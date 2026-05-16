@@ -279,6 +279,24 @@ textarea { min-height: 60px; resize: vertical; }
 </section>
 
 <section>
+  <div class="section-title">Display</div>
+  <div class="toggle-row">
+    <span class="toggle-label">Units</span>
+    <div class="btn-row" id="units-row" style="margin-top:0">
+      <button class="btn" data-units="F" id="units-F">°F</button>
+      <button class="btn" data-units="C" id="units-C">°C</button>
+    </div>
+  </div>
+  <div class="toggle-row">
+    <span class="toggle-label">Screen</span>
+    <div class="btn-row" id="screen-row" style="margin-top:0">
+      <button class="btn" data-screen="1" id="screen-1">1 · Full</button>
+      <button class="btn" data-screen="2" id="screen-2">2 · Minimal</button>
+    </div>
+  </div>
+</section>
+
+<section>
   <div class="section-title">Location & Refresh</div>
   <label class="field">
     <span class="label">City (for weather)</span>
@@ -346,8 +364,40 @@ function render() {
   document.getElementById('city-label').value = cfg.cityLabel || '';
   document.getElementById('refresh').value = cfg.refreshMinutes || 30;
 
+  renderUnits();
+  renderScreens();
   renderTodos();
 }
+
+function renderUnits() {
+  const u = (cfg.units === 'C') ? 'C' : 'F';
+  document.querySelectorAll('#units-row .btn').forEach(b => {
+    b.classList.toggle('btn-primary', b.dataset.units === u);
+  });
+}
+
+function renderScreens() {
+  const s = String(parseInt(cfg.screen, 10) || 1);
+  document.querySelectorAll('#screen-row .btn').forEach(b => {
+    b.classList.toggle('btn-primary', b.dataset.screen === s);
+  });
+}
+
+document.querySelectorAll('#units-row .btn').forEach(b => {
+  b.onclick = () => {
+    cfg.units = b.dataset.units;
+    renderUnits();
+    markDirty();
+  };
+});
+
+document.querySelectorAll('#screen-row .btn').forEach(b => {
+  b.onclick = () => {
+    cfg.screen = parseInt(b.dataset.screen, 10);
+    renderScreens();
+    markDirty();
+  };
+});
 
 function renderTodos() {
   const wrap = document.getElementById('todos');

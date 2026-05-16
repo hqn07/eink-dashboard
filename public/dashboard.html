@@ -19,6 +19,10 @@
   const events = D.events || [];
   const todos = (cfg.todos || []).slice(0, 6);
   const widgets = cfg.widgets || {};
+  const units = D.units || cfg.units || 'F';
+  const screen = D.screen || cfg.screen || 1;
+  document.body.setAttribute('data-screen', String(screen));
+  document.body.setAttribute('data-units', units);
 
   function el(tag, cls, html) {
     const e = document.createElement(tag);
@@ -86,6 +90,12 @@
   const dateStr = w ? w.currentDate : new Date().toDateString().toUpperCase();
   const timeStr = w ? w.currentTime : '';
 
+  // Screen 2 = minimal weather-only layout
+  if (screen === 2) {
+    renderScreen2();
+    return;
+  }
+
   const header = el('header', 'hdr');
   header.innerHTML = `
     <div class="hdr-left">
@@ -110,7 +120,7 @@
       <div class="weather-hero">
         <div class="weather-icon">${icon(w.main, 130)}</div>
         <div class="weather-temp">
-          <span class="temp-num">${w.temp}</span><span class="temp-deg">°</span>
+          <span class="temp-num">${w.temp}</span><span class="temp-deg">°${units}</span>
         </div>
         <div class="weather-desc">${w.desc}</div>
         <div class="weather-hilo">HIGH ${w.tempMax}° &nbsp;·&nbsp; LOW ${w.tempMin}°</div>
@@ -118,7 +128,7 @@
       <div class="weather-stats">
         <div class="stat"><span class="stat-k">FEELS</span><span class="stat-v">${w.feelsLike}°</span></div>
         <div class="stat"><span class="stat-k">HUMID</span><span class="stat-v">${w.humidity}%</span></div>
-        <div class="stat"><span class="stat-k">WIND</span><span class="stat-v">${w.windDir} ${w.windSpeed}</span></div>
+        <div class="stat"><span class="stat-k">WIND</span><span class="stat-v">${w.windDir} ${w.windSpeed} ${w.windUnit || ''}</span></div>
         <div class="stat"><span class="stat-k">RISE</span><span class="stat-v">${w.sunrise}</span></div>
       </div>
     `;
@@ -209,6 +219,52 @@
     return String(s).replace(/[&<>"']/g, c => ({
       '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
     }[c]));
+  }
+
+  function renderScreen2() {
+    // Minimal: huge weather hero centered. No forecast/todos/calendar.
+    const root = page;
+    root.innerHTML = '';
+    root.classList.add('page-minimal');
+
+    const top = el('header', 'hdr');
+    top.innerHTML = `
+      <div class="hdr-left">
+        <div class="hdr-city">${cityLabel}</div>
+        <div class="hdr-date">${dateStr}</div>
+      </div>
+      <div class="hdr-right">
+        <div class="hdr-time">${timeStr}</div>
+        <div class="hdr-meta">SCREEN 2 · MINIMAL</div>
+      </div>
+    `;
+    root.appendChild(top);
+
+    const main = el('main', 'minimal-body');
+    if (widgets.weather && w) {
+      main.innerHTML = `
+        <div class="minimal-icon">${icon(w.main, 220)}</div>
+        <div class="minimal-temp"><span>${w.temp}</span><span class="minimal-deg">°${units}</span></div>
+        <div class="minimal-desc">${w.desc}</div>
+        <div class="minimal-hilo">HIGH ${w.tempMax}° · LOW ${w.tempMin}° · FEELS ${w.feelsLike}°</div>
+        ${widgets.message && cfg.message && cfg.message.text
+          ? `<div class="minimal-msg">${escapeHtml(cfg.message.text)}</div>` : ''}
+      `;
+    } else {
+      main.innerHTML = `<div class="empty">NO WEATHER</div>`;
+    }
+    root.appendChild(main);
+
+    const ftr = el('footer', 'ftr');
+    ftr.innerHTML = `
+      <span class="ftr-bullet">●</span>
+      UPDATED ${timeStr || '—'}
+      <span class="ftr-sep">·</span>
+      REFRESH ${cfg.refreshMinutes || 30}MIN
+      <span class="ftr-sep">·</span>
+      ${(cityLabel || 'DASHBOARD').split(' ')[0]}
+    `;
+    root.appendChild(ftr);
   }
 })();
 </script>

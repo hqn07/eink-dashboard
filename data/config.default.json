@@ -20,5 +20,7 @@
   "city": "Gainesville,FL,US",
   "cityLabel": "GAINESVILLE",
   "refreshMinutes": 30,
-  "theme": "editorial"
+  "theme": "editorial",
+  "units": "F",
+  "screen": 1
 }

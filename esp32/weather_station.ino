@@ -27,7 +27,7 @@ const char* password = "REDACTED";
 // Examples:
 //   "http://192.168.1.42:3000"   <- local Node dev server during testing
 //   "https://your-app.up.railway.app"  <- deployed
-const char* serverBase = "http://192.168.1.42:3000";
+const char* serverBase = "https://eink-dashboard-production.up.railway.app";
 
 // Optional shared secret. Set this if you set DEVICE_TOKEN in the server's .env
 const char* deviceToken = "";

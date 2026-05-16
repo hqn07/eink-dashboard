@@ -2,7 +2,7 @@
 // Fetches weather data from OpenWeatherMap. Caches for 10 minutes to avoid hammering the API.
 
 const CACHE_MS = 10 * 60 * 1000;
-let cache = { at: 0, city: null, data: null };
+const cacheMap = new Map(); // key: city|units
 
 const WIND_DIRS = ['N','NE','E','SE','S','SW','W','NW'];
 function windDir(deg) {
@@ -27,13 +27,17 @@ function formatDate(unixSec, tzOffsetSec) {
   return `${DAYS[d.getUTCDay()]} ${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
 }
 
-async function fetchWeather(city, apiKey) {
+async function fetchWeather(city, apiKey, units = 'F') {
+  const u = units === 'C' ? 'C' : 'F';
+  const owmUnits = u === 'C' ? 'metric' : 'imperial';
+  const cacheKey = `${city}|${u}`;
   const now = Date.now();
-  if (cache.city === city && cache.data && (now - cache.at) < CACHE_MS) {
-    return cache.data;
+  const cached = cacheMap.get(cacheKey);
+  if (cached && (now - cached.at) < CACHE_MS) {
+    return cached.data;
   }
   if (!apiKey) {
-    return stubData();
+    return stubData(u);
   }
 
   const base = 'https://api.openweathermap.org/data/2.5';
@@ -41,13 +45,13 @@ async function fetchWeather(city, apiKey) {
 
   try {
     const [curRes, fcRes] = await Promise.all([
-      fetch(`${base}/weather?q=${q}&appid=${apiKey}&units=imperial`),
-      fetch(`${base}/forecast?q=${q}&appid=${apiKey}&units=imperial&cnt=24`)
+      fetch(`${base}/weather?q=${q}&appid=${apiKey}&units=${owmUnits}`),
+      fetch(`${base}/forecast?q=${q}&appid=${apiKey}&units=${owmUnits}&cnt=24`)
     ]);
 
     if (!curRes.ok || !fcRes.ok) {
       console.warn('Weather fetch non-OK:', curRes.status, fcRes.status);
-      return cache.data || stubData();
+      return cached?.data || stubData(u);
     }
 
     const cur = await curRes.json();
@@ -100,18 +104,20 @@ async function fetchWeather(city, apiKey) {
       currentTime: formatTime(cur.dt, tz),
       currentDate: formatDate(cur.dt, tz),
       forecast,
-      stale: false
+      stale: false,
+      units: u,
+      windUnit: u === 'C' ? 'm/s' : 'mph'
     };
 
-    cache = { at: now, city, data };
+    cacheMap.set(cacheKey, { at: now, data });
     return data;
   } catch (err) {
     console.error('Weather error:', err.message);
-    return cache.data ? { ...cache.data, stale: true } : stubData();
+    return cached?.data ? { ...cached.data, stale: true } : stubData(u);
   }
 }
 
-function stubData() {
+function stubData(units = 'F') {
   return {
     temp: '--', feelsLike: '--', tempMin: '--', tempMax: '--',
     humidity: '--', windSpeed: '--', windDir: '--',
@@ -119,7 +125,9 @@ function stubData() {
     sunrise: '--:--', sunset: '--:--',
     currentTime: '--:--', currentDate: 'NO DATA',
     forecast: [],
-    stale: true
+    stale: true,
+    units,
+    windUnit: units === 'C' ? 'm/s' : 'mph'
   };
 }
 

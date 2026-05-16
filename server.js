@@ -63,7 +63,7 @@ async function getBrowser() {
   return browserPromise;
 }
 
-async function renderDashboardPng() {
+async function renderDashboardPng({ units, screen }) {
   const browser = await getBrowser();
   const page = await browser.newPage();
   try {
@@ -72,7 +72,10 @@ async function renderDashboardPng() {
       height: SCREEN_H,
       deviceScaleFactor: 1
     });
-    const url = `http://127.0.0.1:${PORT}/dashboard`;
+    const qs = new URLSearchParams();
+    if (units) qs.set('units', units);
+    if (screen) qs.set('screen', String(screen));
+    const url = `http://127.0.0.1:${PORT}/dashboard${qs.toString() ? '?' + qs : ''}`;
     await page.goto(url, { waitUntil: 'networkidle0', timeout: 20000 });
     const buf = await page.screenshot({
       type: 'png',
@@ -122,24 +125,38 @@ async function toMonoBin(rgbaPng) {
 
 // ---------- Image cache ----------
 
-let imageCache = { at: 0, png: null, bin: null };
+const imageCache = new Map(); // key: "units|screen" -> { at, png, bin }
 const IMAGE_CACHE_MS = 60 * 1000; // re-render at most every 60s
 
-async function getCurrentImage() {
+async function getCurrentImage({ units, screen }) {
+  const key = `${units}|${screen}`;
   const now = Date.now();
-  if (imageCache.png && (now - imageCache.at) < IMAGE_CACHE_MS) {
-    return imageCache;
+  const cached = imageCache.get(key);
+  if (cached && (now - cached.at) < IMAGE_CACHE_MS) {
+    return cached;
   }
-  const rgba = await renderDashboardPng();
+  const rgba = await renderDashboardPng({ units, screen });
   const png = await toMonoPng(rgba);
   const bin = await toMonoBin(rgba);
-  imageCache = { at: now, png, bin };
-  return imageCache;
+  const entry = { at: now, png, bin };
+  imageCache.set(key, entry);
+  return entry;
 }
 
 // Force re-render on next request (called after config save)
 function invalidateImage() {
-  imageCache = { at: 0, png: null, bin: null };
+  imageCache.clear();
+}
+
+function resolveVariant(req, cfg) {
+  const units = (req.query.units === 'C' || req.query.units === 'F')
+    ? req.query.units
+    : (cfg.units === 'C' ? 'C' : 'F');
+  const screenRaw = parseInt(req.query.screen, 10);
+  const screen = Number.isFinite(screenRaw) && screenRaw > 0
+    ? screenRaw
+    : (parseInt(cfg.screen, 10) || 1);
+  return { units, screen };
 }
 
 // ---------- Auth ----------
@@ -161,15 +178,16 @@ app.use('/static', express.static(path.join(__dirname, 'public')));
 app.get('/dashboard', async (req, res) => {
   try {
     const cfg = await loadConfig();
+    const { units, screen } = resolveVariant(req, cfg);
     const weather = cfg.widgets.weather
-      ? await fetchWeather(cfg.city, process.env.OPENWEATHER_API_KEY)
+      ? await fetchWeather(cfg.city, process.env.OPENWEATHER_API_KEY, units)
       : null;
     const events = cfg.widgets.calendar
       ? await fetchEvents(cfg.calendar.icalUrl)
       : [];
 
     const html = await fsp.readFile(path.join(__dirname, 'public', 'dashboard.html'), 'utf8');
-    const payload = { cfg, weather, events, generatedAt: new Date().toISOString() };
+    const payload = { cfg, weather, events, units, screen, generatedAt: new Date().toISOString() };
     const injected = html.replace(
       '/*__DATA__*/',
       `window.__DASHBOARD__ = ${JSON.stringify(payload)};`
@@ -185,7 +203,9 @@ app.get('/dashboard', async (req, res) => {
 // Preview as PNG (for your browser)
 app.get('/display.png', checkDeviceAuth, async (req, res) => {
   try {
-    const { png } = await getCurrentImage();
+    const cfg = await loadConfig();
+    const variant = resolveVariant(req, cfg);
+    const { png } = await getCurrentImage(variant);
     res.set('Content-Type', 'image/png');
     res.set('Cache-Control', 'no-store');
     res.send(png);
@@ -199,7 +219,9 @@ app.get('/display.png', checkDeviceAuth, async (req, res) => {
 // 800 * 480 / 8 = 48000 bytes
 app.get('/display.bin', checkDeviceAuth, async (req, res) => {
   try {
-    const { bin } = await getCurrentImage();
+    const cfg = await loadConfig();
+    const variant = resolveVariant(req, cfg);
+    const { bin } = await getCurrentImage(variant);
     res.set('Content-Type', 'application/octet-stream');
     res.set('Cache-Control', 'no-store');
     res.set('X-Image-Width', String(SCREEN_W));
