@@ -150,9 +150,9 @@ html, body {
 .weather-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px 16px;
-  padding-top: 10px;
-  margin-top: 6px;
+  gap: 8px 18px;
+  padding-top: 12px;
+  margin-top: 8px;
   border-top: 2px solid #000;
 }
 
@@ -160,18 +160,19 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Oswald', sans-serif;
 }
 
 .stat-k {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 2px;
 }
 
 .stat-v {
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
 /* ============ FORECAST COLUMN ============ */
@@ -257,16 +258,26 @@ html, body {
 .todo-list { list-style: none; }
 .todo-list li {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   font-family: 'Oswald', sans-serif;
   font-size: 14px;
-  font-weight: 500;
-  padding: 2px 0;
+  font-weight: 600;
+  padding: 3px 0;
   letter-spacing: 0.5px;
 }
-.todo-list .checkbox { font-size: 16px; line-height: 1; flex-shrink: 0; }
-.todo-list .todo-text { flex: 1; }
+.todo-list .checkbox {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #000;
+  background: #fff;
+  box-sizing: border-box;
+}
+.todo-list .done .checkbox {
+  background: #000;
+}
+.todo-list .todo-text { flex: 1; line-height: 1.15; }
 .todo-list .done .todo-text {
   text-decoration: line-through;
   text-decoration-thickness: 2px;

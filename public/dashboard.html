@@ -174,7 +174,7 @@
         <ul class="todo-list">
           ${todos.map(t => `
             <li class="${t.done ? 'done' : ''}">
-              <span class="checkbox">${t.done ? '■' : '☐'}</span>
+              <span class="checkbox"></span>
               <span class="todo-text">${escapeHtml(t.text)}</span>
             </li>
           `).join('')}
