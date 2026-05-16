@@ -307,9 +307,48 @@ textarea { min-height: 60px; resize: vertical; }
     <input type="text" id="city-label" placeholder="GAINESVILLE">
   </label>
   <label class="field">
-    <span class="label">Refresh every X minutes (ESP32 sleep)</span>
+    <span class="label">Timezone (IANA, e.g. America/New_York)</span>
+    <input type="text" id="timezone" placeholder="America/New_York">
+  </label>
+  <label class="field">
+    <span class="label">Refresh every X minutes (used when schedule OFF)</span>
     <input type="text" id="refresh" placeholder="30">
   </label>
+</section>
+
+<section>
+  <div class="section-title">Schedule</div>
+  <div class="toggle-row">
+    <span class="toggle-label">Enable schedule</span>
+    <div class="toggle" id="sched-enabled"></div>
+  </div>
+  <div id="sched-body">
+    <label class="field">
+      <span class="label">Active window — from / to (24h HH:MM)</span>
+      <div class="btn-row" style="margin-top:0">
+        <input type="text" id="sched-from" placeholder="07:00" style="flex:1">
+        <input type="text" id="sched-to" placeholder="22:00" style="flex:1">
+      </div>
+    </label>
+    <div class="toggle-row" style="border-top:1px solid #ccc;padding-top:12px;margin-top:8px">
+      <span class="toggle-label">During active</span>
+      <span style="font-size:11px;color:var(--mute)">refresh + screen</span>
+    </div>
+    <div class="btn-row" style="margin-top:0">
+      <input type="text" id="active-refresh" placeholder="30" style="flex:1">
+      <button class="btn" data-mode="active" data-screen="1" id="active-s1">SCR 1</button>
+      <button class="btn" data-mode="active" data-screen="2" id="active-s2">SCR 2</button>
+    </div>
+    <div class="toggle-row" style="border-top:1px solid #ccc;padding-top:12px;margin-top:8px">
+      <span class="toggle-label">During quiet</span>
+      <span style="font-size:11px;color:var(--mute)">refresh + screen</span>
+    </div>
+    <div class="btn-row" style="margin-top:0">
+      <input type="text" id="quiet-refresh" placeholder="120" style="flex:1">
+      <button class="btn" data-mode="quiet" data-screen="1" id="quiet-s1">SCR 1</button>
+      <button class="btn" data-mode="quiet" data-screen="2" id="quiet-s2">SCR 2</button>
+    </div>
+  </div>
 </section>
 
 <div class="save-bar">
@@ -363,10 +402,36 @@ function render() {
   document.getElementById('city').value = cfg.city || '';
   document.getElementById('city-label').value = cfg.cityLabel || '';
   document.getElementById('refresh').value = cfg.refreshMinutes || 30;
+  document.getElementById('timezone').value = cfg.timezone || 'America/New_York';
+
+  cfg.schedule = cfg.schedule || {};
+  cfg.schedule.active = cfg.schedule.active || { refreshMinutes: 30, screen: 1 };
+  cfg.schedule.quiet  = cfg.schedule.quiet  || { refreshMinutes: 120, screen: 2 };
+  document.getElementById('sched-from').value = cfg.schedule.activeFrom || '07:00';
+  document.getElementById('sched-to').value   = cfg.schedule.activeTo   || '22:00';
+  document.getElementById('active-refresh').value = cfg.schedule.active.refreshMinutes || 30;
+  document.getElementById('quiet-refresh').value  = cfg.schedule.quiet.refreshMinutes  || 120;
 
   renderUnits();
   renderScreens();
+  renderSchedule();
   renderTodos();
+}
+
+function renderSchedule() {
+  const en = !!cfg.schedule.enabled;
+  document.getElementById('sched-enabled').classList.toggle('on', en);
+  document.getElementById('sched-body').style.opacity = en ? '1' : '0.4';
+  document.getElementById('sched-body').style.pointerEvents = en ? 'auto' : 'none';
+
+  const aS = String(parseInt(cfg.schedule.active.screen, 10) || 1);
+  const qS = String(parseInt(cfg.schedule.quiet.screen, 10) || 2);
+  document.querySelectorAll('[data-mode="active"]').forEach(b => {
+    b.classList.toggle('btn-primary', b.dataset.screen === aS);
+  });
+  document.querySelectorAll('[data-mode="quiet"]').forEach(b => {
+    b.classList.toggle('btn-primary', b.dataset.screen === qS);
+  });
 }
 
 function renderUnits() {
@@ -395,6 +460,27 @@ document.querySelectorAll('#screen-row .btn').forEach(b => {
   b.onclick = () => {
     cfg.screen = parseInt(b.dataset.screen, 10);
     renderScreens();
+    markDirty();
+  };
+});
+
+document.getElementById('sched-enabled').onclick = () => {
+  cfg.schedule.enabled = !cfg.schedule.enabled;
+  renderSchedule();
+  markDirty();
+};
+
+document.querySelectorAll('[data-mode="active"]').forEach(b => {
+  b.onclick = () => {
+    cfg.schedule.active.screen = parseInt(b.dataset.screen, 10);
+    renderSchedule();
+    markDirty();
+  };
+});
+document.querySelectorAll('[data-mode="quiet"]').forEach(b => {
+  b.onclick = () => {
+    cfg.schedule.quiet.screen = parseInt(b.dataset.screen, 10);
+    renderSchedule();
     markDirty();
   };
 });
@@ -449,7 +535,8 @@ document.getElementById('add-todo').onclick = () => {
   markDirty();
 };
 
-['msg-text','msg-sub','cal-url','city','city-label','refresh'].forEach(id => {
+['msg-text','msg-sub','cal-url','city','city-label','refresh','timezone',
+ 'sched-from','sched-to','active-refresh','quiet-refresh'].forEach(id => {
   document.getElementById(id).oninput = () => markDirty();
 });
 
@@ -473,6 +560,11 @@ document.getElementById('save-btn').onclick = async () => {
   cfg.city = document.getElementById('city').value;
   cfg.cityLabel = document.getElementById('city-label').value;
   cfg.refreshMinutes = parseInt(document.getElementById('refresh').value, 10) || 30;
+  cfg.timezone = document.getElementById('timezone').value || 'America/New_York';
+  cfg.schedule.activeFrom = document.getElementById('sched-from').value || '07:00';
+  cfg.schedule.activeTo   = document.getElementById('sched-to').value   || '22:00';
+  cfg.schedule.active.refreshMinutes = parseInt(document.getElementById('active-refresh').value, 10) || 30;
+  cfg.schedule.quiet.refreshMinutes  = parseInt(document.getElementById('quiet-refresh').value, 10)  || 120;
 
   try {
     const res = await fetch('/api/config', {

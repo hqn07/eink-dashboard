@@ -22,5 +22,13 @@
   "refreshMinutes": 30,
   "theme": "editorial",
   "units": "F",
-  "screen": 1
+  "screen": 1,
+  "timezone": "America/New_York",
+  "schedule": {
+    "enabled": false,
+    "activeFrom": "07:00",
+    "activeTo": "22:00",
+    "active": { "refreshMinutes": 30, "screen": 1 },
+    "quiet":  { "refreshMinutes": 120, "screen": 2 }
+  }
 }

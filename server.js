@@ -148,15 +148,74 @@ function invalidateImage() {
   imageCache.clear();
 }
 
+function parseHHMM(s) {
+  if (typeof s !== 'string') return NaN;
+  const m = s.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return NaN;
+  const h = parseInt(m[1], 10), mm = parseInt(m[2], 10);
+  if (h < 0 || h > 23 || mm < 0 || mm > 59) return NaN;
+  return h * 60 + mm;
+}
+
+function localMinutesNow(tz) {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, hour12: false, hour: '2-digit', minute: '2-digit'
+    }).formatToParts(new Date());
+    let h = 0, m = 0;
+    for (const p of parts) {
+      if (p.type === 'hour') h = parseInt(p.value, 10) % 24;
+      if (p.type === 'minute') m = parseInt(p.value, 10);
+    }
+    return h * 60 + m;
+  } catch {
+    const d = new Date();
+    return d.getHours() * 60 + d.getMinutes();
+  }
+}
+
+// Returns 'active' | 'quiet' | null. null = schedule disabled.
+function pickScheduleMode(cfg, now = Date.now()) {
+  const s = cfg.schedule;
+  if (!s || !s.enabled) return null;
+  const from = parseHHMM(s.activeFrom);
+  const to = parseHHMM(s.activeTo);
+  if (!Number.isFinite(from) || !Number.isFinite(to)) return null;
+  const cur = localMinutesNow(cfg.timezone || 'UTC');
+  let inActive;
+  if (from === to) inActive = false;
+  else if (from < to) inActive = cur >= from && cur < to;
+  else inActive = cur >= from || cur < to; // wraps midnight
+  return inActive ? 'active' : 'quiet';
+}
+
 function resolveVariant(req, cfg) {
   const units = (req.query.units === 'C' || req.query.units === 'F')
     ? req.query.units
     : (cfg.units === 'C' ? 'C' : 'F');
+
   const screenRaw = parseInt(req.query.screen, 10);
-  const screen = Number.isFinite(screenRaw) && screenRaw > 0
-    ? screenRaw
-    : (parseInt(cfg.screen, 10) || 1);
+  let screen;
+  if (Number.isFinite(screenRaw) && screenRaw > 0) {
+    screen = screenRaw;
+  } else {
+    const mode = pickScheduleMode(cfg);
+    if (mode && cfg.schedule[mode] && cfg.schedule[mode].screen) {
+      screen = parseInt(cfg.schedule[mode].screen, 10) || 1;
+    } else {
+      screen = parseInt(cfg.screen, 10) || 1;
+    }
+  }
   return { units, screen };
+}
+
+function resolveRefreshMinutes(cfg) {
+  const mode = pickScheduleMode(cfg);
+  if (mode && cfg.schedule[mode] && cfg.schedule[mode].refreshMinutes) {
+    const m = parseInt(cfg.schedule[mode].refreshMinutes, 10);
+    if (Number.isFinite(m) && m > 0) return m;
+  }
+  return parseInt(cfg.refreshMinutes, 10) || 30;
 }
 
 // ---------- Auth ----------
@@ -233,10 +292,12 @@ app.get('/display.bin', checkDeviceAuth, async (req, res) => {
   }
 });
 
-// Tell ESP32 how long to sleep
+// Tell ESP32 how long to sleep (honors schedule if enabled)
 app.get('/sleep', checkDeviceAuth, async (req, res) => {
   const cfg = await loadConfig();
-  res.json({ minutes: cfg.refreshMinutes || 30 });
+  const minutes = resolveRefreshMinutes(cfg);
+  const mode = pickScheduleMode(cfg);
+  res.json({ minutes, mode });
 });
 
 // Control panel
@@ -253,10 +314,16 @@ app.get('/api/config', async (req, res) => {
 app.post('/api/config', async (req, res) => {
   try {
     const current = await loadConfig();
+    const bodySched = req.body.schedule || {};
+    const curSched = current.schedule || {};
     const merged = { ...current, ...req.body,
       widgets: { ...current.widgets, ...(req.body.widgets || {}) },
       message: { ...current.message, ...(req.body.message || {}) },
-      calendar: { ...current.calendar, ...(req.body.calendar || {}) }
+      calendar: { ...current.calendar, ...(req.body.calendar || {}) },
+      schedule: { ...curSched, ...bodySched,
+        active: { ...(curSched.active || {}), ...(bodySched.active || {}) },
+        quiet:  { ...(curSched.quiet  || {}), ...(bodySched.quiet  || {}) }
+      }
     };
     await saveConfig(merged);
     invalidateImage();
