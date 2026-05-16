@@ -1,0 +1,337 @@
+/* Dashboard CSS — 800x480 e-ink, editorial newspaper aesthetic.
+ * Designed for 1-bit threshold: solid blacks, no thin antialiased lines.
+ * Font stack uses self-hostable serif + condensed sans for that print feel.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Oswald:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 800px;
+  height: 480px;
+  background: #fff;
+  color: #000;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+  text-rendering: geometricPrecision;
+}
+
+.page {
+  width: 800px;
+  height: 480px;
+  display: grid;
+  grid-template-rows: 60px 1fr 28px;
+  background: #fff;
+}
+
+/* ============ HEADER ============ */
+
+.hdr {
+  background: #000;
+  color: #fff;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 4px solid #000;
+}
+
+.hdr-city {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: 26px;
+  letter-spacing: 4px;
+  line-height: 1;
+}
+
+.hdr-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-top: 4px;
+  opacity: 1;
+}
+
+.hdr-right { text-align: right; }
+
+.hdr-time {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: 1px;
+}
+
+.hdr-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 2px;
+  margin-top: 4px;
+}
+
+/* ============ BODY (3 columns) ============ */
+
+.body {
+  display: grid;
+  grid-template-columns: 290px 180px 1fr;
+  height: 100%;
+}
+
+.col {
+  padding: 16px 18px;
+  border-right: 2px solid #000;
+  overflow: hidden;
+}
+
+.col:last-child { border-right: none; }
+
+.col-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 3px;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  border-bottom: 2px solid #000;
+}
+
+/* ============ WEATHER HERO ============ */
+
+.col-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.weather-hero {
+  text-align: center;
+  padding-top: 2px;
+}
+
+.weather-icon {
+  display: inline-block;
+  height: 90px;
+}
+.weather-icon .icon { width: 90px !important; height: 90px !important; }
+
+.weather-temp {
+  font-family: 'DM Serif Display', serif;
+  font-size: 96px;
+  line-height: 0.85;
+  letter-spacing: -4px;
+  margin-top: -8px;
+}
+
+.temp-deg {
+  font-size: 60px;
+  vertical-align: super;
+  margin-left: -8px;
+}
+
+.weather-desc {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 3px;
+  margin-top: 4px;
+}
+
+.weather-hilo {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-top: 4px;
+}
+
+.weather-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 16px;
+  padding-top: 10px;
+  margin-top: 6px;
+  border-top: 2px solid #000;
+}
+
+.stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.stat-k {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.stat-v {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* ============ FORECAST COLUMN ============ */
+
+.col-mid {
+  display: flex;
+  flex-direction: column;
+}
+
+.fc-row {
+  display: grid;
+  grid-template-columns: 50px 50px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px dashed #000;
+}
+
+.fc-row:last-child { border-bottom: none; }
+
+.fc-day {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 1px;
+}
+
+.fc-icon .icon { width: 38px; height: 38px; }
+
+.fc-hilo { text-align: right; font-family: 'JetBrains Mono', monospace; }
+.fc-hi { font-size: 18px; font-weight: 700; }
+.fc-lo { font-size: 13px; font-weight: 500; }
+
+/* ============ RIGHT COLUMN WIDGETS ============ */
+
+.col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.widget {
+  border: 2px solid #000;
+  padding: 8px 12px;
+}
+
+.widget-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 3px;
+  padding-bottom: 4px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #000;
+}
+
+/* Message widget — newspaper headline style */
+.widget-msg {
+  background: #000;
+  color: #fff;
+  border: 2px solid #000;
+}
+
+.msg-text {
+  font-family: 'DM Serif Display', serif;
+  font-style: italic;
+  font-size: 22px;
+  line-height: 1.05;
+  letter-spacing: -0.5px;
+}
+
+.msg-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 2px;
+  margin-top: 6px;
+  border-top: 1px solid #fff;
+  padding-top: 4px;
+}
+
+/* Todos */
+.todo-list { list-style: none; }
+.todo-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: 'Oswald', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 2px 0;
+  letter-spacing: 0.5px;
+}
+.todo-list .checkbox { font-size: 16px; line-height: 1; flex-shrink: 0; }
+.todo-list .todo-text { flex: 1; }
+.todo-list .done .todo-text {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+
+/* Calendar */
+.cal-row {
+  display: grid;
+  grid-template-columns: 50px 1fr;
+  gap: 8px;
+  align-items: baseline;
+  padding: 4px 0;
+  border-bottom: 1px dashed #000;
+}
+.cal-row:last-child { border-bottom: none; }
+
+.cal-day {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.cal-title {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1.1;
+}
+
+.cal-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+
+.empty {
+  font-family: 'Oswald', sans-serif;
+  font-size: 14px;
+  letter-spacing: 3px;
+  text-align: center;
+  padding: 40px 10px;
+  border: 2px dashed #000;
+}
+
+/* ============ FOOTER ============ */
+
+.ftr {
+  background: #000;
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.ftr-sep { opacity: 1; }
+.ftr-bullet { font-size: 8px; }
+
+/* ============ ICON UTIL ============ */
+.icon { display: inline-block; line-height: 0; }
+.icon svg { width: 100%; height: 100%; display: block; }

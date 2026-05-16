@@ -1,0 +1,20 @@
+{
+  "name": "eink-dashboard",
+  "version": "1.0.0",
+  "description": "Server-rendered dashboard for ESP32 e-ink display",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "puppeteer": "^23.5.0",
+    "sharp": "^0.33.5",
+    "node-ical": "^0.18.0",
+    "dotenv": "^16.4.5"
+  }
+}

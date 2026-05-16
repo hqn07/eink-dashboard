@@ -1,0 +1,24 @@
+{
+  "widgets": {
+    "weather": true,
+    "clock": true,
+    "calendar": false,
+    "message": true,
+    "todos": true
+  },
+  "message": {
+    "text": "Welcome home.",
+    "subtitle": "Your dashboard is live."
+  },
+  "todos": [
+    { "text": "Hook up Google Calendar", "done": false },
+    { "text": "Pick a font you actually love", "done": false }
+  ],
+  "calendar": {
+    "icalUrl": ""
+  },
+  "city": "Gainesville,FL,US",
+  "cityLabel": "GAINESVILLE",
+  "refreshMinutes": 30,
+  "theme": "editorial"
+}

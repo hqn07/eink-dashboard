@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Control</title>
+<style>
+:root {
+  --bg: #faf8f3;
+  --ink: #111;
+  --line: #111;
+  --accent: #c8302a;
+  --mute: #6b6960;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  padding: 16px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+header {
+  border-bottom: 3px solid var(--line);
+  padding-bottom: 14px;
+  margin-bottom: 20px;
+}
+
+h1 {
+  font-family: 'Georgia', serif;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+.tagline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-top: 6px;
+  color: var(--mute);
+}
+
+.preview {
+  background: #fff;
+  border: 3px solid var(--line);
+  padding: 8px;
+  margin-bottom: 24px;
+}
+
+.preview img {
+  width: 100%;
+  display: block;
+  image-rendering: pixelated;
+}
+
+.preview-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-top: 8px;
+  color: var(--mute);
+  display: flex;
+  justify-content: space-between;
+}
+
+section {
+  background: #fff;
+  border: 2px solid var(--line);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px dashed #ccc;
+}
+
+.toggle-row:last-child { border-bottom: none; }
+
+.toggle-label {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* iOS-ish toggle */
+.toggle {
+  position: relative;
+  width: 50px;
+  height: 28px;
+  background: #ddd;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.toggle.on { background: var(--ink); }
+.toggle::after {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  top: 3px;
+  left: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: left 0.15s;
+}
+.toggle.on::after { left: 25px; }
+
+label.field {
+  display: block;
+  margin-bottom: 12px;
+}
+
+label.field .label {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  color: var(--mute);
+}
+
+input[type="text"], input[type="url"], textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid var(--line);
+  background: #fff;
+  font-size: 16px;
+  font-family: inherit;
+  border-radius: 0;
+}
+
+textarea { min-height: 60px; resize: vertical; }
+
+.todo-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.todo-row input[type="text"] {
+  flex: 1;
+  padding: 8px 10px;
+}
+
+.todo-check {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--line);
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+}
+.todo-check.done { background: var(--ink); color: #fff; }
+
+.btn {
+  padding: 10px 16px;
+  border: 2px solid var(--line);
+  background: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+}
+.btn-primary { background: var(--ink); color: #fff; }
+.btn-danger { color: var(--accent); }
+.btn-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+.save-bar {
+  position: sticky;
+  bottom: 16px;
+  background: var(--ink);
+  color: #fff;
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+  border: 3px solid var(--line);
+}
+
+.save-bar .status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+}
+
+.save-bar button {
+  background: #fff;
+  color: var(--ink);
+  border: 2px solid #fff;
+  padding: 8px 16px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+.save-bar button:disabled { opacity: 0.5; }
+
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Dashboard Control</h1>
+  <div class="tagline">E-Ink · 800 × 480 · Editorial</div>
+</header>
+
+<div class="preview">
+  <img id="preview" src="/display.png" alt="dashboard preview">
+  <div class="preview-meta">
+    <span>Live preview</span>
+    <button class="btn" id="refresh-btn" style="font-size:10px;padding:4px 10px">↻ Refresh</button>
+  </div>
+</div>
+
+<section>
+  <div class="section-title">Widgets</div>
+  <div id="widget-toggles"></div>
+</section>
+
+<section>
+  <div class="section-title">Message Widget</div>
+  <label class="field">
+    <span class="label">Headline</span>
+    <input type="text" id="msg-text" placeholder="Welcome home.">
+  </label>
+  <label class="field">
+    <span class="label">Subtitle</span>
+    <input type="text" id="msg-sub" placeholder="Optional small text">
+  </label>
+</section>
+
+<section>
+  <div class="section-title">To-Do List</div>
+  <div id="todos"></div>
+  <div class="btn-row">
+    <button class="btn" id="add-todo">+ Add item</button>
+  </div>
+</section>
+
+<section>
+  <div class="section-title">Calendar</div>
+  <label class="field">
+    <span class="label">iCal URL (Google Cal: Settings → Integrate calendar → Secret address in iCal format)</span>
+    <input type="url" id="cal-url" placeholder="https://calendar.google.com/calendar/ical/...">
+  </label>
+</section>
+
+<section>
+  <div class="section-title">Location & Refresh</div>
+  <label class="field">
+    <span class="label">City (for weather)</span>
+    <input type="text" id="city" placeholder="Gainesville,FL,US">
+  </label>
+  <label class="field">
+    <span class="label">City label (shown on display)</span>
+    <input type="text" id="city-label" placeholder="GAINESVILLE">
+  </label>
+  <label class="field">
+    <span class="label">Refresh every X minutes (ESP32 sleep)</span>
+    <input type="text" id="refresh" placeholder="30">
+  </label>
+</section>
+
+<div class="save-bar">
+  <span class="status" id="status">UNSAVED CHANGES</span>
+  <button id="save-btn">SAVE & PUSH</button>
+</div>
+
+<script>
+let cfg = null;
+let dirty = false;
+
+async function load() {
+  const res = await fetch('/api/config');
+  cfg = await res.json();
+  render();
+  setStatus('SYNCED');
+}
+
+function render() {
+  // Widget toggles
+  const toggles = document.getElementById('widget-toggles');
+  toggles.innerHTML = '';
+  const labels = {
+    weather: 'Weather + clock',
+    calendar: 'Calendar',
+    message: 'Custom message',
+    todos: 'To-do list',
+    clock: 'Header clock'
+  };
+  for (const k of ['weather', 'message', 'todos', 'calendar']) {
+    const row = document.createElement('div');
+    row.className = 'toggle-row';
+    row.innerHTML = `
+      <span class="toggle-label">${labels[k] || k}</span>
+      <div class="toggle ${cfg.widgets[k] ? 'on' : ''}" data-k="${k}"></div>
+    `;
+    toggles.appendChild(row);
+  }
+  toggles.querySelectorAll('.toggle').forEach(t => {
+    t.onclick = () => {
+      const k = t.dataset.k;
+      cfg.widgets[k] = !cfg.widgets[k];
+      t.classList.toggle('on');
+      markDirty();
+    };
+  });
+
+  document.getElementById('msg-text').value = cfg.message.text || '';
+  document.getElementById('msg-sub').value = cfg.message.subtitle || '';
+  document.getElementById('cal-url').value = cfg.calendar.icalUrl || '';
+  document.getElementById('city').value = cfg.city || '';
+  document.getElementById('city-label').value = cfg.cityLabel || '';
+  document.getElementById('refresh').value = cfg.refreshMinutes || 30;
+
+  renderTodos();
+}
+
+function renderTodos() {
+  const wrap = document.getElementById('todos');
+  wrap.innerHTML = '';
+  (cfg.todos || []).forEach((t, idx) => {
+    const row = document.createElement('div');
+    row.className = 'todo-row';
+    row.innerHTML = `
+      <div class="todo-check ${t.done ? 'done' : ''}" data-idx="${idx}">${t.done ? '✓' : ''}</div>
+      <input type="text" value="${escapeAttr(t.text)}" data-idx="${idx}">
+      <button class="btn btn-danger" data-idx="${idx}" style="padding:6px 10px">×</button>
+    `;
+    wrap.appendChild(row);
+  });
+
+  wrap.querySelectorAll('.todo-check').forEach(c => {
+    c.onclick = () => {
+      const i = +c.dataset.idx;
+      cfg.todos[i].done = !cfg.todos[i].done;
+      renderTodos();
+      markDirty();
+    };
+  });
+  wrap.querySelectorAll('input[type="text"]').forEach(inp => {
+    inp.oninput = () => {
+      const i = +inp.dataset.idx;
+      cfg.todos[i].text = inp.value;
+      markDirty();
+    };
+  });
+  wrap.querySelectorAll('.btn-danger').forEach(b => {
+    b.onclick = () => {
+      const i = +b.dataset.idx;
+      cfg.todos.splice(i, 1);
+      renderTodos();
+      markDirty();
+    };
+  });
+}
+
+function escapeAttr(s) {
+  return String(s).replace(/"/g, '&quot;');
+}
+
+document.getElementById('add-todo').onclick = () => {
+  cfg.todos = cfg.todos || [];
+  cfg.todos.push({ text: '', done: false });
+  renderTodos();
+  markDirty();
+};
+
+['msg-text','msg-sub','cal-url','city','city-label','refresh'].forEach(id => {
+  document.getElementById(id).oninput = () => markDirty();
+});
+
+function markDirty() {
+  dirty = true;
+  setStatus('UNSAVED');
+}
+
+function setStatus(s) {
+  document.getElementById('status').textContent = s;
+}
+
+document.getElementById('save-btn').onclick = async () => {
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  setStatus('SAVING...');
+
+  cfg.message.text = document.getElementById('msg-text').value;
+  cfg.message.subtitle = document.getElementById('msg-sub').value;
+  cfg.calendar.icalUrl = document.getElementById('cal-url').value;
+  cfg.city = document.getElementById('city').value;
+  cfg.cityLabel = document.getElementById('city-label').value;
+  cfg.refreshMinutes = parseInt(document.getElementById('refresh').value, 10) || 30;
+
+  try {
+    const res = await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cfg)
+    });
+    const j = await res.json();
+    if (j.ok) {
+      cfg = j.config;
+      dirty = false;
+      setStatus('SAVED ✓');
+      refreshPreview();
+    } else {
+      setStatus('ERROR: ' + (j.error || ''));
+    }
+  } catch (err) {
+    setStatus('NETWORK ERROR');
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+document.getElementById('refresh-btn').onclick = refreshPreview;
+
+function refreshPreview() {
+  const img = document.getElementById('preview');
+  img.src = '/display.png?t=' + Date.now();
+}
+
+load();
+</script>
+
+</body>
+</html>
