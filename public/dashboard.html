@@ -214,7 +214,8 @@
 
   // Build layout array from cfg.
   // - If cfg.layout exists, use it (filling in any missing fields from defaults).
-  // - Otherwise build from defaults filtered by cfg.widgets booleans.
+  // - Otherwise auto-fit enabled widgets across the grid so disabled widgets
+  //   never leave empty cells.
   function resolveLayout() {
     if (Array.isArray(cfg.layout) && cfg.layout.length) {
       return cfg.layout.map(l => {
@@ -230,12 +231,51 @@
         };
       }).filter(Boolean);
     }
-    // Legacy fallback: build from cfg.widgets booleans + defaults
-    return WIDGET_REGISTRY.map(def => ({
-      id: def.id,
-      ...def.defaultLayout,
-      enabled: !!widgets[def.requires]
-    }));
+    return buildAutoLayout();
+  }
+
+  // Compute an auto-collapsing layout from the legacy `cfg.widgets` booleans.
+  // Splits the body grid into a weather area on the left and a stack of
+  // right-column widgets, sizing each region only when its widgets are on.
+  function buildAutoLayout() {
+    const have = {};
+    for (const def of WIDGET_REGISTRY) {
+      have[def.id] = !!widgets[def.requires];
+    }
+    const rightItems = ['message', 'todos', 'calendar'].filter(id => have[id]);
+    const haveRight = rightItems.length > 0;
+    const haveHero = have.weather_hero;
+    const haveFc   = have.weather_forecast;
+
+    const leftCols  = haveRight ? (haveHero || haveFc ? (haveRight ? 7 : 12) : 0) : 12;
+    const rightCols = GRID_COLS - leftCols;
+    const rightX    = leftCols;
+
+    const layout = [];
+
+    if (haveHero && haveFc) {
+      const heroW = Math.max(3, Math.ceil(leftCols * 0.57));
+      const fcW   = leftCols - heroW;
+      layout.push({ id:'weather_hero',     x:0,     y:0, w:heroW, h:GRID_ROWS, enabled:true });
+      layout.push({ id:'weather_forecast', x:heroW, y:0, w:fcW,   h:GRID_ROWS, enabled:true });
+    } else if (haveHero) {
+      layout.push({ id:'weather_hero', x:0, y:0, w:leftCols, h:GRID_ROWS, enabled:true });
+    } else if (haveFc) {
+      layout.push({ id:'weather_forecast', x:0, y:0, w:leftCols, h:GRID_ROWS, enabled:true });
+    }
+
+    if (haveRight && rightCols > 0) {
+      const base = Math.floor(GRID_ROWS / rightItems.length);
+      const rem  = GRID_ROWS - base * rightItems.length;
+      let y = 0;
+      rightItems.forEach((id, i) => {
+        const h = base + (i < rem ? 1 : 0);
+        layout.push({ id, x: rightX, y, w: rightCols, h, enabled: true });
+        y += h;
+      });
+    }
+
+    return layout;
   }
 
   const page = document.getElementById('page');
@@ -280,7 +320,10 @@
     if (!def) continue;
     const inner = def.render(ctx);
     if (!inner) continue;
-    const cell = el('div', `cell cell-${item.id}`, inner);
+    const edges = [];
+    if (item.x + item.w >= GRID_COLS) edges.push('cell-edge-right');
+    if (item.y + item.h >= GRID_ROWS) edges.push('cell-edge-bottom');
+    const cell = el('div', `cell cell-${item.id} ${edges.join(' ')}`, inner);
     cell.style.gridColumn = `${item.x + 1} / span ${item.w}`;
     cell.style.gridRow    = `${item.y + 1} / span ${item.h}`;
     body.appendChild(cell);

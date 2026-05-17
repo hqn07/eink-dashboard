@@ -25,6 +25,17 @@ body {
   margin: 0 auto;
 }
 
+@media (min-width: 960px) {
+  body { max-width: 1080px; padding: 24px; }
+  main.layout {
+    display: grid;
+    grid-template-columns: minmax(420px, 1.1fr) 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  main.layout > .preview { position: sticky; top: 24px; }
+}
+
 header {
   border-bottom: 3px solid var(--line);
   padding-bottom: 14px;
@@ -214,6 +225,17 @@ textarea { min-height: 60px; resize: vertical; }
   font-size: 11px;
   letter-spacing: 2px;
 }
+.save-bar.dirty   { background: var(--accent); }
+.save-bar.saving  { background: #444; }
+.save-bar.saved   { background: var(--ink); }
+.save-bar.error   { background: var(--accent); }
+
+.sched-group {
+  border-left: 3px solid var(--ink);
+  padding: 4px 0 4px 14px;
+  margin-top: 8px;
+}
+.sched-group.disabled { opacity: 0.4; pointer-events: none; }
 
 .save-bar button {
   background: #fff;
@@ -237,6 +259,7 @@ textarea { min-height: 60px; resize: vertical; }
   <div class="tagline">E-Ink · 800 × 480 · Editorial</div>
 </header>
 
+<main class="layout">
 <div class="preview">
   <img id="preview" src="/display.png" alt="dashboard preview">
   <div class="preview-meta">
@@ -244,6 +267,8 @@ textarea { min-height: 60px; resize: vertical; }
     <button class="btn" id="refresh-btn" style="font-size:10px;padding:4px 10px">↻ Refresh</button>
   </div>
 </div>
+
+<div class="settings">
 
 <section>
   <div class="section-title">Widgets</div>
@@ -322,7 +347,7 @@ textarea { min-height: 60px; resize: vertical; }
     <span class="toggle-label">Enable schedule</span>
     <div class="toggle" id="sched-enabled"></div>
   </div>
-  <div id="sched-body">
+  <div id="sched-body" class="sched-group">
     <label class="field">
       <span class="label">Active window — from / to (24h HH:MM)</span>
       <div class="btn-row" style="margin-top:0">
@@ -332,26 +357,29 @@ textarea { min-height: 60px; resize: vertical; }
     </label>
     <div class="toggle-row" style="border-top:1px solid #ccc;padding-top:12px;margin-top:8px">
       <span class="toggle-label">During active</span>
-      <span style="font-size:11px;color:var(--mute)">refresh + screen</span>
+      <span style="font-size:11px;color:var(--mute)">refresh min · screen</span>
     </div>
     <div class="btn-row" style="margin-top:0">
-      <input type="text" id="active-refresh" placeholder="30" style="flex:1">
+      <input type="text" id="active-refresh" placeholder="30" style="flex:1;min-width:80px">
       <button class="btn" data-mode="active" data-screen="1" id="active-s1">SCR 1</button>
       <button class="btn" data-mode="active" data-screen="2" id="active-s2">SCR 2</button>
     </div>
     <div class="toggle-row" style="border-top:1px solid #ccc;padding-top:12px;margin-top:8px">
       <span class="toggle-label">During quiet</span>
-      <span style="font-size:11px;color:var(--mute)">refresh + screen</span>
+      <span style="font-size:11px;color:var(--mute)">refresh min · screen</span>
     </div>
     <div class="btn-row" style="margin-top:0">
-      <input type="text" id="quiet-refresh" placeholder="120" style="flex:1">
+      <input type="text" id="quiet-refresh" placeholder="120" style="flex:1;min-width:80px">
       <button class="btn" data-mode="quiet" data-screen="1" id="quiet-s1">SCR 1</button>
       <button class="btn" data-mode="quiet" data-screen="2" id="quiet-s2">SCR 2</button>
     </div>
   </div>
 </section>
 
-<div class="save-bar">
+</div><!-- /.settings -->
+</main><!-- /.layout -->
+
+<div class="save-bar" id="save-bar">
   <span class="status" id="status">UNSAVED CHANGES</span>
   <button id="save-btn">SAVE & PUSH</button>
 </div>
@@ -364,7 +392,7 @@ async function load() {
   const res = await fetch('/api/config');
   cfg = await res.json();
   render();
-  setStatus('SYNCED');
+  setStatus('SYNCED', 'saved');
 }
 
 function render() {
@@ -421,8 +449,7 @@ function render() {
 function renderSchedule() {
   const en = !!cfg.schedule.enabled;
   document.getElementById('sched-enabled').classList.toggle('on', en);
-  document.getElementById('sched-body').style.opacity = en ? '1' : '0.4';
-  document.getElementById('sched-body').style.pointerEvents = en ? 'auto' : 'none';
+  document.getElementById('sched-body').classList.toggle('disabled', !en);
 
   const aS = String(parseInt(cfg.schedule.active.screen, 10) || 1);
   const qS = String(parseInt(cfg.schedule.quiet.screen, 10) || 2);
@@ -542,17 +569,21 @@ document.getElementById('add-todo').onclick = () => {
 
 function markDirty() {
   dirty = true;
-  setStatus('UNSAVED');
+  setStatus('UNSAVED', 'dirty');
 }
 
-function setStatus(s) {
+function setStatus(s, kind) {
   document.getElementById('status').textContent = s;
+  const bar = document.getElementById('save-bar');
+  if (!bar) return;
+  bar.classList.remove('dirty','saving','saved','error');
+  if (kind) bar.classList.add(kind);
 }
 
 document.getElementById('save-btn').onclick = async () => {
   const btn = document.getElementById('save-btn');
   btn.disabled = true;
-  setStatus('SAVING...');
+  setStatus('SAVING...', 'saving');
 
   cfg.message.text = document.getElementById('msg-text').value;
   cfg.message.subtitle = document.getElementById('msg-sub').value;
@@ -576,13 +607,13 @@ document.getElementById('save-btn').onclick = async () => {
     if (j.ok) {
       cfg = j.config;
       dirty = false;
-      setStatus('SAVED ✓');
+      setStatus('SAVED ✓', 'saved');
       refreshPreview();
     } else {
-      setStatus('ERROR: ' + (j.error || ''));
+      setStatus('ERROR: ' + (j.error || ''), 'error');
     }
   } catch (err) {
-    setStatus('NETWORK ERROR');
+    setStatus('NETWORK ERROR', 'error');
   } finally {
     btn.disabled = false;
   }
