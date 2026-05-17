@@ -4,10 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById } from '../widgets.js';
 
 // Editor uses two regions:
-//  - Canvas: the dashboard grid where enabled widgets live. Drag & resize via RGL.
-//  - Pool: a palette below the canvas listing disabled widgets. "+ ADD"
-//    moves a widget onto the canvas at its default (or next free) slot.
-//  - Each canvas tile has a small × button that returns it to the pool.
+//  - Canvas: dashboard grid with enabled widgets. Drag to reposition.
+//  - Pool: palette of disabled widgets with "+ ADD" buttons.
+//  - Each canvas tile has size-preset buttons (S/M/L/XL) and a × remove.
+// Resizing is preset-based — no arbitrary corner drag — to keep layouts
+// snapping to known-good sizes.
 export default function EditorGrid({ layout, showGrid, onChange }) {
   const wrapRef = useRef(null);
   const [width, setWidth] = useState(800);
@@ -27,61 +28,74 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
   const enabled  = layout.filter(l => l.enabled !== false);
   const disabled = layout.filter(l => l.enabled === false);
 
-  // Body grid is GRID_ROWS rows tall; pick rowHeight so the editor mirrors
-  // the dashboard's 60% aspect.
   const rowHeight = ((width - 16) * 0.6) / GRID_ROWS;
 
   const rglLayout = enabled.map(l => ({
     i: l.id,
     x: l.x, y: l.y, w: l.w, h: l.h,
-    minW: 1, minH: 1, maxW: GRID_COLS, maxH: GRID_ROWS
+    minW: 1, minH: 1, maxW: GRID_COLS, maxH: GRID_ROWS,
+    static: false
   }));
 
   const handleLayoutChange = (next) => {
-    // RGL fires onLayoutChange on mount; skip when nothing actually moved.
     const changed = next.some(n => {
       const cur = layout.find(l => l.id === n.i);
       if (!cur) return true;
-      return cur.x !== n.x || cur.y !== n.y || cur.w !== n.w || cur.h !== n.h;
+      return cur.x !== n.x || cur.y !== n.y;
     });
     if (!changed) return;
-
     const map = new Map(next.map(n => [n.i, n]));
     const merged = layout.map(l => {
       const n = map.get(l.id);
       if (!n) return l;
-      return { ...l, x: n.x, y: n.y, w: n.w, h: n.h };
+      return { ...l, x: n.x, y: n.y };
     });
     onChange(merged);
   };
 
-  // Find an empty position to drop an added widget. Tries the widget's
-  // default first; if it collides, scans for a free top-left.
-  const findFreeSlot = (def, items) => {
-    const fits = (x, y, w, h) => {
+  // Bounds-checked positioning. Tries to keep tile at (x, y) but clamps
+  // when the new size would push it off the grid.
+  const clampPos = (x, y, w, h) => ({
+    x: Math.max(0, Math.min(x, GRID_COLS - w)),
+    y: Math.max(0, Math.min(y, GRID_ROWS - h))
+  });
+
+  // Find an empty position to drop an added widget. Tries default first,
+  // then scans for a free top-left.
+  const findFreeSlot = (def, w, h, items) => {
+    const fits = (x, y) => {
       if (x + w > GRID_COLS || y + h > GRID_ROWS) return false;
       return !items.some(it =>
         x < it.x + it.w && x + w > it.x &&
         y < it.y + it.h && y + h > it.y
       );
     };
-    const d = def.defaultLayout;
-    if (fits(d.x, d.y, d.w, d.h)) return { x: d.x, y: d.y, w: d.w, h: d.h };
-    // Fall back: try smaller 3x2 footprint at the first free cell.
-    const w = Math.min(d.w, 4), h = Math.min(d.h, 2);
     for (let y = 0; y + h <= GRID_ROWS; y++) {
       for (let x = 0; x + w <= GRID_COLS; x++) {
-        if (fits(x, y, w, h)) return { x, y, w, h };
+        if (fits(x, y)) return { x, y };
       }
     }
-    return { x: 0, y: 0, w: Math.min(d.w, 3), h: Math.min(d.h, 2) };
+    return { x: 0, y: 0 };
+  };
+
+  const setSize = (id, sizeKey) => {
+    const def = widgetById(id);
+    if (!def || !def.sizes[sizeKey]) return;
+    const { w, h } = def.sizes[sizeKey];
+    onChange(layout.map(l => {
+      if (l.id !== id) return l;
+      const pos = clampPos(l.x, l.y, w, h);
+      return { ...l, ...pos, w, h, size: sizeKey };
+    }));
   };
 
   const addToCanvas = (id) => {
     const def = widgetById(id);
     if (!def) return;
-    const slot = findFreeSlot(def, enabled);
-    onChange(layout.map(l => l.id === id ? { ...l, ...slot, enabled: true } : l));
+    const sizeKey = def.defaultSize;
+    const { w, h } = def.sizes[sizeKey];
+    const slot = findFreeSlot(def, w, h, enabled);
+    onChange(layout.map(l => l.id === id ? { ...l, ...slot, w, h, size: sizeKey, enabled: true } : l));
   };
 
   const removeFromCanvas = (id) => {
@@ -99,14 +113,15 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
           maxRows={GRID_ROWS}
           compactType={null}
           preventCollision
+          isResizable={false}
           margin={[4, 4]}
           containerPadding={[0, 0]}
           layout={rglLayout}
           onLayoutChange={handleLayoutChange}
-          resizeHandles={['se']}
         >
           {enabled.map(l => {
             const def = widgetById(l.id);
+            const sizeKeys = def ? Object.keys(def.sizes) : [];
             return (
               <div key={l.id}>
                 <motion.div
@@ -124,7 +139,16 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
                   >×</button>
                   <div className="tile-id">{l.id}</div>
                   <div className="tile-label">{def?.label || l.id}</div>
-                  <div className="tile-size">{l.w}×{l.h}</div>
+                  <div className="tile-sizes" onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
+                    {sizeKeys.map(k => (
+                      <button
+                        key={k}
+                        className={`size-pill ${l.size === k ? 'active' : ''}`}
+                        onClick={(e) => { e.stopPropagation(); setSize(l.id, k); }}
+                        title={`${def.sizes[k].w}×${def.sizes[k].h}`}
+                      >{k}</button>
+                    ))}
+                  </div>
                 </motion.div>
               </div>
             );

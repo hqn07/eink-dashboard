@@ -94,15 +94,16 @@
   }
 
   // ============ WIDGET REGISTRY ============
-  // Each widget: { id, label, requires, defaultLayout, render(ctx) -> HTML | '' }
-  // requires = which boolean in cfg.widgets must be true (legacy fallback)
-  // render returns '' if data missing, signalling the cell to skip.
+  // Each widget: { id, label, requires, sizes, defaultSize, render(ctx) }
+  // The dashboard renderer is data-only; w/h come from the saved layout
+  // (the editor picks them from `sizes` presets).
   const WIDGET_REGISTRY = [
     {
       id: 'weather_hero',
       label: 'Weather (current)',
       requires: 'weather',
-      defaultLayout: { x: 0, y: 0, w: 4, h: 6 },
+      sizes: { S:{w:4,h:3}, M:{w:4,h:6}, L:{w:6,h:6}, XL:{w:12,h:6} },
+      defaultSize: 'M',
       render: ({ weather, units }) => {
         if (!weather) return '';
         return `
@@ -127,7 +128,8 @@
       id: 'weather_forecast',
       label: '3-Day Forecast',
       requires: 'weather',
-      defaultLayout: { x: 4, y: 0, w: 3, h: 6 },
+      sizes: { S:{w:3,h:4}, M:{w:3,h:6}, L:{w:6,h:6} },
+      defaultSize: 'M',
       render: ({ weather }) => {
         if (!weather || !weather.forecast || !weather.forecast.length) return '';
         return `
@@ -149,7 +151,8 @@
       id: 'message',
       label: 'Custom Message',
       requires: 'message',
-      defaultLayout: { x: 7, y: 0, w: 5, h: 2 },
+      sizes: { S:{w:4,h:2}, M:{w:5,h:2}, L:{w:12,h:2}, XL:{w:12,h:3} },
+      defaultSize: 'M',
       render: ({ cfg }) => {
         const m = cfg.message;
         if (!m || !m.text) return '';
@@ -165,7 +168,8 @@
       id: 'todos',
       label: 'To-Do List',
       requires: 'todos',
-      defaultLayout: { x: 7, y: 2, w: 5, h: 3 },
+      sizes: { S:{w:4,h:3}, M:{w:5,h:3}, L:{w:6,h:6}, XL:{w:12,h:6} },
+      defaultSize: 'M',
       render: ({ todos }) => {
         if (!todos || !todos.length) return '';
         return `
@@ -187,7 +191,8 @@
       id: 'calendar',
       label: 'Calendar',
       requires: 'calendar',
-      defaultLayout: { x: 7, y: 5, w: 5, h: 1 },
+      sizes: { S:{w:4,h:2}, M:{w:5,h:2}, L:{w:12,h:2} },
+      defaultSize: 'M',
       render: ({ events }) => {
         if (!events || !events.length) return '';
         return `
@@ -212,70 +217,72 @@
     return WIDGET_REGISTRY.find(w => w.id === id);
   }
 
-  // Build layout array from cfg.
-  // - If cfg.layout exists, use it (filling in any missing fields from defaults).
-  // - Otherwise auto-fit enabled widgets across the grid so disabled widgets
-  //   never leave empty cells.
-  function resolveLayout() {
-    if (Array.isArray(cfg.layout) && cfg.layout.length) {
-      return cfg.layout.map(l => {
-        const def = widgetById(l.id);
-        if (!def) return null;
-        return {
-          id: l.id,
-          x: Number.isFinite(l.x) ? l.x : def.defaultLayout.x,
-          y: Number.isFinite(l.y) ? l.y : def.defaultLayout.y,
-          w: Number.isFinite(l.w) ? l.w : def.defaultLayout.w,
-          h: Number.isFinite(l.h) ? l.h : def.defaultLayout.h,
-          enabled: l.enabled !== false
-        };
-      }).filter(Boolean);
-    }
-    return buildAutoLayout();
+  // Per-screen defaults — match control-src/widgets.js.
+  const DEFAULT_LAYOUTS = {
+    1: [
+      { id:'weather_hero',     x:0, y:0, size:'M', enabled:true },
+      { id:'weather_forecast', x:4, y:0, size:'M', enabled:true },
+      { id:'message',          x:7, y:0, size:'M', enabled:true },
+      { id:'todos',            x:7, y:2, size:'M', enabled:true },
+      { id:'calendar',         x:7, y:4, size:'M', enabled:false }
+    ],
+    2: [
+      { id:'weather_hero',     x:0, y:0, size:'XL', enabled:true },
+      { id:'weather_forecast', x:0, y:0, size:'M',  enabled:false },
+      { id:'message',          x:0, y:0, size:'M',  enabled:false },
+      { id:'todos',            x:0, y:0, size:'M',  enabled:false },
+      { id:'calendar',         x:0, y:0, size:'M',  enabled:false }
+    ]
+  };
+
+  function sizeFor(def, sizeKey) {
+    const k = sizeKey && def.sizes[sizeKey] ? sizeKey : def.defaultSize;
+    return { size: k, ...def.sizes[k] };
   }
 
-  // Compute an auto-collapsing layout from the legacy `cfg.widgets` booleans.
-  // Splits the body grid into a weather area on the left and a stack of
-  // right-column widgets, sizing each region only when its widgets are on.
-  function buildAutoLayout() {
-    const have = {};
-    for (const def of WIDGET_REGISTRY) {
-      have[def.id] = !!widgets[def.requires];
+  // Resolve a raw saved layout array into one with explicit w/h. Stored
+  // geometry wins; size preset is the fallback.
+  function expandLayout(rawLayout) {
+    const byId = new Map((rawLayout || []).map(l => [l.id, l]));
+    return WIDGET_REGISTRY.map(def => {
+      const stored = byId.get(def.id);
+      const dl = DEFAULT_LAYOUTS[1].find(d => d.id === def.id)
+        || { x:0, y:0, size: def.defaultSize, enabled: false };
+      const merged = { ...dl, ...(stored || {}) };
+      const sz = sizeFor(def, merged.size);
+      return {
+        id: def.id,
+        x: Number.isFinite(merged.x) ? merged.x : 0,
+        y: Number.isFinite(merged.y) ? merged.y : 0,
+        w: Number.isFinite(merged.w) ? merged.w : sz.w,
+        h: Number.isFinite(merged.h) ? merged.h : sz.h,
+        enabled: merged.enabled !== false
+      };
+    });
+  }
+
+  // Pick the layout for the current screen. Order of precedence:
+  //  1. cfg.layouts[screen]               — new per-screen storage
+  //  2. cfg.layout (legacy, screen 1)     — back-compat single layout
+  //  3. cfg.widgets booleans              — oldest config shape
+  //  4. DEFAULT_LAYOUTS[screen]           — final fallback
+  function resolveLayout() {
+    const s = (screen === 2) ? 2 : 1;
+    if (cfg.layouts && Array.isArray(cfg.layouts[s]) && cfg.layouts[s].length) {
+      return expandLayout(cfg.layouts[s]);
     }
-    const rightItems = ['message', 'todos', 'calendar'].filter(id => have[id]);
-    const haveRight = rightItems.length > 0;
-    const haveHero = have.weather_hero;
-    const haveFc   = have.weather_forecast;
-
-    const leftCols  = haveRight ? (haveHero || haveFc ? (haveRight ? 7 : 12) : 0) : 12;
-    const rightCols = GRID_COLS - leftCols;
-    const rightX    = leftCols;
-
-    const layout = [];
-
-    if (haveHero && haveFc) {
-      const heroW = Math.max(3, Math.ceil(leftCols * 0.57));
-      const fcW   = leftCols - heroW;
-      layout.push({ id:'weather_hero',     x:0,     y:0, w:heroW, h:GRID_ROWS, enabled:true });
-      layout.push({ id:'weather_forecast', x:heroW, y:0, w:fcW,   h:GRID_ROWS, enabled:true });
-    } else if (haveHero) {
-      layout.push({ id:'weather_hero', x:0, y:0, w:leftCols, h:GRID_ROWS, enabled:true });
-    } else if (haveFc) {
-      layout.push({ id:'weather_forecast', x:0, y:0, w:leftCols, h:GRID_ROWS, enabled:true });
+    if (s === 1 && Array.isArray(cfg.layout) && cfg.layout.length) {
+      return expandLayout(cfg.layout);
     }
-
-    if (haveRight && rightCols > 0) {
-      const base = Math.floor(GRID_ROWS / rightItems.length);
-      const rem  = GRID_ROWS - base * rightItems.length;
-      let y = 0;
-      rightItems.forEach((id, i) => {
-        const h = base + (i < rem ? 1 : 0);
-        layout.push({ id, x: rightX, y, w: rightCols, h, enabled: true });
-        y += h;
+    if (cfg.widgets && Object.keys(cfg.widgets).length) {
+      // Build from legacy booleans + screen defaults.
+      const base = DEFAULT_LAYOUTS[s].map(d => {
+        const def = widgetById(d.id);
+        return { ...d, enabled: !!widgets[def?.requires] };
       });
+      return expandLayout(base);
     }
-
-    return layout;
+    return expandLayout(DEFAULT_LAYOUTS[s]);
   }
 
   const page = document.getElementById('page');
@@ -284,12 +291,6 @@
   const cityLabel = (cfg.cityLabel || cfg.city || '').toString();
   const dateStr = w ? w.currentDate : new Date().toDateString().toUpperCase();
   const timeStr = w ? w.currentTime : '';
-
-  // Screen 2 = minimal weather-only layout
-  if (screen === 2) {
-    renderScreen2();
-    return;
-  }
 
   const header = el('header', 'hdr');
   header.innerHTML = `
@@ -349,51 +350,6 @@
   `;
   page.appendChild(footer);
 
-  function renderScreen2() {
-    // Minimal: huge weather hero centered. No forecast/todos/calendar.
-    const root = page;
-    root.innerHTML = '';
-    root.classList.add('page-minimal');
-
-    const top = el('header', 'hdr');
-    top.innerHTML = `
-      <div class="hdr-left">
-        <div class="hdr-city">${cityLabel}</div>
-        <div class="hdr-date">${dateStr}</div>
-      </div>
-      <div class="hdr-right">
-        <div class="hdr-time">${timeStr}</div>
-        <div class="hdr-meta">SCREEN 2 · MINIMAL</div>
-      </div>
-    `;
-    root.appendChild(top);
-
-    const main = el('main', 'minimal-body');
-    if (widgets.weather && w) {
-      main.innerHTML = `
-        <div class="minimal-icon">${icon(w.main, 220)}</div>
-        <div class="minimal-temp"><span>${w.temp}</span><span class="minimal-deg">°${units}</span></div>
-        <div class="minimal-desc">${w.desc}</div>
-        <div class="minimal-hilo">HIGH ${w.tempMax}° · LOW ${w.tempMin}° · FEELS ${w.feelsLike}°</div>
-        ${widgets.message && cfg.message && cfg.message.text
-          ? `<div class="minimal-msg">${escapeHtml(cfg.message.text)}</div>` : ''}
-      `;
-    } else {
-      main.innerHTML = `<div class="empty">NO WEATHER</div>`;
-    }
-    root.appendChild(main);
-
-    const ftr = el('footer', 'ftr');
-    ftr.innerHTML = `
-      <span class="ftr-bullet">●</span>
-      UPDATED ${timeStr || '—'}
-      <span class="ftr-sep">·</span>
-      REFRESH ${cfg.refreshMinutes || 30}MIN
-      <span class="ftr-sep">·</span>
-      ${(cityLabel || 'DASHBOARD').split(' ')[0]}
-    `;
-    root.appendChild(ftr);
-  }
 })();
 </script>
 </body>

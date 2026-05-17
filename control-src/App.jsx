@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { fetchConfig, saveConfig, previewUrl } from './api.js';
 import {
   WIDGET_REGISTRY,
   GRID_COLS,
   GRID_ROWS,
-  resolveLayout
+  SCREENS,
+  getScreenLayout,
+  compactLayout,
+  defaultsForScreen
 } from './widgets.js';
 import EditorGrid from './components/EditorGrid.jsx';
 import Settings from './components/Settings.jsx';
@@ -23,10 +26,11 @@ const STATUS = {
 
 export default function App() {
   const [cfg, setCfg] = useState(null);
-  const [layout, setLayout] = useState([]); // editor working copy
+  const [layouts, setLayouts] = useState({ 1: [], 2: [] });
   const [status, setStatus] = useState('syncing');
   const [statusMsg, setStatusMsg] = useState(null);
   const [editMode, setEditMode] = useState(false);
+  const [editScreen, setEditScreen] = useState(1);
   const [showGrid, setShowGrid] = useState(true);
   const [previewKey, setPreviewKey] = useState(Date.now());
 
@@ -34,7 +38,11 @@ export default function App() {
     fetchConfig()
       .then(c => {
         setCfg(c);
-        setLayout(resolveLayout(c));
+        setLayouts({
+          1: getScreenLayout(c, 1),
+          2: getScreenLayout(c, 2)
+        });
+        setEditScreen(parseInt(c.screen, 10) === 2 ? 2 : 1);
         setStatus('synced');
       })
       .catch(err => {
@@ -43,7 +51,7 @@ export default function App() {
       });
   }, []);
 
-  const markDirty = () => { if (status !== 'dirty') setStatus('dirty'); };
+  const markDirty = () => setStatus(s => s === 'dirty' ? s : 'dirty');
 
   const patchCfg = (patch) => {
     setCfg(prev => ({ ...prev, ...patch }));
@@ -55,8 +63,8 @@ export default function App() {
     markDirty();
   };
 
-  const updateLayoutItem = (id, patch) => {
-    setLayout(prev => prev.map(l => l.id === id ? { ...l, ...patch } : l));
+  const updateLayout = (screen, next) => {
+    setLayouts(prev => ({ ...prev, [screen]: next }));
     markDirty();
   };
 
@@ -64,21 +72,30 @@ export default function App() {
     if (!cfg) return;
     setStatus('saving');
     try {
-      // Persist the editor layout array and keep the legacy widgets booleans
-      // in sync (so devices without `layout` still render correctly).
+      // Keep legacy `cfg.widgets` booleans in sync with whatever's enabled
+      // on screen 1, so devices that haven't migrated still render right.
       const widgetsBool = { ...(cfg.widgets || {}) };
       for (const def of WIDGET_REGISTRY) {
-        const item = layout.find(l => l.id === def.id);
+        const item = layouts[1].find(l => l.id === def.id);
         if (item) widgetsBool[def.requires] = item.enabled !== false;
       }
       const next = {
         ...cfg,
         widgets: widgetsBool,
-        layout: layout.map(({ id, x, y, w, h, enabled }) => ({ id, x, y, w, h, enabled }))
+        layouts: {
+          1: compactLayout(layouts[1]),
+          2: compactLayout(layouts[2])
+        }
       };
+      // Drop the legacy single-array field if present; new schema lives on
+      // `layouts`.
+      delete next.layout;
       const saved = await saveConfig(next);
       setCfg(saved);
-      setLayout(resolveLayout(saved));
+      setLayouts({
+        1: getScreenLayout(saved, 1),
+        2: getScreenLayout(saved, 2)
+      });
       setStatus('saved');
       setPreviewKey(Date.now());
     } catch (err) {
@@ -98,6 +115,7 @@ export default function App() {
   }
 
   const statusDef = STATUS[status] || STATUS.synced;
+  const layout = layouts[editScreen] || [];
 
   return (
     <div className="shell">
@@ -123,70 +141,53 @@ export default function App() {
         </div>
 
         <div className="settings">
-          <AnimatePresence mode="wait">
-            {editMode ? (
-              <motion.div
-                key="editor"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                <section className="card">
-                  <div className="section-title">
-                    <span>Edit Layout</span>
-                    <span className="badge">{GRID_COLS}×{GRID_ROWS}</span>
-                  </div>
-                  <div className="editor-toolbar">
-                    <div className="btn-row">
-                      <button className="btn" onClick={() => setShowGrid(g => !g)}>
-                        {showGrid ? '◧ HIDE GRID' : '◧ SHOW GRID'}
-                      </button>
-                      <button className="btn btn-ghost" onClick={() => {
-                        // Reset to defaults
-                        setLayout(WIDGET_REGISTRY.map(def => ({
-                          id: def.id,
-                          ...def.defaultLayout,
-                          enabled: !!(cfg.widgets && cfg.widgets[def.requires])
-                        })));
-                        markDirty();
-                      }}>
-                        ↻ RESET
-                      </button>
-                    </div>
-                  </div>
-                  <EditorGrid
-                    layout={layout}
-                    showGrid={showGrid}
-                    onChange={(next) => { setLayout(next); markDirty(); }}
-                  />
-                  <div className="editor-help">
-                    DRAG TO MOVE · CORNER TO RESIZE · × TO REMOVE · POOL BELOW TO ADD
-                  </div>
-                </section>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="settings"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Settings
-                  cfg={cfg}
-                  layout={layout}
-                  onPatch={patchCfg}
-                  onPatchNested={patchNested}
-                  onToggleWidget={(id) => {
-                    const item = layout.find(l => l.id === id);
-                    if (!item) return;
-                    updateLayoutItem(id, { enabled: !item.enabled });
-                  }}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {editMode ? (
+            <section className="card">
+              <div className="section-title">
+                <span>Edit Layout</span>
+                <span className="badge">{GRID_COLS}×{GRID_ROWS}</span>
+              </div>
+              <div className="editor-toolbar">
+                <div className="btn-row" style={{ marginTop: 0 }}>
+                  <span className="editor-help" style={{ marginRight: 6, marginTop: 0 }}>SCREEN</span>
+                  {SCREENS.map(s => (
+                    <button
+                      key={s}
+                      className={`btn ${editScreen === s ? 'btn-primary' : ''}`}
+                      onClick={() => setEditScreen(s)}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+                <div className="btn-row" style={{ marginTop: 0 }}>
+                  <button className="btn" onClick={() => setShowGrid(g => !g)}>
+                    {showGrid ? '◧ HIDE GRID' : '◧ SHOW GRID'}
+                  </button>
+                  <button className="btn btn-ghost" onClick={() => {
+                    updateLayout(editScreen, defaultsForScreen(editScreen));
+                  }}>
+                    ↻ RESET
+                  </button>
+                </div>
+              </div>
+              <EditorGrid
+                layout={layout}
+                showGrid={showGrid}
+                onChange={(next) => updateLayout(editScreen, next)}
+              />
+              <div className="editor-help">
+                DRAG TO MOVE · PRESETS BELOW EACH TILE · × TO REMOVE · POOL TO ADD
+              </div>
+            </section>
+          ) : (
+            <Settings
+              cfg={cfg}
+              layout={layout}
+              onPatch={patchCfg}
+              onPatchNested={patchNested}
+            />
+          )}
         </div>
       </main>
 

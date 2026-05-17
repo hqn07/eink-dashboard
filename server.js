@@ -372,6 +372,10 @@ app.post('/api/config', async (req, res) => {
     const current = await loadConfig();
     const bodySched = req.body.schedule || {};
     const curSched = current.schedule || {};
+    // `layouts` is a per-screen map. Whatever the client sends is treated
+    // as the canonical state for those screens; missing screens keep the
+    // server's previous values.
+    const mergedLayouts = { ...(current.layouts || {}), ...(req.body.layouts || {}) };
     const merged = { ...current, ...req.body,
       widgets: { ...current.widgets, ...(req.body.widgets || {}) },
       message: { ...current.message, ...(req.body.message || {}) },
@@ -379,8 +383,14 @@ app.post('/api/config', async (req, res) => {
       schedule: { ...curSched, ...bodySched,
         active: { ...(curSched.active || {}), ...(bodySched.active || {}) },
         quiet:  { ...(curSched.quiet  || {}), ...(bodySched.quiet  || {}) }
-      }
+      },
+      layouts: mergedLayouts
     };
+    // The client explicitly drops `layout` (legacy single-array) when it
+    // saves under the new schema. Honor that.
+    if (req.body.layout === null || (req.body.layouts && !('layout' in req.body))) {
+      delete merged.layout;
+    }
     await saveConfig(merged);
     invalidateImage();
     res.json({ ok: true, config: merged });

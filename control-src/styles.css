@@ -363,6 +363,26 @@ input[type="text"], input[type="url"], textarea {
   letter-spacing: 2px;
   margin-top: auto;
 }
+
+.tile-sizes {
+  display: flex;
+  gap: 4px;
+  margin-top: auto;
+}
+.size-pill {
+  border: 2px solid var(--ink);
+  background: #fff;
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 3px 6px;
+  cursor: pointer;
+  min-width: 28px;
+}
+.size-pill.active { background: var(--ink); color: #fff; }
+.size-pill:hover:not(.active) { background: #f0ece2; }
 .editor-tile .tile-handle {
   position: absolute;
   top: 4px;
