@@ -137,15 +137,23 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
   const addToCanvas = (id) => {
     const def = widgetById(id);
     if (!def) return;
-    const sizeKey = smallestSizeKey(def);
-    const { w, h } = def.sizes[sizeKey];
-    const slot = findFreeSlot(w, h, enabled);
-    if (!slot) {
-      triggerShake();
-      onError && onError(`No room for ${def.label} on canvas`);
-      return;
+    // Try every registered size, smallest area first; first one that
+    // fits in the canvas wins. Fluid widgets (e.g. the spacer) also
+    // get a 1×1 fallback so they can squeeze into any leftover cell.
+    const candidates = Object.entries(def.sizes)
+      .map(([key, sz]) => ({ key, w: sz.w, h: sz.h }))
+      .sort((a, b) => (a.w * a.h) - (b.w * b.h));
+    candidates.push({ key: null, w: 1, h: 1 });
+
+    for (const c of candidates) {
+      const slot = findFreeSlot(c.w, c.h, enabled);
+      if (slot) {
+        onChange(layout.map(l => l.id === id ? { ...l, ...slot, w: c.w, h: c.h, size: c.key, enabled: true } : l));
+        return;
+      }
     }
-    onChange(layout.map(l => l.id === id ? { ...l, ...slot, w, h, size: sizeKey, enabled: true } : l));
+    triggerShake();
+    onError && onError(`No room for ${def.label} on canvas`);
   };
 
   const removeFromCanvas = (id) => {
