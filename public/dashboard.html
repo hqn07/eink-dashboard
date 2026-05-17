@@ -294,7 +294,8 @@
         y: Number.isFinite(merged.y) ? merged.y : 0,
         w: Number.isFinite(merged.w) ? merged.w : sz.w,
         h: Number.isFinite(merged.h) ? merged.h : sz.h,
-        enabled: merged.enabled !== false
+        enabled: merged.enabled !== false,
+        flush: !!merged.flush
       };
     });
   }
