@@ -2,13 +2,21 @@ import React, { useRef, useEffect, useState } from 'react';
 import GridLayout from 'react-grid-layout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById } from '../widgets.js';
-import { renderWidget } from '../widget-render.js';
+import { renderWidget, renderHeader, renderFooter } from '../widget-render.js';
 
 // Editor cells must align 1:1 with dashboard cells so widget previews
 // scale cleanly. Any padding/margin would offset cells from the
 // dashboard's tight grid and overflow the live previews.
 const PAD = 0;
 const MARGIN = 0;
+
+// Dashboard chrome heights (must match public/dashboard.css `.page`
+// grid-template-rows: 60px 1fr 28px on a 480px-tall canvas).
+const DASH_W = 800;
+const DASH_H = 480;
+const HEADER_H = 60;
+const FOOTER_H = 28;
+const BODY_H = DASH_H - HEADER_H - FOOTER_H;
 
 // Pick a widget's smallest registered size by area — used for the pool
 // preview and for the initial drop size when a widget is added.
@@ -41,7 +49,12 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
   const enabled  = layout.filter(l => l.enabled !== false);
   const disabled = layout.filter(l => l.enabled === false);
 
-  const rowHeight = size.h / GRID_ROWS;
+  // Editor canvas is sized to the full dashboard aspect; the body
+  // section we hand to RGL is BODY_H/DASH_H of that height. Row
+  // height inside the body matches the dashboard's body row height.
+  const scale = size.w > 0 ? size.w / DASH_W : 1;
+  const bodyHeight = size.h * (BODY_H / DASH_H);
+  const rowHeight = bodyHeight / GRID_ROWS;
   const innerW = size.w;
 
   const rglLayout = enabled.map(l => ({
@@ -174,6 +187,17 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
         onDragLeave={onCanvasDragLeave}
         onDrop={onCanvasDrop}
       >
+        {/* Header chrome — purely visual; matches dashboard.css `.hdr`. */}
+        <div
+          className="editor-chrome hdr"
+          style={{
+            position: 'absolute', top: 0, left: 0,
+            width: DASH_W, height: HEADER_H,
+            transform: `scale(${scale})`, transformOrigin: 'top left',
+            pointerEvents: 'none'
+          }}
+          dangerouslySetInnerHTML={{ __html: renderHeader(previewData) }}
+        />
         <GridLayout
           className="layout"
           cols={GRID_COLS}
@@ -193,12 +217,10 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
         >
           {enabled.map(l => {
             const html = renderWidget(l.id, previewData) || '';
-            // Render widget at its dashboard pixel footprint, then scale
-            // down to fit the editor tile. This way the widget visuals
-            // match what'll show on the real 800×480 display.
-            const dashW = l.w * (800 / GRID_COLS);
-            const dashH = l.h * (480 / GRID_ROWS);
-            const scale = size.w > 0 ? size.w / 800 : 1;
+            // Render widget at its dashboard pixel footprint (body
+            // area only — header/footer live outside the RGL grid).
+            const dashW = l.w * (DASH_W / GRID_COLS);
+            const dashH = l.h * (BODY_H / GRID_ROWS);
             return (
               <div key={l.id}>
                 <motion.div
@@ -237,6 +259,18 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
             &gt; CANVAS_EMPTY — DRAG A WIDGET FROM POOL BELOW
           </div>
         )}
+
+        {/* Footer chrome */}
+        <div
+          className="editor-chrome ftr"
+          style={{
+            position: 'absolute', bottom: 0, left: 0,
+            width: DASH_W, height: FOOTER_H,
+            transform: `scale(${scale})`, transformOrigin: 'bottom left',
+            pointerEvents: 'none'
+          }}
+          dangerouslySetInnerHTML={{ __html: renderFooter(previewData) }}
+        />
       </motion.div>
 
       <div

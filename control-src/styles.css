@@ -300,10 +300,18 @@ input[type="text"], input[type="url"], textarea {
 }
 .editor-wrap .react-grid-layout {
   position: absolute;
-  inset: 0;
+  /* Inset the RGL grid by the dashboard header / footer heights so
+   * widget tiles align 1:1 with the body area of the live dashboard.
+   * 60/480 = 12.5% from top; 28/480 ≈ 5.83% from bottom. */
+  top: 12.5%;
+  bottom: 5.83%;
+  left: 0;
+  right: 0;
   width: 100% !important;
-  height: 100% !important;
+  height: auto !important;
 }
+.editor-chrome.hdr, .editor-chrome.ftr { z-index: 2; }
+.editor-chrome.hdr { background: #000; color: #fff; }
 .editor-wrap.show-grid {
   background-image:
     linear-gradient(to right, var(--grid) 1px, transparent 1px),
@@ -322,7 +330,7 @@ input[type="text"], input[type="url"], textarea {
 
 .editor-tile {
   background: #fff;
-  border: 2px solid var(--line);
+  border: 0;
   padding: 0;
   display: flex;
   flex-direction: column;

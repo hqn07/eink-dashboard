@@ -186,3 +186,39 @@ export function renderWidget(id, data) {
   if (!fn) return '';
   try { return fn(data || {}); } catch { return ''; }
 }
+
+// Header/footer chrome the dashboard wraps around the body grid. The
+// editor renders these in fixed top/bottom strips so the body area
+// exactly matches the dashboard's body grid pixel-for-pixel.
+export function renderHeader(data) {
+  const cfg = (data && data.cfg) || {};
+  const w   = data && data.weather;
+  const cityLabel = (cfg.cityLabel || cfg.city || '').toString();
+  const dateStr = w ? w.currentDate : new Date().toDateString().toUpperCase();
+  const timeStr = w ? w.currentTime : '';
+  return `
+    <div class="hdr-left">
+      <div class="hdr-city">${escapeHtml(cityLabel)}</div>
+      <div class="hdr-date">${escapeHtml(dateStr)}</div>
+    </div>
+    <div class="hdr-right">
+      <div class="hdr-time">${escapeHtml(timeStr)}</div>
+      <div class="hdr-meta">EDITION No. ${Math.floor(Date.now()/3600000) % 9999}</div>
+    </div>
+  `;
+}
+
+export function renderFooter(data) {
+  const cfg = (data && data.cfg) || {};
+  const w   = data && data.weather;
+  const cityLabel = (cfg.cityLabel || cfg.city || '').toString();
+  const timeStr = w ? w.currentTime : '—';
+  return `
+    <span class="ftr-bullet">●</span>
+    UPDATED ${escapeHtml(timeStr || '—')}
+    <span class="ftr-sep">·</span>
+    REFRESH ${cfg.refreshMinutes || 30}MIN
+    <span class="ftr-sep">·</span>
+    THE DAILY ${escapeHtml((cityLabel || 'DASHBOARD').split(' ')[0])}
+  `;
+}
