@@ -9,16 +9,22 @@ import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById } from '../widgets.js
 //  - Each canvas tile has size-preset buttons (S/M/L/XL) and a × remove.
 // Resizing is preset-based — no arbitrary corner drag — to keep layouts
 // snapping to known-good sizes.
+const PAD = 8;
+const MARGIN = 4;
+
 export default function EditorGrid({ layout, showGrid, onChange }) {
   const wrapRef = useRef(null);
-  const [width, setWidth] = useState(800);
+  const [size, setSizeState] = useState({ w: 800, h: 480 });
+  const [shake, setShake] = useState(false);
+  const [invalidPress, setInvalidPress] = useState(null); // { id, size }
 
   useEffect(() => {
     if (!wrapRef.current) return;
     const ro = new ResizeObserver(entries => {
       for (const e of entries) {
         const w = e.contentRect.width;
-        if (w > 0) setWidth(w);
+        const h = e.contentRect.height;
+        if (w > 0 && h > 0) setSizeState({ w, h });
       }
     });
     ro.observe(wrapRef.current);
@@ -28,7 +34,11 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
   const enabled  = layout.filter(l => l.enabled !== false);
   const disabled = layout.filter(l => l.enabled === false);
 
-  const rowHeight = ((width - 16) * 0.6) / GRID_ROWS;
+  // Compute row height from the actual measured container so widgets
+  // always fit, regardless of CSS aspect-ratio rounding.
+  const innerH = Math.max(0, size.h - PAD * 2 - (GRID_ROWS - 1) * MARGIN);
+  const rowHeight = innerH / GRID_ROWS;
+  const innerW = Math.max(0, size.w - PAD * 2);
 
   const rglLayout = enabled.map(l => ({
     i: l.id,
@@ -82,6 +92,33 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
     return { x: 0, y: 0 };
   };
 
+  // Try to place the given size at the tile's current position. Returns
+  // { ok, x, y } — ok=false means nothing on the grid fits.
+  const tryFitSize = (id, w, h) => {
+    const target = layout.find(l => l.id === id);
+    if (!target) return { ok: false };
+    const others = enabled.filter(o => o.id !== id);
+    const overlaps = (px, py) => others.some(o =>
+      px < o.x + o.w && px + w > o.x &&
+      py < o.y + o.h && py + h > o.y
+    );
+    let { x, y } = clampPos(target.x, target.y, w, h);
+    if (!overlaps(x, y)) return { ok: true, x, y };
+    for (let yy = 0; yy + h <= GRID_ROWS; yy++) {
+      for (let xx = 0; xx + w <= GRID_COLS; xx++) {
+        if (!overlaps(xx, yy)) return { ok: true, x: xx, y: yy };
+      }
+    }
+    return { ok: false };
+  };
+
+  const triggerShake = (id, sizeKey) => {
+    setShake(true);
+    setInvalidPress({ id, size: sizeKey });
+    setTimeout(() => setShake(false), 500);
+    setTimeout(() => setInvalidPress(null), 900);
+  };
+
   const setSize = (id, sizeKey) => {
     const def = widgetById(id);
     if (!def || !def.sizes[sizeKey]) return;
@@ -89,30 +126,31 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
     w = Math.min(w, GRID_COLS);
     h = Math.min(h, GRID_ROWS);
 
-    const target = layout.find(l => l.id === id);
-    if (!target) return;
-    const others = enabled.filter(o => o.id !== id);
-    const overlaps = (px, py) => others.some(o =>
-      px < o.x + o.w && px + w > o.x &&
-      py < o.y + o.h && py + h > o.y
-    );
-
-    // Prefer to keep the tile's current position; if the bigger size
-    // collides with neighbors, scan for a free top-left slot. Falls back
-    // to the clamped original position when nothing fits — the user can
-    // then move other widgets out of the way.
-    let { x, y } = clampPos(target.x, target.y, w, h);
-    if (overlaps(x, y)) {
-      let found = null;
-      for (let yy = 0; yy + h <= GRID_ROWS && !found; yy++) {
-        for (let xx = 0; xx + w <= GRID_COLS; xx++) {
-          if (!overlaps(xx, yy)) { found = { x: xx, y: yy }; break; }
-        }
-      }
-      if (found) ({ x, y } = found);
+    const first = tryFitSize(id, w, h);
+    if (first.ok) {
+      onChange(layout.map(l => l.id === id ? { ...l, x: first.x, y: first.y, w, h, size: sizeKey } : l));
+      return;
     }
 
-    onChange(layout.map(l => l.id === id ? { ...l, x, y, w, h, size: sizeKey } : l));
+    // Requested size doesn't fit anywhere. Find the largest preset that
+    // does — by total area, descending — and fall back to it.
+    triggerShake(id, sizeKey);
+    const candidates = Object.entries(def.sizes)
+      .filter(([key]) => key !== sizeKey)
+      .map(([key, { w: cw, h: ch }]) => ({ key, w: Math.min(cw, GRID_COLS), h: Math.min(ch, GRID_ROWS) }))
+      .sort((a, b) => (b.w * b.h) - (a.w * a.h));
+    for (const c of candidates) {
+      const fit = tryFitSize(id, c.w, c.h);
+      if (fit.ok) {
+        // Delay the fallback slightly so the red flash + shake reads as
+        // "tried oversize → fell back".
+        setTimeout(() => {
+          onChange(layout.map(l => l.id === id ? { ...l, x: fit.x, y: fit.y, w: c.w, h: c.h, size: c.key } : l));
+        }, 350);
+        return;
+      }
+    }
+    // Nothing fits at all — just shake; layout unchanged.
   };
 
   const addToCanvas = (id) => {
@@ -130,18 +168,23 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
 
   return (
     <div>
-      <div ref={wrapRef} className={`editor-wrap ${showGrid ? 'show-grid' : ''}`}>
+      <motion.div
+        ref={wrapRef}
+        className={`editor-wrap ${showGrid ? 'show-grid' : ''}`}
+        animate={shake ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
+        transition={{ duration: 0.45 }}
+      >
         <GridLayout
           className="layout"
           cols={GRID_COLS}
           rowHeight={rowHeight}
-          width={width - 16}
+          width={innerW}
           maxRows={GRID_ROWS}
           compactType={null}
           preventCollision
           isResizable
           resizeHandles={['se']}
-          margin={[4, 4]}
+          margin={[MARGIN, MARGIN]}
           containerPadding={[0, 0]}
           layout={rglLayout}
           onLayoutChange={handleLayoutChange}
@@ -167,14 +210,17 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
                   <div className="tile-id">{l.id}</div>
                   <div className="tile-label">{def?.label || l.id}</div>
                   <div className="tile-sizes" onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
-                    {sizeKeys.map(k => (
-                      <button
-                        key={k}
-                        className={`size-pill ${l.size === k ? 'active' : ''}`}
-                        onClick={(e) => { e.stopPropagation(); setSize(l.id, k); }}
-                        title={`${def.sizes[k].w}×${def.sizes[k].h}`}
-                      >{k}</button>
-                    ))}
+                    {sizeKeys.map(k => {
+                      const bad = invalidPress && invalidPress.id === l.id && invalidPress.size === k;
+                      return (
+                        <button
+                          key={k}
+                          className={`size-pill ${l.size === k ? 'active' : ''} ${bad ? 'invalid' : ''}`}
+                          onClick={(e) => { e.stopPropagation(); setSize(l.id, k); }}
+                          title={`${def.sizes[k].w}×${def.sizes[k].h}`}
+                        >{k}</button>
+                      );
+                    })}
                   </div>
                 </motion.div>
               </div>
@@ -187,7 +233,7 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
             &gt; CANVAS_EMPTY — ADD A WIDGET FROM POOL BELOW
           </div>
         )}
-      </div>
+      </motion.div>
 
       <div className="palette">
         <div className="palette-title">

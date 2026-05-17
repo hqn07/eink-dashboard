@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { fetchConfig, saveConfig, previewUrl } from './api.js';
+import { fetchConfig, saveConfig } from './api.js';
 import {
   WIDGET_REGISTRY,
   GRID_COLS,
@@ -137,7 +137,11 @@ export default function App() {
 
       <main className="layout">
         <div className="preview-stage">
-          <Preview src={previewUrl()} cacheKey={previewKey} onRefresh={refreshPreview} />
+          <Preview
+            screen={parseInt(cfg.screen, 10) === 2 ? 2 : 1}
+            cacheKey={previewKey}
+            onRefresh={refreshPreview}
+          />
         </div>
 
         <div className="settings">
