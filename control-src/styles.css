@@ -146,6 +146,56 @@ main.layout {
 .screen-panel.invalid { border-color: var(--accent); }
 .terminal-line.invalid { color: var(--accent); }
 
+/* ============ SCHEDULE TIMELINE ============ */
+.timeline-wrap {
+  background: #fff;
+  border: 2px solid var(--ink);
+  padding: 10px 12px 14px;
+  margin-bottom: 16px;
+}
+.timeline-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--ink);
+}
+.timeline-help {
+  color: var(--mute);
+  font-weight: 500;
+  letter-spacing: 2px;
+}
+.timeline-svg {
+  display: block;
+  touch-action: none;
+  user-select: none;
+}
+.tl-block {
+  cursor: grab;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+.tl-block:active { cursor: grabbing; }
+.tl-block.block-norm { fill: #f0ece2; }
+.tl-block.block-active { fill: var(--ink); }
+.tl-block.block-overlap { fill: var(--accent); }
+.tl-handle {
+  fill: var(--ink);
+  cursor: ew-resize;
+  opacity: 0.6;
+}
+.tl-handle:hover { opacity: 1; }
+.tl-overlap-band {
+  fill: var(--accent);
+  opacity: 0.35;
+}
+
 @media (min-width: 980px) {
   main.layout {
     grid-template-columns: minmax(440px, 1.1fr) 1fr;

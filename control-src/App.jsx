@@ -21,6 +21,7 @@ import Preview from './components/Preview.jsx';
 import SaveBar from './components/SaveBar.jsx';
 import ScreenTabs from './components/ScreenTabs.jsx';
 import ScreenPanel from './components/ScreenPanel.jsx';
+import ScheduleTimeline from './components/ScheduleTimeline.jsx';
 
 const STATUS = {
   syncing: { label: 'SYNCING...', cls: 'saving' },
@@ -275,6 +276,19 @@ export default function App() {
         onAdd={addScreen}
         canAdd={screens.length < MAX_SCREENS}
       />
+
+      {!editMode && (
+        <ScheduleTimeline
+          screens={screens}
+          activeId={editScreenId}
+          overlapIds={overlapIds}
+          timezone={cfg.timezone || 'UTC'}
+          onSelect={setEditScreenId}
+          onUpdateSchedule={(id, patch) => updateScreen(id, {
+            schedule: { ...(screens.find(s => s.id === id)?.schedule || { enabled: false }), ...patch, enabled: true }
+          })}
+        />
+      )}
 
       <main className={`layout ${editMode ? 'edit-mode' : ''}`}>
         {!editMode && (
