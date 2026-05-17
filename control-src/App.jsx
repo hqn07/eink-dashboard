@@ -82,6 +82,15 @@ export default function App() {
   const screens = cfg ? (cfg.screens || []) : [];
   const editScreen = screens.find(s => s.id === editScreenId) || screens[0];
 
+  // Ticker so the active-screen pick + the preview reload when the
+  // wall clock crosses a schedule boundary. 60s is plenty — the
+  // dashboard's own refresh interval is at least that long.
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 60000);
+    return () => clearInterval(id);
+  }, []);
+
   // Lock preview to the scheduled screen at the current moment, unless
   // the user is actively editing (then follow their tab).
   const liveScreen = useMemo(() => {
@@ -90,7 +99,7 @@ export default function App() {
     return pickActiveScreen(cfg, nowMinutesLocal(cfg.timezone || 'UTC'))
       || editScreen
       || screens[0];
-  }, [cfg, editMode, editScreen, screens]);
+  }, [cfg, editMode, editScreen, screens, nowTick]);
 
   // Overlap validation.
   const overlaps = useMemo(() => findOverlaps(screens), [screens]);
@@ -295,7 +304,7 @@ export default function App() {
           <div className="preview-stage">
             <Preview
               screen={liveScreen ? liveScreen.id : ''}
-              cacheKey={previewKey}
+              cacheKey={`${previewKey}-${nowTick}`}
               onRefresh={refreshPreview}
             />
             {liveScreen && pickActiveScreen(cfg, nowMinutesLocal(cfg.timezone || 'UTC'))?.id === liveScreen.id && liveScreen.schedule?.enabled && (
