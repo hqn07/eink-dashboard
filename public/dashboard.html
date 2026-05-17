@@ -24,11 +24,21 @@
   document.body.setAttribute('data-screen', String(screen));
   document.body.setAttribute('data-units', units);
 
+  // ============ GRID CONFIG ============
+  const GRID_COLS = 12;
+  const GRID_ROWS = 6;
+
   function el(tag, cls, html) {
     const e = document.createElement(tag);
     if (cls) e.className = cls;
     if (html !== undefined) e.innerHTML = html;
     return e;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
   }
 
   // Icon SVGs — pure black/white, scale to any size via CSS
@@ -83,6 +93,151 @@
     return `<span class="icon" style="width:${size}px;height:${size}px">${svg}</span>`;
   }
 
+  // ============ WIDGET REGISTRY ============
+  // Each widget: { id, label, requires, defaultLayout, render(ctx) -> HTML | '' }
+  // requires = which boolean in cfg.widgets must be true (legacy fallback)
+  // render returns '' if data missing, signalling the cell to skip.
+  const WIDGET_REGISTRY = [
+    {
+      id: 'weather_hero',
+      label: 'Weather (current)',
+      requires: 'weather',
+      defaultLayout: { x: 0, y: 0, w: 4, h: 6 },
+      render: ({ weather, units }) => {
+        if (!weather) return '';
+        return `
+          <div class="weather-hero">
+            <div class="weather-icon">${icon(weather.main, 130)}</div>
+            <div class="weather-temp">
+              <span class="temp-num">${weather.temp}</span><span class="temp-deg">°${units}</span>
+            </div>
+            <div class="weather-desc">${weather.desc}</div>
+            <div class="weather-hilo">HIGH ${weather.tempMax}° &nbsp;·&nbsp; LOW ${weather.tempMin}°</div>
+          </div>
+          <div class="weather-stats">
+            <div class="stat"><span class="stat-k">FEELS</span><span class="stat-v">${weather.feelsLike}°</span></div>
+            <div class="stat"><span class="stat-k">HUMID</span><span class="stat-v">${weather.humidity}%</span></div>
+            <div class="stat"><span class="stat-k">WIND</span><span class="stat-v">${weather.windDir} ${weather.windSpeed} ${weather.windUnit || ''}</span></div>
+            <div class="stat"><span class="stat-k">RISE</span><span class="stat-v">${weather.sunrise}</span></div>
+          </div>
+        `;
+      }
+    },
+    {
+      id: 'weather_forecast',
+      label: '3-Day Forecast',
+      requires: 'weather',
+      defaultLayout: { x: 4, y: 0, w: 3, h: 6 },
+      render: ({ weather }) => {
+        if (!weather || !weather.forecast || !weather.forecast.length) return '';
+        return `
+          <div class="col-title">3-DAY OUTLOOK</div>
+          ${weather.forecast.map(f => `
+            <div class="fc-row">
+              <div class="fc-day">${f.name}</div>
+              <div class="fc-icon">${icon(f.main, 38)}</div>
+              <div class="fc-hilo">
+                <div class="fc-hi">${f.hi}°</div>
+                <div class="fc-lo">${f.lo}°</div>
+              </div>
+            </div>
+          `).join('')}
+        `;
+      }
+    },
+    {
+      id: 'message',
+      label: 'Custom Message',
+      requires: 'message',
+      defaultLayout: { x: 7, y: 0, w: 5, h: 2 },
+      render: ({ cfg }) => {
+        const m = cfg.message;
+        if (!m || !m.text) return '';
+        return `
+          <div class="widget widget-msg">
+            <div class="msg-text">${escapeHtml(m.text)}</div>
+            ${m.subtitle ? `<div class="msg-sub">${escapeHtml(m.subtitle)}</div>` : ''}
+          </div>
+        `;
+      }
+    },
+    {
+      id: 'todos',
+      label: 'To-Do List',
+      requires: 'todos',
+      defaultLayout: { x: 7, y: 2, w: 5, h: 3 },
+      render: ({ todos }) => {
+        if (!todos || !todos.length) return '';
+        return `
+          <div class="widget widget-todos">
+            <div class="widget-title">TODO</div>
+            <ul class="todo-list">
+              ${todos.map(t => `
+                <li class="${t.done ? 'done' : ''}">
+                  <span class="checkbox"></span>
+                  <span class="todo-text">${escapeHtml(t.text)}</span>
+                </li>
+              `).join('')}
+            </ul>
+          </div>
+        `;
+      }
+    },
+    {
+      id: 'calendar',
+      label: 'Calendar',
+      requires: 'calendar',
+      defaultLayout: { x: 7, y: 5, w: 5, h: 1 },
+      render: ({ events }) => {
+        if (!events || !events.length) return '';
+        return `
+          <div class="widget widget-cal">
+            <div class="widget-title">UPCOMING</div>
+            ${events.slice(0,3).map(ev => `
+              <div class="cal-row">
+                <div class="cal-day">${ev.dayLabel}</div>
+                <div class="cal-info">
+                  <div class="cal-title">${escapeHtml(ev.title)}</div>
+                  <div class="cal-time">${ev.startLabel}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+    }
+  ];
+
+  function widgetById(id) {
+    return WIDGET_REGISTRY.find(w => w.id === id);
+  }
+
+  // Build layout array from cfg.
+  // - If cfg.layout exists, use it (filling in any missing fields from defaults).
+  // - Otherwise build from defaults filtered by cfg.widgets booleans.
+  function resolveLayout() {
+    if (Array.isArray(cfg.layout) && cfg.layout.length) {
+      return cfg.layout.map(l => {
+        const def = widgetById(l.id);
+        if (!def) return null;
+        return {
+          id: l.id,
+          x: Number.isFinite(l.x) ? l.x : def.defaultLayout.x,
+          y: Number.isFinite(l.y) ? l.y : def.defaultLayout.y,
+          w: Number.isFinite(l.w) ? l.w : def.defaultLayout.w,
+          h: Number.isFinite(l.h) ? l.h : def.defaultLayout.h,
+          enabled: l.enabled !== false
+        };
+      }).filter(Boolean);
+    }
+    // Legacy fallback: build from cfg.widgets booleans + defaults
+    return WIDGET_REGISTRY.map(def => ({
+      id: def.id,
+      ...def.defaultLayout,
+      enabled: !!widgets[def.requires]
+    }));
+  }
+
   const page = document.getElementById('page');
 
   // ============ HEADER ============
@@ -109,99 +264,35 @@
   `;
   page.appendChild(header);
 
-  // ============ MAIN BODY ============
-  const body = el('main', 'body');
+  // ============ MAIN BODY — CSS GRID ============
+  const body = el('main', 'body body-grid');
+  body.style.gridTemplateColumns = `repeat(${GRID_COLS}, 1fr)`;
+  body.style.gridTemplateRows    = `repeat(${GRID_ROWS}, 1fr)`;
   page.appendChild(body);
 
-  // Left column: weather hero (always visible if weather enabled)
-  if (widgets.weather && w) {
-    const left = el('section', 'col col-left');
-    left.innerHTML = `
-      <div class="weather-hero">
-        <div class="weather-icon">${icon(w.main, 130)}</div>
-        <div class="weather-temp">
-          <span class="temp-num">${w.temp}</span><span class="temp-deg">°${units}</span>
-        </div>
-        <div class="weather-desc">${w.desc}</div>
-        <div class="weather-hilo">HIGH ${w.tempMax}° &nbsp;·&nbsp; LOW ${w.tempMin}°</div>
-      </div>
-      <div class="weather-stats">
-        <div class="stat"><span class="stat-k">FEELS</span><span class="stat-v">${w.feelsLike}°</span></div>
-        <div class="stat"><span class="stat-k">HUMID</span><span class="stat-v">${w.humidity}%</span></div>
-        <div class="stat"><span class="stat-k">WIND</span><span class="stat-v">${w.windDir} ${w.windSpeed} ${w.windUnit || ''}</span></div>
-        <div class="stat"><span class="stat-k">RISE</span><span class="stat-v">${w.sunrise}</span></div>
-      </div>
-    `;
-    body.appendChild(left);
+  const ctx = { cfg, weather: w, events, todos, units };
+  const layout = resolveLayout();
+
+  let anyRendered = false;
+  for (const item of layout) {
+    if (!item.enabled) continue;
+    const def = widgetById(item.id);
+    if (!def) continue;
+    const inner = def.render(ctx);
+    if (!inner) continue;
+    const cell = el('div', `cell cell-${item.id}`, inner);
+    cell.style.gridColumn = `${item.x + 1} / span ${item.w}`;
+    cell.style.gridRow    = `${item.y + 1} / span ${item.h}`;
+    body.appendChild(cell);
+    anyRendered = true;
   }
 
-  // Middle column: 3-day forecast strip
-  if (widgets.weather && w && w.forecast.length) {
-    const mid = el('section', 'col col-mid');
-    mid.innerHTML = `
-      <div class="col-title">3-DAY OUTLOOK</div>
-      ${w.forecast.map(f => `
-        <div class="fc-row">
-          <div class="fc-day">${f.name}</div>
-          <div class="fc-icon">${icon(f.main, 38)}</div>
-          <div class="fc-hilo">
-            <div class="fc-hi">${f.hi}°</div>
-            <div class="fc-lo">${f.lo}°</div>
-          </div>
-        </div>
-      `).join('')}
-    `;
-    body.appendChild(mid);
+  if (!anyRendered) {
+    const empty = el('div', 'empty terminal-empty', '> NO_WIDGETS_ENABLED');
+    empty.style.gridColumn = `1 / span ${GRID_COLS}`;
+    empty.style.gridRow    = `1 / span ${GRID_ROWS}`;
+    body.appendChild(empty);
   }
-
-  // Right column: stacked widgets (message, todos, calendar)
-  const right = el('section', 'col col-right');
-  let rightHtml = '';
-
-  if (widgets.message && cfg.message && cfg.message.text) {
-    rightHtml += `
-      <div class="widget widget-msg">
-        <div class="msg-text">${escapeHtml(cfg.message.text)}</div>
-        ${cfg.message.subtitle ? `<div class="msg-sub">${escapeHtml(cfg.message.subtitle)}</div>` : ''}
-      </div>
-    `;
-  }
-
-  if (widgets.todos && todos.length) {
-    rightHtml += `
-      <div class="widget widget-todos">
-        <div class="widget-title">TODO</div>
-        <ul class="todo-list">
-          ${todos.map(t => `
-            <li class="${t.done ? 'done' : ''}">
-              <span class="checkbox"></span>
-              <span class="todo-text">${escapeHtml(t.text)}</span>
-            </li>
-          `).join('')}
-        </ul>
-      </div>
-    `;
-  }
-
-  if (widgets.calendar && events.length) {
-    rightHtml += `
-      <div class="widget widget-cal">
-        <div class="widget-title">UPCOMING</div>
-        ${events.slice(0,3).map(ev => `
-          <div class="cal-row">
-            <div class="cal-day">${ev.dayLabel}</div>
-            <div class="cal-info">
-              <div class="cal-title">${escapeHtml(ev.title)}</div>
-              <div class="cal-time">${ev.startLabel}</div>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    `;
-  }
-
-  right.innerHTML = rightHtml || '<div class="empty">NO WIDGETS ENABLED</div>';
-  body.appendChild(right);
 
   // ============ FOOTER ============
   const footer = el('footer', 'ftr');
@@ -214,12 +305,6 @@
     THE DAILY ${(cityLabel || 'DASHBOARD').split(' ')[0]}
   `;
   page.appendChild(footer);
-
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({
-      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-    }[c]));
-  }
 
   function renderScreen2() {
     // Minimal: huge weather hero centered. No forecast/todos/calendar.
