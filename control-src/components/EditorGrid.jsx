@@ -41,14 +41,18 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
     const changed = next.some(n => {
       const cur = layout.find(l => l.id === n.i);
       if (!cur) return true;
-      return cur.x !== n.x || cur.y !== n.y;
+      return cur.x !== n.x || cur.y !== n.y || cur.w !== n.w || cur.h !== n.h;
     });
     if (!changed) return;
     const map = new Map(next.map(n => [n.i, n]));
     const merged = layout.map(l => {
       const n = map.get(l.id);
       if (!n) return l;
-      return { ...l, x: n.x, y: n.y };
+      // When the user free-resizes via the corner handle, the tile no
+      // longer matches a known preset. Clear `size` so the preset row
+      // visually reflects "custom".
+      const sizeChanged = (l.w !== n.w || l.h !== n.h);
+      return { ...l, x: n.x, y: n.y, w: n.w, h: n.h, size: sizeChanged ? null : l.size };
     });
     onChange(merged);
   };
@@ -113,7 +117,8 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
           maxRows={GRID_ROWS}
           compactType={null}
           preventCollision
-          isResizable={false}
+          isResizable
+          resizeHandles={['se']}
           margin={[4, 4]}
           containerPadding={[0, 0]}
           layout={rglLayout}
