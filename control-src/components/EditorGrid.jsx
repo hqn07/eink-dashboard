@@ -217,15 +217,13 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
         >
           {enabled.map(l => {
             const inner = renderWidget(l.id, previewData) || '';
-            // Render widget at its dashboard pixel footprint (body
-            // area only). Wrap in `.cell` so dashboard.css applies the
-            // same padding + grid borders the live dashboard uses.
             const dashW = l.w * (DASH_W / GRID_COLS);
             const dashH = l.h * (BODY_H / GRID_ROWS);
-            const edges = [];
-            if (l.x + l.w >= GRID_COLS) edges.push('cell-edge-right');
-            if (l.y + l.h >= GRID_ROWS) edges.push('cell-edge-bottom');
-            const cellHtml = `<div class="cell cell-${l.id} ${edges.join(' ')}" style="width:${dashW}px;height:${dashH}px">${inner}</div>`;
+            const classes = ['cell', `cell-${l.id}`];
+            if (l.x + l.w >= GRID_COLS) classes.push('cell-edge-right');
+            if (l.y + l.h >= GRID_ROWS) classes.push('cell-edge-bottom');
+            if (l.flush) classes.push('cell-flush');
+            const cellHtml = `<div class="${classes.join(' ')}" style="width:${dashW}px;height:${dashH}px">${inner}</div>`;
             return (
               <div key={l.id}>
                 <motion.div
@@ -234,13 +232,25 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
                   transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                   style={{ width: '100%', height: '100%' }}
                 >
-                  <button
-                    className="tile-remove"
-                    title="Remove"
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onTouchStart={(e) => e.stopPropagation()}
-                    onClick={(e) => { e.stopPropagation(); removeFromCanvas(l.id); }}
-                  >×</button>
+                  <div className="tile-actions">
+                    <button
+                      className={`tile-flush ${l.flush ? 'on' : ''}`}
+                      title={l.flush ? 'Flush edges ON — click for inset' : 'Inset (with border) — click for flush edges'}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onChange(layout.map(it => it.id === l.id ? { ...it, flush: !it.flush } : it));
+                      }}
+                    >⊞</button>
+                    <button
+                      className="tile-remove"
+                      title="Remove"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onClick={(e) => { e.stopPropagation(); removeFromCanvas(l.id); }}
+                    >×</button>
+                  </div>
                   <div className="live-tile-body">
                     <div
                       className="live-tile-scale"

@@ -428,11 +428,16 @@ input[type="text"], input[type="url"], textarea {
   margin-bottom: 10px;
 }
 
-/* ============ TILE REMOVE BUTTON ============ */
-.tile-remove {
+/* ============ TILE ACTIONS (top-right corner) ============ */
+.tile-actions {
   position: absolute;
   top: 4px;
   right: 4px;
+  display: flex;
+  gap: 4px;
+  z-index: 5;
+}
+.tile-remove, .tile-flush {
   width: 20px;
   height: 20px;
   background: #fff;
@@ -446,10 +451,10 @@ input[type="text"], input[type="url"], textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 5;
   padding: 0;
 }
-.tile-remove:hover { background: var(--ink); color: #fff; }
+.tile-remove:hover, .tile-flush:hover { background: var(--ink); color: #fff; }
+.tile-flush.on { background: var(--ink); color: #fff; }
 
 /* ============ PALETTE ============ */
 .palette {

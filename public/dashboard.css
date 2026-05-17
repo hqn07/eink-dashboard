@@ -105,6 +105,15 @@ html, body {
 .cell.cell-edge-right  { border-right: none; }
 .cell.cell-edge-bottom { border-bottom: none; }
 
+/* Flush mode: widget bleeds to the tile's edges — no padding, no
+ * grid borders. Useful for full-width hero widgets (message bar,
+ * black bar, big quote). */
+.cell.cell-flush {
+  padding: 0;
+  border-right: 0;
+  border-bottom: 0;
+}
+
 /* Spacer is meant to be a pure black block — strip the cell's padding
  * + borders so the fill bleeds to the cell edges. */
 .cell.cell-spacer {

@@ -141,7 +141,8 @@ export function expandLayout(rawLayout = []) {
       w: Number.isFinite(merged.w) ? merged.w : sz.w,
       h: Number.isFinite(merged.h) ? merged.h : sz.h,
       size: sz.size,
-      enabled: merged.enabled !== false
+      enabled: merged.enabled !== false,
+      flush: !!merged.flush
     };
   });
 }
@@ -164,8 +165,8 @@ export function getScreenLayout(cfg, screen) {
 // need to know about size presets. Editor still uses `size` for preset
 // buttons; we round-trip the key when present.
 export function compactLayout(items) {
-  return items.map(({ id, x, y, w, h, size, enabled }) => ({
-    id, x, y, w, h, size, enabled
+  return items.map(({ id, x, y, w, h, size, enabled, flush }) => ({
+    id, x, y, w, h, size, enabled, flush: !!flush
   }));
 }
 

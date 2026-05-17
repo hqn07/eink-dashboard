@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>E-Ink Dashboard</title>
-<link rel="stylesheet" href="/static/dashboard.css?v=8">
+<link rel="stylesheet" href="/static/dashboard.css?v=9">
 <script>/*__DATA__*/</script>
 </head>
 <body>
@@ -359,10 +359,11 @@
     if (!def) continue;
     const inner = def.render(ctx);
     if (!inner) continue;
-    const edges = [];
-    if (item.x + item.w >= GRID_COLS) edges.push('cell-edge-right');
-    if (item.y + item.h >= GRID_ROWS) edges.push('cell-edge-bottom');
-    const cell = el('div', `cell cell-${item.id} ${edges.join(' ')}`, inner);
+    const classes = ['cell', `cell-${item.id}`];
+    if (item.x + item.w >= GRID_COLS) classes.push('cell-edge-right');
+    if (item.y + item.h >= GRID_ROWS) classes.push('cell-edge-bottom');
+    if (item.flush) classes.push('cell-flush');
+    const cell = el('div', classes.join(' '), inner);
     cell.style.gridColumn = `${item.x + 1} / span ${item.w}`;
     cell.style.gridRow    = `${item.y + 1} / span ${item.h}`;
     body.appendChild(cell);
