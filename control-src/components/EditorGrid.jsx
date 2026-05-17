@@ -48,29 +48,6 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
     minW: 1, minH: 1, maxW: GRID_COLS, maxH: GRID_ROWS
   }));
 
-  // Snap requested (w,h) to the widget's nearest registered preset.
-  // iOS-style: only valid widget sizes allowed.
-  const snapToValidSize = (id, w, h) => {
-    const def = widgetById(id);
-    if (!def) return { w, h, size: null };
-    let best = null;
-    let bestD = Infinity;
-    for (const [key, sz] of Object.entries(def.sizes)) {
-      const d = Math.abs(sz.w - w) + Math.abs(sz.h - h);
-      if (d < bestD) { bestD = d; best = { key, w: sz.w, h: sz.h }; }
-    }
-    return { w: best.w, h: best.h, size: best.key };
-  };
-
-  const onResize = (layoutArr, oldItem, newItem, placeholder) => {
-    const snap = snapToValidSize(newItem.i, newItem.w, newItem.h);
-    // Live-snap the placeholder so the ghost outline tracks valid sizes.
-    placeholder.w = snap.w;
-    placeholder.h = snap.h;
-    newItem.w = snap.w;
-    newItem.h = snap.h;
-  };
-
   const handleLayoutChange = (next) => {
     const changed = next.some(n => {
       const cur = layout.find(l => l.id === n.i);
@@ -82,13 +59,37 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
     const merged = layout.map(l => {
       const n = map.get(l.id);
       if (!n) return l;
-      if (l.w !== n.w || l.h !== n.h) {
-        const snap = snapToValidSize(l.id, n.w, n.h);
-        return { ...l, x: n.x, y: n.y, w: snap.w, h: snap.h, size: snap.size };
-      }
-      return { ...l, x: n.x, y: n.y, w: n.w, h: n.h };
+      const sizeChanged = (l.w !== n.w || l.h !== n.h);
+      return { ...l, x: n.x, y: n.y, w: n.w, h: n.h, size: sizeChanged ? null : l.size };
     });
     onChange(merged);
+  };
+
+  // Drag-to-delete via RGL's own drag system: when the user releases
+  // a tile over the .trash-zone DOM element, drop the widget instead
+  // of committing the new position.
+  const trashRef = useRef(null);
+  const [trashHover, setTrashHover] = useState(false);
+
+  const pointerOverTrash = (event) => {
+    if (!trashRef.current || !event) return false;
+    const r = trashRef.current.getBoundingClientRect();
+    const x = event.clientX ?? (event.touches && event.touches[0]?.clientX);
+    const y = event.clientY ?? (event.touches && event.touches[0]?.clientY)
+            ?? (event.changedTouches && event.changedTouches[0]?.clientY);
+    if (x == null || y == null) return false;
+    return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+  };
+
+  const onTileDrag = (_, __, ___, ____, event) => {
+    setTrashHover(pointerOverTrash(event));
+  };
+
+  const onTileDragStop = (_, __, newItem, ___, event) => {
+    if (pointerOverTrash(event)) {
+      removeFromCanvas(newItem.i);
+    }
+    setTrashHover(false);
   };
 
   const clampPos = (x, y, w, h) => ({
@@ -185,10 +186,17 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
           containerPadding={[PAD, PAD]}
           layout={rglLayout}
           onLayoutChange={handleLayoutChange}
-          onResize={onResize}
+          onDrag={onTileDrag}
+          onDragStop={onTileDragStop}
         >
           {enabled.map(l => {
             const html = renderWidget(l.id, previewData) || '';
+            // Render widget at its dashboard pixel footprint, then scale
+            // down to fit the editor tile. This way the widget visuals
+            // match what'll show on the real 800×480 display.
+            const dashW = l.w * (800 / GRID_COLS);
+            const dashH = l.h * (480 / GRID_ROWS);
+            const scale = size.w > 0 ? size.w / 800 : 1;
             return (
               <div key={l.id}>
                 <motion.div
@@ -204,7 +212,18 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
                     onTouchStart={(e) => e.stopPropagation()}
                     onClick={(e) => { e.stopPropagation(); removeFromCanvas(l.id); }}
                   >×</button>
-                  <div className="live-tile-body" dangerouslySetInnerHTML={{ __html: html }} />
+                  <div className="live-tile-body">
+                    <div
+                      className="live-tile-scale"
+                      style={{
+                        width: dashW,
+                        height: dashH,
+                        transform: `scale(${scale})`,
+                        transformOrigin: 'top left'
+                      }}
+                      dangerouslySetInnerHTML={{ __html: html }}
+                    />
+                  </div>
                 </motion.div>
               </div>
             );
@@ -217,6 +236,13 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
           </div>
         )}
       </motion.div>
+
+      <div
+        ref={trashRef}
+        className={`trash-zone ${trashHover ? 'hover' : ''}`}
+      >
+        <span>&gt; DRAG TILE HERE TO REMOVE</span>
+      </div>
 
       <div className="palette">
         <div className="palette-title">
@@ -234,9 +260,13 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
                 const sizeKey = smallestSizeKey(def);
                 const { w, h } = def.sizes[sizeKey];
                 const html = renderWidget(l.id, previewData) || '';
-                // Tile in the pool sized roughly to the widget's footprint.
-                // 4 cells per row in the palette area; height keeps ratio.
-                const aspect = w / h;
+                // Render the widget at its dashboard pixel footprint
+                // and scale down to a thumbnail. Pool cards stay a
+                // uniform sub-200px width so big widgets read as
+                // proportional thumbnails.
+                const dashW = w * (800 / GRID_COLS);
+                const dashH = h * (480 / GRID_ROWS);
+                const cardScale = Math.min(180 / dashW, 140 / dashH, 0.5);
                 return (
                   <motion.div
                     key={l.id}
@@ -250,8 +280,20 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
                     onClick={() => addToCanvas(l.id)}
                     title={`${def.label} — drag onto canvas or click to add`}
                   >
-                    <div className="palette-card-preview" style={{ aspectRatio: aspect }}>
-                      <div className="palette-card-scale" dangerouslySetInnerHTML={{ __html: html }} />
+                    <div
+                      className="palette-card-preview"
+                      style={{ width: dashW * cardScale, height: dashH * cardScale }}
+                    >
+                      <div
+                        className="palette-card-scale"
+                        style={{
+                          width: dashW,
+                          height: dashH,
+                          transform: `scale(${cardScale})`,
+                          transformOrigin: 'top left'
+                        }}
+                        dangerouslySetInnerHTML={{ __html: html }}
+                      />
                     </div>
                     <div className="palette-card-label">{def.label}</div>
                   </motion.div>

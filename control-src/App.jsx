@@ -232,7 +232,7 @@ export default function App() {
                 onError={showToast}
               />
               <div className="editor-help">
-                DRAG TILE TO MOVE · CORNER TO RESIZE (SNAPS TO VALID SIZES) · × TO REMOVE · DRAG POOL CARD ONTO CANVAS
+                DRAG TILE TO MOVE · CORNER TO RESIZE · × OR DRAG TO TRASH BELOW · DRAG POOL CARD ONTO CANVAS
               </div>
             </section>
           ) : (

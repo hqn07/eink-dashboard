@@ -339,6 +339,11 @@ input[type="text"], input[type="url"], textarea {
   pointer-events: none;
   overflow: hidden;
 }
+.live-tile-scale {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
 .editor-tile.disabled {
   opacity: 0.35;
   background: repeating-linear-gradient(
@@ -502,17 +507,16 @@ input[type="text"], input[type="url"], textarea {
 .palette-card:hover { background: #faf8f3; }
 .palette-card-preview {
   position: relative;
-  width: 100%;
   background: #fff;
   border-bottom: 1px solid #ccc;
   overflow: hidden;
+  margin: 8px;
 }
 .palette-card-scale {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
   pointer-events: none;
-  /* The widget HTML inside is sized for the dashboard; let the preview
-   * area clip it. Some widgets (forecast, todos) will show partials. */
 }
 .palette-card-label {
   font-family: 'JetBrains Mono', monospace;
