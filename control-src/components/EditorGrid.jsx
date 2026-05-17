@@ -4,8 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById } from '../widgets.js';
 import { renderWidget } from '../widget-render.js';
 
-const PAD = 6;
-const MARGIN = 4;
+// Editor cells must align 1:1 with dashboard cells so widget previews
+// scale cleanly. Any padding/margin would offset cells from the
+// dashboard's tight grid and overflow the live previews.
+const PAD = 0;
+const MARGIN = 0;
 
 // Pick a widget's smallest registered size by area — used for the pool
 // preview and for the initial drop size when a widget is added.
@@ -38,8 +41,7 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
   const enabled  = layout.filter(l => l.enabled !== false);
   const disabled = layout.filter(l => l.enabled === false);
 
-  const innerH = Math.max(0, size.h - PAD * 2 - (GRID_ROWS - 1) * MARGIN);
-  const rowHeight = innerH / GRID_ROWS;
+  const rowHeight = size.h / GRID_ROWS;
   const innerW = size.w;
 
   const rglLayout = enabled.map(l => ({
