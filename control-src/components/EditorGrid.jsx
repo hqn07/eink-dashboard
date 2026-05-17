@@ -216,11 +216,16 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
           onDragStop={onTileDragStop}
         >
           {enabled.map(l => {
-            const html = renderWidget(l.id, previewData) || '';
+            const inner = renderWidget(l.id, previewData) || '';
             // Render widget at its dashboard pixel footprint (body
-            // area only — header/footer live outside the RGL grid).
+            // area only). Wrap in `.cell` so dashboard.css applies the
+            // same padding + grid borders the live dashboard uses.
             const dashW = l.w * (DASH_W / GRID_COLS);
             const dashH = l.h * (BODY_H / GRID_ROWS);
+            const edges = [];
+            if (l.x + l.w >= GRID_COLS) edges.push('cell-edge-right');
+            if (l.y + l.h >= GRID_ROWS) edges.push('cell-edge-bottom');
+            const cellHtml = `<div class="cell cell-${l.id} ${edges.join(' ')}" style="width:${dashW}px;height:${dashH}px">${inner}</div>`;
             return (
               <div key={l.id}>
                 <motion.div
@@ -240,12 +245,10 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
                     <div
                       className="live-tile-scale"
                       style={{
-                        width: dashW,
-                        height: dashH,
                         transform: `scale(${scale})`,
                         transformOrigin: 'top left'
                       }}
-                      dangerouslySetInnerHTML={{ __html: html }}
+                      dangerouslySetInnerHTML={{ __html: cellHtml }}
                     />
                   </div>
                 </motion.div>
@@ -295,13 +298,13 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
                 if (!def) return null;
                 const sizeKey = smallestSizeKey(def);
                 const { w, h } = def.sizes[sizeKey];
-                const html = renderWidget(l.id, previewData) || '';
-                // Render the widget at its dashboard pixel footprint
-                // and scale down to a thumbnail. Pool cards stay a
-                // uniform sub-200px width so big widgets read as
-                // proportional thumbnails.
-                const dashW = w * (800 / GRID_COLS);
-                const dashH = h * (480 / GRID_ROWS);
+                const inner = renderWidget(l.id, previewData) || '';
+                // Render the widget inside `.cell` chrome (same as the
+                // dashboard) so the pool thumbnail looks like the real
+                // tile.
+                const dashW = w * (DASH_W / GRID_COLS);
+                const dashH = h * (BODY_H / GRID_ROWS);
+                const html = `<div class="cell cell-${l.id}" style="width:${dashW}px;height:${dashH}px">${inner}</div>`;
                 const cardScale = Math.min(180 / dashW, 140 / dashH, 0.5);
                 return (
                   <motion.div
