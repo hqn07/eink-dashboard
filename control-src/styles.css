@@ -501,6 +501,9 @@ input[type="text"], input[type="url"], textarea {
 .react-grid-item > .react-resizable-handle::after {
   content: '';
   position: absolute;
+  /* Reset whatever react-resizable's default ::after applied so each
+   * directional handle below can paint only its own L-shape. */
+  top: auto; left: auto; right: auto; bottom: auto;
   width: 8px;
   height: 8px;
   border: 0 solid var(--ink);
