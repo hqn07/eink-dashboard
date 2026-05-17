@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { fetchConfig, saveConfig } from './api.js';
+import { fetchConfig, saveConfig, fetchPreviewData } from './api.js';
 import {
   WIDGET_REGISTRY,
   GRID_COLS,
@@ -34,6 +34,8 @@ export default function App() {
   const [editScreen, setEditScreen] = useState(1);
   const [showGrid, setShowGrid] = useState(true);
   const [previewKey, setPreviewKey] = useState(Date.now());
+  const [previewData, setPreviewData] = useState(null);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     fetchConfig()
@@ -51,6 +53,26 @@ export default function App() {
         setStatusMsg(err.message);
       });
   }, []);
+
+  // Pull the live widget data whenever we save (or first mount). Editor
+  // tiles render real content from this payload.
+  useEffect(() => {
+    if (!cfg) return;
+    const screen = editMode ? editScreen : (parseInt(cfg.screen, 10) === 2 ? 2 : 1);
+    fetchPreviewData(screen).then(setPreviewData).catch(() => {});
+  }, [cfg, editScreen, editMode, previewKey]);
+
+  // Live cfg updates flow into the previewData snapshot so tiles
+  // reflect text edits (message, todos, quote, etc) without waiting
+  // for a save round-trip.
+  const livePreviewData = previewData
+    ? { ...previewData, cfg }
+    : { cfg, weather: null, events: [], units: (cfg?.units || 'F'), screen: editScreen };
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 1800);
+  };
 
   const markDirty = () => setStatus(s => s === 'dirty' ? s : 'dirty');
 
@@ -205,10 +227,12 @@ export default function App() {
               <EditorGrid
                 layout={layout}
                 showGrid={showGrid}
+                previewData={livePreviewData}
                 onChange={(next) => updateLayout(editScreen, next)}
+                onError={showToast}
               />
               <div className="editor-help">
-                DRAG TO MOVE · PRESETS BELOW EACH TILE · × TO REMOVE · POOL TO ADD
+                DRAG TILE TO MOVE · CORNER TO RESIZE · DRAG POOL CARD ONTO CANVAS · DRAG OFF TO REMOVE
               </div>
             </section>
           ) : (
@@ -227,6 +251,10 @@ export default function App() {
         label={statusDef.label + (statusMsg && status === 'error' ? ` · ${statusMsg}` : '')}
         onSave={handleSave}
       />
+
+      {toast && (
+        <div className="toast">{toast}</div>
+      )}
     </div>
   );
 }

@@ -2,21 +2,26 @@ import React, { useRef, useEffect, useState } from 'react';
 import GridLayout from 'react-grid-layout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById } from '../widgets.js';
+import { renderWidget } from '../widget-render.js';
 
-// Editor uses two regions:
-//  - Canvas: dashboard grid with enabled widgets. Drag to reposition.
-//  - Pool: palette of disabled widgets with "+ ADD" buttons.
-//  - Each canvas tile has size-preset buttons (S/M/L/XL) and a × remove.
-// Resizing is preset-based — no arbitrary corner drag — to keep layouts
-// snapping to known-good sizes.
-const PAD = 6;     // even inset around the entire RGL container
-const MARGIN = 4;  // gap between widgets
+const PAD = 6;
+const MARGIN = 4;
 
-export default function EditorGrid({ layout, showGrid, onChange }) {
+// Pick a widget's smallest registered size by area — used for the pool
+// preview and for the initial drop size when a widget is added.
+function smallestSizeKey(def) {
+  return Object.keys(def.sizes).reduce((a, b) => {
+    const sa = def.sizes[a]; const sb = def.sizes[b];
+    return (sb.w * sb.h) < (sa.w * sa.h) ? b : a;
+  }, def.defaultSize);
+}
+
+export default function EditorGrid({ layout, showGrid, previewData, onChange, onError }) {
   const wrapRef = useRef(null);
   const [size, setSizeState] = useState({ w: 800, h: 480 });
   const [shake, setShake] = useState(false);
-  const [invalidPress, setInvalidPress] = useState(null); // { id, size }
+  const [dropHover, setDropHover] = useState(false);
+  const [trashHover, setTrashHover] = useState(false);
 
   useEffect(() => {
     if (!wrapRef.current) return;
@@ -34,9 +39,6 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
   const enabled  = layout.filter(l => l.enabled !== false);
   const disabled = layout.filter(l => l.enabled === false);
 
-  // Compute row height from the actual measured container so widgets
-  // always fit. PAD is the even outer inset RGL applies via
-  // containerPadding; MARGIN is the gap between cells.
   const innerH = Math.max(0, size.h - PAD * 2 - (GRID_ROWS - 1) * MARGIN);
   const rowHeight = innerH / GRID_ROWS;
   const innerW = size.w;
@@ -44,8 +46,7 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
   const rglLayout = enabled.map(l => ({
     i: l.id,
     x: l.x, y: l.y, w: l.w, h: l.h,
-    minW: 1, minH: 1, maxW: GRID_COLS, maxH: GRID_ROWS,
-    static: false
+    minW: 1, minH: 1, maxW: GRID_COLS, maxH: GRID_ROWS
   }));
 
   const handleLayoutChange = (next) => {
@@ -59,25 +60,19 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
     const merged = layout.map(l => {
       const n = map.get(l.id);
       if (!n) return l;
-      // When the user free-resizes via the corner handle, the tile no
-      // longer matches a known preset. Clear `size` so the preset row
-      // visually reflects "custom".
       const sizeChanged = (l.w !== n.w || l.h !== n.h);
       return { ...l, x: n.x, y: n.y, w: n.w, h: n.h, size: sizeChanged ? null : l.size };
     });
     onChange(merged);
   };
 
-  // Bounds-checked positioning. Tries to keep tile at (x, y) but clamps
-  // when the new size would push it off the grid.
   const clampPos = (x, y, w, h) => ({
     x: Math.max(0, Math.min(x, GRID_COLS - w)),
     y: Math.max(0, Math.min(y, GRID_ROWS - h))
   });
 
-  // Find an empty position to drop an added widget. Tries default first,
-  // then scans for a free top-left.
-  const findFreeSlot = (def, w, h, items) => {
+  // Find free slot at given size, scanning top-left to bottom-right.
+  const findFreeSlot = (w, h, items) => {
     const fits = (x, y) => {
       if (x + w > GRID_COLS || y + h > GRID_ROWS) return false;
       return !items.some(it =>
@@ -90,81 +85,25 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
         if (fits(x, y)) return { x, y };
       }
     }
-    return { x: 0, y: 0 };
+    return null;
   };
 
-  // Try to place the given size at the tile's current position. Returns
-  // { ok, x, y } — ok=false means nothing on the grid fits.
-  const tryFitSize = (id, w, h) => {
-    const target = layout.find(l => l.id === id);
-    if (!target) return { ok: false };
-    const others = enabled.filter(o => o.id !== id);
-    const overlaps = (px, py) => others.some(o =>
-      px < o.x + o.w && px + w > o.x &&
-      py < o.y + o.h && py + h > o.y
-    );
-    let { x, y } = clampPos(target.x, target.y, w, h);
-    if (!overlaps(x, y)) return { ok: true, x, y };
-    for (let yy = 0; yy + h <= GRID_ROWS; yy++) {
-      for (let xx = 0; xx + w <= GRID_COLS; xx++) {
-        if (!overlaps(xx, yy)) return { ok: true, x: xx, y: yy };
-      }
-    }
-    return { ok: false };
-  };
-
-  const triggerShake = (id, sizeKey) => {
+  const triggerShake = () => {
     setShake(true);
-    setInvalidPress({ id, size: sizeKey });
     setTimeout(() => setShake(false), 500);
-    setTimeout(() => setInvalidPress(null), 900);
-  };
-
-  const setSize = (id, sizeKey) => {
-    const def = widgetById(id);
-    if (!def || !def.sizes[sizeKey]) return;
-    let { w, h } = def.sizes[sizeKey];
-    w = Math.min(w, GRID_COLS);
-    h = Math.min(h, GRID_ROWS);
-
-    const first = tryFitSize(id, w, h);
-    if (first.ok) {
-      onChange(layout.map(l => l.id === id ? { ...l, x: first.x, y: first.y, w, h, size: sizeKey } : l));
-      return;
-    }
-
-    // Requested size doesn't fit anywhere. Find the largest preset that
-    // does — by total area, descending — and fall back to it.
-    triggerShake(id, sizeKey);
-    const candidates = Object.entries(def.sizes)
-      .filter(([key]) => key !== sizeKey)
-      .map(([key, { w: cw, h: ch }]) => ({ key, w: Math.min(cw, GRID_COLS), h: Math.min(ch, GRID_ROWS) }))
-      .sort((a, b) => (b.w * b.h) - (a.w * a.h));
-    for (const c of candidates) {
-      const fit = tryFitSize(id, c.w, c.h);
-      if (fit.ok) {
-        // Delay the fallback slightly so the red flash + shake reads as
-        // "tried oversize → fell back".
-        setTimeout(() => {
-          onChange(layout.map(l => l.id === id ? { ...l, x: fit.x, y: fit.y, w: c.w, h: c.h, size: c.key } : l));
-        }, 350);
-        return;
-      }
-    }
-    // Nothing fits at all — just shake; layout unchanged.
   };
 
   const addToCanvas = (id) => {
     const def = widgetById(id);
     if (!def) return;
-    // Always drop a freshly-added widget at its SMALLEST registered
-    // size so the canvas has room to spare. User can resize after.
-    const sizeKey = Object.keys(def.sizes).reduce((a, b) => {
-      const sa = def.sizes[a]; const sb = def.sizes[b];
-      return (sb.w * sb.h) < (sa.w * sa.h) ? b : a;
-    }, def.defaultSize);
+    const sizeKey = smallestSizeKey(def);
     const { w, h } = def.sizes[sizeKey];
-    const slot = findFreeSlot(def, w, h, enabled);
+    const slot = findFreeSlot(w, h, enabled);
+    if (!slot) {
+      triggerShake();
+      onError && onError(`No room for ${def.label} on canvas`);
+      return;
+    }
     onChange(layout.map(l => l.id === id ? { ...l, ...slot, w, h, size: sizeKey, enabled: true } : l));
   };
 
@@ -172,13 +111,61 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
     onChange(layout.map(l => l.id === id ? { ...l, enabled: false } : l));
   };
 
+  // HTML5 drag from pool tile onto canvas.
+  const onPoolDragStart = (e, id) => {
+    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.setData('text/x-widget-id', id);
+  };
+
+  const onCanvasDragOver = (e) => {
+    if (e.dataTransfer.types.includes('text/x-widget-id')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      setDropHover(true);
+    }
+  };
+
+  const onCanvasDragLeave = () => setDropHover(false);
+
+  const onCanvasDrop = (e) => {
+    e.preventDefault();
+    setDropHover(false);
+    const id = e.dataTransfer.getData('text/x-widget-id');
+    if (id) addToCanvas(id);
+  };
+
+  // HTML5 drag a canvas tile onto the TRASH zone to delete it.
+  const onTileDragStart = (e, id) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/x-widget-remove', id);
+  };
+
+  const onTrashDragOver = (e) => {
+    if (e.dataTransfer.types.includes('text/x-widget-remove')) {
+      e.preventDefault();
+      setTrashHover(true);
+    }
+  };
+
+  const onTrashDragLeave = () => setTrashHover(false);
+
+  const onTrashDrop = (e) => {
+    e.preventDefault();
+    setTrashHover(false);
+    const id = e.dataTransfer.getData('text/x-widget-remove');
+    if (id) removeFromCanvas(id);
+  };
+
   return (
     <div>
       <motion.div
         ref={wrapRef}
-        className={`editor-wrap ${showGrid ? 'show-grid' : ''}`}
+        className={`editor-wrap ${showGrid ? 'show-grid' : ''} ${dropHover ? 'drop-target' : ''}`}
         animate={shake ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
         transition={{ duration: 0.45 }}
+        onDragOver={onCanvasDragOver}
+        onDragLeave={onCanvasDragLeave}
+        onDrop={onCanvasDrop}
       >
         <GridLayout
           className="layout"
@@ -196,24 +183,18 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
           onLayoutChange={handleLayoutChange}
         >
           {enabled.map(l => {
-            const def = widgetById(l.id);
+            const html = renderWidget(l.id, previewData) || '';
             return (
               <div key={l.id}>
                 <motion.div
                   layout
-                  className="editor-tile"
+                  className="editor-tile live-tile"
                   transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                   style={{ width: '100%', height: '100%' }}
+                  draggable
+                  onDragStart={(e) => onTileDragStart(e, l.id)}
                 >
-                  <button
-                    className="tile-remove"
-                    title="Remove from layout"
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onTouchStart={(e) => e.stopPropagation()}
-                    onClick={(e) => { e.stopPropagation(); removeFromCanvas(l.id); }}
-                  >×</button>
-                  <div className="tile-id">{l.id}</div>
-                  <div className="tile-label">{def?.label || l.id}</div>
+                  <div className="live-tile-body" dangerouslySetInnerHTML={{ __html: html }} />
                 </motion.div>
               </div>
             );
@@ -222,10 +203,19 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
 
         {enabled.length === 0 && (
           <div className="editor-empty terminal-line">
-            &gt; CANVAS_EMPTY — ADD A WIDGET FROM POOL BELOW
+            &gt; CANVAS_EMPTY — DRAG A WIDGET FROM POOL BELOW
           </div>
         )}
       </motion.div>
+
+      <div
+        className={`trash-zone ${trashHover ? 'hover' : ''}`}
+        onDragOver={onTrashDragOver}
+        onDragLeave={onTrashDragLeave}
+        onDrop={onTrashDrop}
+      >
+        <span>&gt; DRAG HERE TO REMOVE</span>
+      </div>
 
       <div className="palette">
         <div className="palette-title">
@@ -235,32 +225,39 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
         {disabled.length === 0 ? (
           <div className="terminal-line palette-empty">&gt; ALL_WIDGETS_ON_CANVAS</div>
         ) : (
-          <AnimatePresence>
-            {disabled.map(l => {
-              const def = widgetById(l.id);
-              return (
-                <motion.div
-                  key={l.id}
-                  layout
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  className="palette-tile"
-                >
-                  <div>
-                    <div className="tile-id">{l.id}</div>
-                    <div className="tile-label">{def?.label || l.id}</div>
-                  </div>
-                  <button
-                    className="btn btn-primary"
+          <div className="palette-grid">
+            <AnimatePresence>
+              {disabled.map(l => {
+                const def = widgetById(l.id);
+                if (!def) return null;
+                const sizeKey = smallestSizeKey(def);
+                const { w, h } = def.sizes[sizeKey];
+                const html = renderWidget(l.id, previewData) || '';
+                // Tile in the pool sized roughly to the widget's footprint.
+                // 4 cells per row in the palette area; height keeps ratio.
+                const aspect = w / h;
+                return (
+                  <motion.div
+                    key={l.id}
+                    layout
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    className="palette-card"
+                    draggable
+                    onDragStart={(e) => onPoolDragStart(e, l.id)}
                     onClick={() => addToCanvas(l.id)}
+                    title={`${def.label} — drag onto canvas or click to add`}
                   >
-                    + ADD
-                  </button>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
+                    <div className="palette-card-preview" style={{ aspectRatio: aspect }}>
+                      <div className="palette-card-scale" dangerouslySetInnerHTML={{ __html: html }} />
+                    </div>
+                    <div className="palette-card-label">{def.label}</div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
         )}
       </div>
     </div>

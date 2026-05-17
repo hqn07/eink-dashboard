@@ -18,3 +18,9 @@ export async function saveConfig(cfg) {
 export function previewUrl(cacheBust = true) {
   return '/display.png' + (cacheBust ? `?t=${Date.now()}` : '');
 }
+
+export async function fetchPreviewData(screen) {
+  const r = await fetch(`/api/preview-data?screen=${screen}`);
+  if (!r.ok) throw new Error(`preview-data ${r.status}`);
+  return r.json();
+}

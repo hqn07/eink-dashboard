@@ -18,6 +18,10 @@ html, body {
   font-family: -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
   background: var(--bg);
   color: var(--ink);
+  /* dashboard.css is loaded in this page so we can reuse widget styles
+   * in the editor; reset its hard-coded 800x480 body size. */
+  width: auto !important;
+  height: auto !important;
 }
 
 #root { min-height: 100vh; padding: 16px; }
@@ -319,14 +323,21 @@ input[type="text"], input[type="url"], textarea {
 .editor-tile {
   background: #fff;
   border: 2px solid var(--line);
-  padding: 16px 14px 14px 18px;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
   cursor: grab;
   user-select: none;
   overflow: hidden;
   font-family: 'JetBrains Mono', monospace;
+}
+.editor-tile.live-tile { background: #fff; }
+.live-tile-body {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
 }
 .editor-tile.disabled {
   opacity: 0.35;
@@ -470,6 +481,93 @@ input[type="text"], input[type="url"], textarea {
 .palette-tile:last-child { margin-bottom: 0; }
 .palette-tile .tile-label { font-size: 15px; }
 .palette-empty { padding: 12px 0; text-align: center; }
+
+/* Pool now shows live miniature widget previews. Each card is drag
+ * source. Clicking also adds (for desktops without easy drag). */
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+.palette-card {
+  border: 2px solid var(--line);
+  background: #fff;
+  cursor: grab;
+  user-select: none;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.palette-card:active { cursor: grabbing; }
+.palette-card:hover { background: #faf8f3; }
+.palette-card-preview {
+  position: relative;
+  width: 100%;
+  background: #fff;
+  border-bottom: 1px solid #ccc;
+  overflow: hidden;
+}
+.palette-card-scale {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* The widget HTML inside is sized for the dashboard; let the preview
+   * area clip it. Some widgets (forecast, todos) will show partials. */
+}
+.palette-card-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 6px 8px;
+  color: var(--mute);
+}
+
+/* Trash drop zone between canvas and pool. */
+.trash-zone {
+  margin: 12px 0;
+  padding: 14px;
+  border: 2px dashed var(--mute);
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--mute);
+  text-transform: uppercase;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.trash-zone.hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* Drop hint when the user drags a pool card over the canvas. */
+.editor-wrap.drop-target {
+  outline: 3px dashed var(--ink);
+  outline-offset: -3px;
+}
+
+/* Toast popup for failure feedback (e.g. no canvas room). */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 80px;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: #fff;
+  padding: 12px 18px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border: 2px solid var(--ink);
+  z-index: 100;
+  pointer-events: none;
+  animation: toast-in 0.15s ease;
+}
+@keyframes toast-in { from { transform: translate(-50%, 12px); opacity: 0; } }
 
 .editor-empty {
   padding: 30px 0;

@@ -362,6 +362,24 @@ app.get('/control-classic', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'control.html'));
 });
 
+// Returns the full payload the dashboard would render — minus the HTML.
+// The React editor uses this to render live widget tiles locally.
+app.get('/api/preview-data', async (req, res) => {
+  try {
+    const cfg = await loadConfig();
+    const { units, screen } = resolveVariant(req, cfg);
+    const weather = cfg.widgets && cfg.widgets.weather
+      ? await fetchWeather(cfg.city, process.env.OPENWEATHER_API_KEY, units)
+      : null;
+    const events = cfg.widgets && cfg.widgets.calendar
+      ? await fetchEvents(cfg.calendar.icalUrl)
+      : [];
+    res.json({ cfg, weather, events, units, screen, generatedAt: new Date().toISOString() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Config API
 app.get('/api/config', async (req, res) => {
   res.json(await loadConfig());
