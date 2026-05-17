@@ -71,6 +71,7 @@ main.layout {
   main.layout {
     grid-template-columns: minmax(440px, 1.1fr) 1fr;
   }
+  main.layout.edit-mode { grid-template-columns: 1fr; }
   .preview-stage { position: sticky; top: 24px; }
 }
 

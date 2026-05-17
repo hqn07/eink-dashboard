@@ -157,7 +157,12 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
   const addToCanvas = (id) => {
     const def = widgetById(id);
     if (!def) return;
-    const sizeKey = def.defaultSize;
+    // Always drop a freshly-added widget at its SMALLEST registered
+    // size so the canvas has room to spare. User can resize after.
+    const sizeKey = Object.keys(def.sizes).reduce((a, b) => {
+      const sa = def.sizes[a]; const sb = def.sizes[b];
+      return (sb.w * sb.h) < (sa.w * sa.h) ? b : a;
+    }, def.defaultSize);
     const { w, h } = def.sizes[sizeKey];
     const slot = findFreeSlot(def, w, h, enabled);
     onChange(layout.map(l => l.id === id ? { ...l, ...slot, w, h, size: sizeKey, enabled: true } : l));
