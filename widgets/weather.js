@@ -27,10 +27,16 @@ function formatDate(unixSec, tzOffsetSec) {
   return `${DAYS[d.getUTCDay()]} ${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
 }
 
-async function fetchWeather(city, apiKey, units = 'F') {
+// `cityOrCoords` accepts either:
+//   - a city query string ("Gainesville,FL,US"), or
+//   - { lat, lon } if precise coords are configured.
+async function fetchWeather(cityOrCoords, apiKey, units = 'F') {
   const u = units === 'C' ? 'C' : 'F';
   const owmUnits = u === 'C' ? 'metric' : 'imperial';
-  const cacheKey = `${city}|${u}`;
+  const isCoords = cityOrCoords && typeof cityOrCoords === 'object'
+    && Number.isFinite(cityOrCoords.lat) && Number.isFinite(cityOrCoords.lon);
+  const locKey = isCoords ? `${cityOrCoords.lat},${cityOrCoords.lon}` : String(cityOrCoords || '');
+  const cacheKey = `${locKey}|${u}`;
   const now = Date.now();
   const cached = cacheMap.get(cacheKey);
   if (cached && (now - cached.at) < CACHE_MS) {
@@ -41,12 +47,14 @@ async function fetchWeather(city, apiKey, units = 'F') {
   }
 
   const base = 'https://api.openweathermap.org/data/2.5';
-  const q = encodeURIComponent(city);
+  const qs = isCoords
+    ? `lat=${cityOrCoords.lat}&lon=${cityOrCoords.lon}`
+    : `q=${encodeURIComponent(cityOrCoords)}`;
 
   try {
     const [curRes, fcRes] = await Promise.all([
-      fetch(`${base}/weather?q=${q}&appid=${apiKey}&units=${owmUnits}`),
-      fetch(`${base}/forecast?q=${q}&appid=${apiKey}&units=${owmUnits}&cnt=24`)
+      fetch(`${base}/weather?${qs}&appid=${apiKey}&units=${owmUnits}`),
+      fetch(`${base}/forecast?${qs}&appid=${apiKey}&units=${owmUnits}&cnt=24`)
     ]);
 
     if (!curRes.ok || !fcRes.ok) {
@@ -111,6 +119,7 @@ async function fetchWeather(city, apiKey, units = 'F') {
 
     cacheMap.set(cacheKey, { at: now, data });
     return data;
+    // (cacheKey defined at top of function — keyed on city OR lat/lon)
   } catch (err) {
     console.error('Weather error:', err.message);
     return cached?.data ? { ...cached.data, stale: true } : stubData(u);

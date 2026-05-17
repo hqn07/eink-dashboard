@@ -1,5 +1,6 @@
 import React from 'react';
 import { WIDGET_REGISTRY } from '../widgets.js';
+import LocationPanel from './LocationPanel.jsx';
 
 function Toggle({ on, onClick }) {
   return <div className={`toggle ${on ? 'on' : ''}`} onClick={onClick} />;
@@ -25,33 +26,7 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested }) {
 
   return (
     <div>
-      <section className="card">
-        <div className="section-title">Location (shared)</div>
-        <label className="field">
-          <span className="label">City (for weather)</span>
-          <input
-            type="text"
-            value={cfg.city || ''}
-            onChange={e => onPatch({ city: e.target.value })}
-          />
-        </label>
-        <label className="field">
-          <span className="label">City label (shown on display)</span>
-          <input
-            type="text"
-            value={cfg.cityLabel || ''}
-            onChange={e => onPatch({ cityLabel: e.target.value })}
-          />
-        </label>
-        <label className="field">
-          <span className="label">Timezone (IANA)</span>
-          <input
-            type="text"
-            value={cfg.timezone || 'America/New_York'}
-            onChange={e => onPatch({ timezone: e.target.value })}
-          />
-        </label>
-      </section>
+      <LocationPanel cfg={cfg} onPatch={onPatch} />
 
       {showMessage && (
         <section className="card">

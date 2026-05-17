@@ -346,8 +346,11 @@ app.get('/dashboard', async (req, res) => {
     const cfg = await loadConfig();
     const { units, screen, activeScreen } = resolveVariant(req, cfg);
     const wantWeather = !cfg.widgets || cfg.widgets.weather !== false;
+    const loc = (Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon))
+      ? { lat: cfg.lat, lon: cfg.lon }
+      : cfg.city;
     const weather = wantWeather
-      ? await fetchWeather(cfg.city, process.env.OPENWEATHER_API_KEY, units)
+      ? await fetchWeather(loc, process.env.OPENWEATHER_API_KEY, units)
       : null;
     const events = cfg.calendar && cfg.calendar.icalUrl
       ? await fetchEvents(cfg.calendar.icalUrl)
@@ -429,13 +432,109 @@ app.get('/control-classic', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'control.html'));
 });
 
+// ---------- Geocoding / weather-check (proxies for OpenWeather) ----------
+// Keep the API key server-side; React fetches these instead of calling
+// OpenWeather directly. Results are cached briefly to avoid burning
+// the free-tier quota during autocomplete typing.
+
+const geocodeCache = new Map(); // key: q-lower → { at, data }
+const GEO_CACHE_MS = 24 * 60 * 60 * 1000;
+
+async function owmFetch(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`OWM ${r.status}`);
+  return r.json();
+}
+
+app.get('/api/geocode', async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q || q.length < 2) return res.json([]);
+  const key = process.env.OPENWEATHER_API_KEY;
+  if (!key) return res.status(500).json({ error: 'No OPENWEATHER_API_KEY' });
+  const cacheKey = q.toLowerCase();
+  const cached = geocodeCache.get(cacheKey);
+  if (cached && (Date.now() - cached.at) < GEO_CACHE_MS) {
+    return res.json(cached.data);
+  }
+  try {
+    const data = await owmFetch(
+      `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(q)}&limit=5&appid=${key}`
+    );
+    const shaped = (data || []).map(d => ({
+      name: d.name,
+      state: d.state || null,
+      country: d.country || null,
+      lat: d.lat,
+      lon: d.lon
+    }));
+    geocodeCache.set(cacheKey, { at: Date.now(), data: shaped });
+    res.json(shaped);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/reverse-geocode', async (req, res) => {
+  const lat = parseFloat(req.query.lat);
+  const lon = parseFloat(req.query.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return res.status(400).json({ error: 'bad coords' });
+  }
+  const key = process.env.OPENWEATHER_API_KEY;
+  if (!key) return res.status(500).json({ error: 'No OPENWEATHER_API_KEY' });
+  try {
+    const data = await owmFetch(
+      `https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${key}`
+    );
+    const d = (data || [])[0];
+    if (!d) return res.json(null);
+    res.json({
+      name: d.name, state: d.state || null, country: d.country || null,
+      lat: d.lat, lon: d.lon
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/weather-check', async (req, res) => {
+  const city = (req.query.city || '').trim();
+  const lat = parseFloat(req.query.lat);
+  const lon = parseFloat(req.query.lon);
+  const units = req.query.units === 'C' ? 'metric' : 'imperial';
+  const key = process.env.OPENWEATHER_API_KEY;
+  if (!key) return res.json({ ok: false, error: 'No API key set' });
+  try {
+    const qs = Number.isFinite(lat) && Number.isFinite(lon)
+      ? `lat=${lat}&lon=${lon}`
+      : `q=${encodeURIComponent(city)}`;
+    const data = await owmFetch(
+      `https://api.openweathermap.org/data/2.5/weather?${qs}&appid=${key}&units=${units}`
+    );
+    if (Number(data.cod) !== 200) {
+      return res.json({ ok: false, error: data.message || 'not found' });
+    }
+    res.json({
+      ok: true,
+      temp: Math.round(data.main.temp),
+      desc: (data.weather[0].description || '').toUpperCase(),
+      country: data.sys && data.sys.country
+    });
+  } catch (err) {
+    res.json({ ok: false, error: err.message });
+  }
+});
+
 // Returns the full payload the dashboard would render — minus the
 // HTML. The React editor uses this to render live widget tiles locally.
 app.get('/api/preview-data', async (req, res) => {
   try {
     const cfg = await loadConfig();
     const { units, screen, activeScreen } = resolveVariant(req, cfg);
-    const weather = await fetchWeather(cfg.city, process.env.OPENWEATHER_API_KEY, units);
+    const loc = (Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon))
+      ? { lat: cfg.lat, lon: cfg.lon }
+      : cfg.city;
+    const weather = await fetchWeather(loc, process.env.OPENWEATHER_API_KEY, units);
     const events = cfg.calendar && cfg.calendar.icalUrl
       ? await fetchEvents(cfg.calendar.icalUrl)
       : [];

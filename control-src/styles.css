@@ -129,6 +129,71 @@ main.layout {
 }
 .screen-tab-add:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* ============ LOCATION PANEL ============ */
+.autocomplete {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: 30;
+  background: #fff;
+  border: 2px solid var(--ink);
+  margin-top: 2px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.autocomplete-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: none;
+  border-bottom: 1px solid #eee;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+}
+.autocomplete-row:hover { background: #faf8f3; }
+.autocomplete-row:last-child { border-bottom: 0; }
+.ac-flag { font-size: 18px; line-height: 1; }
+.ac-name { font-weight: 700; }
+.ac-state { color: var(--mute); font-size: 12px; }
+.ac-country {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--mute);
+}
+
+.loc-badge {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 2px solid var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+  background: #faf8f3;
+}
+.loc-badge.loading { color: var(--mute); animation: blink 1.2s ease-in-out infinite; }
+.loc-badge.ok      { background: #fff; border-color: var(--ink); }
+.loc-badge.err     { background: var(--accent); color: #fff; border-color: var(--accent); }
+.loc-badge.idle    { color: var(--mute); }
+
+.recent-cities {
+  margin-top: 10px;
+}
+.recent-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--mute);
+}
+
 /* Schedule lock badge below the preview when running locked to a schedule */
 .schedule-lock-badge {
   margin-top: 8px;
