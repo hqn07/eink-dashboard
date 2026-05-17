@@ -5,15 +5,22 @@ import {
   WIDGET_REGISTRY,
   GRID_COLS,
   GRID_ROWS,
-  SCREENS,
-  getScreenLayout,
   compactLayout,
-  defaultsForScreen
+  defaultsForScreen,
+  migrateConfigToScreens,
+  makeDefaultScreen,
+  newScreenId,
+  findOverlaps,
+  scheduleIntervals,
+  parseHHMM,
+  pickActiveScreen
 } from './widgets.js';
 import EditorGrid from './components/EditorGrid.jsx';
 import Settings from './components/Settings.jsx';
 import Preview from './components/Preview.jsx';
 import SaveBar from './components/SaveBar.jsx';
+import ScreenTabs from './components/ScreenTabs.jsx';
+import ScreenPanel from './components/ScreenPanel.jsx';
 
 const STATUS = {
   syncing: { label: 'SYNCING...', cls: 'saving' },
@@ -24,14 +31,32 @@ const STATUS = {
   error:   { label: 'ERROR',      cls: 'error' }
 };
 
+const MAX_SCREENS = 20;
+
+function nowMinutesLocal(tz) {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, hour12: false, hour: '2-digit', minute: '2-digit'
+    }).formatToParts(new Date());
+    let h = 0, m = 0;
+    for (const p of parts) {
+      if (p.type === 'hour') h = parseInt(p.value, 10) % 24;
+      if (p.type === 'minute') m = parseInt(p.value, 10);
+    }
+    return h * 60 + m;
+  } catch {
+    const d = new Date();
+    return d.getHours() * 60 + d.getMinutes();
+  }
+}
+
 export default function App() {
   const [cfg, setCfg] = useState(null);
-  const [layouts, setLayouts] = useState({ 1: [], 2: [] });
   const [editSnapshot, setEditSnapshot] = useState(null);
   const [status, setStatus] = useState('syncing');
   const [statusMsg, setStatusMsg] = useState(null);
   const [editMode, setEditMode] = useState(false);
-  const [editScreen, setEditScreen] = useState(1);
+  const [editScreenId, setEditScreenId] = useState(null);
   const [showGrid, setShowGrid] = useState(true);
   const [previewKey, setPreviewKey] = useState(Date.now());
   const [previewData, setPreviewData] = useState(null);
@@ -40,12 +65,11 @@ export default function App() {
   useEffect(() => {
     fetchConfig()
       .then(c => {
-        setCfg(c);
-        setLayouts({
-          1: getScreenLayout(c, 1),
-          2: getScreenLayout(c, 2)
-        });
-        setEditScreen(parseInt(c.screen, 10) === 2 ? 2 : 1);
+        const migrated = migrateConfigToScreens(c);
+        setCfg(migrated);
+        // Default to the screen the dashboard would render right now.
+        const active = pickActiveScreen(migrated, nowMinutesLocal(migrated.timezone || 'UTC'));
+        setEditScreenId(active ? active.id : (migrated.screens[0] && migrated.screens[0].id));
         setStatus('synced');
       })
       .catch(err => {
@@ -54,20 +78,55 @@ export default function App() {
       });
   }, []);
 
-  // Pull the live widget data whenever we save (or first mount). Editor
-  // tiles render real content from this payload.
-  useEffect(() => {
-    if (!cfg) return;
-    const screen = editMode ? editScreen : (parseInt(cfg.screen, 10) === 2 ? 2 : 1);
-    fetchPreviewData(screen).then(setPreviewData).catch(() => {});
-  }, [cfg, editScreen, editMode, previewKey]);
+  const screens = cfg ? (cfg.screens || []) : [];
+  const editScreen = screens.find(s => s.id === editScreenId) || screens[0];
 
-  // Live cfg updates flow into the previewData snapshot so tiles
-  // reflect text edits (message, todos, quote, etc) without waiting
-  // for a save round-trip.
+  // Lock preview to the scheduled screen at the current moment, unless
+  // the user is actively editing (then follow their tab).
+  const liveScreen = useMemo(() => {
+    if (!cfg) return null;
+    if (editMode) return editScreen;
+    return pickActiveScreen(cfg, nowMinutesLocal(cfg.timezone || 'UTC'))
+      || editScreen
+      || screens[0];
+  }, [cfg, editMode, editScreen, screens]);
+
+  // Overlap validation.
+  const overlaps = useMemo(() => findOverlaps(screens), [screens]);
+  const overlapIds = useMemo(() => {
+    const set = new Set();
+    for (const o of overlaps) { set.add(o.screenAId); set.add(o.screenBId); }
+    return set;
+  }, [overlaps]);
+  const hasDefault = screens.some(s => s.isDefault);
+  const validationErrors = [];
+  if (!screens.length) validationErrors.push('At least one screen is required');
+  if (!hasDefault && screens.length) validationErrors.push('Mark one screen as default');
+  if (overlaps.length) validationErrors.push(`${overlaps.length} schedule overlap${overlaps.length > 1 ? 's' : ''}`);
+  for (const s of screens) {
+    if (s.schedule && s.schedule.enabled) {
+      const a = parseHHMM(s.schedule.from);
+      const b = parseHHMM(s.schedule.to);
+      if (!Number.isFinite(a) || !Number.isFinite(b)) {
+        validationErrors.push(`${s.name}: invalid HH:MM`);
+        break;
+      }
+    }
+  }
+  const canSave = validationErrors.length === 0;
+
+  // Refresh live preview data when the screen we're focused on changes,
+  // or after a save.
+  useEffect(() => {
+    if (!cfg || !liveScreen) return;
+    fetchPreviewData(liveScreen.id).then(setPreviewData).catch(() => {});
+  }, [cfg, liveScreen, previewKey]);
+
+  // Splice live cfg edits + the current screen's layout into the
+  // preview data so editor tiles update instantly while typing.
   const livePreviewData = previewData
-    ? { ...previewData, cfg }
-    : { cfg, weather: null, events: [], units: (cfg?.units || 'F'), screen: editScreen };
+    ? { ...previewData, cfg, layout: editScreen ? editScreen.layout : [] }
+    : { cfg, weather: null, events: [], units: (editScreen && editScreen.units) || 'F', layout: editScreen ? editScreen.layout : [] };
 
   const showToast = (msg) => {
     setToast(msg);
@@ -86,39 +145,71 @@ export default function App() {
     markDirty();
   };
 
-  const updateLayout = (screen, next) => {
-    setLayouts(prev => ({ ...prev, [screen]: next }));
+  // ============ SCREENS ============
+  const updateScreen = (id, patch) => {
+    setCfg(prev => ({
+      ...prev,
+      screens: prev.screens.map(s => s.id === id ? { ...s, ...patch } : s)
+    }));
+    markDirty();
+  };
+
+  const updateScreenLayout = (id, layout) => {
+    setCfg(prev => ({
+      ...prev,
+      screens: prev.screens.map(s => s.id === id ? { ...s, layout } : s)
+    }));
+    markDirty();
+  };
+
+  const addScreen = () => {
+    setCfg(prev => {
+      if (prev.screens.length >= MAX_SCREENS) return prev;
+      const template = prev.screens[0] || {};
+      const fresh = makeDefaultScreen({
+        name: `Screen ${prev.screens.length + 1}`,
+        units: template.units || 'F',
+        refreshMinutes: template.refreshMinutes || 30
+      });
+      return { ...prev, screens: [...prev.screens, fresh] };
+    });
+    markDirty();
+  };
+
+  const deleteScreen = (id) => {
+    if (screens.length <= 1) {
+      showToast('Cannot delete the last screen');
+      return;
+    }
+    const target = screens.find(s => s.id === id);
+    if (!target) return;
+    if (!window.confirm(`Delete screen "${target.name}"?`)) return;
+    setCfg(prev => {
+      const next = prev.screens.filter(s => s.id !== id);
+      // If we deleted the default, promote the first remaining one.
+      if (target.isDefault && next.length) next[0] = { ...next[0], isDefault: true };
+      return { ...prev, screens: next };
+    });
+    if (editScreenId === id) {
+      setEditScreenId(screens.find(s => s.id !== id)?.id || null);
+    }
+    markDirty();
+  };
+
+  const setDefaultScreen = (id) => {
+    setCfg(prev => ({
+      ...prev,
+      screens: prev.screens.map(s => ({ ...s, isDefault: s.id === id }))
+    }));
     markDirty();
   };
 
   const handleSave = async () => {
-    if (!cfg) return;
+    if (!cfg || !canSave) return;
     setStatus('saving');
     try {
-      // Keep legacy `cfg.widgets` booleans in sync with whatever's enabled
-      // on screen 1, so devices that haven't migrated still render right.
-      const widgetsBool = { ...(cfg.widgets || {}) };
-      for (const def of WIDGET_REGISTRY) {
-        const has = layouts[1].some(l => (l.widgetId || l.id) === def.id);
-        widgetsBool[def.requires] = has;
-      }
-      const next = {
-        ...cfg,
-        widgets: widgetsBool,
-        layouts: {
-          1: compactLayout(layouts[1]),
-          2: compactLayout(layouts[2])
-        }
-      };
-      // Drop the legacy single-array field if present; new schema lives on
-      // `layouts`.
-      delete next.layout;
-      const saved = await saveConfig(next);
-      setCfg(saved);
-      setLayouts({
-        1: getScreenLayout(saved, 1),
-        2: getScreenLayout(saved, 2)
-      });
+      const saved = await saveConfig({ ...cfg, screens: cfg.screens });
+      setCfg(migrateConfigToScreens(saved));
       setStatus('saved');
       setPreviewKey(Date.now());
     } catch (err) {
@@ -138,7 +229,7 @@ export default function App() {
   }
 
   const statusDef = STATUS[status] || STATUS.synced;
-  const layout = layouts[editScreen] || [];
+  const layout = editScreen ? editScreen.layout : [];
 
   return (
     <div className="shell">
@@ -153,26 +244,18 @@ export default function App() {
             className={`btn ${editMode ? 'btn-primary' : ''}`}
             onClick={() => {
               if (editMode) {
-                // Exiting edit mode. If the user has unsaved changes,
-                // ask whether to discard or keep them (which auto-saves
-                // is still up to them on the Save bar).
                 if (status === 'dirty' && editSnapshot) {
                   const discard = window.confirm(
-                    'Discard unsaved layout changes?\n\nClick OK to revert the editor to the last saved state. Click Cancel to keep editing.'
+                    'Discard unsaved layout changes?\n\nOK = revert. Cancel = keep editing.'
                   );
                   if (!discard) return;
-                  setLayouts(editSnapshot.layouts);
                   setCfg(editSnapshot.cfg);
                   setStatus('synced');
                 }
                 setEditSnapshot(null);
                 setEditMode(false);
               } else {
-                // Entering edit mode — snapshot so we can roll back.
-                setEditSnapshot({
-                  layouts: { 1: [...layouts[1]], 2: [...layouts[2]] },
-                  cfg: { ...cfg }
-                });
+                setEditSnapshot({ cfg: JSON.parse(JSON.stringify(cfg)) });
                 setEditMode(true);
               }
             }}
@@ -182,14 +265,30 @@ export default function App() {
         </div>
       </header>
 
+      <ScreenTabs
+        screens={screens}
+        activeId={editScreenId}
+        overlapIds={overlapIds}
+        editMode={editMode}
+        liveScreen={liveScreen}
+        onSelect={setEditScreenId}
+        onAdd={addScreen}
+        canAdd={screens.length < MAX_SCREENS}
+      />
+
       <main className={`layout ${editMode ? 'edit-mode' : ''}`}>
         {!editMode && (
           <div className="preview-stage">
             <Preview
-              screen={parseInt(cfg.screen, 10) === 2 ? 2 : 1}
+              screen={liveScreen ? liveScreen.id : ''}
               cacheKey={previewKey}
               onRefresh={refreshPreview}
             />
+            {liveScreen && pickActiveScreen(cfg, nowMinutesLocal(cfg.timezone || 'UTC'))?.id === liveScreen.id && liveScreen.schedule?.enabled && (
+              <div className="schedule-lock-badge">
+                SCHEDULED · {liveScreen.name} · {liveScreen.schedule.from}–{liveScreen.schedule.to}
+              </div>
+            )}
           </div>
         )}
 
@@ -197,30 +296,18 @@ export default function App() {
           {editMode ? (
             <section className="card">
               <div className="section-title">
-                <span>Edit Layout</span>
+                <span>Edit Layout — {editScreen?.name || ''}</span>
                 <span className="badge">{GRID_COLS}×{GRID_ROWS}</span>
               </div>
               <div className="editor-toolbar">
-                <div className="btn-row" style={{ marginTop: 0 }}>
-                  <span className="editor-help" style={{ marginRight: 6, marginTop: 0 }}>SCREEN</span>
-                  {SCREENS.map(s => (
-                    <button
-                      key={s}
-                      className={`btn ${editScreen === s ? 'btn-primary' : ''}`}
-                      onClick={() => setEditScreen(s)}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
                 <div className="btn-row" style={{ marginTop: 0 }}>
                   <button className="btn" onClick={() => setShowGrid(g => !g)}>
                     {showGrid ? '◧ HIDE GRID' : '◧ SHOW GRID'}
                   </button>
                   <button className="btn btn-ghost" onClick={() => {
-                    updateLayout(editScreen, defaultsForScreen(editScreen));
+                    updateScreenLayout(editScreen.id, []);
                   }}>
-                    ↻ RESET
+                    ↻ CLEAR
                   </button>
                 </div>
               </div>
@@ -228,28 +315,45 @@ export default function App() {
                 layout={layout}
                 showGrid={showGrid}
                 previewData={livePreviewData}
-                onChange={(next) => updateLayout(editScreen, next)}
+                onChange={(next) => updateScreenLayout(editScreen.id, next)}
                 onError={showToast}
               />
               <div className="editor-help">
-                DRAG TILE TO MOVE · CORNER TO RESIZE · × OR DRAG TO TRASH BELOW · DRAG POOL CARD ONTO CANVAS
+                DRAG TILE TO MOVE · CORNER TO RESIZE · × OR DRAG TO TRASH · DRAG POOL CARD ONTO CANVAS
               </div>
             </section>
           ) : (
-            <Settings
-              cfg={cfg}
-              layout={layout}
-              onPatch={patchCfg}
-              onPatchNested={patchNested}
-            />
+            <>
+              {editScreen && (
+                <ScreenPanel
+                  screen={editScreen}
+                  isOverlap={overlapIds.has(editScreen.id)}
+                  onUpdate={(patch) => updateScreen(editScreen.id, patch)}
+                  onSetDefault={() => setDefaultScreen(editScreen.id)}
+                  onDelete={() => deleteScreen(editScreen.id)}
+                  canDelete={screens.length > 1}
+                />
+              )}
+              <Settings
+                cfg={cfg}
+                layout={layout}
+                onPatch={patchCfg}
+                onPatchNested={patchNested}
+              />
+            </>
           )}
         </div>
       </main>
 
       <SaveBar
-        status={statusDef.cls}
-        label={statusDef.label + (statusMsg && status === 'error' ? ` · ${statusMsg}` : '')}
+        status={canSave ? statusDef.cls : 'error'}
+        label={
+          canSave
+            ? (statusDef.label + (statusMsg && status === 'error' ? ` · ${statusMsg}` : ''))
+            : `BLOCKED · ${validationErrors[0]}`
+        }
         onSave={handleSave}
+        disabled={!canSave}
       />
 
       {toast && (

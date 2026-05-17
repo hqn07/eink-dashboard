@@ -71,6 +71,81 @@ main.layout {
   align-items: start;
 }
 
+/* ============ SCREEN TABS ============ */
+.screen-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px;
+  margin-bottom: 16px;
+  background: #fff;
+  border: 2px solid var(--ink);
+}
+.screen-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 2px solid var(--ink);
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+}
+.screen-tab:hover { background: #faf8f3; }
+.screen-tab.active { background: var(--ink); color: #fff; }
+.screen-tab.overlap {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+.screen-tab.overlap.active { background: var(--accent); color: #fff; }
+.screen-tab-name { font-weight: 700; }
+.screen-tab-flag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  padding: 1px 5px;
+  background: var(--ink);
+  color: #fff;
+  border-radius: 2px;
+}
+.screen-tab.active .screen-tab-flag { background: #fff; color: var(--ink); }
+.screen-tab-flag.live { background: var(--accent); color: #fff !important; }
+.screen-tab-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  opacity: 0.7;
+}
+.screen-tab-add {
+  font-size: 22px;
+  line-height: 1;
+  padding: 4px 14px;
+  background: var(--bg);
+}
+.screen-tab-add:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Schedule lock badge below the preview when running locked to a schedule */
+.schedule-lock-badge {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--ink);
+  color: #fff;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+/* Screen settings panel — flags an overlap with a red border. */
+.screen-panel.invalid { border-color: var(--accent); }
+.terminal-line.invalid { color: var(--accent); }
+
 @media (min-width: 980px) {
   main.layout {
     grid-template-columns: minmax(440px, 1.1fr) 1fr;

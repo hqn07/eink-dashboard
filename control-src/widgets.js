@@ -183,6 +183,122 @@ export function defaultsForScreen(screen) {
   return expandLayout(DEFAULT_LAYOUTS[screen === 2 ? 2 : 1]);
 }
 
+// ============ SCREENS (new schema) ============
+// `cfg.screens` is a flat array. Each screen owns its layout +
+// schedule + per-screen settings. One screen is marked `isDefault`
+// and is used whenever no scheduled screen matches the current time
+// (or when no screens have schedule enabled at all).
+
+let _screenCounter = 0;
+export function newScreenId() {
+  _screenCounter += 1;
+  return `scr-${Date.now().toString(36)}-${_screenCounter}`;
+}
+
+export function makeDefaultScreen(template = {}) {
+  return {
+    id: newScreenId(),
+    name: template.name || 'Screen',
+    isDefault: false,
+    schedule: { enabled: false, from: '07:00', to: '22:00' },
+    units: template.units || 'F',
+    refreshMinutes: Number.isFinite(template.refreshMinutes) ? template.refreshMinutes : 30,
+    layout: template.layout ? template.layout.map(l => ({ ...l })) : []
+  };
+}
+
+// Migrate old config shape (cfg.layouts + cfg.schedule + cfg.units +
+// cfg.refreshMinutes) into the new cfg.screens array. Idempotent —
+// once cfg.screens exists, return as-is.
+export function migrateConfigToScreens(cfg) {
+  if (Array.isArray(cfg.screens) && cfg.screens.length) return cfg;
+  const oldLayouts = cfg.layouts || (Array.isArray(cfg.layout) ? { 1: cfg.layout } : { 1: [] });
+  const sched = cfg.schedule || {};
+  const sActive = sched.active || {};
+  const sQuiet  = sched.quiet  || {};
+  const screens = [];
+  screens.push({
+    id: newScreenId(),
+    name: 'Day',
+    isDefault: true,
+    schedule: sched.enabled
+      ? { enabled: true, from: sched.activeFrom || '07:00', to: sched.activeTo || '22:00' }
+      : { enabled: false, from: '07:00', to: '22:00' },
+    units: cfg.units || 'F',
+    refreshMinutes: sActive.refreshMinutes || cfg.refreshMinutes || 30,
+    layout: (oldLayouts[1] || []).map(l => ({ ...l }))
+  });
+  if (oldLayouts[2] && oldLayouts[2].length) {
+    screens.push({
+      id: newScreenId(),
+      name: 'Night',
+      isDefault: false,
+      schedule: sched.enabled
+        ? { enabled: true, from: sched.activeTo || '22:00', to: sched.activeFrom || '07:00' }
+        : { enabled: false, from: '22:00', to: '07:00' },
+      units: cfg.units || 'F',
+      refreshMinutes: sQuiet.refreshMinutes || 120,
+      layout: (oldLayouts[2] || []).map(l => ({ ...l }))
+    });
+  }
+  return { ...cfg, screens };
+}
+
+// ============ TIME / SCHEDULE HELPERS ============
+
+export function parseHHMM(s) {
+  if (typeof s !== 'string') return NaN;
+  const m = s.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+  if (!m) return NaN;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+
+// Each enabled schedule becomes one or two [a,b) minute intervals
+// in 24h linear space. Wrapping windows (from > to) split.
+export function scheduleIntervals(sch) {
+  if (!sch || !sch.enabled) return [];
+  const a = parseHHMM(sch.from);
+  const b = parseHHMM(sch.to);
+  if (!Number.isFinite(a) || !Number.isFinite(b) || a === b) return [];
+  if (a < b) return [[a, b]];
+  return [[a, 1440], [0, b]];
+}
+
+// Returns array of overlap descriptions between enabled screens.
+// Each entry: { screenAId, screenBId, range: [a,b] }.
+export function findOverlaps(screens) {
+  const intervals = [];
+  for (const s of screens) {
+    for (const [a, b] of scheduleIntervals(s.schedule)) {
+      intervals.push({ screenId: s.id, a, b });
+    }
+  }
+  intervals.sort((x, y) => x.a - y.a);
+  const overlaps = [];
+  for (let i = 0; i < intervals.length; i++) {
+    for (let j = i + 1; j < intervals.length; j++) {
+      if (intervals[i].screenId === intervals[j].screenId) continue;
+      const x = intervals[i], y = intervals[j];
+      if (y.a >= x.b) break;
+      overlaps.push({ screenAId: x.screenId, screenBId: y.screenId, range: [Math.max(x.a, y.a), Math.min(x.b, y.b)] });
+    }
+  }
+  return overlaps;
+}
+
+// Pick which screen should render *now* for the given timezone.
+// Returns the matching screen or, if none, the default screen.
+export function pickActiveScreen(cfg, nowMinutes) {
+  if (!cfg.screens || !cfg.screens.length) return null;
+  for (const s of cfg.screens) {
+    const ints = scheduleIntervals(s.schedule);
+    for (const [a, b] of ints) {
+      if (nowMinutes >= a && nowMinutes < b) return s;
+    }
+  }
+  return cfg.screens.find(s => s.isDefault) || cfg.screens[0];
+}
+
 // Helper for the editor: build a fresh layout item for a new instance
 // of the given widget at given position/size.
 export function makeInstance(widgetId, { x = 0, y = 0, w, h, sizeKey } = {}) {

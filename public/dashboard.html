@@ -301,21 +301,22 @@
     return items;
   }
 
-  // Pick the layout for the current screen. Order of precedence:
-  //  1. cfg.layouts[screen]               — new per-screen storage
-  //  2. cfg.layout (legacy, screen 1)     — back-compat single layout
-  //  3. cfg.widgets booleans              — oldest config shape
-  //  4. DEFAULT_LAYOUTS[screen]           — final fallback
+  // Resolve which layout to render. Order of precedence:
+  //  1. D.layout (server-supplied — new screens schema)
+  //  2. cfg.layouts[screen]               — legacy per-screen map
+  //  3. cfg.layout                        — legacy single layout
+  //  4. cfg.widgets booleans              — oldest config shape
+  //  5. DEFAULT_LAYOUTS[1]                — final fallback
   function resolveLayout() {
+    if (Array.isArray(D.layout) && D.layout.length) return expandLayout(D.layout);
     const s = (screen === 2) ? 2 : 1;
     if (cfg.layouts && Array.isArray(cfg.layouts[s]) && cfg.layouts[s].length) {
       return expandLayout(cfg.layouts[s]);
     }
-    if (s === 1 && Array.isArray(cfg.layout) && cfg.layout.length) {
+    if (Array.isArray(cfg.layout) && cfg.layout.length) {
       return expandLayout(cfg.layout);
     }
     if (cfg.widgets && Object.keys(cfg.widgets).length) {
-      // Build from legacy booleans + screen defaults.
       const base = DEFAULT_LAYOUTS[s].map(d => {
         const def = widgetById(d.id);
         return { ...d, enabled: !!widgets[def?.requires] };
