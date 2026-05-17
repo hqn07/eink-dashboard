@@ -9,8 +9,8 @@ import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById } from '../widgets.js
 //  - Each canvas tile has size-preset buttons (S/M/L/XL) and a × remove.
 // Resizing is preset-based — no arbitrary corner drag — to keep layouts
 // snapping to known-good sizes.
-const PAD = 8;
-const MARGIN = 4;
+const PAD = 6;     // even inset around the entire RGL container
+const MARGIN = 4;  // gap between widgets
 
 export default function EditorGrid({ layout, showGrid, onChange }) {
   const wrapRef = useRef(null);
@@ -35,10 +35,11 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
   const disabled = layout.filter(l => l.enabled === false);
 
   // Compute row height from the actual measured container so widgets
-  // always fit, regardless of CSS aspect-ratio rounding.
+  // always fit. PAD is the even outer inset RGL applies via
+  // containerPadding; MARGIN is the gap between cells.
   const innerH = Math.max(0, size.h - PAD * 2 - (GRID_ROWS - 1) * MARGIN);
   const rowHeight = innerH / GRID_ROWS;
-  const innerW = Math.max(0, size.w - PAD * 2);
+  const innerW = size.w;
 
   const rglLayout = enabled.map(l => ({
     i: l.id,
@@ -185,7 +186,7 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
           isResizable
           resizeHandles={['se', 'sw', 'nw']}
           margin={[MARGIN, MARGIN]}
-          containerPadding={[0, 0]}
+          containerPadding={[PAD, PAD]}
           layout={rglLayout}
           onLayoutChange={handleLayoutChange}
         >
