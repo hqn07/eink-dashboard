@@ -1,9 +1,14 @@
-import React, { useMemo, useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import GridLayout from 'react-grid-layout';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById } from '../widgets.js';
 
-export default function EditorGrid({ layout, showGrid, onChange, onToggle }) {
+// Editor uses two regions:
+//  - Canvas: the dashboard grid where enabled widgets live. Drag & resize via RGL.
+//  - Pool: a palette below the canvas listing disabled widgets. "+ ADD"
+//    moves a widget onto the canvas at its default (or next free) slot.
+//  - Each canvas tile has a small × button that returns it to the pool.
+export default function EditorGrid({ layout, showGrid, onChange }) {
   const wrapRef = useRef(null);
   const [width, setWidth] = useState(800);
 
@@ -19,19 +24,21 @@ export default function EditorGrid({ layout, showGrid, onChange, onToggle }) {
     return () => ro.disconnect();
   }, []);
 
-  // Body grid is GRID_ROWS rows tall; pick rowHeight so the grid is the
-  // dashboard's aspect ratio (60% of width = 480/800 → minus header/footer).
-  const rowHeight = (width * 0.6) / GRID_ROWS;
+  const enabled  = layout.filter(l => l.enabled !== false);
+  const disabled = layout.filter(l => l.enabled === false);
 
-  const rglLayout = layout.map(l => ({
+  // Body grid is GRID_ROWS rows tall; pick rowHeight so the editor mirrors
+  // the dashboard's 60% aspect.
+  const rowHeight = ((width - 16) * 0.6) / GRID_ROWS;
+
+  const rglLayout = enabled.map(l => ({
     i: l.id,
     x: l.x, y: l.y, w: l.w, h: l.h,
     minW: 1, minH: 1, maxW: GRID_COLS, maxH: GRID_ROWS
   }));
 
   const handleLayoutChange = (next) => {
-    // react-grid-layout fires onLayoutChange on mount with the layout we
-    // already passed in. Skip when nothing actually moved.
+    // RGL fires onLayoutChange on mount; skip when nothing actually moved.
     const changed = next.some(n => {
       const cur = layout.find(l => l.id === n.i);
       if (!cur) return true;
@@ -48,50 +55,125 @@ export default function EditorGrid({ layout, showGrid, onChange, onToggle }) {
     onChange(merged);
   };
 
+  // Find an empty position to drop an added widget. Tries the widget's
+  // default first; if it collides, scans for a free top-left.
+  const findFreeSlot = (def, items) => {
+    const fits = (x, y, w, h) => {
+      if (x + w > GRID_COLS || y + h > GRID_ROWS) return false;
+      return !items.some(it =>
+        x < it.x + it.w && x + w > it.x &&
+        y < it.y + it.h && y + h > it.y
+      );
+    };
+    const d = def.defaultLayout;
+    if (fits(d.x, d.y, d.w, d.h)) return { x: d.x, y: d.y, w: d.w, h: d.h };
+    // Fall back: try smaller 3x2 footprint at the first free cell.
+    const w = Math.min(d.w, 4), h = Math.min(d.h, 2);
+    for (let y = 0; y + h <= GRID_ROWS; y++) {
+      for (let x = 0; x + w <= GRID_COLS; x++) {
+        if (fits(x, y, w, h)) return { x, y, w, h };
+      }
+    }
+    return { x: 0, y: 0, w: Math.min(d.w, 3), h: Math.min(d.h, 2) };
+  };
+
+  const addToCanvas = (id) => {
+    const def = widgetById(id);
+    if (!def) return;
+    const slot = findFreeSlot(def, enabled);
+    onChange(layout.map(l => l.id === id ? { ...l, ...slot, enabled: true } : l));
+  };
+
+  const removeFromCanvas = (id) => {
+    onChange(layout.map(l => l.id === id ? { ...l, enabled: false } : l));
+  };
+
   return (
-    <div ref={wrapRef} className={`editor-wrap ${showGrid ? 'show-grid' : ''}`}>
-      <GridLayout
-        className="layout"
-        cols={GRID_COLS}
-        rowHeight={rowHeight}
-        width={width - 16}
-        maxRows={GRID_ROWS}
-        compactType={null}
-        preventCollision
-        margin={[4, 4]}
-        containerPadding={[0, 0]}
-        layout={rglLayout}
-        onLayoutChange={handleLayoutChange}
-        draggableHandle=".tile-drag"
-        resizeHandles={['se']}
-      >
-        {layout.map(l => {
-          const def = widgetById(l.id);
-          return (
-            <div key={l.id} className="tile-drag">
-              <motion.div
-                layout
-                onClick={(e) => {
-                  // Skip toggle when the user clicked the resize handle
-                  // (which is RGL's own element). Drag-initiated mouse-ups
-                  // don't produce a click event, so genuine clicks here
-                  // are real toggle intents.
-                  if (e.target.closest('.react-resizable-handle')) return;
-                  e.stopPropagation();
-                  onToggle(l.id);
-                }}
-                className={`editor-tile ${l.enabled === false ? 'disabled' : ''}`}
-                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                style={{ width: '100%', height: '100%' }}
-              >
-                <div className="tile-id">{l.id}</div>
-                <div className="tile-label">{def?.label || l.id}</div>
-                <div className="tile-size">{l.w}×{l.h} · {l.enabled === false ? 'OFF' : 'ON'}</div>
-              </motion.div>
-            </div>
-          );
-        })}
-      </GridLayout>
+    <div>
+      <div ref={wrapRef} className={`editor-wrap ${showGrid ? 'show-grid' : ''}`}>
+        <GridLayout
+          className="layout"
+          cols={GRID_COLS}
+          rowHeight={rowHeight}
+          width={width - 16}
+          maxRows={GRID_ROWS}
+          compactType={null}
+          preventCollision
+          margin={[4, 4]}
+          containerPadding={[0, 0]}
+          layout={rglLayout}
+          onLayoutChange={handleLayoutChange}
+          resizeHandles={['se']}
+        >
+          {enabled.map(l => {
+            const def = widgetById(l.id);
+            return (
+              <div key={l.id}>
+                <motion.div
+                  layout
+                  className="editor-tile"
+                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  style={{ width: '100%', height: '100%' }}
+                >
+                  <button
+                    className="tile-remove"
+                    title="Remove from layout"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    onClick={(e) => { e.stopPropagation(); removeFromCanvas(l.id); }}
+                  >×</button>
+                  <div className="tile-id">{l.id}</div>
+                  <div className="tile-label">{def?.label || l.id}</div>
+                  <div className="tile-size">{l.w}×{l.h}</div>
+                </motion.div>
+              </div>
+            );
+          })}
+        </GridLayout>
+
+        {enabled.length === 0 && (
+          <div className="editor-empty terminal-line">
+            &gt; CANVAS_EMPTY — ADD A WIDGET FROM POOL BELOW
+          </div>
+        )}
+      </div>
+
+      <div className="palette">
+        <div className="palette-title">
+          <span>Widget Pool</span>
+          <span className="badge">{disabled.length}</span>
+        </div>
+        {disabled.length === 0 ? (
+          <div className="terminal-line palette-empty">&gt; ALL_WIDGETS_ON_CANVAS</div>
+        ) : (
+          <AnimatePresence>
+            {disabled.map(l => {
+              const def = widgetById(l.id);
+              return (
+                <motion.div
+                  key={l.id}
+                  layout
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  className="palette-tile"
+                >
+                  <div>
+                    <div className="tile-id">{l.id}</div>
+                    <div className="tile-label">{def?.label || l.id}</div>
+                  </div>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => addToCanvas(l.id)}
+                  >
+                    + ADD
+                  </button>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        )}
+      </div>
     </div>
   );
 }

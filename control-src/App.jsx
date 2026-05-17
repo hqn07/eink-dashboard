@@ -159,14 +159,9 @@ export default function App() {
                     layout={layout}
                     showGrid={showGrid}
                     onChange={(next) => { setLayout(next); markDirty(); }}
-                    onToggle={(id) => {
-                      const item = layout.find(l => l.id === id);
-                      if (!item) return;
-                      updateLayoutItem(id, { enabled: !item.enabled });
-                    }}
                   />
                   <div className="editor-help">
-                    DRAG TO MOVE · CORNER TO RESIZE · CLICK TILE TO TOGGLE ON/OFF
+                    DRAG TO MOVE · CORNER TO RESIZE · × TO REMOVE · POOL BELOW TO ADD
                   </div>
                 </section>
               </motion.div>

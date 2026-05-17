@@ -41,31 +41,52 @@ async function saveConfig(cfg) {
   await fsp.writeFile(CONFIG_PATH, JSON.stringify(cfg, null, 2));
 }
 
-// ---------- Puppeteer (one persistent browser) ----------
+// ---------- Puppeteer (one persistent browser, auto-relaunch if it dies) ----------
 
 let browserPromise = null;
 async function getBrowser() {
-  if (!browserPromise) {
-    const launchOpts = {
-      headless: 'new',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu'
-      ]
-    };
-    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-      launchOpts.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  if (browserPromise) {
+    try {
+      const b = await browserPromise;
+      // Puppeteer marks a Browser as disconnected if the process crashed.
+      if (b && b.connected) return b;
+    } catch (_) {
+      // Fall through to relaunch
     }
-    browserPromise = puppeteer.launch(launchOpts);
+    browserPromise = null;
   }
+  const launchOpts = {
+    headless: 'new',
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu'
+    ]
+  };
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    launchOpts.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+  browserPromise = puppeteer.launch(launchOpts).then(b => {
+    b.on('disconnected', () => {
+      console.warn('Puppeteer browser disconnected — will relaunch on next request');
+      browserPromise = null;
+    });
+    return b;
+  }).catch(err => {
+    browserPromise = null;
+    throw err;
+  });
   return browserPromise;
 }
 
 async function renderDashboardPng({ units, screen }) {
   const browser = await getBrowser();
   const page = await browser.newPage();
+  // Hard cap any single render at 25s — better to fail fast than block
+  // the request queue when the browser is wedged.
+  page.setDefaultTimeout(25000);
+  page.setDefaultNavigationTimeout(20000);
   try {
     await page.setViewport({
       width: SCREEN_W,
@@ -83,7 +104,7 @@ async function renderDashboardPng({ units, screen }) {
     });
     return buf;
   } finally {
-    await page.close();
+    try { await page.close(); } catch (_) {}
   }
 }
 
