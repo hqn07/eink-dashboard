@@ -124,52 +124,78 @@ function sizeFor(def, sizeKey) {
 }
 
 // Resolve a raw layout array into one with width/height filled in.
-// Stored geometry (`w`/`h`) wins; otherwise fall back to the `size`
-// preset. Adds any missing registry entries as disabled tiles so the
-// editor can show every widget in the pool.
+// Each item gets an instance `id` and a `widgetId` (registry key).
+// Old layouts (without instance ids) are migrated: `id` from storage
+// becomes both the instance id and the widget id.
 export function expandLayout(rawLayout = []) {
-  const byId = new Map(rawLayout.map(l => [l.id, l]));
-  return WIDGET_REGISTRY.map(def => {
-    const stored = byId.get(def.id);
-    const dl = (DEFAULT_LAYOUTS[1].find(d => d.id === def.id)) || { x: 0, y: 0, size: def.defaultSize, enabled: false };
-    const merged = { ...dl, ...(stored || {}) };
-    const sz = sizeFor(def, merged.size);
-    return {
-      id: def.id,
-      x: Number.isFinite(merged.x) ? merged.x : 0,
-      y: Number.isFinite(merged.y) ? merged.y : 0,
-      w: Number.isFinite(merged.w) ? merged.w : sz.w,
-      h: Number.isFinite(merged.h) ? merged.h : sz.h,
+  const items = [];
+  for (const raw of rawLayout) {
+    const widgetId = raw.widgetId || raw.id;
+    const def = widgetById(widgetId);
+    if (!def) continue;
+    if (raw.enabled === false) continue; // dropped widgets simply aren't in the layout anymore
+    const sz = sizeFor(def, raw.size);
+    items.push({
+      id: raw.id || newInstanceId(widgetId),
+      widgetId,
+      x: Number.isFinite(raw.x) ? raw.x : 0,
+      y: Number.isFinite(raw.y) ? raw.y : 0,
+      w: Number.isFinite(raw.w) ? raw.w : sz.w,
+      h: Number.isFinite(raw.h) ? raw.h : sz.h,
       size: sz.size,
-      enabled: merged.enabled !== false,
-      flush: !!merged.flush
-    };
-  });
+      flush: !!raw.flush
+    });
+  }
+  return items;
 }
 
 // Returns the expanded layout for the requested screen, falling back to
 // legacy `cfg.layout` if `cfg.layouts` isn't set.
 export function getScreenLayout(cfg, screen) {
   const s = (screen === 2) ? 2 : 1;
-  if (cfg.layouts && Array.isArray(cfg.layouts[s])) {
-    return expandLayout(cfg.layouts[s]);
+  let source = null;
+  if (cfg.layouts && Array.isArray(cfg.layouts[s]) && cfg.layouts[s].length) {
+    source = cfg.layouts[s];
+  } else if (s === 1 && Array.isArray(cfg.layout) && cfg.layout.length) {
+    source = cfg.layout;
+  } else {
+    source = DEFAULT_LAYOUTS[s];
   }
-  // Legacy: cfg.layout (single) used for screen 1; defaults for screen 2.
-  if (s === 1 && Array.isArray(cfg.layout)) {
-    return expandLayout(cfg.layout);
-  }
-  return expandLayout(DEFAULT_LAYOUTS[s]);
+  return expandLayout(source);
 }
 
 // Store layout with explicit geometry so the dashboard renderer doesn't
-// need to know about size presets. Editor still uses `size` for preset
-// buttons; we round-trip the key when present.
+// need to know about size presets. `id` is the unique instance id;
+// `widgetId` is the registry key (multiple instances may share it).
 export function compactLayout(items) {
-  return items.map(({ id, x, y, w, h, size, enabled, flush }) => ({
-    id, x, y, w, h, size, enabled, flush: !!flush
+  return items.map(({ id, widgetId, x, y, w, h, size, enabled, flush }) => ({
+    id, widgetId: widgetId || id, x, y, w, h, size, enabled, flush: !!flush
   }));
+}
+
+let _instanceCounter = 0;
+export function newInstanceId(widgetId) {
+  _instanceCounter += 1;
+  return `${widgetId}-${Date.now().toString(36)}-${_instanceCounter}`;
 }
 
 export function defaultsForScreen(screen) {
   return expandLayout(DEFAULT_LAYOUTS[screen === 2 ? 2 : 1]);
+}
+
+// Helper for the editor: build a fresh layout item for a new instance
+// of the given widget at given position/size.
+export function makeInstance(widgetId, { x = 0, y = 0, w, h, sizeKey } = {}) {
+  const def = widgetById(widgetId);
+  if (!def) return null;
+  const sz = sizeFor(def, sizeKey);
+  return {
+    id: newInstanceId(widgetId),
+    widgetId,
+    x, y,
+    w: Number.isFinite(w) ? w : sz.w,
+    h: Number.isFinite(h) ? h : sz.h,
+    size: sz.size,
+    flush: false
+  };
 }

@@ -15,8 +15,9 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested, onToggle
   // canvas. Layout is the source of truth; legacy `cfg.widgets` booleans
   // act as a fallback when no layout is set yet.
   const isOn = (id) => {
-    const item = layout.find(l => l.id === id);
-    if (item) return item.enabled !== false;
+    // Any instance of this widget type on the canvas counts as "on"
+    // for the purpose of showing its config section.
+    if (layout.some(l => (l.widgetId || l.id) === id)) return true;
     const def = WIDGET_REGISTRY.find(w => w.id === id);
     if (!def) return false;
     return !!(cfg.widgets && cfg.widgets[def.requires]);

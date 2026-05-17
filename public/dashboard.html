@@ -281,23 +281,24 @@
   // Resolve a raw saved layout array into one with explicit w/h. Stored
   // geometry wins; size preset is the fallback.
   function expandLayout(rawLayout) {
-    const byId = new Map((rawLayout || []).map(l => [l.id, l]));
-    return WIDGET_REGISTRY.map(def => {
-      const stored = byId.get(def.id);
-      const dl = DEFAULT_LAYOUTS[1].find(d => d.id === def.id)
-        || { x:0, y:0, size: def.defaultSize, enabled: false };
-      const merged = { ...dl, ...(stored || {}) };
-      const sz = sizeFor(def, merged.size);
-      return {
-        id: def.id,
-        x: Number.isFinite(merged.x) ? merged.x : 0,
-        y: Number.isFinite(merged.y) ? merged.y : 0,
-        w: Number.isFinite(merged.w) ? merged.w : sz.w,
-        h: Number.isFinite(merged.h) ? merged.h : sz.h,
-        enabled: merged.enabled !== false,
-        flush: !!merged.flush
-      };
-    });
+    const items = [];
+    for (const raw of (rawLayout || [])) {
+      if (raw.enabled === false) continue; // legacy: disabled = not rendered
+      const widgetId = raw.widgetId || raw.id;
+      const def = widgetById(widgetId);
+      if (!def) continue;
+      const sz = sizeFor(def, raw.size);
+      items.push({
+        id: raw.id || widgetId,
+        widgetId,
+        x: Number.isFinite(raw.x) ? raw.x : 0,
+        y: Number.isFinite(raw.y) ? raw.y : 0,
+        w: Number.isFinite(raw.w) ? raw.w : sz.w,
+        h: Number.isFinite(raw.h) ? raw.h : sz.h,
+        flush: !!raw.flush
+      });
+    }
+    return items;
   }
 
   // Pick the layout for the current screen. Order of precedence:
@@ -355,12 +356,11 @@
 
   let anyRendered = false;
   for (const item of layout) {
-    if (!item.enabled) continue;
-    const def = widgetById(item.id);
+    const def = widgetById(item.widgetId || item.id);
     if (!def) continue;
     const inner = def.render(ctx);
     if (!inner) continue;
-    const classes = ['cell', `cell-${item.id}`];
+    const classes = ['cell', `cell-${def.id}`];
     if (item.x + item.w >= GRID_COLS) classes.push('cell-edge-right');
     if (item.y + item.h >= GRID_ROWS) classes.push('cell-edge-bottom');
     if (item.flush) classes.push('cell-flush');

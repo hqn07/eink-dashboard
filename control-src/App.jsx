@@ -99,8 +99,8 @@ export default function App() {
       // on screen 1, so devices that haven't migrated still render right.
       const widgetsBool = { ...(cfg.widgets || {}) };
       for (const def of WIDGET_REGISTRY) {
-        const item = layouts[1].find(l => l.id === def.id);
-        if (item) widgetsBool[def.requires] = item.enabled !== false;
+        const has = layouts[1].some(l => (l.widgetId || l.id) === def.id);
+        widgetsBool[def.requires] = has;
       }
       const next = {
         ...cfg,

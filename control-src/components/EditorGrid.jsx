@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import GridLayout from 'react-grid-layout';
 import { motion, AnimatePresence } from 'framer-motion';
-import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById } from '../widgets.js';
+import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById, makeInstance } from '../widgets.js';
 import { renderWidget, renderHeader, renderFooter } from '../widget-render.js';
 
 // Editor cells must align 1:1 with dashboard cells so widget previews
@@ -46,8 +46,11 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
     return () => ro.disconnect();
   }, []);
 
-  const enabled  = layout.filter(l => l.enabled !== false);
-  const disabled = layout.filter(l => l.enabled === false);
+  // All items in `layout` are on the canvas (no more enabled flag).
+  // The pool is a fixed list of widget templates from the registry —
+  // each card creates a NEW instance when added.
+  const enabled = layout;
+  const palette = WIDGET_REGISTRY;
 
   // Editor canvas is sized to the full dashboard aspect; the body
   // section we hand to RGL is BODY_H/DASH_H of that height. Row
@@ -134,12 +137,11 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
     setTimeout(() => setShake(false), 500);
   };
 
-  const addToCanvas = (id) => {
-    const def = widgetById(id);
+  // Add a NEW instance of the given widget type. Multiple instances of
+  // the same widget can coexist on the canvas.
+  const addToCanvas = (widgetId) => {
+    const def = widgetById(widgetId);
     if (!def) return;
-    // Try every registered size, smallest area first; first one that
-    // fits in the canvas wins. Fluid widgets (e.g. the spacer) also
-    // get a 1×1 fallback so they can squeeze into any leftover cell.
     const candidates = Object.entries(def.sizes)
       .map(([key, sz]) => ({ key, w: sz.w, h: sz.h }))
       .sort((a, b) => (a.w * a.h) - (b.w * b.h));
@@ -148,7 +150,8 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
     for (const c of candidates) {
       const slot = findFreeSlot(c.w, c.h, enabled);
       if (slot) {
-        onChange(layout.map(l => l.id === id ? { ...l, ...slot, w: c.w, h: c.h, size: c.key, enabled: true } : l));
+        const inst = makeInstance(widgetId, { x: slot.x, y: slot.y, w: c.w, h: c.h, sizeKey: c.key });
+        if (inst) onChange([...layout, inst]);
         return;
       }
     }
@@ -156,8 +159,9 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
     onError && onError(`No room for ${def.label} on canvas`);
   };
 
+  // Remove a specific instance by its instance id.
   const removeFromCanvas = (id) => {
-    onChange(layout.map(l => l.id === id ? { ...l, enabled: false } : l));
+    onChange(layout.filter(l => l.id !== id));
   };
 
   // HTML5 drag from pool tile onto canvas.
@@ -224,10 +228,10 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
           onDragStop={onTileDragStop}
         >
           {enabled.map(l => {
-            const inner = renderWidget(l.id, previewData) || '';
+            const inner = renderWidget(l.widgetId, previewData) || '';
             const dashW = l.w * (DASH_W / GRID_COLS);
             const dashH = l.h * (BODY_H / GRID_ROWS);
-            const classes = ['cell', `cell-${l.id}`];
+            const classes = ['cell', `cell-${l.widgetId}`];
             if (l.x + l.w >= GRID_COLS) classes.push('cell-edge-right');
             if (l.y + l.h >= GRID_ROWS) classes.push('cell-edge-bottom');
             if (l.flush) classes.push('cell-flush');
@@ -304,61 +308,50 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
       <div className="palette">
         <div className="palette-title">
           <span>Widget Pool</span>
-          <span className="badge">{disabled.length}</span>
+          <span className="badge">{palette.length}</span>
         </div>
-        {disabled.length === 0 ? (
-          <div className="terminal-line palette-empty">&gt; ALL_WIDGETS_ON_CANVAS</div>
-        ) : (
-          <div className="palette-grid">
-            <AnimatePresence>
-              {disabled.map(l => {
-                const def = widgetById(l.id);
-                if (!def) return null;
-                const sizeKey = smallestSizeKey(def);
-                const { w, h } = def.sizes[sizeKey];
-                const inner = renderWidget(l.id, previewData) || '';
-                // Render the widget inside `.cell` chrome (same as the
-                // dashboard) so the pool thumbnail looks like the real
-                // tile.
-                const dashW = w * (DASH_W / GRID_COLS);
-                const dashH = h * (BODY_H / GRID_ROWS);
-                const html = `<div class="cell cell-${l.id}" style="width:${dashW}px;height:${dashH}px">${inner}</div>`;
-                const cardScale = Math.min(180 / dashW, 140 / dashH, 0.5);
-                return (
-                  <motion.div
-                    key={l.id}
-                    layout
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    className="palette-card"
-                    draggable
-                    onDragStart={(e) => onPoolDragStart(e, l.id)}
-                    onClick={() => addToCanvas(l.id)}
-                    title={`${def.label} — drag onto canvas or click to add`}
-                  >
-                    <div
-                      className="palette-card-preview"
-                      style={{ width: dashW * cardScale, height: dashH * cardScale }}
-                    >
-                      <div
-                        className="palette-card-scale"
-                        style={{
-                          width: dashW,
-                          height: dashH,
-                          transform: `scale(${cardScale})`,
-                          transformOrigin: 'top left'
-                        }}
-                        dangerouslySetInnerHTML={{ __html: html }}
-                      />
-                    </div>
-                    <div className="palette-card-label">{def.label}</div>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
-          </div>
-        )}
+        <div className="palette-grid">
+          {palette.map(def => {
+            const sizeKey = smallestSizeKey(def);
+            const { w, h } = def.sizes[sizeKey];
+            const inner = renderWidget(def.id, previewData) || '';
+            const dashW = w * (DASH_W / GRID_COLS);
+            const dashH = h * (BODY_H / GRID_ROWS);
+            const html = `<div class="cell cell-${def.id}" style="width:${dashW}px;height:${dashH}px">${inner}</div>`;
+            const cardScale = Math.min(180 / dashW, 140 / dashH, 0.5);
+            const count = enabled.filter(l => l.widgetId === def.id).length;
+            return (
+              <motion.div
+                key={def.id}
+                layout
+                className="palette-card"
+                draggable
+                onDragStart={(e) => onPoolDragStart(e, def.id)}
+                onClick={() => addToCanvas(def.id)}
+                title={`${def.label} — drag onto canvas or click to add`}
+              >
+                <div
+                  className="palette-card-preview"
+                  style={{ width: dashW * cardScale, height: dashH * cardScale }}
+                >
+                  <div
+                    className="palette-card-scale"
+                    style={{
+                      width: dashW,
+                      height: dashH,
+                      transform: `scale(${cardScale})`,
+                      transformOrigin: 'top left'
+                    }}
+                    dangerouslySetInnerHTML={{ __html: html }}
+                  />
+                </div>
+                <div className="palette-card-label">
+                  {def.label}{count > 0 ? ` · ${count} ON` : ''}
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
