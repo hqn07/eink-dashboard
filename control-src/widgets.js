@@ -65,6 +65,30 @@ export const WIDGET_REGISTRY = [
       L: { w: 12, h: 2 }
     },
     defaultSize: 'M'
+  },
+  {
+    id: 'spacer',
+    label: 'Black Bar',
+    requires: 'spacer',
+    sizes: {
+      S:  { w: 12, h: 1 },
+      M:  { w: 6,  h: 1 },
+      L:  { w: 4,  h: 6 },
+      XL: { w: 12, h: 2 }
+    },
+    defaultSize: 'S'
+  },
+  {
+    id: 'quote',
+    label: 'Text / Quote',
+    requires: 'quote',
+    sizes: {
+      S:  { w: 4, h: 2 },
+      M:  { w: 6, h: 3 },
+      L:  { w: 12, h: 3 },
+      XL: { w: 12, h: 6 }
+    },
+    defaultSize: 'M'
   }
 ];
 
@@ -79,14 +103,18 @@ const DEFAULT_LAYOUTS = {
     { id: 'weather_forecast', x: 4, y: 0, size: 'M', enabled: true },
     { id: 'message',          x: 7, y: 0, size: 'M', enabled: true },
     { id: 'todos',            x: 7, y: 2, size: 'M', enabled: true },
-    { id: 'calendar',         x: 7, y: 4, size: 'M', enabled: false }
+    { id: 'calendar',         x: 7, y: 4, size: 'M', enabled: false },
+    { id: 'spacer',           x: 0, y: 0, size: 'S', enabled: false },
+    { id: 'quote',            x: 0, y: 0, size: 'M', enabled: false }
   ],
   2: [
     { id: 'weather_hero',     x: 0, y: 0, size: 'XL', enabled: true },
     { id: 'weather_forecast', x: 0, y: 0, size: 'M',  enabled: false },
     { id: 'message',          x: 0, y: 0, size: 'M',  enabled: false },
     { id: 'todos',            x: 0, y: 0, size: 'M',  enabled: false },
-    { id: 'calendar',         x: 0, y: 0, size: 'M',  enabled: false }
+    { id: 'calendar',         x: 0, y: 0, size: 'M',  enabled: false },
+    { id: 'spacer',           x: 0, y: 0, size: 'S',  enabled: false },
+    { id: 'quote',            x: 0, y: 0, size: 'M',  enabled: false }
   ]
 };
 

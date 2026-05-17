@@ -17,6 +17,13 @@
   "calendar": {
     "icalUrl": ""
   },
+  "spacer": {
+    "text": ""
+  },
+  "quote": {
+    "text": "Make each day your masterpiece.",
+    "attribution": "John Wooden"
+  },
   "city": "Gainesville,FL,US",
   "cityLabel": "GAINESVILLE",
   "refreshMinutes": 30,

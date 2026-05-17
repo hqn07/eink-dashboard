@@ -210,6 +210,40 @@
           </div>
         `;
       }
+    },
+    {
+      id: 'spacer',
+      label: 'Black Bar',
+      requires: 'spacer',
+      sizes: { S:{w:12,h:1}, M:{w:6,h:1}, L:{w:4,h:6}, XL:{w:12,h:2} },
+      defaultSize: 'S',
+      render: ({ cfg }) => {
+        const s = cfg.spacer || {};
+        const text = (s.text || '').trim();
+        return `<div class="widget widget-spacer">${text ? escapeHtml(text) : ''}</div>`;
+      }
+    },
+    {
+      id: 'quote',
+      label: 'Text / Quote',
+      requires: 'quote',
+      sizes: { S:{w:4,h:2}, M:{w:6,h:3}, L:{w:12,h:3}, XL:{w:12,h:6} },
+      defaultSize: 'M',
+      render: ({ cfg }) => {
+        const q = cfg.quote || {};
+        const body = (q.text || '').trim();
+        if (!body) return '';
+        const attr = (q.attribution || '').trim();
+        // Rough auto-fit: scale font by inverse char count so a 200-char
+        // quote in a small box still reads. We let CSS handle alignment.
+        const baseSize = Math.max(14, Math.min(46, Math.round(420 / Math.max(8, body.length / 4))));
+        return `
+          <div class="widget widget-quote">
+            <div class="quote-body" style="font-size:${baseSize}px">${escapeHtml(body)}</div>
+            ${attr ? `<div class="quote-attr">— ${escapeHtml(attr)}</div>` : ''}
+          </div>
+        `;
+      }
     }
   ];
 
@@ -224,14 +258,18 @@
       { id:'weather_forecast', x:4, y:0, size:'M', enabled:true },
       { id:'message',          x:7, y:0, size:'M', enabled:true },
       { id:'todos',            x:7, y:2, size:'M', enabled:true },
-      { id:'calendar',         x:7, y:4, size:'M', enabled:false }
+      { id:'calendar',         x:7, y:4, size:'M', enabled:false },
+      { id:'spacer',           x:0, y:0, size:'S', enabled:false },
+      { id:'quote',            x:0, y:0, size:'M', enabled:false }
     ],
     2: [
       { id:'weather_hero',     x:0, y:0, size:'XL', enabled:true },
       { id:'weather_forecast', x:0, y:0, size:'M',  enabled:false },
       { id:'message',          x:0, y:0, size:'M',  enabled:false },
       { id:'todos',            x:0, y:0, size:'M',  enabled:false },
-      { id:'calendar',         x:0, y:0, size:'M',  enabled:false }
+      { id:'calendar',         x:0, y:0, size:'M',  enabled:false },
+      { id:'spacer',           x:0, y:0, size:'S',  enabled:false },
+      { id:'quote',            x:0, y:0, size:'M',  enabled:false }
     ]
   };
 

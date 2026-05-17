@@ -24,6 +24,8 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested, onToggle
   const showMessage  = isOn('message');
   const showTodos    = isOn('todos');
   const showCalendar = isOn('calendar');
+  const showSpacer   = isOn('spacer');
+  const showQuote    = isOn('quote');
 
   const setSchedActive = (patch) => onPatchNested('schedule', {
     ...sched, active: { ...schedActive, ...patch }
@@ -145,6 +147,44 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested, onToggle
               value={cfg.calendar?.icalUrl || ''}
               onChange={e => onPatchNested('calendar', { icalUrl: e.target.value })}
               placeholder="https://calendar.google.com/calendar/ical/..."
+            />
+          </label>
+        </section>
+      )}
+
+      {showSpacer && (
+        <section className="card">
+          <div className="section-title">Black Bar</div>
+          <label className="field">
+            <span className="label">Label (optional)</span>
+            <input
+              type="text"
+              value={cfg.spacer?.text || ''}
+              onChange={e => onPatchNested('spacer', { text: e.target.value })}
+              placeholder="e.g. GOOD MORNING"
+            />
+          </label>
+        </section>
+      )}
+
+      {showQuote && (
+        <section className="card">
+          <div className="section-title">Text / Quote</div>
+          <label className="field">
+            <span className="label">Body</span>
+            <textarea
+              value={cfg.quote?.text || ''}
+              onChange={e => onPatchNested('quote', { text: e.target.value })}
+              placeholder="Make each day your masterpiece."
+            />
+          </label>
+          <label className="field">
+            <span className="label">Attribution (optional)</span>
+            <input
+              type="text"
+              value={cfg.quote?.attribution || ''}
+              onChange={e => onPatchNested('quote', { attribution: e.target.value })}
+              placeholder="John Wooden"
             />
           </label>
         </section>

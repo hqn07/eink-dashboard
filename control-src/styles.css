@@ -309,6 +309,18 @@ input[type="text"], input[type="url"], textarea {
   border: 2px solid var(--line);
   background: #fff;
   padding: 8px;
+  /* Match the dashboard aspect (800×480 = 60% taller-than-wide ratio).
+   * Locks the visual canvas to the physical display so the editor can
+   * never overflow regardless of widget sizes. */
+  aspect-ratio: 800 / 480;
+  overflow: hidden;
+}
+.editor-wrap .react-grid-layout {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
 }
 .editor-wrap.show-grid {
   background-image:

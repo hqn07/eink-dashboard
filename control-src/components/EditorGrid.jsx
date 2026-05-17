@@ -85,12 +85,34 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
   const setSize = (id, sizeKey) => {
     const def = widgetById(id);
     if (!def || !def.sizes[sizeKey]) return;
-    const { w, h } = def.sizes[sizeKey];
-    onChange(layout.map(l => {
-      if (l.id !== id) return l;
-      const pos = clampPos(l.x, l.y, w, h);
-      return { ...l, ...pos, w, h, size: sizeKey };
-    }));
+    let { w, h } = def.sizes[sizeKey];
+    w = Math.min(w, GRID_COLS);
+    h = Math.min(h, GRID_ROWS);
+
+    const target = layout.find(l => l.id === id);
+    if (!target) return;
+    const others = enabled.filter(o => o.id !== id);
+    const overlaps = (px, py) => others.some(o =>
+      px < o.x + o.w && px + w > o.x &&
+      py < o.y + o.h && py + h > o.y
+    );
+
+    // Prefer to keep the tile's current position; if the bigger size
+    // collides with neighbors, scan for a free top-left slot. Falls back
+    // to the clamped original position when nothing fits — the user can
+    // then move other widgets out of the way.
+    let { x, y } = clampPos(target.x, target.y, w, h);
+    if (overlaps(x, y)) {
+      let found = null;
+      for (let yy = 0; yy + h <= GRID_ROWS && !found; yy++) {
+        for (let xx = 0; xx + w <= GRID_COLS; xx++) {
+          if (!overlaps(xx, yy)) { found = { x: xx, y: yy }; break; }
+        }
+      }
+      if (found) ({ x, y } = found);
+    }
+
+    onChange(layout.map(l => l.id === id ? { ...l, x, y, w, h, size: sizeKey } : l));
   };
 
   const addToCanvas = (id) => {

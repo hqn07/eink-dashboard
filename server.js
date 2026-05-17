@@ -380,6 +380,8 @@ app.post('/api/config', async (req, res) => {
       widgets: { ...current.widgets, ...(req.body.widgets || {}) },
       message: { ...current.message, ...(req.body.message || {}) },
       calendar: { ...current.calendar, ...(req.body.calendar || {}) },
+      spacer:  { ...(current.spacer  || {}), ...(req.body.spacer  || {}) },
+      quote:   { ...(current.quote   || {}), ...(req.body.quote   || {}) },
       schedule: { ...curSched, ...bodySched,
         active: { ...(curSched.active || {}), ...(bodySched.active || {}) },
         quiet:  { ...(curSched.quiet  || {}), ...(bodySched.quiet  || {}) }
