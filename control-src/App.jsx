@@ -163,7 +163,7 @@ export default function App() {
       <main className="layout">
         <div className="preview-stage">
           <Preview
-            screen={parseInt(cfg.screen, 10) === 2 ? 2 : 1}
+            screen={editMode ? editScreen : (parseInt(cfg.screen, 10) === 2 ? 2 : 1)}
             cacheKey={previewKey}
             onRefresh={refreshPreview}
           />
