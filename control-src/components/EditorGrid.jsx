@@ -21,7 +21,6 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
   const [size, setSizeState] = useState({ w: 800, h: 480 });
   const [shake, setShake] = useState(false);
   const [dropHover, setDropHover] = useState(false);
-  const [trashHover, setTrashHover] = useState(false);
 
   useEffect(() => {
     if (!wrapRef.current) return;
@@ -49,6 +48,29 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
     minW: 1, minH: 1, maxW: GRID_COLS, maxH: GRID_ROWS
   }));
 
+  // Snap requested (w,h) to the widget's nearest registered preset.
+  // iOS-style: only valid widget sizes allowed.
+  const snapToValidSize = (id, w, h) => {
+    const def = widgetById(id);
+    if (!def) return { w, h, size: null };
+    let best = null;
+    let bestD = Infinity;
+    for (const [key, sz] of Object.entries(def.sizes)) {
+      const d = Math.abs(sz.w - w) + Math.abs(sz.h - h);
+      if (d < bestD) { bestD = d; best = { key, w: sz.w, h: sz.h }; }
+    }
+    return { w: best.w, h: best.h, size: best.key };
+  };
+
+  const onResize = (layoutArr, oldItem, newItem, placeholder) => {
+    const snap = snapToValidSize(newItem.i, newItem.w, newItem.h);
+    // Live-snap the placeholder so the ghost outline tracks valid sizes.
+    placeholder.w = snap.w;
+    placeholder.h = snap.h;
+    newItem.w = snap.w;
+    newItem.h = snap.h;
+  };
+
   const handleLayoutChange = (next) => {
     const changed = next.some(n => {
       const cur = layout.find(l => l.id === n.i);
@@ -60,8 +82,11 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
     const merged = layout.map(l => {
       const n = map.get(l.id);
       if (!n) return l;
-      const sizeChanged = (l.w !== n.w || l.h !== n.h);
-      return { ...l, x: n.x, y: n.y, w: n.w, h: n.h, size: sizeChanged ? null : l.size };
+      if (l.w !== n.w || l.h !== n.h) {
+        const snap = snapToValidSize(l.id, n.w, n.h);
+        return { ...l, x: n.x, y: n.y, w: snap.w, h: snap.h, size: snap.size };
+      }
+      return { ...l, x: n.x, y: n.y, w: n.w, h: n.h };
     });
     onChange(merged);
   };
@@ -134,27 +159,6 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
     if (id) addToCanvas(id);
   };
 
-  // HTML5 drag a canvas tile onto the TRASH zone to delete it.
-  const onTileDragStart = (e, id) => {
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/x-widget-remove', id);
-  };
-
-  const onTrashDragOver = (e) => {
-    if (e.dataTransfer.types.includes('text/x-widget-remove')) {
-      e.preventDefault();
-      setTrashHover(true);
-    }
-  };
-
-  const onTrashDragLeave = () => setTrashHover(false);
-
-  const onTrashDrop = (e) => {
-    e.preventDefault();
-    setTrashHover(false);
-    const id = e.dataTransfer.getData('text/x-widget-remove');
-    if (id) removeFromCanvas(id);
-  };
 
   return (
     <div>
@@ -181,6 +185,7 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
           containerPadding={[PAD, PAD]}
           layout={rglLayout}
           onLayoutChange={handleLayoutChange}
+          onResize={onResize}
         >
           {enabled.map(l => {
             const html = renderWidget(l.id, previewData) || '';
@@ -191,9 +196,14 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
                   className="editor-tile live-tile"
                   transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                   style={{ width: '100%', height: '100%' }}
-                  draggable
-                  onDragStart={(e) => onTileDragStart(e, l.id)}
                 >
+                  <button
+                    className="tile-remove"
+                    title="Remove"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    onClick={(e) => { e.stopPropagation(); removeFromCanvas(l.id); }}
+                  >×</button>
                   <div className="live-tile-body" dangerouslySetInnerHTML={{ __html: html }} />
                 </motion.div>
               </div>
@@ -207,15 +217,6 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
           </div>
         )}
       </motion.div>
-
-      <div
-        className={`trash-zone ${trashHover ? 'hover' : ''}`}
-        onDragOver={onTrashDragOver}
-        onDragLeave={onTrashDragLeave}
-        onDrop={onTrashDrop}
-      >
-        <span>&gt; DRAG HERE TO REMOVE</span>
-      </div>
 
       <div className="palette">
         <div className="palette-title">
