@@ -183,7 +183,7 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
           compactType={null}
           preventCollision
           isResizable
-          resizeHandles={['se', 'sw', 'ne', 'nw']}
+          resizeHandles={['se', 'sw', 'nw']}
           margin={[MARGIN, MARGIN]}
           containerPadding={[0, 0]}
           layout={rglLayout}
@@ -191,7 +191,6 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
         >
           {enabled.map(l => {
             const def = widgetById(l.id);
-            const sizeKeys = def ? Object.keys(def.sizes) : [];
             return (
               <div key={l.id}>
                 <motion.div
@@ -209,19 +208,6 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
                   >×</button>
                   <div className="tile-id">{l.id}</div>
                   <div className="tile-label">{def?.label || l.id}</div>
-                  <div className="tile-sizes" onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
-                    {sizeKeys.map(k => {
-                      const bad = invalidPress && invalidPress.id === l.id && invalidPress.size === k;
-                      return (
-                        <button
-                          key={k}
-                          className={`size-pill ${l.size === k ? 'active' : ''} ${bad ? 'invalid' : ''}`}
-                          onClick={(e) => { e.stopPropagation(); setSize(l.id, k); }}
-                          title={`${def.sizes[k].w}×${def.sizes[k].h}`}
-                        >{k}</button>
-                      );
-                    })}
-                  </div>
                 </motion.div>
               </div>
             );
