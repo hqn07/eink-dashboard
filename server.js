@@ -13,7 +13,7 @@ const fsp = require('fs/promises');
 const puppeteer = require('puppeteer');
 const sharp = require('sharp');
 
-const { fetchWeather } = require('./widgets/weather');
+const { fetchWeather, geocodeCity } = require('./widgets/weather');
 const { fetchEvents } = require('./widgets/calendar');
 
 const PORT = process.env.PORT || 3000;
@@ -432,40 +432,38 @@ app.get('/control-classic', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'control.html'));
 });
 
-// ---------- Geocoding / weather-check (proxies for OpenWeather) ----------
-// Keep the API key server-side; React fetches these instead of calling
-// OpenWeather directly. Results are cached briefly to avoid burning
-// the free-tier quota during autocomplete typing.
+// ---------- Geocoding / weather-check (Open-Meteo, no API key) ----------
+// React fetches these instead of calling Open-Meteo directly so that
+// (a) we can cache responses on the server and (b) the path is stable
+// if we ever switch providers.
 
 const geocodeCache = new Map(); // key: q-lower → { at, data }
 const GEO_CACHE_MS = 24 * 60 * 60 * 1000;
 
-async function owmFetch(url) {
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`OWM ${r.status}`);
+async function jsonFetch(url, opts = {}) {
+  const r = await fetch(url, opts);
+  if (!r.ok) throw new Error(`${url.split('?')[0]} → ${r.status}`);
   return r.json();
 }
 
 app.get('/api/geocode', async (req, res) => {
   const q = (req.query.q || '').trim();
   if (!q || q.length < 2) return res.json([]);
-  const key = process.env.OPENWEATHER_API_KEY;
-  if (!key) return res.status(500).json({ error: 'No OPENWEATHER_API_KEY' });
   const cacheKey = q.toLowerCase();
   const cached = geocodeCache.get(cacheKey);
   if (cached && (Date.now() - cached.at) < GEO_CACHE_MS) {
     return res.json(cached.data);
   }
   try {
-    const data = await owmFetch(
-      `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(q)}&limit=5&appid=${key}`
+    const data = await jsonFetch(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=en&format=json`
     );
-    const shaped = (data || []).map(d => ({
+    const shaped = ((data && data.results) || []).map(d => ({
       name: d.name,
-      state: d.state || null,
-      country: d.country || null,
-      lat: d.lat,
-      lon: d.lon
+      state: d.admin1 || null,
+      country: (d.country_code || '').toUpperCase() || null,
+      lat: d.latitude,
+      lon: d.longitude
     }));
     geocodeCache.set(cacheKey, { at: Date.now(), data: shaped });
     res.json(shaped);
@@ -480,17 +478,21 @@ app.get('/api/reverse-geocode', async (req, res) => {
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
     return res.status(400).json({ error: 'bad coords' });
   }
-  const key = process.env.OPENWEATHER_API_KEY;
-  if (!key) return res.status(500).json({ error: 'No OPENWEATHER_API_KEY' });
   try {
-    const data = await owmFetch(
-      `https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${key}`
+    // Nominatim (OpenStreetMap) is the only reliable free reverse
+    // geocoder. Their usage policy requires a clear User-Agent.
+    const data = await jsonFetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`,
+      { headers: { 'User-Agent': 'eink-dashboard/1.0 (https://github.com/hqn07/eink-dashboard)' } }
     );
-    const d = (data || [])[0];
-    if (!d) return res.json(null);
+    const addr = (data && data.address) || {};
+    const name = addr.city || addr.town || addr.village || addr.municipality || addr.county || data.name || '';
     res.json({
-      name: d.name, state: d.state || null, country: d.country || null,
-      lat: d.lat, lon: d.lon
+      name: name,
+      state: addr.state || null,
+      country: (addr.country_code || '').toUpperCase() || null,
+      lat: parseFloat(data.lat) || lat,
+      lon: parseFloat(data.lon) || lon
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -501,24 +503,21 @@ app.get('/api/weather-check', async (req, res) => {
   const city = (req.query.city || '').trim();
   const lat = parseFloat(req.query.lat);
   const lon = parseFloat(req.query.lon);
-  const units = req.query.units === 'C' ? 'metric' : 'imperial';
-  const key = process.env.OPENWEATHER_API_KEY;
-  if (!key) return res.json({ ok: false, error: 'No API key set' });
+  const units = req.query.units === 'C' ? 'C' : 'F';
   try {
-    const qs = Number.isFinite(lat) && Number.isFinite(lon)
-      ? `lat=${lat}&lon=${lon}`
-      : `q=${encodeURIComponent(city)}`;
-    const data = await owmFetch(
-      `https://api.openweathermap.org/data/2.5/weather?${qs}&appid=${key}&units=${units}`
-    );
-    if (Number(data.cod) !== 200) {
-      return res.json({ ok: false, error: data.message || 'not found' });
-    }
+    // Reuse the weather widget so the result matches what the
+    // dashboard will actually render. fetchWeather handles the
+    // geocode-then-fetch dance internally for city-only queries.
+    const loc = (Number.isFinite(lat) && Number.isFinite(lon))
+      ? { lat, lon }
+      : city;
+    const w = await fetchWeather(loc, null, units);
+    if (w.stale) return res.json({ ok: false, error: 'not found' });
     res.json({
       ok: true,
-      temp: Math.round(data.main.temp),
-      desc: (data.weather[0].description || '').toUpperCase(),
-      country: data.sys && data.sys.country
+      temp: w.temp,
+      desc: w.desc,
+      country: w.country || null
     });
   } catch (err) {
     res.json({ ok: false, error: err.message });
