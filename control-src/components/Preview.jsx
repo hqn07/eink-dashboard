@@ -1,34 +1,38 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-// Renders the dashboard preview image with a loading placeholder so the
-// card never collapses to zero height while the server warms its
-// Puppeteer browser.
+// Renders the dashboard preview image with a placeholder overlay that
+// stays on top until the image fires `load` (or the render takes too
+// long). The <img> is kept in the DOM the whole time so its request
+// actually fires — `display: none` prevented it in older revs.
 export default function Preview({ src, cacheKey, onRefresh }) {
-  const [url, setUrl] = useState(`${src}&_=${cacheKey}`);
   const [state, setState] = useState('loading'); // loading | ready | error
-  const imgRef = useRef(null);
+  const url = `${src}&_=${cacheKey}`;
 
   useEffect(() => {
-    setUrl(`${src}&_=${cacheKey}`);
     setState('loading');
-  }, [src, cacheKey]);
+    // Hard fallback: if we never get onload after 15s, treat as ready
+    // anyway so the placeholder doesn't get stuck.
+    const id = setTimeout(() => {
+      setState(s => s === 'loading' ? 'ready' : s);
+    }, 15000);
+    return () => clearTimeout(id);
+  }, [url]);
 
   return (
     <>
       <div className="preview-frame">
+        <img
+          key={url}
+          src={url}
+          alt="dashboard preview"
+          onLoad={() => setState('ready')}
+          onError={() => setState('error')}
+        />
         {state !== 'ready' && (
           <div className="preview-placeholder">
             {state === 'loading' ? '> RENDERING...' : '> ERROR LOADING PREVIEW'}
           </div>
         )}
-        <img
-          ref={imgRef}
-          src={url}
-          alt="dashboard preview"
-          style={{ display: state === 'ready' ? 'block' : 'none' }}
-          onLoad={() => setState('ready')}
-          onError={() => setState('error')}
-        />
       </div>
       <div className="preview-meta">
         <span>LIVE PREVIEW · 800×480</span>

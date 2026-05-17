@@ -11,6 +11,20 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested, onToggle
   const schedActive = sched.active || { refreshMinutes: 30, screen: 1 };
   const schedQuiet  = sched.quiet  || { refreshMinutes: 120, screen: 2 };
 
+  // Widget config sections only appear when the related widget is on the
+  // canvas. Layout is the source of truth; legacy `cfg.widgets` booleans
+  // act as a fallback when no layout is set yet.
+  const isOn = (id) => {
+    const item = layout.find(l => l.id === id);
+    if (item) return item.enabled !== false;
+    const def = WIDGET_REGISTRY.find(w => w.id === id);
+    if (!def) return false;
+    return !!(cfg.widgets && cfg.widgets[def.requires]);
+  };
+  const showMessage  = isOn('message');
+  const showTodos    = isOn('todos');
+  const showCalendar = isOn('calendar');
+
   const setSchedActive = (patch) => onPatchNested('schedule', {
     ...sched, active: { ...schedActive, ...patch }
   });
@@ -57,95 +71,84 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested, onToggle
         </div>
       </section>
 
-      <section className="card">
-        <div className="section-title">
-          <span>Widgets</span>
-          <span className="badge">{layout.filter(l => l.enabled !== false).length}/{layout.length}</span>
-        </div>
-        {WIDGET_REGISTRY.map(def => {
-          const item = layout.find(l => l.id === def.id);
-          const on = item ? item.enabled !== false : false;
-          return (
-            <div key={def.id} className="toggle-row">
-              <span className="toggle-label">{def.label}</span>
-              <Toggle on={on} onClick={() => onToggleWidget(def.id)} />
-            </div>
-          );
-        })}
-      </section>
-
-      <section className="card">
-        <div className="section-title">Message Widget</div>
-        <label className="field">
-          <span className="label">Headline</span>
-          <input
-            type="text"
-            value={cfg.message?.text || ''}
-            onChange={e => onPatchNested('message', { text: e.target.value })}
-            placeholder="Welcome home."
-          />
-        </label>
-        <label className="field">
-          <span className="label">Subtitle</span>
-          <input
-            type="text"
-            value={cfg.message?.subtitle || ''}
-            onChange={e => onPatchNested('message', { subtitle: e.target.value })}
-            placeholder="Optional small text"
-          />
-        </label>
-      </section>
-
-      <section className="card">
-        <div className="section-title">To-Do List</div>
-        {(cfg.todos || []).map((t, idx) => (
-          <div key={idx} className="todo-row">
-            <div
-              className={`todo-check ${t.done ? 'done' : ''}`}
-              onClick={() => {
-                const todos = [...(cfg.todos || [])];
-                todos[idx] = { ...todos[idx], done: !todos[idx].done };
-                onPatch({ todos });
-              }}
-            >{t.done ? '✓' : ''}</div>
+      {showMessage && (
+        <section className="card">
+          <div className="section-title">Message Widget</div>
+          <label className="field">
+            <span className="label">Headline</span>
             <input
               type="text"
-              value={t.text}
-              onChange={e => {
-                const todos = [...(cfg.todos || [])];
-                todos[idx] = { ...todos[idx], text: e.target.value };
-                onPatch({ todos });
-              }}
+              value={cfg.message?.text || ''}
+              onChange={e => onPatchNested('message', { text: e.target.value })}
+              placeholder="Welcome home."
             />
-            <button
-              className="btn btn-danger"
-              style={{ padding: '6px 10px' }}
-              onClick={() => {
-                const todos = (cfg.todos || []).filter((_, i) => i !== idx);
-                onPatch({ todos });
-              }}
-            >×</button>
-          </div>
-        ))}
-        <div className="btn-row">
-          <button className="btn" onClick={() => onPatch({
-            todos: [...(cfg.todos || []), { text: '', done: false }]
-          })}>+ Add item</button>
-        </div>
-      </section>
+          </label>
+          <label className="field">
+            <span className="label">Subtitle</span>
+            <input
+              type="text"
+              value={cfg.message?.subtitle || ''}
+              onChange={e => onPatchNested('message', { subtitle: e.target.value })}
+              placeholder="Optional small text"
+            />
+          </label>
+        </section>
+      )}
 
-      <section className="card">
-        <div className="section-title">Calendar</div>
-        <label className="field">
-          <span className="label">iCal URL</span>
-          <input
-            type="url"
-            value={cfg.calendar?.icalUrl || ''}
-            onChange={e => onPatchNested('calendar', { icalUrl: e.target.value })}
-            placeholder="https://calendar.google.com/calendar/ical/..."
-          />
-        </label>
-      </section>
+      {showTodos && (
+        <section className="card">
+          <div className="section-title">To-Do List</div>
+          {(cfg.todos || []).map((t, idx) => (
+            <div key={idx} className="todo-row">
+              <div
+                className={`todo-check ${t.done ? 'done' : ''}`}
+                onClick={() => {
+                  const todos = [...(cfg.todos || [])];
+                  todos[idx] = { ...todos[idx], done: !todos[idx].done };
+                  onPatch({ todos });
+                }}
+              >{t.done ? '✓' : ''}</div>
+              <input
+                type="text"
+                value={t.text}
+                onChange={e => {
+                  const todos = [...(cfg.todos || [])];
+                  todos[idx] = { ...todos[idx], text: e.target.value };
+                  onPatch({ todos });
+                }}
+              />
+              <button
+                className="btn btn-danger"
+                style={{ padding: '6px 10px' }}
+                onClick={() => {
+                  const todos = (cfg.todos || []).filter((_, i) => i !== idx);
+                  onPatch({ todos });
+                }}
+              >×</button>
+            </div>
+          ))}
+          <div className="btn-row">
+            <button className="btn" onClick={() => onPatch({
+              todos: [...(cfg.todos || []), { text: '', done: false }]
+            })}>+ Add item</button>
+          </div>
+        </section>
+      )}
+
+      {showCalendar && (
+        <section className="card">
+          <div className="section-title">Calendar</div>
+          <label className="field">
+            <span className="label">iCal URL</span>
+            <input
+              type="url"
+              value={cfg.calendar?.icalUrl || ''}
+              onChange={e => onPatchNested('calendar', { icalUrl: e.target.value })}
+              placeholder="https://calendar.google.com/calendar/ical/..."
+            />
+          </label>
+        </section>
+      )}
 
       <section className="card">
         <div className="section-title">Location &amp; Refresh</div>
