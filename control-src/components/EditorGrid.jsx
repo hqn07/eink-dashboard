@@ -183,7 +183,7 @@ export default function EditorGrid({ layout, showGrid, onChange }) {
           compactType={null}
           preventCollision
           isResizable
-          resizeHandles={['se']}
+          resizeHandles={['se', 'sw', 'ne', 'nw']}
           margin={[MARGIN, MARGIN]}
           containerPadding={[0, 0]}
           layout={rglLayout}
