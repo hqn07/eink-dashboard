@@ -230,8 +230,13 @@ function checkDeviceAuth(req, res, next) {
 // ---------- App ----------
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use('/static', express.static(path.join(__dirname, 'public')));
+
+// React control panel build output (built by Vite via `npm run build`).
+const CONTROL_APP_DIR = path.join(__dirname, 'public', 'control-app');
+const CONTROL_APP_INDEX = path.join(CONTROL_APP_DIR, 'index.html');
+app.use('/control-app', express.static(CONTROL_APP_DIR));
 
 // Dashboard HTML — built from the current config + live data
 app.get('/dashboard', async (req, res) => {
@@ -303,6 +308,16 @@ app.get('/sleep', checkDeviceAuth, async (req, res) => {
 // Control panel
 app.get('/', (req, res) => res.redirect('/control'));
 app.get('/control', (req, res) => {
+  // Prefer the React app; fall back to the legacy vanilla page when the
+  // build artifact hasn't been produced yet (e.g. local dev before
+  // `npm run build`).
+  if (fs.existsSync(CONTROL_APP_INDEX)) {
+    res.sendFile(CONTROL_APP_INDEX);
+  } else {
+    res.sendFile(path.join(__dirname, 'public', 'control.html'));
+  }
+});
+app.get('/control-classic', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'control.html'));
 });
 

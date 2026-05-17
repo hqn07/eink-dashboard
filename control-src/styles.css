@@ -1,0 +1,388 @@
+/* Retro newspaper / terminal styling for the control panel. */
+
+@import 'react-grid-layout/css/styles.css';
+@import 'react-resizable/css/styles.css';
+
+:root {
+  --bg: #faf8f3;
+  --ink: #111;
+  --line: #111;
+  --accent: #c8302a;
+  --mute: #6b6960;
+  --grid: rgba(17, 17, 17, 0.08);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  font-family: -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+#root { min-height: 100vh; padding: 16px; }
+
+.shell {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.app-header {
+  border-bottom: 3px solid var(--line);
+  padding-bottom: 14px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.app-header h1 {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 34px;
+  font-weight: 400;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+.app-header .tagline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-top: 6px;
+  color: var(--mute);
+}
+
+.app-header .actions {
+  display: flex;
+  gap: 8px;
+}
+
+main.layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (min-width: 980px) {
+  main.layout {
+    grid-template-columns: minmax(440px, 1.1fr) 1fr;
+  }
+  .preview-stage { position: sticky; top: 24px; }
+}
+
+/* ============ PREVIEW ============ */
+.preview-stage {
+  background: #fff;
+  border: 3px solid var(--line);
+  padding: 8px;
+}
+.preview-stage img {
+  width: 100%;
+  display: block;
+  image-rendering: pixelated;
+}
+.preview-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-top: 8px;
+  color: var(--mute);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ============ SECTIONS ============ */
+section.card {
+  background: #fff;
+  border: 2px solid var(--line);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section-title .badge {
+  font-size: 9px;
+  background: var(--ink);
+  color: #fff;
+  padding: 2px 6px;
+  letter-spacing: 2px;
+}
+
+/* ============ TOGGLES / BUTTONS / INPUTS ============ */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px dashed #ccc;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.toggle-row:last-child { border-bottom: none; }
+.toggle-label {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.toggle {
+  position: relative;
+  width: 50px;
+  height: 28px;
+  background: #ddd;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.toggle.on { background: var(--ink); }
+.toggle::after {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  top: 3px;
+  left: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: left 0.15s;
+}
+.toggle.on::after { left: 25px; }
+
+.field { display: block; margin-bottom: 12px; }
+.field .label {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  color: var(--mute);
+}
+
+input[type="text"], input[type="url"], textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid var(--line);
+  background: #fff;
+  font-size: 16px;
+  font-family: inherit;
+  border-radius: 0;
+}
+
+.btn {
+  padding: 10px 16px;
+  border: 2px solid var(--line);
+  background: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: transform 0.08s ease, background 0.15s ease;
+}
+.btn:hover { background: #f0ece2; }
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--ink); color: #fff; }
+.btn-primary:hover { background: #222; }
+.btn-ghost { background: transparent; border-color: var(--mute); color: var(--mute); }
+.btn-danger { color: var(--accent); }
+.btn-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+
+/* ============ SAVE BAR ============ */
+.save-bar {
+  position: sticky;
+  bottom: 16px;
+  background: var(--ink);
+  color: #fff;
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+  border: 3px solid var(--line);
+  z-index: 50;
+}
+.save-bar.dirty  { background: var(--accent); }
+.save-bar.saving { background: #444; }
+.save-bar.saved  { background: var(--ink); }
+.save-bar.error  { background: var(--accent); }
+.save-bar .status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+}
+.save-bar button {
+  background: #fff;
+  color: var(--ink);
+  border: 2px solid #fff;
+  padding: 8px 16px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+.save-bar button:disabled { opacity: 0.5; }
+
+/* ============ TODO ROWS ============ */
+.todo-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0;
+}
+.todo-row input[type="text"] { flex: 1; padding: 8px 10px; }
+.todo-check {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--line);
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+}
+.todo-check.done { background: var(--ink); color: #fff; }
+
+/* ============ SCHEDULE GROUP ============ */
+.sched-group {
+  border-left: 3px solid var(--ink);
+  padding: 4px 0 4px 14px;
+  margin-top: 8px;
+  transition: opacity 0.2s ease;
+}
+.sched-group.disabled { opacity: 0.4; pointer-events: none; }
+
+/* ============ EDITOR (react-grid-layout) ============ */
+.editor-wrap {
+  position: relative;
+  border: 2px solid var(--line);
+  background: #fff;
+  padding: 8px;
+}
+.editor-wrap.show-grid {
+  background-image:
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: calc(100% / 12) calc(100% / 6);
+}
+.editor-aspect {
+  position: relative;
+  width: 100%;
+  padding-top: 60%; /* 800x480 = 60% */
+}
+.editor-aspect > .react-grid-layout {
+  position: absolute;
+  inset: 0;
+}
+
+.editor-tile {
+  background: #fff;
+  border: 2px solid var(--line);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: grab;
+  user-select: none;
+  overflow: hidden;
+  font-family: 'JetBrains Mono', monospace;
+}
+.editor-tile.disabled {
+  opacity: 0.35;
+  background: repeating-linear-gradient(
+    -45deg, #fff 0 8px, #eee 8px 12px
+  );
+}
+.editor-tile:active { cursor: grabbing; }
+
+.editor-tile .tile-id {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--mute);
+  text-transform: uppercase;
+}
+.editor-tile .tile-label {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 16px;
+  line-height: 1.05;
+}
+.editor-tile .tile-size {
+  font-size: 9px;
+  color: var(--mute);
+  letter-spacing: 2px;
+  margin-top: auto;
+}
+.editor-tile .tile-handle {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 16px;
+  height: 16px;
+  background:
+    linear-gradient(to bottom right, transparent calc(50% - 1px), var(--ink) calc(50% - 1px), var(--ink) 50%, transparent 50%, transparent calc(50% + 2px), var(--ink) calc(50% + 2px), var(--ink) calc(50% + 3px), transparent calc(50% + 3px));
+  display: none;
+}
+.edit-mode .editor-tile .tile-handle { display: block; }
+
+.editor-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.editor-help {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--mute);
+  margin-top: 8px;
+  text-transform: uppercase;
+}
+
+/* react-grid-layout overrides for our retro look */
+.react-grid-item.react-grid-placeholder {
+  background: #ddd !important;
+  border: 2px dashed var(--ink) !important;
+  opacity: 1 !important;
+  border-radius: 0 !important;
+}
+.react-grid-item > .react-resizable-handle::after {
+  border-right: 2px solid var(--ink) !important;
+  border-bottom: 2px solid var(--ink) !important;
+}
+.react-grid-item.react-draggable-dragging {
+  z-index: 30;
+}
+
+.terminal-line {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--mute);
+  text-transform: uppercase;
+}

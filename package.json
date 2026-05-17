@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "control-dev": "vite",
+    "build": "vite build"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -15,6 +17,14 @@
     "puppeteer": "^23.5.0",
     "sharp": "^0.33.5",
     "node-ical": "^0.18.0",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-grid-layout": "^1.5.0",
+    "framer-motion": "^11.11.10"
+  },
+  "devDependencies": {
+    "vite": "^5.4.10",
+    "@vitejs/plugin-react": "^4.3.3"
   }
 }

@@ -5,3 +5,6 @@ data/config.json
 *.log
 .cache/
 .vscode/
+
+# Vite build output for the React control app (built on deploy)
+public/control-app/

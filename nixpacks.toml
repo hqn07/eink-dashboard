@@ -4,6 +4,9 @@ nixPkgs = ['nodejs_20', 'chromium']
 [phases.install]
 cmds = ['npm install']
 
+[phases.build]
+cmds = ['npm run build']
+
 [start]
 cmd = 'node server.js'
 
