@@ -399,8 +399,8 @@ html, body {
 
 /* ============ SPACER ============ */
 .widget-spacer {
-  background: #000;
-  color: #fff;
+  background: #000 !important;
+  color: #fff !important;
   width: 100%;
   height: 100%;
   display: flex;
@@ -408,13 +408,18 @@ html, body {
   justify-content: center;
   font-family: 'Oswald', sans-serif;
   font-weight: 700;
-  font-size: 18px;
+  font-size: 22px;
   letter-spacing: 6px;
   text-transform: uppercase;
   text-align: center;
   padding: 0;
   border: 0;
   margin: 0;
+}
+.widget-spacer.invert {
+  background: #fff !important;
+  color: #000 !important;
+  border: 2px solid #000 !important;
 }
 
 /* ============ QUOTE / TEXT ============ */

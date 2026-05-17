@@ -164,6 +164,13 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested, onToggle
               placeholder="e.g. GOOD MORNING"
             />
           </label>
+          <div className="toggle-row">
+            <span className="toggle-label">Invert (white bar, black text)</span>
+            <Toggle
+              on={!!cfg.spacer?.invert}
+              onClick={() => onPatchNested('spacer', { invert: !cfg.spacer?.invert })}
+            />
+          </div>
         </section>
       )}
 
@@ -187,6 +194,18 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested, onToggle
               placeholder="John Wooden"
             />
           </label>
+          <div className="toggle-row">
+            <span className="toggle-label">Alignment</span>
+            <div className="btn-row" style={{ marginTop: 0 }}>
+              {['left', 'center', 'right'].map(a => (
+                <button
+                  key={a}
+                  className={`btn ${(cfg.quote?.align || 'center') === a ? 'btn-primary' : ''}`}
+                  onClick={() => onPatchNested('quote', { align: a })}
+                >{a.toUpperCase()}</button>
+              ))}
+            </div>
+          </div>
         </section>
       )}
 

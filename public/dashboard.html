@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>E-Ink Dashboard</title>
-<link rel="stylesheet" href="/static/dashboard.css">
+<link rel="stylesheet" href="/static/dashboard.css?v=8">
 <script>/*__DATA__*/</script>
 </head>
 <body>
@@ -220,7 +220,8 @@
       render: ({ cfg }) => {
         const s = cfg.spacer || {};
         const text = (s.text || '').trim();
-        return `<div class="widget widget-spacer">${text ? escapeHtml(text) : ''}</div>`;
+        const invertCls = s.invert ? ' invert' : '';
+        return `<div class="widget widget-spacer${invertCls}">${text ? escapeHtml(text) : ''}</div>`;
       }
     },
     {
@@ -234,11 +235,10 @@
         const body = (q.text || '').trim();
         if (!body) return '';
         const attr = (q.attribution || '').trim();
-        // Rough auto-fit: scale font by inverse char count so a 200-char
-        // quote in a small box still reads. We let CSS handle alignment.
+        const align = (q.align === 'left' || q.align === 'right') ? q.align : 'center';
         const baseSize = Math.max(14, Math.min(46, Math.round(420 / Math.max(8, body.length / 4))));
         return `
-          <div class="widget widget-quote">
+          <div class="widget widget-quote" style="text-align:${align}">
             <div class="quote-body" style="font-size:${baseSize}px">${escapeHtml(body)}</div>
             ${attr ? `<div class="quote-attr">— ${escapeHtml(attr)}</div>` : ''}
           </div>

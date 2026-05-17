@@ -27,6 +27,7 @@ const STATUS = {
 export default function App() {
   const [cfg, setCfg] = useState(null);
   const [layouts, setLayouts] = useState({ 1: [], 2: [] });
+  const [editSnapshot, setEditSnapshot] = useState(null);
   const [status, setStatus] = useState('syncing');
   const [statusMsg, setStatusMsg] = useState(null);
   const [editMode, setEditMode] = useState(false);
@@ -128,7 +129,31 @@ export default function App() {
           <motion.button
             whileTap={{ scale: 0.96 }}
             className={`btn ${editMode ? 'btn-primary' : ''}`}
-            onClick={() => setEditMode(v => !v)}
+            onClick={() => {
+              if (editMode) {
+                // Exiting edit mode. If the user has unsaved changes,
+                // ask whether to discard or keep them (which auto-saves
+                // is still up to them on the Save bar).
+                if (status === 'dirty' && editSnapshot) {
+                  const discard = window.confirm(
+                    'Discard unsaved layout changes?\n\nClick OK to revert the editor to the last saved state. Click Cancel to keep editing.'
+                  );
+                  if (!discard) return;
+                  setLayouts(editSnapshot.layouts);
+                  setCfg(editSnapshot.cfg);
+                  setStatus('synced');
+                }
+                setEditSnapshot(null);
+                setEditMode(false);
+              } else {
+                // Entering edit mode — snapshot so we can roll back.
+                setEditSnapshot({
+                  layouts: { 1: [...layouts[1]], 2: [...layouts[2]] },
+                  cfg: { ...cfg }
+                });
+                setEditMode(true);
+              }
+            }}
           >
             {editMode ? 'EXIT EDIT' : '✎ EDIT LAYOUT'}
           </motion.button>
