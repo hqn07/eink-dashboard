@@ -80,13 +80,19 @@ async function getBrowser() {
   return browserPromise;
 }
 
+async function killBrowser() {
+  try {
+    const b = browserPromise ? await browserPromise : null;
+    if (b) await b.close();
+  } catch (_) {}
+  browserPromise = null;
+}
+
 async function renderDashboardPng({ units, screen }) {
   const browser = await getBrowser();
   const page = await browser.newPage();
-  // Hard cap any single render at 25s — better to fail fast than block
-  // the request queue when the browser is wedged.
-  page.setDefaultTimeout(25000);
-  page.setDefaultNavigationTimeout(20000);
+  page.setDefaultTimeout(15000);
+  page.setDefaultNavigationTimeout(15000);
   try {
     await page.setViewport({
       width: SCREEN_W,
@@ -97,12 +103,26 @@ async function renderDashboardPng({ units, screen }) {
     if (units) qs.set('units', units);
     if (screen) qs.set('screen', String(screen));
     const url = `http://127.0.0.1:${PORT}/dashboard${qs.toString() ? '?' + qs : ''}`;
-    await page.goto(url, { waitUntil: 'networkidle0', timeout: 20000 });
+    // domcontentloaded fires fast; the dashboard's JS runs synchronously.
+    // We then wait for web fonts to settle so the screenshot has the
+    // right typography, with a hard cap so a slow CDN can't hang us.
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await Promise.race([
+      page.evaluate(() => document.fonts && document.fonts.ready),
+      new Promise(r => setTimeout(r, 4000))
+    ]);
     const buf = await page.screenshot({
       type: 'png',
       clip: { x: 0, y: 0, width: SCREEN_W, height: SCREEN_H }
     });
     return buf;
+  } catch (err) {
+    // The browser may be in a wedged state. Close it so the next
+    // request relaunches a fresh instance instead of retrying against
+    // the broken one.
+    console.error('Render failed, recycling browser:', err.message);
+    await killBrowser();
+    throw err;
   } finally {
     try { await page.close(); } catch (_) {}
   }
