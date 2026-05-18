@@ -666,7 +666,8 @@ html, body {
 
 /* ============ COUNTDOWN ============ */
 .widget-countdown {
-  display: flex; flex-direction: column; justify-content: center;
+  display: flex; flex-direction: column;
+  justify-content: space-around;
   padding: 8px; height: 100%; gap: 4px;
 }
 .cd-row { display: flex; align-items: baseline; gap: 12px; }
@@ -695,6 +696,8 @@ html, body {
 .widget-aqi {
   display: flex; flex-direction: column;
   padding: 10px; height: 100%;
+  justify-content: space-between;
+  gap: 4px;
 }
 .widget-aqi .widget-title {
   font-family: 'JetBrains Mono', monospace;
@@ -722,6 +725,8 @@ html, body {
 .widget-moonsun {
   display: flex; flex-direction: column;
   padding: 10px; height: 100%;
+  justify-content: space-between;
+  gap: 6px;
 }
 .widget-moonsun .widget-title {
   font-family: 'JetBrains Mono', monospace;
@@ -783,6 +788,12 @@ html, body {
 /* ============ STOCKS ============ */
 .widget-stocks {
   padding: 10px; height: 100%;
+  display: flex; flex-direction: column;
+}
+.widget-stocks .stock-rows {
+  display: flex; flex-direction: column;
+  flex: 1;
+  justify-content: space-between;
 }
 .widget-stocks .widget-title {
   font-family: 'JetBrains Mono', monospace;
