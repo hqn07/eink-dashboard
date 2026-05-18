@@ -289,8 +289,19 @@ export default function LocationPanel({ cfg, onPatch }) {
             </motion.div>
           )}
         </AnimatePresence>
-        <div className="terminal-line" style={{ fontSize: 10, marginTop: 4 }}>
-          &gt; CURRENTLY {now} IN {cfg.timezone || 'UTC'}
+        <div className="terminal-line" style={{ fontSize: 10, marginTop: 4, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+          <span>&gt; CURRENTLY {now} IN {cfg.timezone || 'UTC'}</span>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            style={{ fontSize: 9, padding: '2px 8px' }}
+            onClick={() => {
+              try {
+                const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                if (detected && detected !== cfg.timezone) onPatch({ timezone: detected });
+              } catch {}
+            }}
+          >DETECT FROM BROWSER</button>
         </div>
       </label>
 

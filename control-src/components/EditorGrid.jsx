@@ -27,7 +27,7 @@ function smallestSizeKey(def) {
   }, def.defaultSize);
 }
 
-export default function EditorGrid({ layout, showGrid, previewData, onChange, onError }) {
+export default function EditorGrid({ layout, showGrid, previewData, onChange, onError, onJumpToSettings }) {
   const wrapRef = useRef(null);
   const [size, setSizeState] = useState({ w: 800, h: 480 });
   const [shake, setShake] = useState(false);
@@ -228,7 +228,7 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
           onDragStop={onTileDragStop}
         >
           {enabled.map(l => {
-            const inner = renderWidget(l.widgetId, previewData) || '';
+            const inner = renderWidget(l.widgetId, { ...previewData, cellW: l.w, cellH: l.h }) || '';
             const dashW = l.w * (DASH_W / GRID_COLS);
             const dashH = l.h * (BODY_H / GRID_ROWS);
             const classes = ['cell', `cell-${l.widgetId}`];
@@ -255,6 +255,15 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
                         onChange(layout.map(it => it.id === l.id ? { ...it, flush: !it.flush } : it));
                       }}
                     >⊞</button>
+                    {onJumpToSettings && (
+                      <button
+                        className="tile-settings"
+                        title="Jump to widget settings"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); onJumpToSettings(l.widgetId); }}
+                      >⚙</button>
+                    )}
                     <button
                       className="tile-remove"
                       title="Remove"

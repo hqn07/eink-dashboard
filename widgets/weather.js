@@ -36,6 +36,13 @@ function formatTimeOM(s) {
   return `${h}:${String(t.minute).padStart(2, '0')} ${ampm}`;
 }
 
+// Minutes-since-midnight from an Open-Meteo local timestamp string.
+function minutesOM(s) {
+  const t = parseOMTime(s);
+  if (!t) return null;
+  return t.hour * 60 + t.minute;
+}
+
 function dayLabel(s) {
   const t = parseOMTime(s);
   if (!t) return '???';
@@ -156,6 +163,7 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
     latitude: String(lat),
     longitude: String(lon),
     current: 'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m',
+    hourly: 'temperature_2m,weather_code',
     daily: 'temperature_2m_max,temperature_2m_min,weather_code,sunrise,sunset',
     timezone: 'auto',
     forecast_days: '4',
@@ -173,6 +181,37 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
     const cur = data.current || {};
     const daily = data.daily || {};
     const curWmo = wmo(cur.weather_code);
+
+    // Hourly: pick next 6 hours starting from the current local time.
+    const hourly = [];
+    const hr = data.hourly || {};
+    const htimes = hr.time || [];
+    const nowM = minutesOM(cur.time);
+    if (nowM != null && htimes.length) {
+      let startIdx = 0;
+      for (let i = 0; i < htimes.length; i++) {
+        const m = minutesOM(htimes[i]);
+        // Match by date prefix + hour ≥ now.
+        if (htimes[i].slice(0, 10) === (cur.time || '').slice(0, 10) && m >= nowM) {
+          startIdx = i;
+          break;
+        }
+      }
+      for (let i = startIdx + 1; i < Math.min(startIdx + 7, htimes.length); i++) {
+        const t = parseOMTime(htimes[i]);
+        if (!t) continue;
+        let h = t.hour;
+        const ampm = h >= 12 ? 'p' : 'a';
+        h = h % 12; if (h === 0) h = 12;
+        const wf = wmo(hr.weather_code[i]);
+        hourly.push({
+          label: `${h}${ampm}`,
+          temp: Math.round(hr.temperature_2m[i]),
+          main: wf.main
+        });
+        if (hourly.length >= 6) break;
+      }
+    }
 
     const forecast = [];
     const dlen = (daily.time || []).length;
@@ -199,9 +238,13 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
       main: curWmo.main,
       sunrise: formatTimeOM(daily.sunrise && daily.sunrise[0]),
       sunset:  formatTimeOM(daily.sunset  && daily.sunset[0]),
+      sunriseMin: minutesOM(daily.sunrise && daily.sunrise[0]),
+      sunsetMin:  minutesOM(daily.sunset  && daily.sunset[0]),
+      nowMin:     minutesOM(cur.time),
       currentTime: formatTimeOM(cur.time),
       currentDate: formatDateOM(cur.time),
       forecast,
+      hourly,
       stale: false,
       units: u,
       windUnit: u === 'C' ? 'm/s' : 'mph',
@@ -224,6 +267,7 @@ function stubData(units = 'F') {
     sunrise: '--:--', sunset: '--:--',
     currentTime: '--:--', currentDate: 'NO DATA',
     forecast: [],
+    hourly: [],
     stale: true,
     units,
     windUnit: units === 'C' ? 'm/s' : 'mph',

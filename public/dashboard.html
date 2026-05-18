@@ -93,6 +93,45 @@
     return `<span class="icon" style="width:${size}px;height:${size}px">${svg}</span>`;
   }
 
+  // Day-progress bar between sunrise and sunset. Renders nothing if the
+  // weather payload lacks the parsed minute timestamps.
+  function sunBar(w) {
+    if (!w || !Number.isFinite(w.sunriseMin) || !Number.isFinite(w.sunsetMin)) return '';
+    const sr = w.sunriseMin, ss = w.sunsetMin;
+    const nowM = Number.isFinite(w.nowMin) ? w.nowMin : sr;
+    let pct;
+    if (nowM < sr) pct = 0;
+    else if (nowM > ss) pct = 100;
+    else pct = ((nowM - sr) / (ss - sr)) * 100;
+    return `
+      <div class="sun-bar">
+        <div class="sun-track">
+          <div class="sun-fill" style="width:${pct.toFixed(1)}%"></div>
+          <div class="sun-dot" style="left:${pct.toFixed(1)}%"></div>
+        </div>
+        <div class="sun-labels">
+          <span>↑ ${w.sunrise}</span>
+          <span>↓ ${w.sunset}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  function hourlyStrip(w) {
+    if (!w || !Array.isArray(w.hourly) || !w.hourly.length) return '';
+    return `
+      <div class="hourly-strip">
+        ${w.hourly.map(h => `
+          <div class="hr-cell">
+            <div class="hr-time">${h.label}</div>
+            ${icon(h.main, 22)}
+            <div class="hr-temp">${h.temp}°</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
   // ============ WIDGET REGISTRY ============
   // Each widget: { id, label, requires, sizes, defaultSize, render(ctx) }
   // The dashboard renderer is data-only; w/h come from the saved layout
@@ -104,10 +143,16 @@
       requires: 'weather',
       sizes: { S:{w:4,h:3}, M:{w:4,h:6}, L:{w:6,h:6}, XL:{w:12,h:6} },
       defaultSize: 'M',
-      render: ({ weather, units }) => {
+      render: ({ weather, units, cellW, cellH }) => {
         if (!weather) return '';
+        const staleClass = weather.stale ? ' weather-stale' : '';
+        const staleBadge = weather.stale ? '<div class="stale-pill">CACHED</div>' : '';
+        // Extras only when there's vertical headroom + width.
+        const hasRoom = (cellH || 0) >= 6 && (cellW || 0) >= 6;
+        const extras = hasRoom ? `${sunBar(weather)}${hourlyStrip(weather)}` : '';
         return `
-          <div class="weather-hero">
+          <div class="weather-hero${staleClass}">
+            ${staleBadge}
             <div class="weather-icon">${icon(weather.main, 130)}</div>
             <div class="weather-temp">
               <span class="temp-num">${weather.temp}</span><span class="temp-deg">°${units}</span>
@@ -121,6 +166,7 @@
             <div class="stat"><span class="stat-k">WIND</span><span class="stat-v">${weather.windDir} ${weather.windSpeed} ${weather.windUnit || ''}</span></div>
             <div class="stat"><span class="stat-k">RISE</span><span class="stat-v">${weather.sunrise}</span></div>
           </div>
+          ${extras}
         `;
       }
     },
@@ -330,8 +376,24 @@
 
   // ============ HEADER ============
   const cityLabel = (cfg.cityLabel || cfg.city || '').toString();
-  const dateStr = w ? w.currentDate : new Date().toDateString().toUpperCase();
-  const timeStr = w ? w.currentTime : '';
+
+  // Header time/date must reflect REAL clock, not weather observation time
+  // (weather is cached 10min and `cur.time` only updates hourly upstream).
+  const tz = cfg.timezone || 'UTC';
+  const now = new Date();
+  let timeStr = '';
+  let dateStr = '';
+  try {
+    timeStr = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, hour: 'numeric', minute: '2-digit', hour12: true
+    }).format(now).toUpperCase();
+    dateStr = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+    }).format(now).toUpperCase();
+  } catch {
+    timeStr = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    dateStr = now.toDateString().toUpperCase();
+  }
 
   const header = el('header', 'hdr');
   header.innerHTML = `
@@ -359,7 +421,8 @@
   for (const item of layout) {
     const def = widgetById(item.widgetId || item.id);
     if (!def) continue;
-    const inner = def.render(ctx);
+    const itemCtx = { ...ctx, cellW: item.w, cellH: item.h };
+    const inner = def.render(itemCtx);
     if (!inner) continue;
     const classes = ['cell', `cell-${def.id}`];
     if (item.x + item.w >= GRID_COLS) classes.push('cell-edge-right');

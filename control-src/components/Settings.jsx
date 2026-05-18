@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { WIDGET_REGISTRY } from '../widgets.js';
 import LocationPanel from './LocationPanel.jsx';
 
@@ -10,7 +10,30 @@ function Toggle({ on, onClick }) {
 // across all screens (location, timezone, calendar URL, etc.) plus the
 // per-widget content sections. Each content section appears only when
 // at least one instance of that widget is on the active screen.
-export default function Settings({ cfg, layout, onPatch, onPatchNested }) {
+export default function Settings({ cfg, layout, onPatch, onPatchNested, focusedWidgetId, onFocusHandled }) {
+  const refs = useRef({});
+  const [flashId, setFlashId] = useState(null);
+
+  useEffect(() => {
+    if (!focusedWidgetId) return;
+    const el = refs.current[focusedWidgetId];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setFlashId(focusedWidgetId);
+      const t = setTimeout(() => {
+        setFlashId(null);
+        onFocusHandled && onFocusHandled();
+      }, 1400);
+      return () => clearTimeout(t);
+    } else {
+      onFocusHandled && onFocusHandled();
+    }
+  }, [focusedWidgetId]);
+
+  const sectionProps = (id) => ({
+    ref: (el) => { refs.current[id] = el; },
+    className: `card ${flashId === id ? 'card-flash' : ''}`
+  });
   const isOn = (id) => {
     if (layout.some(l => (l.widgetId || l.id) === id)) return true;
     const def = WIDGET_REGISTRY.find(w => w.id === id);
@@ -24,12 +47,22 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested }) {
   const showSpacer   = isOn('spacer');
   const showQuote    = isOn('quote');
 
+  // Weather widgets share LocationPanel — flash + scroll the same target.
+  const locWrap = (
+    <div
+      ref={(el) => { refs.current['weather_hero'] = el; refs.current['weather_forecast'] = el; }}
+      className={(flashId === 'weather_hero' || flashId === 'weather_forecast') ? 'card-flash-wrap' : ''}
+    >
+      <LocationPanel cfg={cfg} onPatch={onPatch} />
+    </div>
+  );
+
   return (
     <div>
-      <LocationPanel cfg={cfg} onPatch={onPatch} />
+      {locWrap}
 
       {showMessage && (
-        <section className="card">
+        <section {...sectionProps('message')}>
           <div className="section-title">Message Widget</div>
           <label className="field">
             <span className="label">Headline</span>
@@ -53,7 +86,7 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested }) {
       )}
 
       {showTodos && (
-        <section className="card">
+        <section {...sectionProps('todos')}>
           <div className="section-title">To-Do List</div>
           {(cfg.todos || []).map((t, idx) => (
             <div key={idx} className="todo-row">
@@ -93,10 +126,18 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested }) {
       )}
 
       {showCalendar && (
-        <section className="card">
+        <section {...sectionProps('calendar')}>
           <div className="section-title">Calendar</div>
           <label className="field">
-            <span className="label">iCal URL</span>
+            <span className="label">
+              iCal URL ·{' '}
+              <a
+                href="https://support.google.com/calendar/answer/37648?hl=en#zippy=%2Cget-your-calendar-view-only"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: 'var(--mute)', textDecoration: 'underline' }}
+              >Where do I get this? →</a>
+            </span>
             <input
               type="url"
               value={cfg.calendar?.icalUrl || ''}
@@ -108,7 +149,7 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested }) {
       )}
 
       {showSpacer && (
-        <section className="card">
+        <section {...sectionProps('spacer')}>
           <div className="section-title">Black Bar</div>
           <label className="field">
             <span className="label">Label (optional)</span>
@@ -130,7 +171,7 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested }) {
       )}
 
       {showQuote && (
-        <section className="card">
+        <section {...sectionProps('quote')}>
           <div className="section-title">Text / Quote</div>
           <label className="field">
             <span className="label">Body</span>

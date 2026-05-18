@@ -62,16 +62,59 @@ function fakeWeather(units) {
     temp: '--', feelsLike: '--', tempMin: '--', tempMax: '--',
     humidity: '--', windSpeed: '--', windDir: '--', windUnit: units === 'C' ? 'm/s' : 'mph',
     desc: 'NO DATA', main: 'Clear',
-    sunrise: '--:--',
-    forecast: []
+    sunrise: '--:--', sunset: '--:--',
+    sunriseMin: null, sunsetMin: null, nowMin: null,
+    forecast: [], hourly: []
   };
 }
 
+function sunBar(w) {
+  if (!w || !Number.isFinite(w.sunriseMin) || !Number.isFinite(w.sunsetMin)) return '';
+  const sr = w.sunriseMin, ss = w.sunsetMin;
+  const nowM = Number.isFinite(w.nowMin) ? w.nowMin : sr;
+  let pct;
+  if (nowM < sr) pct = 0;
+  else if (nowM > ss) pct = 100;
+  else pct = ((nowM - sr) / (ss - sr)) * 100;
+  return `
+    <div class="sun-bar">
+      <div class="sun-track">
+        <div class="sun-fill" style="width:${pct.toFixed(1)}%"></div>
+        <div class="sun-dot" style="left:${pct.toFixed(1)}%"></div>
+      </div>
+      <div class="sun-labels">
+        <span>↑ ${w.sunrise}</span>
+        <span>↓ ${w.sunset}</span>
+      </div>
+    </div>
+  `;
+}
+
+function hourlyStrip(w) {
+  if (!w || !Array.isArray(w.hourly) || !w.hourly.length) return '';
+  return `
+    <div class="hourly-strip">
+      ${w.hourly.map(h => `
+        <div class="hr-cell">
+          <div class="hr-time">${h.label}</div>
+          ${icon(h.main, 22)}
+          <div class="hr-temp">${h.temp}°</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
 const RENDERERS = {
-  weather_hero: ({ weather, units }) => {
+  weather_hero: ({ weather, units, cellW, cellH }) => {
     const w = weather || fakeWeather(units);
+    const staleClass = w.stale ? ' weather-stale' : '';
+    const staleBadge = w.stale ? '<div class="stale-pill">CACHED</div>' : '';
+    const hasRoom = (cellH || 0) >= 6 && (cellW || 0) >= 6;
+    const extras = hasRoom ? `${sunBar(w)}${hourlyStrip(w)}` : '';
     return `
-      <div class="weather-hero">
+      <div class="weather-hero${staleClass}">
+        ${staleBadge}
         <div class="weather-icon">${icon(w.main, 110)}</div>
         <div class="weather-temp">
           <span class="temp-num">${w.temp}</span><span class="temp-deg">°${units}</span>
@@ -85,6 +128,7 @@ const RENDERERS = {
         <div class="stat"><span class="stat-k">WIND</span><span class="stat-v">${w.windDir} ${w.windSpeed} ${w.windUnit || ''}</span></div>
         <div class="stat"><span class="stat-k">RISE</span><span class="stat-v">${w.sunrise}</span></div>
       </div>
+      ${extras}
     `;
   },
   weather_forecast: ({ weather }) => {

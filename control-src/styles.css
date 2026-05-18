@@ -627,7 +627,7 @@ input[type="text"], input[type="url"], textarea {
   gap: 4px;
   z-index: 5;
 }
-.tile-remove, .tile-flush {
+.tile-remove, .tile-flush, .tile-settings {
   width: 20px;
   height: 20px;
   background: #fff;
@@ -643,7 +643,7 @@ input[type="text"], input[type="url"], textarea {
   justify-content: center;
   padding: 0;
 }
-.tile-remove:hover, .tile-flush:hover { background: var(--ink); color: #fff; }
+.tile-remove:hover, .tile-flush:hover, .tile-settings:hover { background: var(--ink); color: #fff; }
 .tile-flush.on { background: var(--ink); color: #fff; }
 
 /* ============ PALETTE ============ */
@@ -756,6 +756,42 @@ input[type="text"], input[type="url"], textarea {
   outline-offset: -3px;
 }
 
+/* ============ SETUP WIZARD ============ */
+.wizard-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 17, 17, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 200;
+}
+.wizard-modal {
+  background: var(--bg);
+  border: 3px solid var(--ink);
+  max-width: 560px;
+  width: 100%;
+  padding: 24px;
+  position: relative;
+}
+.wizard-modal header { margin-bottom: 16px; }
+.wizard-modal h2 {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 32px;
+  margin-bottom: 6px;
+  letter-spacing: 2px;
+}
+.wizard-results {
+  border: 2px solid var(--ink);
+  background: #fff;
+  margin-top: 8px;
+}
+.wizard-results .autocomplete-row.picked {
+  background: var(--ink);
+  color: #fff;
+}
+
 /* Toast popup for failure feedback (e.g. no canvas room). */
 .toast {
   position: fixed;
@@ -850,4 +886,94 @@ input[type="text"], input[type="url"], textarea {
   letter-spacing: 3px;
   color: var(--mute);
   text-transform: uppercase;
+}
+
+/* ============ FOCUS FLASH ============
+ * Pulse a card to draw the eye when jumped to from the editor. */
+@keyframes card-flash {
+  0%   { box-shadow: 0 0 0 0 var(--accent); }
+  20%  { box-shadow: 0 0 0 6px rgba(200, 48, 42, 0.35); }
+  100% { box-shadow: 0 0 0 0 rgba(200, 48, 42, 0); }
+}
+.card-flash, .card-flash-wrap > .card:first-child {
+  animation: card-flash 1.4s ease-out;
+}
+
+/* ============ DARK MODE ============
+ * Inverts the canvas while leaving the actual e-ink preview untouched
+ * (it must keep its newspaper look so what you see = what gets printed). */
+html[data-theme="dark"] {
+  --bg: #14171c;
+  --ink: #e8e6df;
+  --line: #e8e6df;
+  --accent: #ff7a73;
+  --mute: #8b8a82;
+  --grid: rgba(232, 230, 223, 0.08);
+}
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .wizard-modal,
+html[data-theme="dark"] .save-bar {
+  background: #1c2026;
+  border-color: var(--line);
+  color: var(--ink);
+}
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select {
+  background: #0f1115;
+  color: var(--ink);
+  border-color: var(--line);
+}
+html[data-theme="dark"] .btn {
+  background: #1c2026;
+  color: var(--ink);
+  border-color: var(--line);
+}
+html[data-theme="dark"] .btn-primary {
+  background: var(--ink);
+  color: #14171c;
+}
+html[data-theme="dark"] .btn-ghost {
+  background: transparent;
+}
+/* Keep the actual e-ink preview iframe content as-is (newspaper white).
+ * Only re-tint the surrounding stage. */
+html[data-theme="dark"] .preview-frame {
+  background: #0f1115;
+  border-color: var(--line);
+}
+html[data-theme="dark"] .toast {
+  background: var(--ink);
+  color: #14171c;
+}
+
+/* ============ MOBILE / RESPONSIVE ============ */
+@media (max-width: 768px) {
+  #root { padding: 10px; }
+  .shell { max-width: 100%; }
+  .app-header { flex-direction: column; align-items: stretch; gap: 10px; }
+  .app-header h1 { font-size: 24px; }
+  .app-header .actions { justify-content: flex-end; }
+  main.layout { gap: 14px; }
+  .card { padding: 12px; }
+  .btn { padding: 10px 12px; min-height: 40px; font-size: 12px; }
+  .btn-row { flex-wrap: wrap; }
+  .editor-toolbar .btn-row { flex-wrap: wrap; }
+  .preview-meta { font-size: 9px; }
+  .screen-tabs { padding: 8px; gap: 4px; }
+  .screen-tabs .tab { padding: 8px 10px; }
+  .field input, .field textarea, .field select {
+    font-size: 16px; /* prevents iOS auto-zoom on focus */
+  }
+  .save-bar {
+    padding: 10px 12px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .save-bar .btn { width: 100%; }
+}
+@media (max-width: 480px) {
+  .app-header h1 { font-size: 20px; }
+  .preview-stage { transform: none; }
 }

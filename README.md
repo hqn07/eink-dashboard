@@ -4,6 +4,14 @@ Server-rendered dashboard for a Waveshare 7.5" e-ink display + ESP32 driver boar
 
 The server renders your dashboard as HTML, screenshots it to a 800×480 1-bit image, and serves it to the ESP32. You control widgets, todos, messages, etc. from a webpage.
 
+## Quick deploy
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.com/new/github/hqn07/eink-dashboard)
+
+Click → Railway creates a service from this repo. **No API keys to set** — weather is from Open-Meteo (free, keyless). The deploy takes ~2 min, then visit `/control` on the generated domain.
+
+Want to run locally first instead? See [Part 1](#part-1--run-it-locally-first) below.
+
 ## Architecture
 
 ```

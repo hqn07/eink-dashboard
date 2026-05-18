@@ -44,14 +44,40 @@ const char* deviceToken = "";
 static const int EPD_BUSY = 25, EPD_RST = 26, EPD_DC = 27;
 static const int EPD_CS = 15, EPD_SCK = 13, EPD_MOSI = 14;
 
+// =================== INPUT PINS (buttons + PIR) ===================
+//
+// Wake-on-button + wake-on-motion. All four pins are RTC-capable so
+// they can wake the ESP32 from deep sleep via ext1.
+//
+// External 10kΩ pull-down resistors required on the button lines
+// (GPIO 35/39 have no internal pull-down). When a button is pressed
+// it connects the pin to 3.3V → reads HIGH → wakes.
+// PIR (HC-SR501) output is active-HIGH, same wake convention.
+#define BTN_UNITS    32   // toggle °F ↔ °C
+#define BTN_REFRESH  33   // force a refresh
+#define BTN_SCREEN   35   // cycle through screens
+#define PIR_PIN      39   // motion sensor
+
+#define WAKE_PIN_MASK ( (1ULL << BTN_UNITS)   \
+                      | (1ULL << BTN_REFRESH) \
+                      | (1ULL << BTN_SCREEN)  \
+                      | (1ULL << PIR_PIN) )
+
+// Persisted across deep sleeps via RTC memory.
+RTC_DATA_ATTR uint32_t bootCount   = 0;
+RTC_DATA_ATTR uint8_t  unitsToggle = 0;   // 0 = F, 1 = C
+RTC_DATA_ATTR uint8_t  screenIndex = 0;   // cycled by BTN_SCREEN
+
 SPIClass hspi(HSPI);
 GxEPD2_BW<GxEPD2_750_GDEY075T7, GxEPD2_750_GDEY075T7::HEIGHT>
   display(GxEPD2_750_GDEY075T7(EPD_CS, EPD_DC, EPD_RST, EPD_BUSY));
 
 // =================== WIFI ===================
 
-bool connectWiFi(unsigned long timeoutMs = 20000) {
+bool connectWiFiOnce(unsigned long timeoutMs = 15000) {
   WiFi.mode(WIFI_STA);
+  WiFi.disconnect(true, true);
+  delay(100);
   WiFi.begin(ssid, password);
   Serial.print("WiFi");
   unsigned long start = millis();
@@ -61,14 +87,41 @@ bool connectWiFi(unsigned long timeoutMs = 20000) {
   }
   Serial.println();
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.printf("Connected: %s\n", WiFi.localIP().toString().c_str());
+    Serial.printf("Connected: %s  RSSI=%d\n",
+                  WiFi.localIP().toString().c_str(), WiFi.RSSI());
     return true;
   }
-  Serial.println("WiFi FAILED");
+  return false;
+}
+
+// Retry WiFi a few times — landlord AP is flaky, single attempt fails often
+bool connectWiFi() {
+  for (int attempt = 1; attempt <= 3; attempt++) {
+    Serial.printf("WiFi attempt %d/3\n", attempt);
+    if (connectWiFiOnce()) return true;
+    WiFi.disconnect(true, true);
+    delay(1000);
+  }
+  Serial.println("WiFi FAILED after 3 tries");
   return false;
 }
 
 // =================== HTTP HELPERS ===================
+
+// Wake Railway free-tier server before big download.
+// Free tier sleeps after ~15min idle — first req takes 30-60s to boot Puppeteer.
+// Cheap /health ping kicks it awake while we still have time budget.
+void warmServer() {
+  String url = String(serverBase) + "/health";
+  HTTPClient http;
+  http.setTimeout(45000);
+  http.begin(url);
+  Serial.print("Warming server... ");
+  unsigned long t0 = millis();
+  int code = http.GET();
+  Serial.printf("HTTP %d in %lums\n", code, millis() - t0);
+  http.end();
+}
 
 String addToken(String url) {
   if (strlen(deviceToken) == 0) return url;
@@ -84,7 +137,7 @@ uint8_t* downloadImage() {
   Serial.printf("GET %s\n", url.c_str());
 
   HTTPClient http;
-  http.setTimeout(20000);
+  http.setTimeout(60000);   // Railway cold start can take 30-60s
   http.begin(url);
   int code = http.GET();
   if (code != 200) {
@@ -212,7 +265,13 @@ void setup() {
     drawFailScreen("WiFi connection failed");
     sleepMin = 5;
   } else {
+    warmServer();   // wake Railway dyno before the big download
     uint8_t* img = downloadImage();
+    if (!img) {
+      Serial.println("Retry download once after 2s");
+      delay(2000);
+      img = downloadImage();
+    }
     if (img) {
       pushImage(img);
       free(img);
