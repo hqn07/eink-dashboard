@@ -489,13 +489,9 @@ input[type="text"], input[type="url"], textarea {
   overflow: hidden;
 }
 .editor-wrap .react-grid-layout {
-  position: absolute;
-  /* Top/bottom inset are set inline by EditorGrid from the active
-   * screen's chrome state (60px header / 28px footer in dashboard pixels). */
-  left: 0;
-  right: 0;
+  /* Sits inside .editor-grid-inset which provides the chrome-aware
+   * absolute positioning. RGL handles its own height from rowHeight. */
   width: 100% !important;
-  height: auto !important;
 }
 .editor-chrome.hdr, .editor-chrome.ftr { z-index: 2; }
 .editor-chrome.hdr { background: #000; color: #fff; }

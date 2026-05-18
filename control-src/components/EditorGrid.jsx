@@ -259,6 +259,15 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
             dangerouslySetInnerHTML={{ __html: renderHeader(previewData) }}
           />
         )}
+        <div
+          className="editor-grid-inset"
+          style={{
+            position: 'absolute',
+            left: 0, right: 0,
+            top: `${(HEADER_H / DASH_H) * 100}%`,
+            bottom: `${(FOOTER_H / DASH_H) * 100}%`
+          }}
+        >
         <GridLayout
           className="layout"
           cols={GRID_COLS}
@@ -271,10 +280,6 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
           resizeHandles={['se', 'sw', 'nw']}
           margin={[MARGIN, MARGIN]}
           containerPadding={[PAD, PAD]}
-          style={{
-            top: `${(HEADER_H / DASH_H) * 100}%`,
-            bottom: `${(FOOTER_H / DASH_H) * 100}%`
-          }}
           layout={rglLayout}
           onLayoutChange={handleLayoutChange}
           onDrag={onTileDrag}
@@ -353,6 +358,7 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
             );
           })}
         </GridLayout>
+        </div>
 
         {enabled.length === 0 && (
           <div className="editor-empty terminal-line">
