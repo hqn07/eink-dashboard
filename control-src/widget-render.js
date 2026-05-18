@@ -182,20 +182,23 @@ const RENDERERS = {
       `).join('')}
     `;
   },
-  message: ({ cfg, resolvedMessage }) => {
+  message: ({ cfg, resolvedMessage, cellH }) => {
     const m = resolvedMessage || (cfg && cfg.message) || {};
     const text = m.text || 'Custom message';
     const sub  = m.subtitle || '';
+    const ch = cellH || 0;
+    const showSub = ch >= 3;
+    const txtSize = ch < 3 ? 14 : ch < 5 ? 18 : ch < 8 ? 22 : 28;
     return `
       <div class="widget widget-msg">
-        <div class="msg-text">${md(escapeHtml(text))}</div>
-        ${sub ? `<div class="msg-sub">${md(escapeHtml(sub))}</div>` : ''}
+        <div class="msg-text" style="font-size:${txtSize}px">${md(escapeHtml(text))}</div>
+        ${showSub && sub ? `<div class="msg-sub">${md(escapeHtml(sub))}</div>` : ''}
       </div>
     `;
   },
-  todos: ({ cfg }) => {
-    const todos = ((cfg && cfg.todos) || []).slice(0, 8);
-    if (!todos.length) {
+  todos: ({ cfg, cellH }) => {
+    const all = ((cfg && cfg.todos) || []);
+    if (!all.length) {
       return `
         <div class="widget widget-todos">
           <div class="widget-title">TODO</div>
@@ -207,16 +210,21 @@ const RENDERERS = {
       const d = new Date();
       return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     })();
+    const ch = cellH || 0;
+    const maxItems = ch < 4 ? 2 : ch < 6 ? 4 : ch < 12 ? 6 : 10;
+    const showDue  = ch >= 4;
+    const showRecur = ch >= 4;
+    const list = all.slice(0, maxItems);
     return `
       <div class="widget widget-todos">
         <div class="widget-title">TODO</div>
         <ul class="todo-list">
-          ${todos.map(t => {
+          ${list.map(t => {
             const overdue = t.dueDate && !t.done && t.dueDate < today;
-            const due = t.dueDate && !t.done
+            const due = showDue && t.dueDate && !t.done
               ? `<span class="todo-due ${overdue ? 'overdue' : ''}">${t.dueDate === today ? 'TODAY' : (overdue ? 'LATE' : t.dueDate.slice(5))}</span>`
               : '';
-            const recur = t.recurring === 'daily' ? '<span class="todo-recur">↻</span>' : '';
+            const recur = showRecur && t.recurring === 'daily' ? '<span class="todo-recur">↻</span>' : '';
             return `
               <li class="${t.done ? 'done' : ''}">
                 <span class="checkbox">${t.done ? '✓' : ''}</span>
@@ -230,10 +238,30 @@ const RENDERERS = {
       </div>
     `;
   },
-  calendar: ({ events }) => {
-    const list = (events || []).slice(0, 8);
-    if (!list.length) {
+  calendar: ({ events, cellH }) => {
+    const all = (events || []);
+    if (!all.length) {
       return `<div class="widget widget-cal"><div class="widget-title">UPCOMING</div><div class="cal-row"><div class="cal-info"><div class="cal-title">No events</div></div></div></div>`;
+    }
+    const ch = cellH || 0;
+    const maxEvents = ch < 4 ? 2 : ch < 6 ? 4 : ch < 12 ? 6 : 10;
+    const showSections = ch >= 6;
+    const list = all.slice(0, maxEvents);
+    if (!showSections) {
+      return `
+        <div class="widget widget-cal">
+          <div class="widget-title">UPCOMING</div>
+          ${list.map(ev => `
+            <div class="cal-row ${ev.isAllDay ? 'allday' : ''}">
+              <div class="cal-day">${escapeHtml(ev.dayLabel || '')}</div>
+              <div class="cal-info">
+                <div class="cal-title">${escapeHtml(ev.title || '')}</div>
+                <div class="cal-time">${escapeHtml(ev.startLabel || '')}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
     }
     const groups = {};
     const order = [];
@@ -266,16 +294,21 @@ const RENDERERS = {
     const cls = s.invert ? ' invert' : '';
     return `<div class="widget widget-spacer${cls}">${text ? escapeHtml(text) : ''}</div>`;
   },
-  quote: ({ cfg, resolvedQuote }) => {
+  quote: ({ cfg, resolvedQuote, cellH, cellW }) => {
     const q = resolvedQuote || (cfg && cfg.quote) || {};
     const body = (q.text || '').trim() || 'Type a quote in settings.';
     const attr = (q.attribution || '').trim();
     const align = (q.align === 'left' || q.align === 'right') ? q.align : 'center';
-    const baseSize = Math.max(14, Math.min(46, Math.round(420 / Math.max(8, body.length / 4))));
+    const ch = cellH || 0, cw = cellW || 0;
+    const lengthBase = Math.max(14, Math.min(54, Math.round(560 / Math.max(8, body.length / 4))));
+    const cellCap = ch < 3 ? 14 : ch < 5 ? 22 : ch < 8 ? 32 : ch < 12 ? 42 : 56;
+    const widthCap = cw < 5 ? 18 : cw < 8 ? 30 : 60;
+    const finalSize = Math.min(lengthBase, cellCap, widthCap);
+    const showAttr = attr && ch >= 4;
     return `
       <div class="widget widget-quote" style="text-align:${align}">
-        <div class="quote-body" style="font-size:${baseSize}px">${md(escapeHtml(body))}</div>
-        ${attr ? `<div class="quote-attr">— ${escapeHtml(attr)}</div>` : ''}
+        <div class="quote-body" style="font-size:${finalSize}px">${md(escapeHtml(body))}</div>
+        ${showAttr ? `<div class="quote-attr">— ${escapeHtml(attr)}</div>` : ''}
       </div>
     `;
   },
@@ -300,28 +333,35 @@ const RENDERERS = {
       </div>
     `;
   },
-  wifi_qr: ({ cfg, wifiQrSvg }) => {
+  wifi_qr: ({ cfg, wifiQrSvg, cellH, cellW }) => {
     const w = (cfg && cfg.wifi) || {};
     if (!w.ssid) return placeholder('WIFI QR', 'Enter WiFi SSID + password in settings');
     const qr = wifiQrSvg || '<div class="wifi-qr-placeholder">QR</div>';
+    const ch = cellH || 0, cw = cellW || 0;
+    const showMeta = ch >= 6 && cw >= 4;
     return `
-      <div class="widget widget-wifi">
+      <div class="widget widget-wifi" style="${showMeta ? '' : 'justify-content:center'}">
         <div class="wifi-qr">${qr}</div>
-        <div class="wifi-meta">
-          <div class="wifi-ssid">${escapeHtml(w.ssid)}</div>
-          <div class="wifi-hint">SCAN TO CONNECT</div>
-        </div>
+        ${showMeta ? `
+          <div class="wifi-meta">
+            <div class="wifi-ssid">${escapeHtml(w.ssid)}</div>
+            <div class="wifi-hint">SCAN TO CONNECT</div>
+          </div>
+        ` : ''}
       </div>
     `;
   },
-  countdown: ({ countdowns }) => {
+  countdown: ({ countdowns, cellH }) => {
     const list = countdowns || [];
     if (!list.length) return placeholder('COUNTDOWN', 'Add a label + date in settings');
+    const ch = cellH || 0;
+    const maxRows = ch < 4 ? 1 : ch < 8 ? 3 : 5;
+    const numSize = ch < 4 ? 28 : ch < 6 ? 36 : ch < 9 ? 44 : 56;
     return `
       <div class="widget widget-countdown">
-        ${list.slice(0, 3).map(c => `
+        ${list.slice(0, maxRows).map(c => `
           <div class="cd-row">
-            <div class="cd-num">${c.days}</div>
+            <div class="cd-num" style="font-size:${numSize}px">${c.days}</div>
             <div class="cd-meta">
               <div class="cd-unit">${c.unit}</div>
               <div class="cd-label">${escapeHtml(c.label)}</div>
@@ -331,33 +371,40 @@ const RENDERERS = {
       </div>
     `;
   },
-  aqi: ({ aqi, cfg }) => {
+  aqi: ({ aqi, cfg, cellH }) => {
     if (!aqi) {
       if (!cfg || !Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
         return placeholder('AIR QUALITY', 'Set your location in settings');
       }
       return placeholder('AIR QUALITY', 'Data unavailable for this location');
     }
+    const ch = cellH || 0;
+    const showStats = ch >= 6;
+    const numSize = ch < 4 ? 36 : ch < 6 ? 48 : 56;
     return `
       <div class="widget widget-aqi">
         <div class="widget-title">AIR QUALITY</div>
-        <div class="aqi-num">${aqi.aqi}</div>
+        <div class="aqi-num" style="font-size:${numSize}px">${aqi.aqi}</div>
         <div class="aqi-cat">${aqi.category}</div>
-        <div class="aqi-stats">
-          <div class="stat"><span class="stat-k">PM2.5</span><span class="stat-v">${aqi.pm25 ?? '--'}</span></div>
-          <div class="stat"><span class="stat-k">PM10</span><span class="stat-v">${aqi.pm10 ?? '--'}</span></div>
-          <div class="stat"><span class="stat-k">O₃</span><span class="stat-v">${aqi.o3 ?? '--'}</span></div>
-        </div>
+        ${showStats ? `
+          <div class="aqi-stats">
+            <div class="stat"><span class="stat-k">PM2.5</span><span class="stat-v">${aqi.pm25 ?? '--'}</span></div>
+            <div class="stat"><span class="stat-k">PM10</span><span class="stat-v">${aqi.pm10 ?? '--'}</span></div>
+            <div class="stat"><span class="stat-k">O₃</span><span class="stat-v">${aqi.o3 ?? '--'}</span></div>
+          </div>
+        ` : ''}
       </div>
     `;
   },
-  moonsun: ({ moonsun, cfg }) => {
+  moonsun: ({ moonsun, cfg, cellH }) => {
     if (!moonsun) {
       if (!cfg || !Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
         return placeholder('MOON & SUN', 'Set your location in settings');
       }
       return placeholder('MOON & SUN', 'Data unavailable');
     }
+    const ch = cellH || 0;
+    const showSunRow = ch >= 5;
     return `
       <div class="widget widget-moonsun">
         <div class="widget-title">SKY</div>
@@ -368,47 +415,53 @@ const RENDERERS = {
             <div class="moon-illum">${moonsun.illuminationPct}% lit</div>
           </div>
         </div>
-        <div class="sun-row">
+        ${showSunRow ? `<div class="sun-row">
           <span>↑ ${moonsun.sunrise}</span>
           <span>↓ ${moonsun.sunset}</span>
-        </div>
+        </div>` : ''}
       </div>
     `;
   },
-  news: ({ news, cfg }) => {
+  news: ({ news, cfg, cellH }) => {
     if (!cfg || !cfg.news || !cfg.news.feedUrl) {
       return placeholder('NEWS HEADLINES', 'Paste an RSS or Atom feed URL in settings');
     }
     const list = news || [];
     if (!list.length) return placeholder('NEWS HEADLINES', 'Feed returned no items');
+    const ch = cellH || 0;
+    const maxItems = ch < 6 ? 2 : ch < 12 ? 3 : 5;
+    const showSource = ch >= 6;
     return `
       <div class="widget widget-news">
         <div class="widget-title">HEADLINES</div>
         <ul class="news-list">
-          ${list.slice(0, 5).map(n => `
+          ${list.slice(0, maxItems).map(n => `
             <li>
               <div class="news-title">${escapeHtml(n.title)}</div>
-              ${n.source ? `<div class="news-source">${escapeHtml(n.source)}</div>` : ''}
+              ${showSource && n.source ? `<div class="news-source">${escapeHtml(n.source)}</div>` : ''}
             </li>
           `).join('')}
         </ul>
       </div>
     `;
   },
-  stocks: ({ stocks, cfg }) => {
+  stocks: ({ stocks, cfg, cellH }) => {
     const syms = (cfg && cfg.stocks && cfg.stocks.symbols) || [];
     if (!syms.length) return placeholder('MARKETS', 'Add symbols (AAPL, BTC-USD) in settings');
     const list = stocks || [];
     if (!list.length) return placeholder('MARKETS', 'Data unavailable — check symbols');
+    const ch = cellH || 0;
+    const maxRows = ch < 4 ? 2 : ch < 6 ? 4 : 8;
+    const showChg = ch >= 4;
     return `
       <div class="widget widget-stocks">
         <div class="widget-title">MARKETS</div>
         <div class="stock-rows">
-          ${list.map(s => `
+          ${list.slice(0, maxRows).map(s => `
             <div class="stock-row">
               <span class="stock-sym">${escapeHtml(s.symbol)}</span>
               <span class="stock-price">${s.price}</span>
-              <span class="stock-chg ${s.change >= 0 ? 'up' : 'down'}">${s.change >= 0 ? '▲' : '▼'} ${Math.abs(s.changePct).toFixed(2)}%</span>
+              ${showChg ? `<span class="stock-chg ${s.change >= 0 ? 'up' : 'down'}">${s.change >= 0 ? '▲' : '▼'} ${Math.abs(s.changePct).toFixed(2)}%</span>` : ''}
             </div>
           `).join('')}
         </div>
@@ -421,16 +474,21 @@ const RENDERERS = {
     const fit = p.fit === 'cover' ? 'cover' : 'contain';
     return `<div class="widget widget-photo"><img src="${p.dataUrl}" style="object-fit:${fit}" alt="" /></div>`;
   },
-  github: ({ github, cfg }) => {
+  github: ({ github, cfg, cellH }) => {
     if (!cfg || !cfg.github || !cfg.github.user) {
       return placeholder('GITHUB', 'Enter a GitHub username in settings');
     }
     if (!github || !github.weeks || !github.weeks.length) {
       return placeholder('GITHUB', 'Data unavailable for ' + escapeHtml(cfg.github.user));
     }
+    const ch = cellH || 0;
+    const showTitle = ch >= 3;
+    const titleText = ch < 5
+      ? `${escapeHtml(github.user)} · ${github.total}`
+      : `GITHUB · ${escapeHtml(github.user)} · ${github.total} CONTRIBUTIONS`;
     return `
       <div class="widget widget-github">
-        <div class="widget-title">GITHUB · ${escapeHtml(github.user)} · ${github.total} CONTRIBUTIONS</div>
+        ${showTitle ? `<div class="widget-title">${titleText}</div>` : ''}
         <div class="gh-grid">
           ${github.weeks.map(week => `
             <div class="gh-col">

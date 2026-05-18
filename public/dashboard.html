@@ -288,13 +288,17 @@
       requires: 'message',
       sizes: { XS:{w:4,h:3}, S:{w:4,h:4}, M:{w:5,h:4}, L:{w:12,h:4}, XL:{w:12,h:6} },
       defaultSize: 'M',
-      render: ({ cfg, resolvedMessage }) => {
+      render: ({ cfg, resolvedMessage, cellH }) => {
         const m = resolvedMessage || cfg.message;
         if (!m || !m.text) return placeholder('MESSAGE', 'Set a headline in settings');
+        const ch = cellH || 0;
+        // Smaller cells suppress subtitle, scale the headline down.
+        const showSub = ch >= 3;
+        const txtSize = ch < 3 ? 14 : ch < 5 ? 18 : ch < 8 ? 22 : 28;
         return `
           <div class="widget widget-msg">
-            <div class="msg-text">${md(escapeHtml(m.text))}</div>
-            ${m.subtitle ? `<div class="msg-sub">${md(escapeHtml(m.subtitle))}</div>` : ''}
+            <div class="msg-text" style="font-size:${txtSize}px">${md(escapeHtml(m.text))}</div>
+            ${showSub && m.subtitle ? `<div class="msg-sub">${md(escapeHtml(m.subtitle))}</div>` : ''}
           </div>
         `;
       }
@@ -305,22 +309,28 @@
       requires: 'todos',
       sizes: { S:{w:4,h:6}, M:{w:5,h:6}, L:{w:6,h:12}, XL:{w:12,h:12} },
       defaultSize: 'M',
-      render: ({ todos }) => {
+      render: ({ todos, cellH }) => {
         if (!todos || !todos.length) return placeholder('TODO', 'Add items in settings');
         const today = (() => {
           const d = new Date();
           return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         })();
+        const ch = cellH || 0;
+        // Tier: shorter cells → fewer items, no due-date pills.
+        const maxItems = ch < 4 ? 2 : ch < 6 ? 4 : ch < 12 ? 6 : 10;
+        const showDue  = ch >= 4;
+        const showRecur = ch >= 4;
+        const list = todos.slice(0, maxItems);
         return `
           <div class="widget widget-todos">
             <div class="widget-title">TODO</div>
             <ul class="todo-list">
-              ${todos.map(t => {
+              ${list.map(t => {
                 const overdue = t.dueDate && !t.done && t.dueDate < today;
-                const due = t.dueDate && !t.done
+                const due = showDue && t.dueDate && !t.done
                   ? `<span class="todo-due ${overdue ? 'overdue' : ''}">${t.dueDate === today ? 'TODAY' : (overdue ? 'LATE' : t.dueDate.slice(5))}</span>`
                   : '';
-                const recur = t.recurring === 'daily' ? '<span class="todo-recur">↻</span>' : '';
+                const recur = showRecur && t.recurring === 'daily' ? '<span class="todo-recur">↻</span>' : '';
                 return `
                   <li class="${t.done ? 'done' : ''}">
                     <span class="checkbox">${t.done ? '✓' : ''}</span>
@@ -341,16 +351,35 @@
       requires: 'calendar',
       sizes: { S:{w:4,h:4}, M:{w:5,h:4}, L:{w:12,h:4}, XL:{w:12,h:8} },
       defaultSize: 'M',
-      render: ({ events, cfg }) => {
+      render: ({ events, cfg, cellH }) => {
         const urls = (cfg.calendar && Array.isArray(cfg.calendar.icalUrls) && cfg.calendar.icalUrls.filter(Boolean).length)
           ? cfg.calendar.icalUrls.filter(Boolean)
           : (cfg.calendar && cfg.calendar.icalUrl ? [cfg.calendar.icalUrl] : []);
         if (!urls.length) return placeholder('UPCOMING', 'Paste an iCal URL in settings');
         if (!events || !events.length) return placeholder('UPCOMING', 'No events in the next 14 days');
-        // Group by section. Limit total render to 6 to fit medium cell.
+        const ch = cellH || 0;
+        const maxEvents  = ch < 4 ? 2 : ch < 6 ? 4 : ch < 12 ? 6 : 10;
+        const showSections = ch >= 6;
+        const slice = events.slice(0, maxEvents);
+        if (!showSections) {
+          return `
+            <div class="widget widget-cal">
+              <div class="widget-title">UPCOMING</div>
+              ${slice.map(ev => `
+                <div class="cal-row ${ev.isAllDay ? 'allday' : ''}">
+                  <div class="cal-day">${ev.dayLabel}</div>
+                  <div class="cal-info">
+                    <div class="cal-title">${escapeHtml(ev.title)}</div>
+                    <div class="cal-time">${ev.startLabel}</div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
         const groups = {};
         const order = [];
-        for (const ev of events.slice(0, 8)) {
+        for (const ev of slice) {
           const s = ev.section || 'LATER';
           if (!groups[s]) { groups[s] = []; order.push(s); }
           groups[s].push(ev);
@@ -393,17 +422,25 @@
       requires: 'quote',
       sizes: { S:{w:4,h:4}, M:{w:6,h:6}, L:{w:12,h:6}, XL:{w:12,h:12} },
       defaultSize: 'M',
-      render: ({ cfg, resolvedQuote }) => {
+      render: ({ cfg, resolvedQuote, cellH, cellW }) => {
         const q = resolvedQuote || cfg.quote || {};
         const body = (q.text || '').trim();
         if (!body) return placeholder('QUOTE', 'Add text or switch source in settings');
         const attr = (q.attribution || '').trim();
         const align = (q.align === 'left' || q.align === 'right') ? q.align : 'center';
-        const baseSize = Math.max(14, Math.min(46, Math.round(420 / Math.max(8, body.length / 4))));
+        // Font scales by both cell area AND text length so the quote
+        // fills the cell without overflowing.
+        const ch = cellH || 0;
+        const cw = cellW || 0;
+        const lengthBase = Math.max(14, Math.min(54, Math.round(560 / Math.max(8, body.length / 4))));
+        const cellCap = ch < 3 ? 14 : ch < 5 ? 22 : ch < 8 ? 32 : ch < 12 ? 42 : 56;
+        const widthCap = cw < 5 ? 18 : cw < 8 ? 30 : 60;
+        const finalSize = Math.min(lengthBase, cellCap, widthCap);
+        const showAttr = attr && ch >= 4;
         return `
           <div class="widget widget-quote" style="text-align:${align}">
-            <div class="quote-body" style="font-size:${baseSize}px">${md(escapeHtml(body))}</div>
-            ${attr ? `<div class="quote-attr">— ${escapeHtml(attr)}</div>` : ''}
+            <div class="quote-body" style="font-size:${finalSize}px">${md(escapeHtml(body))}</div>
+            ${showAttr ? `<div class="quote-attr">— ${escapeHtml(attr)}</div>` : ''}
           </div>
         `;
       }
@@ -443,17 +480,22 @@
       requires: 'wifi',
       sizes: { S:{w:3,h:6}, M:{w:4,h:8}, L:{w:6,h:12} },
       defaultSize: 'M',
-      render: ({ cfg, wifiQrSvg }) => {
+      render: ({ cfg, wifiQrSvg, cellH, cellW }) => {
         const w = cfg.wifi || {};
         if (!w.ssid) return placeholder('WIFI QR', 'Enter WiFi SSID + password in settings');
         if (!wifiQrSvg) return placeholder('WIFI QR', 'QR generator not available');
+        // Below ~6 rows the meta column gets too cramped — show QR only.
+        const ch = cellH || 0, cw = cellW || 0;
+        const showMeta = ch >= 6 && cw >= 4;
         return `
-          <div class="widget widget-wifi">
+          <div class="widget widget-wifi" style="${showMeta ? '' : 'justify-content:center'}">
             <div class="wifi-qr">${wifiQrSvg}</div>
-            <div class="wifi-meta">
-              <div class="wifi-ssid">${escapeHtml(w.ssid)}</div>
-              <div class="wifi-hint">SCAN TO CONNECT</div>
-            </div>
+            ${showMeta ? `
+              <div class="wifi-meta">
+                <div class="wifi-ssid">${escapeHtml(w.ssid)}</div>
+                <div class="wifi-hint">SCAN TO CONNECT</div>
+              </div>
+            ` : ''}
           </div>
         `;
       }
@@ -464,13 +506,16 @@
       requires: 'countdowns',
       sizes: { S:{w:4,h:4}, M:{w:6,h:4}, L:{w:12,h:4} },
       defaultSize: 'M',
-      render: ({ countdowns }) => {
+      render: ({ countdowns, cellH }) => {
         if (!countdowns || !countdowns.length) return placeholder('COUNTDOWN', 'Add a label + date in settings');
+        const ch = cellH || 0;
+        const maxRows = ch < 4 ? 1 : ch < 8 ? 3 : 5;
+        const numSize = ch < 4 ? 28 : ch < 6 ? 36 : ch < 9 ? 44 : 56;
         return `
           <div class="widget widget-countdown">
-            ${countdowns.slice(0, 3).map(c => `
+            ${countdowns.slice(0, maxRows).map(c => `
               <div class="cd-row">
-                <div class="cd-num">${c.days}</div>
+                <div class="cd-num" style="font-size:${numSize}px">${c.days}</div>
                 <div class="cd-meta">
                   <div class="cd-unit">${c.unit}</div>
                   <div class="cd-label">${escapeHtml(c.label)}</div>
@@ -552,19 +597,22 @@
       requires: 'news',
       sizes: { S:{w:6,h:6}, M:{w:6,h:12}, L:{w:12,h:12} },
       defaultSize: 'M',
-      render: ({ news, cfg }) => {
+      render: ({ news, cfg, cellH }) => {
         if (!cfg.news || !cfg.news.feedUrl) {
           return placeholder('NEWS HEADLINES', 'Paste an RSS or Atom feed URL in settings');
         }
         if (!news || !news.length) return placeholder('NEWS HEADLINES', 'Feed returned no items');
+        const ch = cellH || 0;
+        const maxItems = ch < 6 ? 2 : ch < 12 ? 3 : 5;
+        const showSource = ch >= 6;
         return `
           <div class="widget widget-news">
             <div class="widget-title">HEADLINES</div>
             <ul class="news-list">
-              ${news.slice(0, 5).map(n => `
+              ${news.slice(0, maxItems).map(n => `
                 <li>
                   <div class="news-title">${escapeHtml(n.title)}</div>
-                  ${n.source ? `<div class="news-source">${escapeHtml(n.source)}</div>` : ''}
+                  ${showSource && n.source ? `<div class="news-source">${escapeHtml(n.source)}</div>` : ''}
                 </li>
               `).join('')}
             </ul>
@@ -578,19 +626,22 @@
       requires: 'stocks',
       sizes: { S:{w:4,h:4}, M:{w:6,h:6}, L:{w:12,h:6} },
       defaultSize: 'M',
-      render: ({ stocks, cfg }) => {
+      render: ({ stocks, cfg, cellH }) => {
         const syms = (cfg.stocks && cfg.stocks.symbols) || [];
         if (!syms.length) return placeholder('MARKETS', 'Add symbols (AAPL, BTC-USD) in settings');
         if (!stocks || !stocks.length) return placeholder('MARKETS', 'Data unavailable — check symbols');
+        const ch = cellH || 0;
+        const maxRows = ch < 4 ? 2 : ch < 6 ? 4 : 8;
+        const showChg = ch >= 4;
         return `
           <div class="widget widget-stocks">
             <div class="widget-title">MARKETS</div>
             <div class="stock-rows">
-              ${stocks.map(s => `
+              ${stocks.slice(0, maxRows).map(s => `
                 <div class="stock-row">
                   <span class="stock-sym">${escapeHtml(s.symbol)}</span>
                   <span class="stock-price">${s.price}</span>
-                  <span class="stock-chg ${s.change >= 0 ? 'up' : 'down'}">${s.change >= 0 ? '▲' : '▼'} ${Math.abs(s.changePct).toFixed(2)}%</span>
+                  ${showChg ? `<span class="stock-chg ${s.change >= 0 ? 'up' : 'down'}">${s.change >= 0 ? '▲' : '▼'} ${Math.abs(s.changePct).toFixed(2)}%</span>` : ''}
                 </div>
               `).join('')}
             </div>
@@ -621,16 +672,21 @@
       requires: 'github',
       sizes: { S:{w:6,h:4}, M:{w:12,h:4}, L:{w:12,h:6} },
       defaultSize: 'M',
-      render: ({ github, cfg }) => {
+      render: ({ github, cfg, cellH, cellW }) => {
         if (!cfg.github || !cfg.github.user) {
           return placeholder('GITHUB', 'Enter a GitHub username in settings');
         }
         if (!github || !github.weeks || !github.weeks.length) {
           return placeholder('GITHUB', 'Data unavailable for ' + escapeHtml(cfg.github.user));
         }
+        const ch = cellH || 0;
+        const showTitle = ch >= 3;
+        const titleText = ch < 5
+          ? `${escapeHtml(github.user)} · ${github.total}`
+          : `GITHUB · ${escapeHtml(github.user)} · ${github.total} CONTRIBUTIONS`;
         return `
           <div class="widget widget-github">
-            <div class="widget-title">GITHUB · ${escapeHtml(github.user)} · ${github.total} CONTRIBUTIONS</div>
+            ${showTitle ? `<div class="widget-title">${titleText}</div>` : ''}
             <div class="gh-grid">
               ${github.weeks.map(week => `
                 <div class="gh-col">
