@@ -17,7 +17,6 @@ import {
 } from './widgets.js';
 import EditorGrid from './components/EditorGrid.jsx';
 import Settings from './components/Settings.jsx';
-import Preview from './components/Preview.jsx';
 import SaveBar from './components/SaveBar.jsx';
 import ScreenTabs from './components/ScreenTabs.jsx';
 import ScreenPanel from './components/ScreenPanel.jsx';
@@ -55,10 +54,8 @@ function nowMinutesLocal(tz) {
 
 export default function App() {
   const [cfg, setCfg] = useState(null);
-  const [editSnapshot, setEditSnapshot] = useState(null);
   const [status, setStatus] = useState('syncing');
   const [statusMsg, setStatusMsg] = useState(null);
-  const [editMode, setEditMode] = useState(false);
   const [editScreenId, setEditScreenId] = useState(() => {
     try { return localStorage.getItem('ctrl.editScreenId') || null; } catch { return null; }
   });
@@ -109,11 +106,13 @@ export default function App() {
   // the user is actively editing (then follow their tab).
   const liveScreen = useMemo(() => {
     if (!cfg) return null;
-    if (editMode) return editScreen;
-    return pickActiveScreen(cfg, nowMinutesLocal(cfg.timezone || 'UTC'))
-      || editScreen
+    // Show the screen the user is editing — there is no separate "live"
+    // mode anymore. The active scheduled screen is still surfaced via
+    // the SCHEDULED badge in the timeline.
+    return editScreen
+      || pickActiveScreen(cfg, nowMinutesLocal(cfg.timezone || 'UTC'))
       || screens[0];
-  }, [cfg, editMode, editScreen, screens, nowTick]);
+  }, [cfg, editScreen, screens, nowTick]);
 
   // Overlap validation.
   const overlaps = useMemo(() => findOverlaps(screens), [screens]);
@@ -152,10 +151,6 @@ export default function App() {
     ? { ...previewData, cfg, layout: editScreen ? editScreen.layout : [], chrome: editScreen ? editScreen.chrome : null }
     : { cfg, weather: null, events: [], units: (editScreen && editScreen.units) || 'F', layout: editScreen ? editScreen.layout : [], chrome: editScreen ? editScreen.chrome : null };
 
-  // Data for the non-edit preview — uses the SCHEDULED-active screen.
-  const liveDashData = previewData
-    ? { ...previewData, cfg, layout: liveScreen ? liveScreen.layout : [], chrome: liveScreen ? liveScreen.chrome : null }
-    : { cfg, weather: null, events: [], units: (liveScreen && liveScreen.units) || 'F', layout: liveScreen ? liveScreen.layout : [], chrome: liveScreen ? liveScreen.chrome : null };
 
   const showToast = (msg) => {
     setToast(msg);
@@ -253,22 +248,6 @@ export default function App() {
 
   const refreshPreview = () => setPreviewKey(Date.now());
 
-  const toggleEditMode = () => {
-    if (editMode) {
-      if (status === 'dirty' && editSnapshot) {
-        const discard = window.confirm('Discard unsaved layout changes?\n\nOK = revert. Cancel = keep editing.');
-        if (!discard) return;
-        setCfg(editSnapshot.cfg);
-        setStatus('synced');
-      }
-      setEditSnapshot(null);
-      setEditMode(false);
-    } else {
-      setEditSnapshot({ cfg: JSON.parse(JSON.stringify(cfg)) });
-      setEditMode(true);
-    }
-  };
-
   // Auto-save: 2s after the last edit if config is valid.
   useEffect(() => {
     if (status !== 'dirty' || !canSave) return;
@@ -276,7 +255,7 @@ export default function App() {
     return () => clearTimeout(t);
   }, [status, canSave, cfg]);
 
-  // Keyboard shortcuts: cmd+s save, cmd+z undo, e toggle edit, esc exit edit.
+  // Keyboard shortcuts: cmd+s save, cmd+z undo.
   useEffect(() => {
     function onKey(e) {
       const t = e.target;
@@ -290,22 +269,11 @@ export default function App() {
       if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey) {
         e.preventDefault();
         undo();
-        return;
-      }
-      if (inField) return;
-      if (e.key === 'Escape' && editMode) {
-        e.preventDefault();
-        toggleEditMode();
-        return;
-      }
-      if (e.key.toLowerCase() === 'e' && !mod) {
-        e.preventDefault();
-        toggleEditMode();
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [canSave, editMode, cfg, undoCfg, editSnapshot, status]);
+  }, [canSave, cfg, undoCfg, status]);
 
   if (!cfg) {
     return (
@@ -326,14 +294,9 @@ export default function App() {
           <div className="tagline">E-Ink · 800 × 480 · Editorial</div>
         </div>
         <div className="actions">
-          <motion.button
-            whileTap={{ scale: 0.96 }}
-            className={`btn ${editMode ? 'btn-primary' : ''}`}
-            title="Toggle edit mode (E)"
-            onClick={toggleEditMode}
-          >
-            {editMode ? 'EXIT EDIT' : '✎ EDIT LAYOUT'}
-          </motion.button>
+          <span className="terminal-line" style={{ fontSize: 10 }}>
+            &gt; LIVE EDIT · AUTO-SAVE
+          </span>
         </div>
       </header>
 
@@ -341,105 +304,81 @@ export default function App() {
         screens={screens}
         activeId={editScreenId}
         overlapIds={overlapIds}
-        editMode={editMode}
+        editMode={true}
         liveScreen={liveScreen}
         onSelect={setEditScreenId}
         onAdd={addScreen}
         canAdd={screens.length < MAX_SCREENS}
       />
 
-      {!editMode && (
-        <ScheduleTimeline
-          screens={screens}
-          activeId={editScreenId}
-          overlapIds={overlapIds}
-          timezone={cfg.timezone || 'UTC'}
-          onSelect={setEditScreenId}
-          onUpdateSchedule={(id, patch) => updateScreen(id, {
-            schedule: { ...(screens.find(s => s.id === id)?.schedule || { enabled: false }), ...patch, enabled: true }
-          })}
-        />
-      )}
+      <ScheduleTimeline
+        screens={screens}
+        activeId={editScreenId}
+        overlapIds={overlapIds}
+        timezone={cfg.timezone || 'UTC'}
+        onSelect={setEditScreenId}
+        onUpdateSchedule={(id, patch) => updateScreen(id, {
+          schedule: { ...(screens.find(s => s.id === id)?.schedule || { enabled: false }), ...patch, enabled: true }
+        })}
+      />
 
-      <main className={`layout ${editMode ? 'edit-mode' : ''}`}>
-        {!editMode && (
-          <div className="preview-stage">
-            <Preview
-              data={liveDashData}
-              cacheKey={`${previewKey}-${nowTick}`}
-              onRefresh={refreshPreview}
-            />
-            {liveScreen && pickActiveScreen(cfg, nowMinutesLocal(cfg.timezone || 'UTC'))?.id === liveScreen.id && liveScreen.schedule?.enabled && (
-              <div className="schedule-lock-badge">
-                SCHEDULED · {liveScreen.name} · {liveScreen.schedule.from}–{liveScreen.schedule.to}
-              </div>
-            )}
-          </div>
-        )}
-
+      <main className="layout edit-mode">
         <div className="settings">
-          {editMode ? (
-            <section className="card">
-              <div className="section-title">
-                <span>Edit Layout — {editScreen?.name || ''}</span>
+          <section className="card">
+            <div className="section-title">
+              <span>{editScreen?.name || 'Screen'}</span>
+              <div className="btn-row" style={{ marginTop: 0, gap: 6 }}>
                 <span className="badge">{GRID_COLS}×{GRID_ROWS}</span>
+                <button className="btn" onClick={() => setShowGrid(g => !g)}
+                  style={{ padding: '4px 10px', fontSize: 11 }}>
+                  {showGrid ? '◧ HIDE GRID' : '◧ SHOW GRID'}
+                </button>
+                <button className="btn btn-ghost"
+                  style={{ padding: '4px 10px', fontSize: 11 }}
+                  onClick={() => updateScreenLayout(editScreen.id, [])}>
+                  ↻ CLEAR
+                </button>
               </div>
-              <div className="editor-toolbar">
-                <div className="btn-row" style={{ marginTop: 0 }}>
-                  <button className="btn" onClick={() => setShowGrid(g => !g)}>
-                    {showGrid ? '◧ HIDE GRID' : '◧ SHOW GRID'}
-                  </button>
-                  <button className="btn btn-ghost" onClick={() => {
-                    updateScreenLayout(editScreen.id, []);
-                  }}>
-                    ↻ CLEAR
-                  </button>
-                </div>
-              </div>
-              <EditorGrid
-                layout={layout}
-                showGrid={showGrid}
-                previewData={livePreviewData}
-                onChange={(next) => updateScreenLayout(editScreen.id, next)}
-                onError={showToast}
-                onJumpToSettings={(widgetId) => {
-                  setEditMode(false);
-                  setEditSnapshot(null);
-                  setFocusedWidgetId(widgetId);
-                }}
+            </div>
+            <EditorGrid
+              layout={layout}
+              showGrid={showGrid}
+              previewData={livePreviewData}
+              onChange={(next) => updateScreenLayout(editScreen.id, next)}
+              onError={showToast}
+              onJumpToSettings={(widgetId) => {
+                setFocusedWidgetId(widgetId);
+              }}
+            />
+            <div className="editor-help">
+              DRAG TILE TO MOVE · CORNER TO RESIZE · × OR DRAG TO TRASH · DRAG POOL CARD ONTO CANVAS
+            </div>
+            {editScreen && (
+              <ChromePanel
+                screen={editScreen}
+                onUpdate={(patch) => updateScreen(editScreen.id, patch)}
               />
-              <div className="editor-help">
-                DRAG TILE TO MOVE · CORNER TO RESIZE · × OR DRAG TO TRASH · DRAG POOL CARD ONTO CANVAS
-              </div>
-              {editScreen && (
-                <ChromePanel
-                  screen={editScreen}
-                  onUpdate={(patch) => updateScreen(editScreen.id, patch)}
-                />
-              )}
-            </section>
-          ) : (
-            <>
-              {editScreen && (
-                <ScreenPanel
-                  screen={editScreen}
-                  isOverlap={overlapIds.has(editScreen.id)}
-                  onUpdate={(patch) => updateScreen(editScreen.id, patch)}
-                  onSetDefault={() => setDefaultScreen(editScreen.id)}
-                  onDelete={() => deleteScreen(editScreen.id)}
-                  canDelete={screens.length > 1}
-                />
-              )}
-              <Settings
-                cfg={cfg}
-                layout={layout}
-                onPatch={patchCfg}
-                onPatchNested={patchNested}
-                focusedWidgetId={focusedWidgetId}
-                onFocusHandled={() => setFocusedWidgetId(null)}
-              />
-            </>
+            )}
+          </section>
+
+          {editScreen && (
+            <ScreenPanel
+              screen={editScreen}
+              isOverlap={overlapIds.has(editScreen.id)}
+              onUpdate={(patch) => updateScreen(editScreen.id, patch)}
+              onSetDefault={() => setDefaultScreen(editScreen.id)}
+              onDelete={() => deleteScreen(editScreen.id)}
+              canDelete={screens.length > 1}
+            />
           )}
+          <Settings
+            cfg={cfg}
+            layout={layout}
+            onPatch={patchCfg}
+            onPatchNested={patchNested}
+            focusedWidgetId={focusedWidgetId}
+            onFocusHandled={() => setFocusedWidgetId(null)}
+          />
         </div>
       </main>
 
