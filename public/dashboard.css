@@ -21,8 +21,9 @@ html, body {
   width: 800px;
   height: 480px;
   display: grid;
-  grid-template-rows: 60px 1fr 28px;
+  grid-template-rows: 60px minmax(0, 1fr) 28px;
   background: #fff;
+  overflow: hidden;
 }
 
 /* ============ HEADER ============ */

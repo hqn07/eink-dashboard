@@ -736,11 +736,12 @@
   }
 
   // Page grid rows depend on which chrome bars are enabled.
+  // minmax(0, 1fr) prevents body content from pushing the page taller.
   const headerOn = chrome.header && chrome.header.enabled !== false;
   const footerOn = chrome.footer && chrome.footer.enabled !== false;
-  const headerRow = headerOn ? '60px' : '0';
-  const footerRow = footerOn ? '28px' : '0';
-  page.style.gridTemplateRows = `${headerRow} 1fr ${footerRow}`;
+  const headerRow = headerOn ? '60px' : '0px';
+  const footerRow = footerOn ? '28px' : '0px';
+  page.style.gridTemplateRows = `${headerRow} minmax(0, 1fr) ${footerRow}`;
 
   if (headerOn) {
     const h = chrome.header || {};
@@ -762,9 +763,12 @@
   }
 
   // ============ MAIN BODY — CSS GRID ============
+  // minmax(0, 1fr) prevents wide cell content from pushing the column
+  // wider than its share (default 1fr = minmax(auto, 1fr) lets content
+  // overflow the page horizontally).
   const body = el('main', 'body body-grid');
-  body.style.gridTemplateColumns = `repeat(${GRID_COLS}, 1fr)`;
-  body.style.gridTemplateRows    = `repeat(${GRID_ROWS}, 1fr)`;
+  body.style.gridTemplateColumns = `repeat(${GRID_COLS}, minmax(0, 1fr))`;
+  body.style.gridTemplateRows    = `repeat(${GRID_ROWS}, minmax(0, 1fr))`;
   page.appendChild(body);
 
   const ctx = {
