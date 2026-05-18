@@ -20,6 +20,7 @@ export const WIDGET_REGISTRY = [
     id: 'weather_hero',
     label: 'Weather · Current',
     requires: 'weather',
+    minSize: { w: 6, h: 4 },
     sizes: {
       XS: { w: 8, h: 4 },
       S:  { w: 8, h: 6 },
@@ -33,6 +34,7 @@ export const WIDGET_REGISTRY = [
     id: 'weather_forecast',
     label: 'Weather · Forecast',
     requires: 'weather',
+    minSize: { w: 6, h: 6 },
     sizes: {
       S:  { w: 6, h: 8 },
       M:  { w: 6, h: 12 },
@@ -45,6 +47,7 @@ export const WIDGET_REGISTRY = [
     id: 'message',
     label: 'Custom Message',
     requires: 'message',
+    minSize: { w: 6, h: 2 },
     sizes: {
       XS: { w: 8, h: 3 },
       S:  { w: 8, h: 4 },
@@ -58,6 +61,7 @@ export const WIDGET_REGISTRY = [
     id: 'todos',
     label: 'To-Do List',
     requires: 'todos',
+    minSize: { w: 6, h: 4 },
     sizes: {
       S:  { w: 8, h: 6 },
       M:  { w: 10, h: 6 },
@@ -70,6 +74,7 @@ export const WIDGET_REGISTRY = [
     id: 'calendar',
     label: 'Calendar',
     requires: 'calendar',
+    minSize: { w: 6, h: 3 },
     sizes: {
       S: { w: 8, h: 4 },
       M: { w: 10, h: 4 },
@@ -82,6 +87,7 @@ export const WIDGET_REGISTRY = [
     id: 'spacer',
     label: 'Black Bar',
     requires: 'spacer',
+    minSize: { w: 4, h: 1 },
     sizes: {
       XS: { w: 24, h: 1 },
       S:  { w: 24, h: 2 },
@@ -95,6 +101,7 @@ export const WIDGET_REGISTRY = [
     id: 'quote',
     label: 'Text / Quote',
     requires: 'quote',
+    minSize: { w: 6, h: 3 },
     sizes: {
       S:  { w: 8, h: 4 },
       M:  { w: 12, h: 6 },
@@ -107,6 +114,7 @@ export const WIDGET_REGISTRY = [
     id: 'clock',
     label: 'Clock',
     requires: 'clock',
+    minSize: { w: 6, h: 3 },
     sizes: {
       XS: { w: 8, h: 3 },
       S:  { w: 8, h: 4 },
@@ -120,6 +128,7 @@ export const WIDGET_REGISTRY = [
     id: 'wifi_qr',
     label: 'WiFi QR Code',
     requires: 'wifi',
+    minSize: { w: 4, h: 4 },
     sizes: {
       S: { w: 6, h: 6 },
       M: { w: 8, h: 8 },
@@ -131,6 +140,7 @@ export const WIDGET_REGISTRY = [
     id: 'countdown',
     label: 'Countdown',
     requires: 'countdowns',
+    minSize: { w: 6, h: 3 },
     sizes: {
       S: { w: 8, h: 4 },
       M: { w: 12, h: 4 },
@@ -142,6 +152,7 @@ export const WIDGET_REGISTRY = [
     id: 'aqi',
     label: 'Air Quality',
     requires: 'aqi',
+    minSize: { w: 6, h: 3 },
     sizes: {
       S: { w: 8, h: 4 },
       M: { w: 8, h: 6 },
@@ -153,6 +164,7 @@ export const WIDGET_REGISTRY = [
     id: 'moonsun',
     label: 'Moon & Sun',
     requires: 'moonsun',
+    minSize: { w: 6, h: 3 },
     sizes: {
       S: { w: 8, h: 4 },
       M: { w: 8, h: 6 },
@@ -164,6 +176,7 @@ export const WIDGET_REGISTRY = [
     id: 'news',
     label: 'News Headlines',
     requires: 'news',
+    minSize: { w: 8, h: 4 },
     sizes: {
       S: { w: 12, h: 6 },
       M: { w: 12, h: 12 },
@@ -175,6 +188,7 @@ export const WIDGET_REGISTRY = [
     id: 'stocks',
     label: 'Stocks / Crypto',
     requires: 'stocks',
+    minSize: { w: 6, h: 3 },
     sizes: {
       S: { w: 8, h: 4 },
       M: { w: 12, h: 6 },
@@ -186,6 +200,7 @@ export const WIDGET_REGISTRY = [
     id: 'photo',
     label: 'Photo / Image',
     requires: 'photo',
+    minSize: { w: 4, h: 4 },
     sizes: {
       S: { w: 8, h: 6 },
       M: { w: 12, h: 12 },
@@ -197,6 +212,7 @@ export const WIDGET_REGISTRY = [
     id: 'github',
     label: 'GitHub Activity',
     requires: 'github',
+    minSize: { w: 10, h: 3 },
     sizes: {
       S: { w: 12, h: 4 },
       M: { w: 24, h: 4 },
@@ -205,6 +221,29 @@ export const WIDGET_REGISTRY = [
     defaultSize: 'M'
   }
 ];
+
+// Tier resolver — returns one of: tiny | compact | standard | extended | full.
+// Widgets use this to pick a layout that fits the cell. Width and height
+// are both considered; the lower-cap wins so a very wide but short cell
+// gets the shorter tier.
+export function pickTier(cellW, cellH) {
+  const w = cellW || 0, h = cellH || 0;
+  // Height-driven default
+  let byH = 'full';
+  if (h < 4)       byH = 'tiny';
+  else if (h < 6)  byH = 'compact';
+  else if (h < 8)  byH = 'standard';
+  else if (h < 12) byH = 'extended';
+  // Width can pull us down a tier if the cell is short on width
+  let byW = 'full';
+  if (w < 6)       byW = 'tiny';
+  else if (w < 8)  byW = 'compact';
+  else if (w < 12) byW = 'standard';
+  else if (w < 18) byW = 'extended';
+  const order = ['tiny', 'compact', 'standard', 'extended', 'full'];
+  const lower = order[Math.min(order.indexOf(byH), order.indexOf(byW))];
+  return lower;
+}
 
 export function widgetById(id) {
   return WIDGET_REGISTRY.find(w => w.id === id);

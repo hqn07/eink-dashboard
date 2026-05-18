@@ -3,6 +3,8 @@
 // calling these — the result is dropped into the DOM via
 // `dangerouslySetInnerHTML` and styled via /static/dashboard.css.
 
+import { pickTier } from './widgets.js';
+
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -131,36 +133,46 @@ function hourlyStrip(w) {
 const RENDERERS = {
   weather_hero: ({ weather, units, cellW, cellH }) => {
     const w = weather || fakeWeather(units);
-    const ch = cellH || 0, cw = cellW || 0;
+    const tier = pickTier(cellW, cellH);
     const staleClass = w.stale ? ' weather-stale' : '';
     const staleBadge = w.stale ? '<div class="stale-pill">CACHED</div>' : '';
-    const showDesc   = ch >= 4;
-    const showStats  = ch >= 6;
-    const showExtras = ch >= 12 && cw >= 12;
-    const iconSize   = ch < 4 ? 60 : ch < 8 ? 100 : 110;
-    const extras = showExtras ? `${sunBar(w)}${hourlyStrip(w)}` : '';
-    const stats = showStats ? `
+    const tempBlock = (size) => `
+      <div class="weather-temp" style="font-size:${size}px">
+        <span class="temp-num">${w.temp}</span><span class="temp-deg" style="font-size:${Math.round(size*0.6)}px">°${units}</span>
+      </div>`;
+    const heroIcon = (px) => `<div class="weather-icon" style="height:${px}px">${icon(w.main, px)}</div>`;
+    const descLine = () => `<div class="weather-desc">${w.desc}</div>`;
+    const hiloLine = () => `<div class="weather-hilo">HIGH ${w.tempMax}° &nbsp;·&nbsp; LOW ${w.tempMin}°</div>`;
+    const statsBlock = () => `
       <div class="weather-stats">
         <div class="stat"><span class="stat-k">FEELS</span><span class="stat-v">${w.feelsLike}°</span></div>
         <div class="stat"><span class="stat-k">HUMID</span><span class="stat-v">${w.humidity}%</span></div>
         <div class="stat"><span class="stat-k">WIND</span><span class="stat-v">${w.windDir} ${w.windSpeed} ${w.windUnit || ''}</span></div>
         <div class="stat"><span class="stat-k">RISE</span><span class="stat-v">${w.sunrise}</span></div>
-      </div>` : '';
-    return `
-      <div class="weather-hero${staleClass}">
-        ${staleBadge}
-        <div class="weather-icon">${icon(w.main, iconSize)}</div>
-        <div class="weather-temp">
-          <span class="temp-num">${w.temp}</span><span class="temp-deg">°${units}</span>
-        </div>
-        ${showDesc ? `
-          <div class="weather-desc">${w.desc}</div>
-          <div class="weather-hilo">HIGH ${w.tempMax}° &nbsp;·&nbsp; LOW ${w.tempMin}°</div>
-        ` : ''}
-      </div>
-      ${stats}
-      ${extras}
-    `;
+      </div>`;
+    switch (tier) {
+      case 'tiny':
+        return `<div class="weather-hero hero-tier-tiny${staleClass}">${staleBadge}${tempBlock(54)}</div>`;
+      case 'compact':
+        return `<div class="weather-hero hero-tier-compact${staleClass}">
+          ${staleBadge}
+          <div class="hero-row">${heroIcon(60)}${tempBlock(72)}</div>
+          ${hiloLine()}
+        </div>`;
+      case 'standard':
+        return `<div class="weather-hero hero-tier-standard${staleClass}">
+          ${staleBadge}${heroIcon(90)}${tempBlock(86)}${descLine()}${hiloLine()}
+        </div>${statsBlock()}`;
+      case 'extended':
+        return `<div class="weather-hero hero-tier-extended${staleClass}">
+          ${staleBadge}${heroIcon(110)}${tempBlock(96)}${descLine()}${hiloLine()}
+        </div>${statsBlock()}`;
+      case 'full':
+      default:
+        return `<div class="weather-hero hero-tier-full${staleClass}">
+          ${staleBadge}${heroIcon(130)}${tempBlock(96)}${descLine()}${hiloLine()}
+        </div>${statsBlock()}${sunBar(w)}${hourlyStrip(w)}`;
+    }
   },
   weather_forecast: ({ weather, cellH }) => {
     const w = weather;
@@ -199,7 +211,7 @@ const RENDERERS = {
       </div>
     `;
   },
-  todos: ({ cfg, cellH }) => {
+  todos: ({ cfg, cellW, cellH }) => {
     const all = ((cfg && cfg.todos) || []);
     if (!all.length) {
       return `
@@ -213,56 +225,72 @@ const RENDERERS = {
       const d = new Date();
       return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     })();
-    const ch = cellH || 0;
-    const maxItems = ch < 4 ? 2 : ch < 6 ? 4 : ch < 12 ? 6 : 10;
-    const showDue  = ch >= 4;
-    const showRecur = ch >= 4;
-    const list = all.slice(0, maxItems);
+    const tier = pickTier(cellW, cellH);
+    const matrix = {
+      tiny:     { items: 2,  showDue: false, showRecur: false, showFooter: false },
+      compact:  { items: 3,  showDue: false, showRecur: true,  showFooter: false },
+      standard: { items: 5,  showDue: true,  showRecur: true,  showFooter: true  },
+      extended: { items: 7,  showDue: true,  showRecur: true,  showFooter: true  },
+      full:     { items: 10, showDue: true,  showRecur: true,  showFooter: true  }
+    };
+    const t = matrix[tier];
+    const list = all.slice(0, t.items);
+    const totalOpen = all.filter(x => !x.done).length;
+    const totalDone = all.length - totalOpen;
     return `
       <div class="widget widget-todos">
-        <div class="widget-title">TODO</div>
+        <div class="widget-title">TODO${t.showFooter ? ` · ${totalOpen} LEFT` : ''}</div>
         <ul class="todo-list">
-          ${list.map(t => {
-            const overdue = t.dueDate && !t.done && t.dueDate < today;
-            const due = showDue && t.dueDate && !t.done
-              ? `<span class="todo-due ${overdue ? 'overdue' : ''}">${t.dueDate === today ? 'TODAY' : (overdue ? 'LATE' : t.dueDate.slice(5))}</span>`
+          ${list.map(it => {
+            const overdue = it.dueDate && !it.done && it.dueDate < today;
+            const due = t.showDue && it.dueDate && !it.done
+              ? `<span class="todo-due ${overdue ? 'overdue' : ''}">${it.dueDate === today ? 'TODAY' : (overdue ? 'LATE' : it.dueDate.slice(5))}</span>`
               : '';
-            const recur = showRecur && t.recurring === 'daily' ? '<span class="todo-recur">↻</span>' : '';
+            const recur = t.showRecur && it.recurring === 'daily' ? '<span class="todo-recur">↻</span>' : '';
             return `
-              <li class="${t.done ? 'done' : ''}">
-                <span class="checkbox">${t.done ? '✓' : ''}</span>
-                <span class="todo-text">${escapeHtml(t.text)}</span>
+              <li class="${it.done ? 'done' : ''}">
+                <span class="checkbox">${it.done ? '✓' : ''}</span>
+                <span class="todo-text">${escapeHtml(it.text)}</span>
                 ${recur}
                 ${due}
               </li>
             `;
           }).join('')}
         </ul>
+        ${t.showFooter && all.length > t.items
+          ? `<div class="todo-footer">+ ${all.length - t.items} more · ${totalDone}/${all.length} done</div>`
+          : ''}
       </div>
     `;
   },
-  calendar: ({ events, cellH }) => {
+  calendar: ({ events, cellW, cellH }) => {
     const all = (events || []);
     if (!all.length) {
       return `<div class="widget widget-cal"><div class="widget-title">UPCOMING</div><div class="cal-row"><div class="cal-info"><div class="cal-title">No events</div></div></div></div>`;
     }
-    const ch = cellH || 0;
-    const maxEvents = ch < 4 ? 2 : ch < 6 ? 4 : ch < 12 ? 6 : 10;
-    const showSections = ch >= 6;
-    const list = all.slice(0, maxEvents);
-    if (!showSections) {
+    const tier = pickTier(cellW, cellH);
+    const matrix = {
+      tiny:     { events: 1, sections: false },
+      compact:  { events: 2, sections: false },
+      standard: { events: 4, sections: false },
+      extended: { events: 5, sections: true  },
+      full:     { events: 8, sections: true  }
+    };
+    const t = matrix[tier];
+    const list = all.slice(0, t.events);
+    const row = ev => `
+      <div class="cal-row ${ev.isAllDay ? 'allday' : ''}">
+        <div class="cal-day">${escapeHtml(ev.dayLabel || '')}</div>
+        <div class="cal-info">
+          <div class="cal-title">${escapeHtml(ev.title || '')}</div>
+          <div class="cal-time">${escapeHtml(ev.startLabel || '')}</div>
+        </div>
+      </div>`;
+    if (!t.sections) {
       return `
         <div class="widget widget-cal">
           <div class="widget-title">UPCOMING</div>
-          ${list.map(ev => `
-            <div class="cal-row ${ev.isAllDay ? 'allday' : ''}">
-              <div class="cal-day">${escapeHtml(ev.dayLabel || '')}</div>
-              <div class="cal-info">
-                <div class="cal-title">${escapeHtml(ev.title || '')}</div>
-                <div class="cal-time">${escapeHtml(ev.startLabel || '')}</div>
-              </div>
-            </div>
-          `).join('')}
+          ${list.map(row).join('')}
         </div>
       `;
     }
@@ -278,15 +306,7 @@ const RENDERERS = {
         <div class="widget-title">UPCOMING</div>
         ${order.map(s => `
           <div class="cal-section-title">${s}</div>
-          ${groups[s].map(ev => `
-            <div class="cal-row ${ev.isAllDay ? 'allday' : ''}">
-              <div class="cal-day">${escapeHtml(ev.dayLabel || '')}</div>
-              <div class="cal-info">
-                <div class="cal-title">${escapeHtml(ev.title || '')}</div>
-                <div class="cal-time">${escapeHtml(ev.startLabel || '')}</div>
-              </div>
-            </div>
-          `).join('')}
+          ${groups[s].map(row).join('')}
         `).join('')}
       </div>
     `;
@@ -425,46 +445,58 @@ const RENDERERS = {
       </div>
     `;
   },
-  news: ({ news, cfg, cellH }) => {
+  news: ({ news, cfg, cellW, cellH }) => {
     if (!cfg || !cfg.news || !cfg.news.feedUrl) {
       return placeholder('NEWS HEADLINES', 'Paste an RSS or Atom feed URL in settings');
     }
     const list = news || [];
     if (!list.length) return placeholder('NEWS HEADLINES', 'Feed returned no items');
-    const ch = cellH || 0;
-    const maxItems = ch < 6 ? 2 : ch < 12 ? 3 : 5;
-    const showSource = ch >= 6;
+    const tier = pickTier(cellW, cellH);
+    const matrix = {
+      tiny:     { items: 1, showSource: false, titleClamp: 2 },
+      compact:  { items: 2, showSource: false, titleClamp: 2 },
+      standard: { items: 3, showSource: true,  titleClamp: 3 },
+      extended: { items: 4, showSource: true,  titleClamp: 3 },
+      full:     { items: 6, showSource: true,  titleClamp: 4 }
+    };
+    const t = matrix[tier];
     return `
       <div class="widget widget-news">
         <div class="widget-title">HEADLINES</div>
         <ul class="news-list">
-          ${list.slice(0, maxItems).map(n => `
+          ${list.slice(0, t.items).map(n => `
             <li>
-              <div class="news-title">${escapeHtml(n.title)}</div>
-              ${showSource && n.source ? `<div class="news-source">${escapeHtml(n.source)}</div>` : ''}
+              <div class="news-title" style="-webkit-line-clamp:${t.titleClamp}">${escapeHtml(n.title)}</div>
+              ${t.showSource && n.source ? `<div class="news-source">${escapeHtml(n.source)}</div>` : ''}
             </li>
           `).join('')}
         </ul>
       </div>
     `;
   },
-  stocks: ({ stocks, cfg, cellH }) => {
+  stocks: ({ stocks, cfg, cellW, cellH }) => {
     const syms = (cfg && cfg.stocks && cfg.stocks.symbols) || [];
     if (!syms.length) return placeholder('MARKETS', 'Add symbols (AAPL, BTC-USD) in settings');
     const list = stocks || [];
     if (!list.length) return placeholder('MARKETS', 'Data unavailable — check symbols');
-    const ch = cellH || 0;
-    const maxRows = ch < 4 ? 2 : ch < 6 ? 4 : 8;
-    const showChg = ch >= 4;
+    const tier = pickTier(cellW, cellH);
+    const matrix = {
+      tiny:     { rows: 2, showChg: false },
+      compact:  { rows: 3, showChg: true  },
+      standard: { rows: 4, showChg: true  },
+      extended: { rows: 6, showChg: true  },
+      full:     { rows: 8, showChg: true  }
+    };
+    const t = matrix[tier];
     return `
       <div class="widget widget-stocks">
         <div class="widget-title">MARKETS</div>
         <div class="stock-rows">
-          ${list.slice(0, maxRows).map(s => `
+          ${list.slice(0, t.rows).map(s => `
             <div class="stock-row">
               <span class="stock-sym">${escapeHtml(s.symbol)}</span>
               <span class="stock-price">${s.price}</span>
-              ${showChg ? `<span class="stock-chg ${s.change >= 0 ? 'up' : 'down'}">${s.change >= 0 ? '▲' : '▼'} ${Math.abs(s.changePct).toFixed(2)}%</span>` : ''}
+              ${t.showChg ? `<span class="stock-chg ${s.change >= 0 ? 'up' : 'down'}">${s.change >= 0 ? '▲' : '▼'} ${Math.abs(s.changePct).toFixed(2)}%</span>` : ''}
             </div>
           `).join('')}
         </div>

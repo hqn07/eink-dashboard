@@ -525,6 +525,32 @@ html, body {
 
 /* ============ STALE WEATHER ============ */
 .weather-hero { position: relative; }
+
+/* ===== weather_hero tier layouts ===== */
+.hero-tier-tiny {
+  display: flex; align-items: center; justify-content: center;
+  height: 100%; padding: 4px;
+}
+.hero-tier-tiny .weather-temp { line-height: 1; margin: 0; }
+
+.hero-tier-compact {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; padding: 4px; gap: 4px;
+}
+.hero-tier-compact .hero-row {
+  display: flex; align-items: center; gap: 8px;
+}
+.hero-tier-compact .weather-temp { margin: 0; line-height: 0.9; }
+.hero-tier-compact .weather-icon { height: 60px !important; }
+.hero-tier-compact .weather-icon .icon {
+  width: 60px !important; height: 60px !important;
+}
+
+.hero-tier-standard,
+.hero-tier-extended,
+.hero-tier-full {
+  text-align: center;
+}
 .weather-hero.weather-stale {
   border: 2px dashed #000;
   border-radius: 0;
@@ -776,6 +802,10 @@ html, body {
   font-family: 'Oswald', sans-serif;
   font-size: 13px;
   line-height: 1.2;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
 }
 .news-source {
   font-family: 'JetBrains Mono', monospace;
@@ -983,6 +1013,15 @@ html, body {
   color: #000;
 }
 .todo-list li.done .todo-text { text-decoration: line-through; text-decoration-thickness: 2px; }
+.todo-footer {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-top: auto;
+  padding-top: 6px;
+  border-top: 1.5px solid #000;
+  color: #000;
+}
 
 /* ============ SETUP-NEEDED PLACEHOLDER ============ */
 .widget-placeholder {

@@ -110,11 +110,16 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
   const rowHeight = bodyHeight / GRID_ROWS;
   const innerW = size.w;
 
-  const rglLayout = enabled.map(l => ({
-    i: l.id,
-    x: l.x, y: l.y, w: l.w, h: l.h,
-    minW: 1, minH: 1, maxW: GRID_COLS, maxH: GRID_ROWS
-  }));
+  const rglLayout = enabled.map(l => {
+    const def = widgetById(l.widgetId);
+    const min = (def && def.minSize) || { w: 1, h: 1 };
+    return {
+      i: l.id,
+      x: l.x, y: l.y, w: l.w, h: l.h,
+      minW: min.w, minH: min.h,
+      maxW: GRID_COLS, maxH: GRID_ROWS
+    };
+  });
 
   const handleLayoutChange = (next) => {
     const changed = next.some(n => {
