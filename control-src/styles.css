@@ -932,6 +932,74 @@ input[type="text"], input[type="url"], textarea {
   text-transform: uppercase;
 }
 
+/* ============ SCREEN PRESET PICKER ============ */
+.preset-modal {
+  max-width: 1000px !important;
+  width: 92vw !important;
+}
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+.preset-card {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  border: 2px solid var(--line);
+  background: var(--bg);
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  overflow: hidden;
+  transition: transform 0.1s ease;
+}
+.preset-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+.preset-thumb {
+  width: 100%;
+  aspect-ratio: 800 / 480;
+  background: #fff;
+  border-bottom: 2px solid var(--line);
+  overflow: hidden;
+  position: relative;
+}
+.preset-thumb-scale {
+  width: 800px;
+  height: 480px;
+  transform: scale(calc((100% / 800) * 1));
+  /* Use an actual scaling factor — the container width controls the
+   * outer thumb, so just lock the source to 800×480 and let CSS
+   * compute the visible scale. */
+  transform-origin: top left;
+  position: absolute;
+  top: 0; left: 0;
+  /* Will be overridden by inline style from container width — but we
+   * provide a sane fallback using clamp via aspect ratio. */
+}
+.preset-meta {
+  padding: 10px 12px;
+}
+.preset-name {
+  font-family: 'Oswald', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.preset-desc {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--mute);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
 /* ============ FOCUS FLASH ============
  * Pulse a card to draw the eye when jumped to from the editor. */
 @keyframes card-flash {

@@ -324,6 +324,108 @@ export const DEFAULT_CHROME = {
   }
 };
 
+// Curated starter layouts. User picks one when they click "+ Add Screen".
+// All coords are in the live 24x12 grid.
+export const SCREEN_PRESETS = [
+  {
+    id: 'blank',
+    name: 'Blank',
+    description: 'Empty canvas — start from scratch.',
+    layout: []
+  },
+  {
+    id: 'editorial',
+    name: 'Editorial',
+    description: 'Newspaper feel: weather + forecast + message + todos.',
+    layout: [
+      { widgetId: 'weather_hero',     x: 0,  y: 0, w: 8,  h: 12 },
+      { widgetId: 'weather_forecast', x: 8,  y: 0, w: 6,  h: 12 },
+      { widgetId: 'message',          x: 14, y: 0, w: 10, h: 4 },
+      { widgetId: 'todos',            x: 14, y: 4, w: 10, h: 8 }
+    ]
+  },
+  {
+    id: 'minimal_hero',
+    name: 'Minimal Hero',
+    description: 'Just the weather, full-bleed.',
+    layout: [
+      { widgetId: 'weather_hero', x: 0, y: 0, w: 24, h: 12 }
+    ]
+  },
+  {
+    id: 'wake_up',
+    name: 'Wake Up',
+    description: 'Big clock + countdown + today’s todos.',
+    layout: [
+      { widgetId: 'clock',     x: 0,  y: 0, w: 24, h: 6 },
+      { widgetId: 'countdown', x: 0,  y: 6, w: 12, h: 6 },
+      { widgetId: 'todos',     x: 12, y: 6, w: 12, h: 6 }
+    ]
+  },
+  {
+    id: 'bedside',
+    name: 'Bedside',
+    description: 'Clock, moon phase, gentle message.',
+    layout: [
+      { widgetId: 'clock',   x: 0,  y: 0, w: 24, h: 8 },
+      { widgetId: 'moonsun', x: 0,  y: 8, w: 12, h: 4 },
+      { widgetId: 'message', x: 12, y: 8, w: 12, h: 4 }
+    ]
+  },
+  {
+    id: 'photo_wall',
+    name: 'Photo Wall',
+    description: 'A single uploaded image, full-bleed.',
+    layout: [
+      { widgetId: 'photo', x: 0, y: 0, w: 24, h: 12 }
+    ]
+  },
+  {
+    id: 'office',
+    name: 'Office',
+    description: 'Clock, calendar, news, markets.',
+    layout: [
+      { widgetId: 'clock',    x: 0,  y: 0, w: 12, h: 4 },
+      { widgetId: 'calendar', x: 12, y: 0, w: 12, h: 4 },
+      { widgetId: 'news',     x: 0,  y: 4, w: 12, h: 8 },
+      { widgetId: 'stocks',   x: 12, y: 4, w: 12, h: 8 }
+    ]
+  },
+  {
+    id: 'quote_card',
+    name: 'Quote Card',
+    description: 'A daily quote, big and quiet.',
+    layout: [
+      { widgetId: 'quote', x: 0, y: 0, w: 24, h: 12 }
+    ]
+  },
+  {
+    id: 'status_board',
+    name: 'Status Board',
+    description: 'GitHub heat-map, markets, countdowns, sky.',
+    layout: [
+      { widgetId: 'github',    x: 0,  y: 0, w: 24, h: 4 },
+      { widgetId: 'countdown', x: 0,  y: 4, w: 12, h: 4 },
+      { widgetId: 'stocks',    x: 12, y: 4, w: 12, h: 4 },
+      { widgetId: 'aqi',       x: 0,  y: 8, w: 8,  h: 4 },
+      { widgetId: 'moonsun',   x: 8,  y: 8, w: 8,  h: 4 },
+      { widgetId: 'clock',     x: 16, y: 8, w: 8,  h: 4 }
+    ]
+  }
+];
+
+// Inflate a preset's layout into real instances (each item gets its own
+// instance id + a sizeKey hint based on its w/h).
+export function inflatePresetLayout(preset) {
+  if (!preset || !Array.isArray(preset.layout)) return [];
+  return preset.layout.map(item => ({
+    id: newInstanceId(item.widgetId),
+    widgetId: item.widgetId,
+    x: item.x, y: item.y, w: item.w, h: item.h,
+    flush: false
+  }));
+}
+
 export function makeDefaultScreen(template = {}) {
   return {
     id: newScreenId(),

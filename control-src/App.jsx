@@ -13,12 +13,14 @@ import {
   findOverlaps,
   scheduleIntervals,
   parseHHMM,
-  pickActiveScreen
+  pickActiveScreen,
+  inflatePresetLayout
 } from './widgets.js';
 import EditorGrid from './components/EditorGrid.jsx';
 import Settings from './components/Settings.jsx';
 import SaveBar from './components/SaveBar.jsx';
 import ScreenTabs from './components/ScreenTabs.jsx';
+import ScreenPresetPicker from './components/ScreenPresetPicker.jsx';
 import ScreenPanel from './components/ScreenPanel.jsx';
 import ChromePanel from './components/ChromePanel.jsx';
 import ScheduleTimeline from './components/ScheduleTimeline.jsx';
@@ -185,16 +187,31 @@ export default function App() {
     screens: prev.screens.map(s => s.id === id ? { ...s, layout } : s)
   }));
 
-  const addScreen = () => mutateCfg(prev => {
-    if (prev.screens.length >= MAX_SCREENS) return prev;
-    const template = prev.screens[0] || {};
-    const fresh = makeDefaultScreen({
-      name: `Screen ${prev.screens.length + 1}`,
-      units: template.units || 'F',
-      refreshMinutes: template.refreshMinutes || 30
+  const [showPresetPicker, setShowPresetPicker] = useState(false);
+
+  const addScreen = () => {
+    if (cfg && cfg.screens && cfg.screens.length >= MAX_SCREENS) {
+      showToast(`Max ${MAX_SCREENS} screens`);
+      return;
+    }
+    setShowPresetPicker(true);
+  };
+
+  const addScreenWithPreset = (preset) => {
+    setShowPresetPicker(false);
+    mutateCfg(prev => {
+      if (prev.screens.length >= MAX_SCREENS) return prev;
+      const template = prev.screens[0] || {};
+      const fresh = makeDefaultScreen({
+        name: preset && preset.id !== 'blank' ? preset.name : `Screen ${prev.screens.length + 1}`,
+        units: template.units || 'F',
+        refreshMinutes: template.refreshMinutes || 30,
+        layout: inflatePresetLayout(preset)
+      });
+      setTimeout(() => setEditScreenId(fresh.id), 0);
+      return { ...prev, screens: [...prev.screens, fresh] };
     });
-    return { ...prev, screens: [...prev.screens, fresh] };
-  });
+  };
 
   const deleteScreen = (id) => {
     if (screens.length <= 1) {
@@ -404,6 +421,14 @@ export default function App() {
           cfg={cfg}
           onPatch={patchCfg}
           onClose={() => {}}
+        />
+      )}
+
+      {showPresetPicker && (
+        <ScreenPresetPicker
+          previewData={livePreviewData}
+          onPick={addScreenWithPreset}
+          onClose={() => setShowPresetPicker(false)}
         />
       )}
     </div>
