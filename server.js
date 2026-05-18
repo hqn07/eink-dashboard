@@ -493,6 +493,56 @@ app.get('/dashboard', async (req, res) => {
   }
 });
 
+// Reset config back to data/config.default.json. Destructive — the
+// client side confirms before calling.
+app.post('/api/config/reset', async (req, res) => {
+  try {
+    const raw = await fsp.readFile(DEFAULT_CONFIG_PATH, 'utf8');
+    await fsp.writeFile(CONFIG_PATH, raw);
+    invalidateImage();
+    const cfg = migrateConfigToScreens(JSON.parse(raw));
+    res.json(cfg);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Visual matrix — every widget at every preset size, top-to-bottom.
+// Pure dev tooling for spotting layout bugs before they hit the panel.
+app.get('/widgets-matrix', async (req, res) => {
+  try {
+    const cfg = await loadConfig();
+    const units = cfg.units || 'F';
+    // Force-fetch every data widget so the matrix has real content.
+    const fakeLayout = [
+      { widgetId: 'weather_hero' }, { widgetId: 'weather_forecast' },
+      { widgetId: 'calendar' }, { widgetId: 'todos' }, { widgetId: 'message' },
+      { widgetId: 'quote' }, { widgetId: 'clock' }, { widgetId: 'wifi_qr' },
+      { widgetId: 'countdown' }, { widgetId: 'aqi' }, { widgetId: 'moonsun' },
+      { widgetId: 'news' }, { widgetId: 'stocks' }, { widgetId: 'photo' },
+      { widgetId: 'github' }, { widgetId: 'spacer' }
+    ];
+    const data = await buildWidgetData(cfg, units, fakeLayout);
+    const html = await fsp.readFile(path.join(__dirname, 'public', 'dashboard.html'), 'utf8');
+    const payload = {
+      cfg, units, screen: 1, layout: [],
+      chrome: { header: { enabled: false }, footer: { enabled: false } },
+      ...data,
+      mode: 'matrix',
+      generatedAt: new Date().toISOString()
+    };
+    const injected = html.replace(
+      '/*__DATA__*/',
+      `window.__DASHBOARD__ = ${JSON.stringify(payload)};`
+    );
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.send(injected);
+  } catch (err) {
+    console.error('Matrix render error:', err);
+    res.status(500).send(err.message);
+  }
+});
+
 // Preview as PNG (for your browser)
 app.get('/display.png', checkDeviceAuth, async (req, res) => {
   try {

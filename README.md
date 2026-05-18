@@ -1,21 +1,32 @@
 # E-Ink Dashboard
 
-Server-rendered dashboard for a Waveshare 7.5" e-ink display + ESP32 driver board.
+A server-rendered, newspaper-style dashboard for the Waveshare 7.5" e-paper display + ESP32.
 
-The server renders your dashboard as HTML, screenshots it to a 800×480 1-bit image, and serves it to the ESP32. You control widgets, todos, messages, etc. from a webpage.
-
-## Quick deploy
+The server renders your dashboard as HTML, screenshots it to an 800×480 1-bit image, and serves it to the ESP32. You arrange widgets, edit content, and schedule screens from a phone-friendly control panel.
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.com/new/github/hqn07/eink-dashboard)
 
-Click → Railway creates a service from this repo. **No API keys to set** — weather is from Open-Meteo (free, keyless). The deploy takes ~2 min, then visit `/control` on the generated domain.
+No API keys required — weather comes from Open-Meteo (free, keyless).
 
-Want to run locally first instead? See [Part 1](#part-1--run-it-locally-first) below.
+---
+
+## What you get
+
+- **16 widgets**: weather (current + forecast), clock, calendar (multi-iCal), to-dos, message, quote (static / rotating list / daily-API), countdown, photo slideshow, WiFi QR, news (RSS), stocks / crypto (with sparklines), air quality, moon + sun, GitHub contribution heatmap, custom message, divider.
+- **Unlimited screens** with per-screen layout, schedule, and chrome (header / footer).
+- **Live editor** — drag-resize widgets directly on the preview, no mode toggle.
+- **Tier-aware layouts** — every widget has a deliberate compact / standard / extended / full layout. Resize freely; the widget always picks a layout that fits.
+- **Screen presets** — Editorial, Wake Up, Bedside, Photo Wall, Office, Quote Card, Status Board…
+- **Per-tile customization** — border style, visibility schedule, flush-edge mode.
+- **Self-hosted fonts** — no Google Fonts dependency at runtime.
+- **All-1-bit** — pure black/white render path tuned for the actual physical panel, not just the browser preview.
+
+---
 
 ## Architecture
 
 ```
-[Phone/laptop] --edits--> [Control Panel /control]
+[Phone/laptop] --edits--> [Control panel /control]
                               |
                               v
                           [config.json]
@@ -23,161 +34,140 @@ Want to run locally first instead? See [Part 1](#part-1--run-it-locally-first) b
                               v
                    [Dashboard HTML /dashboard]
                               |
-                       (Puppeteer screenshot)
+                       (Puppeteer screenshot + Sharp threshold)
                               |
                               v
-              [/display.bin  +  /display.png]
+              [/display.png  +  /display.bin]
                               ^
                               |
-              [ESP32 wakes every N min, downloads, displays, sleeps]
+              [ESP32 wakes every N min → downloads .bin → renders → sleeps]
 ```
+
+The ESP32 firmware is intentionally "dumb": it knows how to download a 48000-byte 1-bit image and push it to the display. All layout, fonts, and data fetching happens server-side.
 
 ---
 
-## Part 1 — Run it locally first
+## Quick start
 
-Make sure Node.js 20+ is installed: `node -v`
+### Local
 
 ```bash
-# In this folder:
+git clone https://github.com/hqn07/eink-dashboard
+cd eink-dashboard
 npm install
-cp .env.example .env
-# Edit .env — put your NEW OpenWeatherMap key in it
 npm start
 ```
 
-Then visit:
-
+Visit:
 - **http://localhost:3000/control** — control panel
 - **http://localhost:3000/dashboard** — live HTML preview (what gets screenshot)
-- **http://localhost:3000/display.png** — the rendered image the ESP32 will get
+- **http://localhost:3000/display.png** — the rendered 1-bit image the ESP32 will get
+- **http://localhost:3000/widgets-matrix** — visual QA page showing every widget at every preset size
 
 If `display.png` looks right, you're 90% done.
 
-### Troubleshooting local
+### Railway
 
-- **Puppeteer fails to launch** → run `npx puppeteer browsers install chrome`
-- **Sharp errors** → delete `node_modules`, run `npm install` again
-- **Fonts look wrong** → check internet connection (Google Fonts loads at render time). For full offline use, self-host the fonts later.
+1. Click the **Deploy on Railway** button above (or push to your own GitHub and connect manually).
+2. Wait ~2 min for the build.
+3. Click **Settings → Networking → Generate Domain**.
+4. Visit `https://<your-app>.up.railway.app/control`.
+
+Optional environment variables:
+- `DEVICE_TOKEN` — secret string. If set, the ESP32 must include `?token=<value>` (or `X-Device-Token` header) to hit `/display.bin`. Lock down the device endpoints.
+- `PORT` — auto-provided by Railway. Leave alone.
 
 ---
 
-## Part 2 — Deploy to Railway (free, public URL)
+## Flash the firmware
 
-1. Push this repo to GitHub:
-   ```bash
-   git init
-   git add .
-   git commit -m "initial"
-   git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/eink-dashboard.git
-   git push -u origin main
+1. Open `esp32/weather_station.ino` in Arduino IDE.
+2. Update three lines:
+   ```cpp
+   const char* ssid       = "YOUR_WIFI";
+   const char* password   = "YOUR_PASS";
+   const char* serverBase = "https://<your-app>.up.railway.app";
    ```
+3. Upload to the ESP32 driver board (ESP32 Dev Module, 115200 baud).
+4. Open Serial Monitor. Look for `Got 48000 bytes` + `Sleep N min`.
 
-2. Go to **railway.app** → New Project → Deploy from GitHub repo → pick this repo.
-
-3. After the first build, click **Variables** and add:
-   - `OPENWEATHER_API_KEY` = your new key
-   - `CITY` = `Gainesville,FL,US`
-   - `DEVICE_TOKEN` = (optional, see below)
-
-4. Railway needs Chrome for Puppeteer. Add a `nixpacks.toml` file (already in this repo) and it'll work. If you see Chrome errors, also set:
-   - `PUPPETEER_CACHE_DIR` = `/app/.cache/puppeteer`
-
-5. Click **Settings → Networking → Generate Domain**. You'll get a URL like `your-app.up.railway.app`.
-
-6. Visit `https://your-app.up.railway.app/control` — your control panel is now public.
-
-### About `DEVICE_TOKEN`
-
-If you don't set this, anyone with your URL can hit `/display.png` and `/display.bin`. Not a big deal (it's just a dashboard image), but if you want to lock the ESP32 endpoints, set a random string in Railway's env vars and the same string in your `.ino` file (`const char* deviceToken`).
-
-The control panel itself is currently unauthenticated. For v1 that's fine since the URL is hard to guess. For v2 we can add basic auth.
-
----
-
-## Part 3 — Flash the new ESP32 firmware
-
-Open `esp32/weather_station.ino` in Arduino IDE.
-
-Change two lines:
-
-```cpp
-const char* ssid     = "YOUR_WIFI";
-const char* password = "YOUR_PASS";
-const char* serverBase = "https://your-app.up.railway.app";  // <— your Railway URL
-```
-
-Upload to your ESP32 driver board (same as before — ESP32 Dev Module).
-
-Open Serial Monitor at 115200. You should see:
-
-```
-=== E-Ink Dashboard Client ===
-WiFi...
-Connected: 192.168.1.x
-GET https://your-app.up.railway.app/display.bin
-Got 48000 bytes
-Sleep 30 min
-```
-
-And the display shows your dashboard. 🎉
-
-### Local-only testing
-
-While developing, you can point the ESP32 at your laptop instead of Railway:
-
-```cpp
-const char* serverBase = "http://192.168.1.42:3000";  // your computer's IP
-```
-
-Find your IP with `ipconfig` (Windows) or `ifconfig | grep inet` (Mac/Linux).
-
----
-
-## Part 4 — Daily use
-
-1. Open `https://your-app.up.railway.app/control` on your phone.
-2. Toggle widgets, edit the message, check off todos.
-3. Hit **SAVE & PUSH**.
-4. The display updates on its next wake cycle (within ~30 min by default).
-
-Want it to update immediately? Press the EN button on the ESP32 board.
+The display refreshes on its next wake cycle. To force an immediate refresh, press the EN button on the driver board (or wire a manual refresh button — see `BOM.md`).
 
 ---
 
 ## File map
 
 ```
-server.js                  Main server. Express + Puppeteer + Sharp.
-package.json               Node deps.
+server.js                Express + Puppeteer + Sharp. Renders /dashboard → PNG/BIN.
+package.json             Node deps.
+nixpacks.toml            Railway build config (installs Chromium).
+
 public/
-  dashboard.html           The 800x480 page Puppeteer screenshots.
-  dashboard.css            Editorial e-ink styling.
-  control.html             Mobile control panel.
-widgets/
-  weather.js               OpenWeatherMap fetcher.
-  calendar.js              iCal feed parser.
+  dashboard.html         The 800×480 page Puppeteer screenshots. Inlines WIDGET_REGISTRY.
+  dashboard.css          Editorial e-ink styling (pure black + white).
+  fonts/                 Self-hosted WOFF2s.
+  control-app/           Built React control panel (output of `npm run build`).
+
+control-src/             React control panel source. Edit + `npm run build` to ship.
+  App.jsx                Main editor app.
+  widgets.js             Widget registry + pickTier() + screen presets.
+  widget-render.js       Mirror of dashboard.html renderers, for live editor previews.
+  components/            UI pieces.
+
+widgets/                 Server-side fetchers (one file per data widget).
+  weather.js calendar.js news.js stocks.js github.js aqi.js
+  countdown.js moonsun.js photo.js quote.js message.js clock.js wifi.js todos.js
+  alerts.js              NWS severe weather alerts (US).
+
 data/
-  config.default.json      Defaults.
-  config.json              Live config (auto-generated).
+  config.default.json    Shipped defaults.
+  config.json            Live config (auto-generated; gitignored).
+
 esp32/
-  weather_station.ino      New firmware.
+  weather_station.ino    Firmware: wake → WiFi → /display.bin → render → sleep.
 ```
+
+---
 
 ## Customizing the look
 
-Edit `public/dashboard.css`. Open `http://localhost:3000/dashboard` in your browser to preview instantly — no ESP32 reflash needed.
+Edit `public/dashboard.css`. Open `http://localhost:3000/dashboard` in your browser to preview instantly — no reflash needed.
 
-Tips for e-ink:
-- Use pure black and white. Greys get thresholded.
-- Avoid thin strokes < 2px. They get crushed.
+**E-ink rules** (things that look fine in a browser but break on real hardware):
+- The display is 1-bit. Use **pure `#000` and `#fff`** only — any `opacity`, `rgba`, or grey dithers into noisy stipple.
+- **Minimum 11px** fonts. Sub-11 strokes vanish on the panel.
+- **Minimum 1.5px** borders. Thin 1px borders sometimes drop.
 - Stick to bold, condensed fonts. Thin weights disappear.
-- The display is 800×480. The CSS already locks `<body>` to those dimensions.
+- `<body>` is locked to 800×480.
 
-## Adding widgets
+When in doubt, photograph the physical panel before declaring a render "fine".
 
-1. Create `widgets/mything.js` exporting `async function fetchMyThing()`.
-2. Import it in `server.js` and add to the `/dashboard` route payload.
-3. Add a section to `dashboard.html` that reads from `window.__DASHBOARD__`.
-4. Add a toggle in `control.html`.
+---
+
+## Adding a widget
+
+A widget lives in three places:
+
+1. **Registry** in `control-src/widgets.js` — declare `id`, `label`, `sizes`, `minSize`, `defaultSize`.
+2. **Server-side fetcher** (optional) in `widgets/<id>.js` — exports an async function called from `buildWidgetData()` in `server.js`.
+3. **Renderer** in BOTH `public/dashboard.html` (`WIDGET_REGISTRY`) and `control-src/widget-render.js` (`RENDERERS`). Keep them in sync.
+
+Use `pickTier(cellW, cellH)` in the renderer and branch on `tiny / compact / standard / extended / full`. Set `minSize` so the editor can't shrink your widget below a known-good floor.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for more.
+
+---
+
+## Hardware
+
+See [BOM.md](BOM.md) for the parts list, GPIO pinout, and assembly notes. Estimated build cost: **$55–80 USD**.
+
+---
+
+## License
+
+MIT. See [LICENSE](LICENSE).
+
+## Contributing
+
+PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for scope, dev setup, widget anatomy, and the e-ink rules of thumb.

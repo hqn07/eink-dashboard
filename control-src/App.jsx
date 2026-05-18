@@ -395,6 +395,10 @@ export default function App() {
             onPatchNested={patchNested}
             focusedWidgetId={focusedWidgetId}
             onFocusHandled={() => setFocusedWidgetId(null)}
+            onReplaceConfig={(next) => {
+              setCfg(migrateConfigToScreens(next));
+              setStatus('dirty');
+            }}
           />
         </div>
       </main>

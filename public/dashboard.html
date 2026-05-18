@@ -947,6 +947,46 @@
 
   const page = document.getElementById('page');
 
+  // ============ MATRIX MODE ============
+  // /widgets-matrix renders every widget at every preset size for
+  // visual QA. We branch the entire render here and bail before the
+  // normal layout pipeline runs.
+  if (D.mode === 'matrix') {
+    document.body.style.width = '100vw';
+    document.body.style.height = 'auto';
+    document.documentElement.style.width = '100vw';
+    document.documentElement.style.height = 'auto';
+    page.style.cssText = 'width:100%;height:auto;display:flex;flex-direction:column;gap:32px;padding:32px;background:#fff';
+    const ctxMatrix = {
+      cfg, weather: w, events, todos, units,
+      aqi, news, stocks, github, wifiQrSvg, clockNow, countdowns, moonsun,
+      resolvedQuote, resolvedMessage, resolvedPhoto
+    };
+    // ~33px per grid cell (800/24 horiz, 480/12 vert with chrome off).
+    const PX_W = 800 / 24, PX_H = 480 / 12;
+    for (const def of WIDGET_REGISTRY) {
+      const sizes = def.sizes || {};
+      const sizeKeys = Object.keys(sizes);
+      for (const key of sizeKeys) {
+        const { w: cw, h: ch } = sizes[key];
+        const cellWidth = cw * PX_W;
+        const cellHeight = ch * PX_H;
+        const inner = (def.render && def.render({ ...ctxMatrix, cellW: cw, cellH: ch })) || '';
+        const card = el('div');
+        card.style.cssText = 'border:2px solid #000;background:#fff';
+        card.innerHTML = `
+          <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#000;color:#fff;font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:2px;">
+            <span>${def.id} · ${key}</span>
+            <span>${cw}×${ch} · ${Math.round(cellWidth)}×${Math.round(cellHeight)}px · ${(function(){const _w=cw,_h=ch;let bH='full';if(_h<4)bH='tiny';else if(_h<6)bH='compact';else if(_h<8)bH='standard';else if(_h<12)bH='extended';let bW='full';if(_w<6)bW='tiny';else if(_w<8)bW='compact';else if(_w<12)bW='standard';else if(_w<18)bW='extended';const order=['tiny','compact','standard','extended','full'];return order[Math.min(order.indexOf(bH),order.indexOf(bW))];})()}</span>
+          </div>
+          <div class="cell cell-${def.id}" style="width:${cellWidth}px;height:${cellHeight}px;margin:0">${inner}</div>
+        `;
+        page.appendChild(card);
+      }
+    }
+    return; // skip the rest of the normal render
+  }
+
   // ============ HEADER ============
   const cityLabel = (cfg.cityLabel || cfg.city || '').toString();
 

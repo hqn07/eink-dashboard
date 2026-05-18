@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { WIDGET_REGISTRY } from '../widgets.js';
+import { resetConfig } from '../api.js';
 import LocationPanel from './LocationPanel.jsx';
 
 function Toggle({ on, onClick }) {
@@ -10,7 +11,7 @@ function Toggle({ on, onClick }) {
 // across all screens (location, timezone, calendar URL, etc.) plus the
 // per-widget content sections. Each content section appears only when
 // at least one instance of that widget is on the active screen.
-export default function Settings({ cfg, layout, onPatch, onPatchNested, focusedWidgetId, onFocusHandled }) {
+export default function Settings({ cfg, layout, onPatch, onPatchNested, focusedWidgetId, onFocusHandled, onReplaceConfig }) {
   const refs = useRef({});
   const [flashId, setFlashId] = useState(null);
 
@@ -573,6 +574,58 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested, focusedW
           </section>
         );
       })()}
+
+      <section {...sectionProps('backup')}>
+        <div className="section-title">Backup & Reset</div>
+        <div className="terminal-line" style={{ fontSize: 10, marginBottom: 8 }}>
+          &gt; EXPORT A JSON SNAPSHOT · IMPORT TO RESTORE · RESET WIPES BACK TO DEFAULTS
+        </div>
+        <div className="btn-row">
+          <button className="btn" onClick={() => {
+            const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `eink-config-${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }}>↓ EXPORT</button>
+
+          <label className="btn" style={{ cursor: 'pointer' }}>
+            ↑ IMPORT
+            <input type="file" accept="application/json" style={{ display: 'none' }}
+              onChange={e => {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                  try {
+                    const next = JSON.parse(reader.result);
+                    if (!next || typeof next !== 'object') throw new Error('not an object');
+                    if (!window.confirm('Replace current config with imported file? Unsaved changes will be lost.')) return;
+                    onReplaceConfig && onReplaceConfig(next);
+                  } catch (err) {
+                    window.alert('Import failed: ' + err.message);
+                  }
+                };
+                reader.readAsText(file);
+                e.target.value = '';
+              }} />
+          </label>
+
+          <button className="btn btn-danger" onClick={async () => {
+            if (!window.confirm('Reset all settings to factory defaults? This cannot be undone.')) return;
+            try {
+              const fresh = await resetConfig();
+              onReplaceConfig && onReplaceConfig(fresh);
+            } catch (err) {
+              window.alert('Reset failed: ' + err.message);
+            }
+          }}>↺ RESET TO DEFAULTS</button>
+        </div>
+      </section>
 
     </div>
   );

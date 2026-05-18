@@ -15,6 +15,12 @@ export async function saveConfig(cfg) {
   return j.config;
 }
 
+export async function resetConfig() {
+  const r = await fetch('/api/config/reset', { method: 'POST' });
+  if (!r.ok) throw new Error('reset failed');
+  return r.json();
+}
+
 export function previewUrl(cacheBust = true) {
   return '/display.png' + (cacheBust ? `?t=${Date.now()}` : '');
 }

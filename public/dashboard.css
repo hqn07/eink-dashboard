@@ -3,7 +3,7 @@
  * Font stack uses self-hostable serif + condensed sans for that print feel.
  */
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Oswald:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap');
+@import url('/static/fonts/fonts.css');
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
