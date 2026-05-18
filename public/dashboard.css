@@ -68,7 +68,7 @@ html, body {
 .hdr-meta {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 500;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 2px;
   margin-top: 4px;
 }
@@ -266,7 +266,7 @@ html, body {
 .widget-title {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 3px;
   padding-bottom: 4px;
   margin-bottom: 6px;
@@ -291,7 +291,7 @@ html, body {
 .msg-sub {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 500;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 2px;
   margin-top: 6px;
   border-top: 1px solid #fff;
@@ -354,7 +354,7 @@ html, body {
 
 .cal-time {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 1px;
   margin-top: 2px;
@@ -405,7 +405,7 @@ html, body {
 }
 
 .ftr-sep { opacity: 1; }
-.ftr-bullet { font-size: 8px; }
+.ftr-bullet { font-size: 12px; }
 
 /* ============ SPACER ============ */
 .widget-spacer {
@@ -535,7 +535,7 @@ html, body {
   top: 4px;
   right: 4px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 2px;
   background: #000;
   color: #fff;
@@ -549,10 +549,10 @@ html, body {
 }
 .sun-track {
   position: relative;
-  height: 4px;
-  background: #000;
-  opacity: 0.15;
-  margin-bottom: 4px;
+  height: 6px;
+  border: 1.5px solid #000;
+  background: #fff;
+  margin-bottom: 6px;
 }
 .sun-fill {
   position: absolute;
@@ -560,7 +560,6 @@ html, body {
   left: 0;
   height: 100%;
   background: #000;
-  opacity: 1;
 }
 .sun-dot {
   position: absolute;
@@ -575,7 +574,7 @@ html, body {
   display: flex;
   justify-content: space-between;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 2px;
   margin-top: 2px;
 }
@@ -587,7 +586,7 @@ html, body {
   gap: 4px;
   margin-top: 10px;
   padding: 6px 4px 2px;
-  border-top: 1px solid rgba(0, 0, 0, 0.2);
+  border-top: 1.5px solid #000;
 }
 .hr-cell {
   flex: 1;
@@ -599,7 +598,7 @@ html, body {
 }
 .hr-time {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 1px;
   color: #000;
 }
@@ -639,7 +638,7 @@ html, body {
   font-size: 11px;
   letter-spacing: 3px;
   margin-top: 6px;
-  color: #444;
+  color: #000;
 }
 
 /* ============ WIFI QR ============ */
@@ -659,9 +658,9 @@ html, body {
 }
 .wifi-hint {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 3px;
-  color: #444;
+  color: #000;
 }
 
 /* ============ COUNTDOWN ============ */
@@ -681,9 +680,9 @@ html, body {
 .cd-meta { display: flex; flex-direction: column; }
 .cd-unit {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 3px;
-  color: #444;
+  color: #000;
 }
 .cd-label {
   font-family: 'Oswald', sans-serif;
@@ -701,7 +700,7 @@ html, body {
 }
 .widget-aqi .widget-title {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 3px;
   margin-bottom: 4px;
 }
@@ -730,7 +729,7 @@ html, body {
 }
 .widget-moonsun .widget-title {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 3px;
   margin-bottom: 6px;
 }
@@ -744,9 +743,9 @@ html, body {
 }
 .moon-illum {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 2px;
-  color: #444;
+  color: #000;
 }
 .sun-row {
   display: flex; justify-content: space-between;
@@ -762,14 +761,14 @@ html, body {
 }
 .widget-news .widget-title {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 3px;
   margin-bottom: 6px;
 }
 .news-list { list-style: none; padding: 0; margin: 0; }
 .news-list li {
   padding: 6px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  border-bottom: 1.5px solid #000;
 }
 .news-list li:last-child { border-bottom: 0; }
 .news-title {
@@ -779,9 +778,9 @@ html, body {
 }
 .news-source {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 2px;
-  color: #555;
+  color: #000;
   margin-top: 2px;
 }
 
@@ -797,7 +796,7 @@ html, body {
 }
 .widget-stocks .widget-title {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 3px;
   margin-bottom: 6px;
 }
@@ -806,7 +805,7 @@ html, body {
   grid-template-columns: 1fr auto auto;
   gap: 8px;
   padding: 4px 0;
-  border-bottom: 1px solid rgba(0,0,0,0.08);
+  border-bottom: 1.5px solid #000;
   align-items: baseline;
 }
 .stock-row:last-child { border-bottom: 0; }
@@ -847,7 +846,7 @@ html, body {
 }
 .widget-github .widget-title {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 3px;
   margin-bottom: 6px;
 }
@@ -869,35 +868,28 @@ html, body {
   background: #fff;
   border: 1px solid #000;
 }
-.gh-cell[data-l="1"] { background: #d8d8d8; }
-.gh-cell[data-l="2"] { background: #888; }
-.gh-cell[data-l="3"] { background: #444; }
+/* 1-bit display: quantize 5 intensity levels to black/white at 50%.
+ * Level 0 = no contributions = white; level 1+ = solid black. */
+.gh-cell[data-l="1"],
+.gh-cell[data-l="2"],
+.gh-cell[data-l="3"],
 .gh-cell[data-l="4"] { background: #000; }
 
-/* ============ HOURLY PRECIP BARS ============ */
-.hr-precip {
-  position: relative;
-  width: 100%;
-  height: 18px;
-  margin-top: 2px;
-  border: 1px solid #000;
-  display: flex;
-  align-items: flex-end;
-}
-.hr-precip-bar {
-  width: 100%;
-  background: #000;
-}
+/* ============ HOURLY PRECIP ============ */
+/* On a 1-bit panel, tiny grey fill bars look like dirty noise. We render
+ * the percentage as a plain pill below the temp instead. Caller only
+ * emits markup when precip is meaningful (≥10%). */
 .hr-precip-pct {
-  position: absolute;
-  inset: 0;
-  display: flex; align-items: center; justify-content: center;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 8px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-top: 1px;
+  padding: 0 4px;
+  border: 1.5px solid #000;
+  background: #fff;
   color: #000;
-  mix-blend-mode: difference;
-  filter: invert(1);
+  line-height: 1.2;
 }
 
 /* ============ WEATHER ALERT BANNER ============ */
@@ -913,7 +905,7 @@ html, body {
 }
 .alert-tag {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 2px;
   font-weight: 700;
 }
@@ -932,29 +924,29 @@ html, body {
 .fc-row { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; }
 .fc-precip {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 1px;
   min-width: 32px;
   text-align: right;
-  color: #444;
+  color: #000;
 }
 
 /* ============ CAL SECTIONS + ALL-DAY ============ */
 .cal-section-title {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 3px;
   margin: 6px 0 2px;
-  color: #444;
+  color: #000;
   padding-bottom: 1px;
-  border-bottom: 1px solid rgba(0,0,0,0.2);
+  border-bottom: 1.5px solid #000;
 }
 .cal-row.allday .cal-time {
   background: #000;
   color: #fff;
   padding: 1px 4px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 2px;
   display: inline-block;
 }
@@ -963,7 +955,7 @@ html, body {
 .todo-list li .todo-due {
   margin-left: auto;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 1px;
   padding: 1px 4px;
   border: 1px solid #000;
@@ -976,9 +968,9 @@ html, body {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   margin-left: 4px;
-  color: #555;
+  color: #000;
 }
-.todo-list li.done .todo-text { text-decoration: line-through; opacity: 0.5; }
+.todo-list li.done .todo-text { text-decoration: line-through; text-decoration-thickness: 2px; }
 
 /* ============ SETUP-NEEDED PLACEHOLDER ============ */
 .widget-placeholder {
@@ -988,14 +980,9 @@ html, body {
   padding: 12px;
   gap: 6px;
   position: relative;
-  background:
-    repeating-linear-gradient(
-      135deg,
-      transparent 0,
-      transparent 14px,
-      rgba(0, 0, 0, 0.05) 14px,
-      rgba(0, 0, 0, 0.05) 16px
-    );
+  background: #fff;
+  border: 3px dashed #000;
+  margin: 4px;
 }
 .widget-placeholder .ph-title {
   font-family: 'Oswald', sans-serif;
@@ -1006,9 +993,9 @@ html, body {
 }
 .widget-placeholder .ph-hint {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 1px;
-  color: #444;
+  color: #000;
   line-height: 1.4;
 }
 .widget-placeholder .ph-tag {
@@ -1016,7 +1003,7 @@ html, body {
   top: 6px;
   right: 6px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 2px;
   background: #000;
   color: #fff;

@@ -160,6 +160,8 @@
 
   function hourlyStrip(w) {
     if (!w || !Array.isArray(w.hourly) || !w.hourly.length) return '';
+    // Threshold: only render the pill at >=10% chance — anything below
+    // is visual noise on a 1-bit panel + read as battery / unrelated UI.
     return `
       <div class="hourly-strip">
         ${w.hourly.map(h => `
@@ -167,11 +169,8 @@
             <div class="hr-time">${h.label}</div>
             ${icon(h.main, 22)}
             <div class="hr-temp">${h.temp}°</div>
-            ${Number.isFinite(h.precip) && h.precip > 0
-              ? `<div class="hr-precip" title="${h.precip}% chance">
-                   <div class="hr-precip-bar" style="height:${Math.min(100, h.precip)}%"></div>
-                   <div class="hr-precip-pct">${h.precip}%</div>
-                 </div>`
+            ${Number.isFinite(h.precip) && h.precip >= 10
+              ? `<div class="hr-precip-pct">${h.precip}%</div>`
               : ''}
           </div>
         `).join('')}

@@ -119,6 +119,9 @@ function hourlyStrip(w) {
           <div class="hr-time">${h.label}</div>
           ${icon(h.main, 22)}
           <div class="hr-temp">${h.temp}°</div>
+          ${Number.isFinite(h.precip) && h.precip >= 10
+            ? `<div class="hr-precip-pct">${h.precip}%</div>`
+            : ''}
         </div>
       `).join('')}
     </div>
