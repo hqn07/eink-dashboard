@@ -208,30 +208,44 @@
           }
           return placeholder('WEATHER', 'Data unavailable');
         }
+        const h = cellH || 0, w = cellW || 0;
         const staleClass = weather.stale ? ' weather-stale' : '';
         const staleBadge = weather.stale ? '<div class="stale-pill">CACHED</div>' : '';
-        // Extras only when there's vertical headroom + width.
-        const hasRoom = (cellH || 0) >= 12 && (cellW || 0) >= 6;
-        const extras = hasRoom ? `${sunBar(weather)}${hourlyStrip(weather)}` : '';
-        return `
+
+        // Tiered layouts: progressively reveal info as the cell grows.
+        // h < 4   : just temp + small icon
+        // h 4-5   : + description + hi/lo
+        // h 6-7   : + stats grid
+        // h 8-11  : + alert banner
+        // h >= 12 : + sun bar + hourly strip
+        const showDesc   = h >= 4;
+        const showStats  = h >= 6;
+        const showAlert  = h >= 6;
+        const showExtras = h >= 12 && w >= 6;
+        const iconSize   = h < 4 ? 60 : h < 8 ? 100 : 130;
+
+        const hero = `
           <div class="weather-hero${staleClass}">
             ${staleBadge}
-            <div class="weather-icon">${icon(weather.main, 130)}</div>
+            <div class="weather-icon">${icon(weather.main, iconSize)}</div>
             <div class="weather-temp">
               <span class="temp-num">${weather.temp}</span><span class="temp-deg">°${units}</span>
             </div>
-            <div class="weather-desc">${weather.desc}</div>
-            <div class="weather-hilo">HIGH ${weather.tempMax}° &nbsp;·&nbsp; LOW ${weather.tempMin}°</div>
-          </div>
-          ${alertBanner(weather)}
+            ${showDesc ? `
+              <div class="weather-desc">${weather.desc}</div>
+              <div class="weather-hilo">HIGH ${weather.tempMax}° &nbsp;·&nbsp; LOW ${weather.tempMin}°</div>
+            ` : ''}
+          </div>`;
+        const stats = showStats ? `
           <div class="weather-stats">
             <div class="stat"><span class="stat-k">FEELS</span><span class="stat-v">${weather.feelsLike}°</span></div>
             <div class="stat"><span class="stat-k">HUMID</span><span class="stat-v">${weather.humidity}%</span></div>
             <div class="stat"><span class="stat-k">WIND</span><span class="stat-v">${weather.windDir} ${weather.windSpeed}${weather.windGust ? ` (G${weather.windGust})` : ''} ${weather.windUnit || ''}</span></div>
             <div class="stat"><span class="stat-k">${Number.isFinite(weather.cloudCover) ? 'CLOUD' : 'RISE'}</span><span class="stat-v">${Number.isFinite(weather.cloudCover) ? weather.cloudCover + '%' : weather.sunrise}</span></div>
-          </div>
-          ${extras}
-        `;
+          </div>` : '';
+        const extras = showExtras ? `${sunBar(weather)}${hourlyStrip(weather)}` : '';
+        const alert  = showAlert ? alertBanner(weather) : '';
+        return `${hero}${alert}${stats}${extras}`;
       }
     },
     {
@@ -400,7 +414,7 @@
       requires: 'clock',
       sizes: { XS:{w:4,h:3}, S:{w:4,h:4}, M:{w:6,h:4}, L:{w:12,h:4}, XL:{w:12,h:6} },
       defaultSize: 'M',
-      render: ({ cfg, clockNow }) => {
+      render: ({ cfg, clockNow, cellH, cellW }) => {
         const c = cfg.clock || {};
         const t = clockNow || { hour: 0, minute: 0, dateLabel: '' };
         let h = t.hour;
@@ -410,10 +424,15 @@
         const hh = fmt === 24 ? String(h).padStart(2, '0') : String(h);
         const mm = String(t.minute).padStart(2, '0');
         const suffix = fmt === 12 ? ` ${ampm}` : '';
+        // Tiered font sizing — fills the cell at any height.
+        const ch = cellH || 0;
+        const cw = cellW || 0;
+        const timeSize = ch < 4 ? 38 : ch < 5 ? 54 : ch < 7 ? 72 : 96;
+        const showDate = c.showDate !== false && ch >= 4 && cw >= 5;
         return `
           <div class="widget widget-clock">
-            <div class="clock-time">${hh}:${mm}<span class="clock-ampm">${suffix}</span></div>
-            ${c.showDate !== false ? `<div class="clock-date">${t.dateLabel}</div>` : ''}
+            <div class="clock-time" style="font-size:${timeSize}px">${hh}:${mm}<span class="clock-ampm">${suffix}</span></div>
+            ${showDate ? `<div class="clock-date">${t.dateLabel}</div>` : ''}
           </div>
         `;
       }
@@ -468,23 +487,28 @@
       requires: 'aqi',
       sizes: { S:{w:4,h:4}, M:{w:4,h:6}, L:{w:6,h:6} },
       defaultSize: 'M',
-      render: ({ aqi, cfg }) => {
+      render: ({ aqi, cfg, cellH }) => {
         if (!aqi) {
           if (!Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
             return placeholder('AIR QUALITY', 'Set your location in settings');
           }
           return placeholder('AIR QUALITY', 'Data unavailable for this location');
         }
+        const ch = cellH || 0;
+        const showStats = ch >= 6;
+        const numSize = ch < 4 ? 36 : ch < 6 ? 48 : 56;
         return `
           <div class="widget widget-aqi">
             <div class="widget-title">AIR QUALITY</div>
-            <div class="aqi-num">${aqi.aqi}</div>
+            <div class="aqi-num" style="font-size:${numSize}px">${aqi.aqi}</div>
             <div class="aqi-cat">${aqi.category}</div>
-            <div class="aqi-stats">
-              <div class="stat"><span class="stat-k">PM2.5</span><span class="stat-v">${aqi.pm25 ?? '--'}</span></div>
-              <div class="stat"><span class="stat-k">PM10</span><span class="stat-v">${aqi.pm10 ?? '--'}</span></div>
-              <div class="stat"><span class="stat-k">O₃</span><span class="stat-v">${aqi.o3 ?? '--'}</span></div>
-            </div>
+            ${showStats ? `
+              <div class="aqi-stats">
+                <div class="stat"><span class="stat-k">PM2.5</span><span class="stat-v">${aqi.pm25 ?? '--'}</span></div>
+                <div class="stat"><span class="stat-k">PM10</span><span class="stat-v">${aqi.pm10 ?? '--'}</span></div>
+                <div class="stat"><span class="stat-k">O₃</span><span class="stat-v">${aqi.o3 ?? '--'}</span></div>
+              </div>
+            ` : ''}
           </div>
         `;
       }
@@ -495,13 +519,15 @@
       requires: 'moonsun',
       sizes: { S:{w:4,h:4}, M:{w:4,h:6}, L:{w:6,h:6} },
       defaultSize: 'M',
-      render: ({ moonsun, cfg }) => {
+      render: ({ moonsun, cfg, cellH }) => {
         if (!moonsun) {
           if (!Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
             return placeholder('MOON & SUN', 'Set your location in settings');
           }
           return placeholder('MOON & SUN', 'Data unavailable');
         }
+        const ch = cellH || 0;
+        const showSunRow = ch >= 5;
         return `
           <div class="widget widget-moonsun">
             <div class="widget-title">SKY</div>
@@ -512,10 +538,10 @@
                 <div class="moon-illum">${moonsun.illuminationPct}% lit</div>
               </div>
             </div>
-            <div class="sun-row">
+            ${showSunRow ? `<div class="sun-row">
               <span>↑ ${moonsun.sunrise}</span>
               <span>↓ ${moonsun.sunset}</span>
-            </div>
+            </div>` : ''}
           </div>
         `;
       }

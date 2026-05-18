@@ -128,26 +128,34 @@ function hourlyStrip(w) {
 const RENDERERS = {
   weather_hero: ({ weather, units, cellW, cellH }) => {
     const w = weather || fakeWeather(units);
+    const ch = cellH || 0, cw = cellW || 0;
     const staleClass = w.stale ? ' weather-stale' : '';
     const staleBadge = w.stale ? '<div class="stale-pill">CACHED</div>' : '';
-    const hasRoom = (cellH || 0) >= 12 && (cellW || 0) >= 6;
-    const extras = hasRoom ? `${sunBar(w)}${hourlyStrip(w)}` : '';
-    return `
-      <div class="weather-hero${staleClass}">
-        ${staleBadge}
-        <div class="weather-icon">${icon(w.main, 110)}</div>
-        <div class="weather-temp">
-          <span class="temp-num">${w.temp}</span><span class="temp-deg">°${units}</span>
-        </div>
-        <div class="weather-desc">${w.desc}</div>
-        <div class="weather-hilo">HIGH ${w.tempMax}° &nbsp;·&nbsp; LOW ${w.tempMin}°</div>
-      </div>
+    const showDesc   = ch >= 4;
+    const showStats  = ch >= 6;
+    const showExtras = ch >= 12 && cw >= 6;
+    const iconSize   = ch < 4 ? 60 : ch < 8 ? 100 : 110;
+    const extras = showExtras ? `${sunBar(w)}${hourlyStrip(w)}` : '';
+    const stats = showStats ? `
       <div class="weather-stats">
         <div class="stat"><span class="stat-k">FEELS</span><span class="stat-v">${w.feelsLike}°</span></div>
         <div class="stat"><span class="stat-k">HUMID</span><span class="stat-v">${w.humidity}%</span></div>
         <div class="stat"><span class="stat-k">WIND</span><span class="stat-v">${w.windDir} ${w.windSpeed} ${w.windUnit || ''}</span></div>
         <div class="stat"><span class="stat-k">RISE</span><span class="stat-v">${w.sunrise}</span></div>
+      </div>` : '';
+    return `
+      <div class="weather-hero${staleClass}">
+        ${staleBadge}
+        <div class="weather-icon">${icon(w.main, iconSize)}</div>
+        <div class="weather-temp">
+          <span class="temp-num">${w.temp}</span><span class="temp-deg">°${units}</span>
+        </div>
+        ${showDesc ? `
+          <div class="weather-desc">${w.desc}</div>
+          <div class="weather-hilo">HIGH ${w.tempMax}° &nbsp;·&nbsp; LOW ${w.tempMin}°</div>
+        ` : ''}
       </div>
+      ${stats}
       ${extras}
     `;
   },
@@ -271,7 +279,7 @@ const RENDERERS = {
       </div>
     `;
   },
-  clock: ({ cfg, clockNow }) => {
+  clock: ({ cfg, clockNow, cellH, cellW }) => {
     const c = (cfg && cfg.clock) || {};
     const t = clockNow || { hour: 12, minute: 0, dateLabel: 'PREVIEW' };
     let h = t.hour;
@@ -281,10 +289,14 @@ const RENDERERS = {
     const hh = fmt === 24 ? String(h).padStart(2, '0') : String(h);
     const mm = String(t.minute).padStart(2, '0');
     const suffix = fmt === 12 ? ` ${ampm}` : '';
+    const ch = cellH || 0;
+    const cw = cellW || 0;
+    const timeSize = ch < 4 ? 38 : ch < 5 ? 54 : ch < 7 ? 72 : 96;
+    const showDate = c.showDate !== false && ch >= 4 && cw >= 5;
     return `
       <div class="widget widget-clock">
-        <div class="clock-time">${hh}:${mm}<span class="clock-ampm">${suffix}</span></div>
-        ${c.showDate !== false ? `<div class="clock-date">${escapeHtml(t.dateLabel)}</div>` : ''}
+        <div class="clock-time" style="font-size:${timeSize}px">${hh}:${mm}<span class="clock-ampm">${suffix}</span></div>
+        ${showDate ? `<div class="clock-date">${escapeHtml(t.dateLabel)}</div>` : ''}
       </div>
     `;
   },
