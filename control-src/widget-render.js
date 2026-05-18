@@ -222,6 +222,149 @@ const RENDERERS = {
         ${attr ? `<div class="quote-attr">— ${escapeHtml(attr)}</div>` : ''}
       </div>
     `;
+  },
+  clock: ({ cfg, clockNow }) => {
+    const c = (cfg && cfg.clock) || {};
+    const t = clockNow || { hour: 12, minute: 0, second: 0, dateLabel: 'PREVIEW' };
+    let h = t.hour;
+    const fmt = c.format === 24 ? 24 : 12;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    if (fmt === 12) { h = h % 12; if (h === 0) h = 12; }
+    const hh = fmt === 24 ? String(h).padStart(2, '0') : String(h);
+    const mm = String(t.minute).padStart(2, '0');
+    const ss = c.showSeconds ? `:${String(t.second).padStart(2,'0')}` : '';
+    const suffix = fmt === 12 ? ` ${ampm}` : '';
+    return `
+      <div class="widget widget-clock">
+        <div class="clock-time">${hh}:${mm}${ss}<span class="clock-ampm">${suffix}</span></div>
+        ${c.showDate ? `<div class="clock-date">${escapeHtml(t.dateLabel)}</div>` : ''}
+      </div>
+    `;
+  },
+  wifi_qr: ({ cfg, wifiQrSvg }) => {
+    const w = (cfg && cfg.wifi) || {};
+    if (!w.ssid) {
+      return `<div class="widget widget-wifi"><div class="wifi-meta"><div class="wifi-ssid">SET WIFI IN SETTINGS</div></div></div>`;
+    }
+    const qr = wifiQrSvg || '<div class="wifi-qr-placeholder">QR</div>';
+    return `
+      <div class="widget widget-wifi">
+        <div class="wifi-qr">${qr}</div>
+        <div class="wifi-meta">
+          <div class="wifi-ssid">${escapeHtml(w.ssid)}</div>
+          <div class="wifi-hint">SCAN TO CONNECT</div>
+        </div>
+      </div>
+    `;
+  },
+  countdown: ({ countdowns }) => {
+    const list = countdowns || [];
+    if (!list.length) return `<div class="widget widget-countdown"><div class="cd-label">ADD A COUNTDOWN</div></div>`;
+    return `
+      <div class="widget widget-countdown">
+        ${list.slice(0, 3).map(c => `
+          <div class="cd-row">
+            <div class="cd-num">${c.days}</div>
+            <div class="cd-meta">
+              <div class="cd-unit">${c.unit}</div>
+              <div class="cd-label">${escapeHtml(c.label)}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  },
+  aqi: ({ aqi }) => {
+    if (!aqi) return `<div class="widget widget-aqi"><div class="widget-title">AIR QUALITY</div><div class="aqi-num">--</div><div class="aqi-cat">NO LOCATION</div></div>`;
+    return `
+      <div class="widget widget-aqi">
+        <div class="widget-title">AIR QUALITY</div>
+        <div class="aqi-num">${aqi.aqi}</div>
+        <div class="aqi-cat">${aqi.category}</div>
+        <div class="aqi-stats">
+          <div class="stat"><span class="stat-k">PM2.5</span><span class="stat-v">${aqi.pm25 ?? '--'}</span></div>
+          <div class="stat"><span class="stat-k">PM10</span><span class="stat-v">${aqi.pm10 ?? '--'}</span></div>
+          <div class="stat"><span class="stat-k">O₃</span><span class="stat-v">${aqi.o3 ?? '--'}</span></div>
+        </div>
+      </div>
+    `;
+  },
+  moonsun: ({ moonsun }) => {
+    if (!moonsun) return `<div class="widget widget-moonsun"><div class="widget-title">SKY</div><div class="moon-phase">—</div></div>`;
+    return `
+      <div class="widget widget-moonsun">
+        <div class="widget-title">SKY</div>
+        <div class="moon-row">
+          <div class="moon-disc">${moonsun.moonSvg}</div>
+          <div class="moon-meta">
+            <div class="moon-phase">${moonsun.phase}</div>
+            <div class="moon-illum">${moonsun.illuminationPct}% lit</div>
+          </div>
+        </div>
+        <div class="sun-row">
+          <span>↑ ${moonsun.sunrise}</span>
+          <span>↓ ${moonsun.sunset}</span>
+        </div>
+      </div>
+    `;
+  },
+  news: ({ news }) => {
+    const list = news || [];
+    if (!list.length) return `<div class="widget widget-news"><div class="widget-title">HEADLINES</div><div class="news-source">SET RSS URL IN SETTINGS</div></div>`;
+    return `
+      <div class="widget widget-news">
+        <div class="widget-title">HEADLINES</div>
+        <ul class="news-list">
+          ${list.slice(0, 5).map(n => `
+            <li>
+              <div class="news-title">${escapeHtml(n.title)}</div>
+              ${n.source ? `<div class="news-source">${escapeHtml(n.source)}</div>` : ''}
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+    `;
+  },
+  stocks: ({ stocks }) => {
+    const list = stocks || [];
+    if (!list.length) return `<div class="widget widget-stocks"><div class="widget-title">MARKETS</div><div class="news-source">ADD SYMBOLS IN SETTINGS</div></div>`;
+    return `
+      <div class="widget widget-stocks">
+        <div class="widget-title">MARKETS</div>
+        <div class="stock-rows">
+          ${list.map(s => `
+            <div class="stock-row">
+              <span class="stock-sym">${escapeHtml(s.symbol)}</span>
+              <span class="stock-price">${s.price}</span>
+              <span class="stock-chg ${s.change >= 0 ? 'up' : 'down'}">${s.change >= 0 ? '▲' : '▼'} ${Math.abs(s.changePct).toFixed(2)}%</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  },
+  photo: ({ cfg }) => {
+    const p = (cfg && cfg.photo) || {};
+    if (!p.dataUrl) return `<div class="widget widget-photo"><div class="news-source" style="padding:14px">UPLOAD PHOTO IN SETTINGS</div></div>`;
+    const fit = p.fit === 'cover' ? 'cover' : 'contain';
+    return `<div class="widget widget-photo"><img src="${p.dataUrl}" style="object-fit:${fit}" alt="" /></div>`;
+  },
+  github: ({ github }) => {
+    if (!github || !github.weeks || !github.weeks.length) {
+      return `<div class="widget widget-github"><div class="widget-title">GITHUB</div><div class="news-source">SET USERNAME IN SETTINGS</div></div>`;
+    }
+    return `
+      <div class="widget widget-github">
+        <div class="widget-title">GITHUB · ${escapeHtml(github.user)} · ${github.total} CONTRIBUTIONS</div>
+        <div class="gh-grid">
+          ${github.weeks.map(week => `
+            <div class="gh-col">
+              ${week.map(d => `<div class="gh-cell" data-l="${d}"></div>`).join('')}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
   }
 };
 

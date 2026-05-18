@@ -13,18 +13,20 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "express": "^4.21.0",
-    "puppeteer": "^23.5.0",
-    "sharp": "^0.33.5",
-    "node-ical": "^0.18.0",
     "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "fast-xml-parser": "^5.8.0",
+    "framer-motion": "^11.11.10",
+    "node-ical": "^0.18.0",
+    "puppeteer": "^23.5.0",
+    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-grid-layout": "^1.5.0",
-    "framer-motion": "^11.11.10"
+    "sharp": "^0.33.5"
   },
   "devDependencies": {
-    "vite": "^5.4.10",
-    "@vitejs/plugin-react": "^4.3.3"
+    "@vitejs/plugin-react": "^4.3.3",
+    "vite": "^5.4.10"
   }
 }

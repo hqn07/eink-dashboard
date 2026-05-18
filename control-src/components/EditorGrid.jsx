@@ -265,6 +265,19 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
                       >⚙</button>
                     )}
                     <button
+                      className="tile-border"
+                      title={`Border: ${l.border || 'solid'} — click to cycle`}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const order = ['solid', 'dashed', 'none'];
+                        const cur = l.border || 'solid';
+                        const next = order[(order.indexOf(cur) + 1) % order.length];
+                        onChange(layout.map(it => it.id === l.id ? { ...it, border: next } : it));
+                      }}
+                    >▢</button>
+                    <button
                       className="tile-remove"
                       title="Remove"
                       onMouseDown={(e) => e.stopPropagation()}

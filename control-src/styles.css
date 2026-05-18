@@ -627,7 +627,7 @@ input[type="text"], input[type="url"], textarea {
   gap: 4px;
   z-index: 5;
 }
-.tile-remove, .tile-flush, .tile-settings {
+.tile-remove, .tile-flush, .tile-settings, .tile-border {
   width: 20px;
   height: 20px;
   background: #fff;
@@ -643,7 +643,7 @@ input[type="text"], input[type="url"], textarea {
   justify-content: center;
   padding: 0;
 }
-.tile-remove:hover, .tile-flush:hover, .tile-settings:hover { background: var(--ink); color: #fff; }
+.tile-remove:hover, .tile-flush:hover, .tile-settings:hover, .tile-border:hover { background: var(--ink); color: #fff; }
 .tile-flush.on { background: var(--ink); color: #fff; }
 
 /* ============ PALETTE ============ */

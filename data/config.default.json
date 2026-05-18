@@ -24,6 +24,39 @@
     "text": "Make each day your masterpiece.",
     "attribution": "John Wooden"
   },
+  "clock": {
+    "format": 12,
+    "showSeconds": false,
+    "showDate": true
+  },
+  "wifi": {
+    "ssid": "",
+    "password": "",
+    "security": "WPA",
+    "hidden": false
+  },
+  "countdowns": [
+    { "label": "NEW YEAR", "date": "2027-01-01" }
+  ],
+  "aqi": {
+    "showPollutants": true
+  },
+  "news": {
+    "feedUrl": "",
+    "maxItems": 5
+  },
+  "stocks": {
+    "symbols": ["AAPL", "BTC-USD"]
+  },
+  "github": {
+    "user": ""
+  },
+  "photo": {
+    "dataUrl": "",
+    "fit": "contain"
+  },
+  "accent": "#c8302a",
+  "iconSet": "default",
   "city": "Gainesville,FL,US",
   "cityLabel": "GAINESVILLE",
   "refreshMinutes": 30,

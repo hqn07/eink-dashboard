@@ -15,6 +15,14 @@ const sharp = require('sharp');
 
 const { fetchWeather, geocodeCity } = require('./widgets/weather');
 const { fetchEvents } = require('./widgets/calendar');
+const { buildClockNow } = require('./widgets/clock');
+const { buildCountdowns } = require('./widgets/countdown');
+const { buildMoonSun } = require('./widgets/moonsun');
+const { buildWifiQrSvg } = require('./widgets/wifi');
+const { fetchAqi } = require('./widgets/aqi');
+const { fetchNews } = require('./widgets/news');
+const { fetchStocks } = require('./widgets/stocks');
+const { fetchGithub } = require('./widgets/github');
 
 const PORT = process.env.PORT || 3000;
 const DEVICE_TOKEN = process.env.DEVICE_TOKEN || '';
@@ -332,7 +340,7 @@ function checkDeviceAuth(req, res, next) {
 // ---------- App ----------
 
 const app = express();
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '10mb' })); // photo widget can carry a base64 image
 app.use('/static', express.static(path.join(__dirname, 'public')));
 
 // React control panel build output (built by Vite via `npm run build`).
@@ -340,26 +348,55 @@ const CONTROL_APP_DIR = path.join(__dirname, 'public', 'control-app');
 const CONTROL_APP_INDEX = path.join(CONTROL_APP_DIR, 'index.html');
 app.use('/control-app', express.static(CONTROL_APP_DIR));
 
+// Gather all widget data needed by the dashboard. Each fetch only runs
+// if at least one instance of that widget is on the active layout (or
+// if the widget is non-fetched / always-on).
+async function buildWidgetData(cfg, units, layout) {
+  const ids = new Set((layout || []).map(it => it.widgetId || it.id));
+  const wantWeather = ids.has('weather_hero') || ids.has('weather_forecast') || ids.has('moonsun');
+  const loc = (Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon))
+    ? { lat: cfg.lat, lon: cfg.lon }
+    : cfg.city;
+
+  const [weather, events, aqi, news, stocks, github, wifiQrSvg] = await Promise.all([
+    wantWeather ? fetchWeather(loc, process.env.OPENWEATHER_API_KEY, units) : null,
+    (ids.has('calendar') && cfg.calendar && cfg.calendar.icalUrl) ? fetchEvents(cfg.calendar.icalUrl) : [],
+    (ids.has('aqi') && Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon))
+      ? fetchAqi({ lat: cfg.lat, lon: cfg.lon }) : null,
+    (ids.has('news') && cfg.news && cfg.news.feedUrl)
+      ? fetchNews(cfg.news.feedUrl, cfg.news.maxItems || 5) : [],
+    (ids.has('stocks') && cfg.stocks && Array.isArray(cfg.stocks.symbols) && cfg.stocks.symbols.length)
+      ? fetchStocks(cfg.stocks.symbols) : [],
+    (ids.has('github') && cfg.github && cfg.github.user)
+      ? fetchGithub(cfg.github.user) : null,
+    ids.has('wifi_qr') ? buildWifiQrSvg(cfg.wifi || {}) : null
+  ]);
+
+  const clockNow    = ids.has('clock')     ? buildClockNow(cfg.timezone || 'UTC') : null;
+  const countdowns  = ids.has('countdown') ? buildCountdowns(cfg.countdowns || [], cfg.timezone || 'UTC') : [];
+  const moonsun     = ids.has('moonsun')   ? buildMoonSun(weather) : null;
+  const todos       = ids.has('todos') ? (cfg.todos || []) : [];
+
+  return {
+    weather, events, aqi, news, stocks, github,
+    wifiQrSvg, clockNow, countdowns, moonsun, todos
+  };
+}
+
 // Dashboard HTML — built from the active screen's layout + live data
 app.get('/dashboard', async (req, res) => {
   try {
     const cfg = await loadConfig();
     const { units, screen, activeScreen } = resolveVariant(req, cfg);
-    const wantWeather = !cfg.widgets || cfg.widgets.weather !== false;
-    const loc = (Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon))
-      ? { lat: cfg.lat, lon: cfg.lon }
-      : cfg.city;
-    const weather = wantWeather
-      ? await fetchWeather(loc, process.env.OPENWEATHER_API_KEY, units)
-      : null;
-    const events = cfg.calendar && cfg.calendar.icalUrl
-      ? await fetchEvents(cfg.calendar.icalUrl)
-      : [];
+    const layout = activeScreen ? activeScreen.layout : [];
+    const data = await buildWidgetData(cfg, units, layout);
 
     const html = await fsp.readFile(path.join(__dirname, 'public', 'dashboard.html'), 'utf8');
-    // The dashboard renderer reads `layout` directly from the payload.
-    const layout = activeScreen ? activeScreen.layout : [];
-    const payload = { cfg, weather, events, units, screen, layout, generatedAt: new Date().toISOString() };
+    const payload = {
+      cfg, units, screen, layout,
+      ...data,
+      generatedAt: new Date().toISOString()
+    };
     const injected = html.replace(
       '/*__DATA__*/',
       `window.__DASHBOARD__ = ${JSON.stringify(payload)};`
@@ -530,20 +567,11 @@ app.get('/api/preview-data', async (req, res) => {
   try {
     const cfg = await loadConfig();
     const { units, screen, activeScreen } = resolveVariant(req, cfg);
-    const loc = (Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon))
-      ? { lat: cfg.lat, lon: cfg.lon }
-      : cfg.city;
-    const weather = await fetchWeather(loc, process.env.OPENWEATHER_API_KEY, units);
-    const events = cfg.calendar && cfg.calendar.icalUrl
-      ? await fetchEvents(cfg.calendar.icalUrl)
-      : [];
+    const layout = activeScreen ? activeScreen.layout : [];
+    const data = await buildWidgetData(cfg, units, layout);
     res.json({
-      cfg,
-      weather,
-      events,
-      units,
-      screen,
-      layout: activeScreen ? activeScreen.layout : [],
+      cfg, units, screen, layout,
+      ...data,
       generatedAt: new Date().toISOString()
     });
   } catch (err) {
@@ -569,6 +597,13 @@ app.post('/api/config', async (req, res) => {
       calendar: { ...(current.calendar || {}), ...(req.body.calendar || {}) },
       spacer:   { ...(current.spacer   || {}), ...(req.body.spacer   || {}) },
       quote:    { ...(current.quote    || {}), ...(req.body.quote    || {}) },
+      clock:    { ...(current.clock    || {}), ...(req.body.clock    || {}) },
+      wifi:     { ...(current.wifi     || {}), ...(req.body.wifi     || {}) },
+      news:     { ...(current.news     || {}), ...(req.body.news     || {}) },
+      stocks:   { ...(current.stocks   || {}), ...(req.body.stocks   || {}) },
+      github:   { ...(current.github   || {}), ...(req.body.github   || {}) },
+      photo:    { ...(current.photo    || {}), ...(req.body.photo    || {}) },
+      aqi:      { ...(current.aqi      || {}), ...(req.body.aqi      || {}) },
     };
     if (Array.isArray(req.body.screens)) {
       merged.screens = req.body.screens;

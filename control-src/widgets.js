@@ -89,6 +89,106 @@ export const WIDGET_REGISTRY = [
       XL: { w: 12, h: 6 }
     },
     defaultSize: 'M'
+  },
+  {
+    id: 'clock',
+    label: 'Clock',
+    requires: 'clock',
+    sizes: {
+      S:  { w: 4, h: 2 },
+      M:  { w: 6, h: 2 },
+      L:  { w: 12, h: 2 },
+      XL: { w: 12, h: 3 }
+    },
+    defaultSize: 'M'
+  },
+  {
+    id: 'wifi_qr',
+    label: 'WiFi QR Code',
+    requires: 'wifi',
+    sizes: {
+      S: { w: 3, h: 3 },
+      M: { w: 4, h: 4 },
+      L: { w: 6, h: 6 }
+    },
+    defaultSize: 'M'
+  },
+  {
+    id: 'countdown',
+    label: 'Countdown',
+    requires: 'countdowns',
+    sizes: {
+      S: { w: 4, h: 2 },
+      M: { w: 6, h: 2 },
+      L: { w: 12, h: 2 }
+    },
+    defaultSize: 'M'
+  },
+  {
+    id: 'aqi',
+    label: 'Air Quality',
+    requires: 'aqi',
+    sizes: {
+      S: { w: 4, h: 2 },
+      M: { w: 4, h: 3 },
+      L: { w: 6, h: 3 }
+    },
+    defaultSize: 'M'
+  },
+  {
+    id: 'moonsun',
+    label: 'Moon & Sun',
+    requires: 'moonsun',
+    sizes: {
+      S: { w: 4, h: 2 },
+      M: { w: 4, h: 3 },
+      L: { w: 6, h: 3 }
+    },
+    defaultSize: 'M'
+  },
+  {
+    id: 'news',
+    label: 'News Headlines',
+    requires: 'news',
+    sizes: {
+      S: { w: 6, h: 3 },
+      M: { w: 6, h: 6 },
+      L: { w: 12, h: 6 }
+    },
+    defaultSize: 'M'
+  },
+  {
+    id: 'stocks',
+    label: 'Stocks / Crypto',
+    requires: 'stocks',
+    sizes: {
+      S: { w: 4, h: 2 },
+      M: { w: 6, h: 3 },
+      L: { w: 12, h: 3 }
+    },
+    defaultSize: 'M'
+  },
+  {
+    id: 'photo',
+    label: 'Photo / Image',
+    requires: 'photo',
+    sizes: {
+      S: { w: 4, h: 3 },
+      M: { w: 6, h: 6 },
+      L: { w: 12, h: 6 }
+    },
+    defaultSize: 'M'
+  },
+  {
+    id: 'github',
+    label: 'GitHub Activity',
+    requires: 'github',
+    sizes: {
+      S: { w: 6, h: 2 },
+      M: { w: 12, h: 2 },
+      L: { w: 12, h: 3 }
+    },
+    defaultSize: 'M'
   }
 ];
 

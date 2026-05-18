@@ -21,6 +21,19 @@
   const widgets = cfg.widgets || {};
   const units = D.units || cfg.units || 'F';
   const screen = D.screen || cfg.screen || 1;
+  const aqi = D.aqi || null;
+  const news = D.news || [];
+  const stocks = D.stocks || [];
+  const github = D.github || null;
+  const wifiQrSvg = D.wifiQrSvg || null;
+  const clockNow = D.clockNow || null;
+  const countdowns = D.countdowns || [];
+  const moonsun = D.moonsun || null;
+
+  // Inject accent color as CSS variable, if set.
+  if (cfg.accent) {
+    document.documentElement.style.setProperty('--accent', cfg.accent);
+  }
   document.body.setAttribute('data-screen', String(screen));
   document.body.setAttribute('data-units', units);
 
@@ -290,6 +303,208 @@
           </div>
         `;
       }
+    },
+    {
+      id: 'clock',
+      label: 'Clock',
+      requires: 'clock',
+      sizes: { S:{w:4,h:2}, M:{w:6,h:2}, L:{w:12,h:2}, XL:{w:12,h:3} },
+      defaultSize: 'M',
+      render: ({ cfg, clockNow }) => {
+        const c = cfg.clock || {};
+        const t = clockNow || { hour: 0, minute: 0, second: 0, dateLabel: '' };
+        let h = t.hour;
+        const fmt = c.format === 24 ? 24 : 12;
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        if (fmt === 12) { h = h % 12; if (h === 0) h = 12; }
+        const hh = fmt === 24 ? String(h).padStart(2, '0') : String(h);
+        const mm = String(t.minute).padStart(2, '0');
+        const ss = c.showSeconds ? `:${String(t.second).padStart(2,'0')}` : '';
+        const suffix = fmt === 12 ? ` ${ampm}` : '';
+        return `
+          <div class="widget widget-clock">
+            <div class="clock-time">${hh}:${mm}${ss}<span class="clock-ampm">${suffix}</span></div>
+            ${c.showDate ? `<div class="clock-date">${t.dateLabel}</div>` : ''}
+          </div>
+        `;
+      }
+    },
+    {
+      id: 'wifi_qr',
+      label: 'WiFi QR Code',
+      requires: 'wifi',
+      sizes: { S:{w:3,h:3}, M:{w:4,h:4}, L:{w:6,h:6} },
+      defaultSize: 'M',
+      render: ({ cfg, wifiQrSvg }) => {
+        const w = cfg.wifi || {};
+        if (!w.ssid || !wifiQrSvg) return '';
+        return `
+          <div class="widget widget-wifi">
+            <div class="wifi-qr">${wifiQrSvg}</div>
+            <div class="wifi-meta">
+              <div class="wifi-ssid">${escapeHtml(w.ssid)}</div>
+              <div class="wifi-hint">SCAN TO CONNECT</div>
+            </div>
+          </div>
+        `;
+      }
+    },
+    {
+      id: 'countdown',
+      label: 'Countdown',
+      requires: 'countdowns',
+      sizes: { S:{w:4,h:2}, M:{w:6,h:2}, L:{w:12,h:2} },
+      defaultSize: 'M',
+      render: ({ countdowns }) => {
+        if (!countdowns || !countdowns.length) return '';
+        return `
+          <div class="widget widget-countdown">
+            ${countdowns.slice(0, 3).map(c => `
+              <div class="cd-row">
+                <div class="cd-num">${c.days}</div>
+                <div class="cd-meta">
+                  <div class="cd-unit">${c.unit}</div>
+                  <div class="cd-label">${escapeHtml(c.label)}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+    },
+    {
+      id: 'aqi',
+      label: 'Air Quality',
+      requires: 'aqi',
+      sizes: { S:{w:4,h:2}, M:{w:4,h:3}, L:{w:6,h:3} },
+      defaultSize: 'M',
+      render: ({ aqi }) => {
+        if (!aqi) return '';
+        return `
+          <div class="widget widget-aqi">
+            <div class="widget-title">AIR QUALITY</div>
+            <div class="aqi-num">${aqi.aqi}</div>
+            <div class="aqi-cat">${aqi.category}</div>
+            <div class="aqi-stats">
+              <div class="stat"><span class="stat-k">PM2.5</span><span class="stat-v">${aqi.pm25 ?? '--'}</span></div>
+              <div class="stat"><span class="stat-k">PM10</span><span class="stat-v">${aqi.pm10 ?? '--'}</span></div>
+              <div class="stat"><span class="stat-k">O₃</span><span class="stat-v">${aqi.o3 ?? '--'}</span></div>
+            </div>
+          </div>
+        `;
+      }
+    },
+    {
+      id: 'moonsun',
+      label: 'Moon & Sun',
+      requires: 'moonsun',
+      sizes: { S:{w:4,h:2}, M:{w:4,h:3}, L:{w:6,h:3} },
+      defaultSize: 'M',
+      render: ({ moonsun }) => {
+        if (!moonsun) return '';
+        return `
+          <div class="widget widget-moonsun">
+            <div class="widget-title">SKY</div>
+            <div class="moon-row">
+              <div class="moon-disc">${moonsun.moonSvg}</div>
+              <div class="moon-meta">
+                <div class="moon-phase">${moonsun.phase}</div>
+                <div class="moon-illum">${moonsun.illuminationPct}% lit</div>
+              </div>
+            </div>
+            <div class="sun-row">
+              <span>↑ ${moonsun.sunrise}</span>
+              <span>↓ ${moonsun.sunset}</span>
+            </div>
+          </div>
+        `;
+      }
+    },
+    {
+      id: 'news',
+      label: 'News Headlines',
+      requires: 'news',
+      sizes: { S:{w:6,h:3}, M:{w:6,h:6}, L:{w:12,h:6} },
+      defaultSize: 'M',
+      render: ({ news }) => {
+        if (!news || !news.length) return '';
+        return `
+          <div class="widget widget-news">
+            <div class="widget-title">HEADLINES</div>
+            <ul class="news-list">
+              ${news.slice(0, 5).map(n => `
+                <li>
+                  <div class="news-title">${escapeHtml(n.title)}</div>
+                  ${n.source ? `<div class="news-source">${escapeHtml(n.source)}</div>` : ''}
+                </li>
+              `).join('')}
+            </ul>
+          </div>
+        `;
+      }
+    },
+    {
+      id: 'stocks',
+      label: 'Stocks / Crypto',
+      requires: 'stocks',
+      sizes: { S:{w:4,h:2}, M:{w:6,h:3}, L:{w:12,h:3} },
+      defaultSize: 'M',
+      render: ({ stocks }) => {
+        if (!stocks || !stocks.length) return '';
+        return `
+          <div class="widget widget-stocks">
+            <div class="widget-title">MARKETS</div>
+            <div class="stock-rows">
+              ${stocks.map(s => `
+                <div class="stock-row">
+                  <span class="stock-sym">${escapeHtml(s.symbol)}</span>
+                  <span class="stock-price">${s.price}</span>
+                  <span class="stock-chg ${s.change >= 0 ? 'up' : 'down'}">${s.change >= 0 ? '▲' : '▼'} ${Math.abs(s.changePct).toFixed(2)}%</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+    },
+    {
+      id: 'photo',
+      label: 'Photo / Image',
+      requires: 'photo',
+      sizes: { S:{w:4,h:3}, M:{w:6,h:6}, L:{w:12,h:6} },
+      defaultSize: 'M',
+      render: ({ cfg }) => {
+        const p = cfg.photo || {};
+        if (!p.dataUrl) return '';
+        const fit = p.fit === 'cover' ? 'cover' : 'contain';
+        return `
+          <div class="widget widget-photo">
+            <img src="${escapeHtml(p.dataUrl)}" style="object-fit:${fit}" alt="" />
+          </div>
+        `;
+      }
+    },
+    {
+      id: 'github',
+      label: 'GitHub Activity',
+      requires: 'github',
+      sizes: { S:{w:6,h:2}, M:{w:12,h:2}, L:{w:12,h:3} },
+      defaultSize: 'M',
+      render: ({ github }) => {
+        if (!github || !github.weeks || !github.weeks.length) return '';
+        return `
+          <div class="widget widget-github">
+            <div class="widget-title">GITHUB · ${escapeHtml(github.user)} · ${github.total} CONTRIBUTIONS</div>
+            <div class="gh-grid">
+              ${github.weeks.map(week => `
+                <div class="gh-col">
+                  ${week.map(d => `<div class="gh-cell" data-l="${d}"></div>`).join('')}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
     }
   ];
 
@@ -414,13 +629,46 @@
   body.style.gridTemplateRows    = `repeat(${GRID_ROWS}, 1fr)`;
   page.appendChild(body);
 
-  const ctx = { cfg, weather: w, events, todos, units };
+  const ctx = {
+    cfg, weather: w, events, todos, units,
+    aqi, news, stocks, github, wifiQrSvg, clockNow, countdowns, moonsun
+  };
   const layout = resolveLayout();
+
+  // Compute the wall-clock minute-of-day for visibility gating.
+  function nowMinsTZ(tz) {
+    try {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz || 'UTC', hour12: false, hour: '2-digit', minute: '2-digit'
+      }).formatToParts(new Date());
+      let h = 0, m = 0;
+      for (const p of parts) {
+        if (p.type === 'hour') h = parseInt(p.value, 10) % 24;
+        if (p.type === 'minute') m = parseInt(p.value, 10);
+      }
+      return h * 60 + m;
+    } catch { return new Date().getHours() * 60 + new Date().getMinutes(); }
+  }
+  function parseHHMM(s) {
+    const m = String(s || '').match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return null;
+    return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+  }
+  function withinVisibility(vis, nowM) {
+    if (!vis || !vis.enabled) return true;
+    const a = parseHHMM(vis.from), b = parseHHMM(vis.to);
+    if (a == null || b == null) return true;
+    if (a === b) return true;
+    if (a < b) return nowM >= a && nowM < b;
+    return nowM >= a || nowM < b; // wraps midnight
+  }
+  const nowM = nowMinsTZ(cfg.timezone || 'UTC');
 
   let anyRendered = false;
   for (const item of layout) {
     const def = widgetById(item.widgetId || item.id);
     if (!def) continue;
+    if (!withinVisibility(item.visibility, nowM)) continue;
     const itemCtx = { ...ctx, cellW: item.w, cellH: item.h };
     const inner = def.render(itemCtx);
     if (!inner) continue;
@@ -428,6 +676,8 @@
     if (item.x + item.w >= GRID_COLS) classes.push('cell-edge-right');
     if (item.y + item.h >= GRID_ROWS) classes.push('cell-edge-bottom');
     if (item.flush) classes.push('cell-flush');
+    if (item.border === 'dashed') classes.push('cell-border-dashed');
+    if (item.border === 'none')   classes.push('cell-border-none');
     const cell = el('div', classes.join(' '), inner);
     cell.style.gridColumn = `${item.x + 1} / span ${item.w}`;
     cell.style.gridRow    = `${item.y + 1} / span ${item.h}`;
