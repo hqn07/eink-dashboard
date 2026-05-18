@@ -585,6 +585,7 @@ html, body {
   justify-content: space-between;
   gap: 4px;
   margin-top: 10px;
+  margin-bottom: 8px;
   padding: 6px 4px 2px;
   border-top: 1.5px solid #000;
 }
