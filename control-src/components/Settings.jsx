@@ -542,17 +542,22 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested, focusedW
       )}
 
       <section {...sectionProps('appearance')}>
-        <div className="section-title">Appearance</div>
+        <div className="section-title">Theme & Preview</div>
+        <div className="terminal-line" style={{ fontSize: 10, marginBottom: 10 }}>
+          &gt; THE E-INK DISPLAY IS 1-BIT (BLACK / WHITE). THESE SETTINGS ONLY AFFECT THE BROWSER PREVIEW + COLOR PNG.
+        </div>
         <label className="field">
-          <span className="label">Accent color</span>
+          <span className="label">Accent color (browser preview)</span>
           <input type="color" value={cfg.accent || '#c8302a'}
             onChange={e => onPatch({ accent: e.target.value })}
             style={{ width: 80, height: 36, padding: 2 }} />
         </label>
         <label className="field">
-          <span className="label">Icon set</span>
+          <span className="label">Weather icon set (coming soon)</span>
           <select value={cfg.iconSet || 'default'}
-            onChange={e => onPatch({ iconSet: e.target.value })}>
+            onChange={e => onPatch({ iconSet: e.target.value })}
+            disabled
+            title="Alternate SVG sets not wired yet — picker is parked for now">
             <option value="default">Default (sharp)</option>
             <option value="soft">Soft (rounded)</option>
             <option value="block">Block (pixel)</option>
