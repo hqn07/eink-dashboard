@@ -14,29 +14,44 @@ async function fetchGithub(user) {
     if (!r.ok) return hit?.data || null;
     const html = await r.text();
 
-    // Each <td class="ContributionCalendar-day" data-level="N"> is one day.
-    // Group into weeks by parent <tr>.
-    const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/g;
-    const dayRegex = /data-level="(\d)"/g;
     const totalMatch = html.match(/(\d[\d,]*)\s+contribution/i);
     const total = totalMatch ? parseInt(totalMatch[1].replace(/,/g, ''), 10) : 0;
 
-    // GitHub renders rows as days-of-week (7 rows), cols as weeks.
-    // Easier: pull each ContributionCalendar-day in document order — they
-    // come week-by-week.
-    const weeks = [];
-    let week = [];
-    const dayAll = [...html.matchAll(/<td[^>]*class="[^"]*ContributionCalendar-day[^"]*"[^>]*data-level="(\d)"[^>]*data-date="(\d{4}-\d{2}-\d{2})"/g)];
-    // Group by week: a new week starts every 7 days OR when the date jumps backward (Sun → Sat).
-    // Simpler: sort by date, group every 7.
-    const sorted = dayAll
-      .map(m => ({ level: parseInt(m[1], 10), date: m[2] }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-    for (const d of sorted) {
-      week.push(d.level);
-      if (week.length === 7) { weeks.push(week); week = []; }
+    // GitHub orders attributes inconsistently (data-date sometimes
+    // before data-level, class sometimes last). Pull each
+    // ContributionCalendar-day <td> as a whole, then extract attrs
+    // attribute-order-agnostic.
+    const tdRegex = /<td\b[^>]*ContributionCalendar-day[^>]*>/g;
+    const days = [];
+    for (const m of html.matchAll(tdRegex)) {
+      const tag = m[0];
+      const levelMatch = tag.match(/data-level="(\d)"/);
+      const dateMatch  = tag.match(/data-date="(\d{4}-\d{2}-\d{2})"/);
+      if (!dateMatch) continue;
+      days.push({
+        date: dateMatch[1],
+        level: levelMatch ? parseInt(levelMatch[1], 10) : 0
+      });
     }
-    if (week.length) weeks.push(week);
+    if (!days.length) return hit?.data || null;
+    days.sort((a, b) => a.date.localeCompare(b.date));
+
+    // Group into calendar weeks. GitHub starts each week on Sunday, so
+    // we slot each day by its day-of-week into the corresponding 7-day
+    // bucket — gives a stable rectangle even when the first week is
+    // partial.
+    const weeks = [];
+    let currentWeek = null;
+    let lastDow = -1;
+    for (const d of days) {
+      const dow = new Date(d.date + 'T00:00:00Z').getUTCDay();
+      if (!currentWeek || dow <= lastDow) {
+        currentWeek = [0, 0, 0, 0, 0, 0, 0];
+        weeks.push(currentWeek);
+      }
+      currentWeek[dow] = d.level;
+      lastDow = dow;
+    }
 
     const result = { user, total, weeks };
     cache.set(user, { at: Date.now(), data: result });
