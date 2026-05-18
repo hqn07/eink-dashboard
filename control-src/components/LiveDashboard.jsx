@@ -12,7 +12,7 @@ const DASH_W = 800;
 const DASH_H = 480;
 const HEADER_H = 60;
 const FOOTER_H = 28;
-const GRID_COLS = 12;
+const GRID_COLS = 24;
 const GRID_ROWS = 12;
 
 // Same minute-of-day helper the dashboard.html version uses, for the

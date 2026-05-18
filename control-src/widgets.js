@@ -3,26 +3,29 @@
 // Sizes are predefined presets per widget so users pick from a small set
 // rather than dragging arbitrary corners.
 
-export const GRID_COLS = 12;
+export const GRID_COLS = 24;
 export const GRID_ROWS = 12;
 // Bump this whenever the grid resolution changes so old saved configs
-// can be migrated. v1 = 12x6 (Apr 2026 → May 2026), v2 = 12x12 (this).
-export const GRID_VERSION = 2;
+// can be migrated.
+// v1 = 12x6  (Apr 2026 → May 2026, rectangular cells)
+// v2 = 12x12 (May 18 2026, finer h but rectangular cells)
+// v3 = 24x12 (this — square cells, fine in both axes)
+export const GRID_VERSION = 3;
 export const SCREENS = [1, 2];
 
-// Sizes are in 12x12 grid units. A row = ~32px at full 480px height (or
-// ~37px when chrome is off). Heights doubled vs the original 12x6 grid.
+// Sizes are in 24x12 grid units. With body ≈ 800px × 392-452px, cells
+// are ~33px square. h heights match the 12x12 era; only w doubled.
 export const WIDGET_REGISTRY = [
   {
     id: 'weather_hero',
     label: 'Weather · Current',
     requires: 'weather',
     sizes: {
-      XS: { w: 4, h: 4 },
-      S:  { w: 4, h: 6 },
-      M:  { w: 4, h: 12 },
-      L:  { w: 6, h: 12 },
-      XL: { w: 12, h: 12 }
+      XS: { w: 8, h: 4 },
+      S:  { w: 8, h: 6 },
+      M:  { w: 8, h: 12 },
+      L:  { w: 12, h: 12 },
+      XL: { w: 24, h: 12 }
     },
     defaultSize: 'M'
   },
@@ -31,10 +34,10 @@ export const WIDGET_REGISTRY = [
     label: 'Weather · Forecast',
     requires: 'weather',
     sizes: {
-      S:  { w: 3, h: 8 },
-      M:  { w: 3, h: 12 },
-      L:  { w: 6, h: 12 },
-      XL: { w: 12, h: 6 }
+      S:  { w: 6, h: 8 },
+      M:  { w: 6, h: 12 },
+      L:  { w: 12, h: 12 },
+      XL: { w: 24, h: 6 }
     },
     defaultSize: 'M'
   },
@@ -43,11 +46,11 @@ export const WIDGET_REGISTRY = [
     label: 'Custom Message',
     requires: 'message',
     sizes: {
-      XS: { w: 4, h: 3 },
-      S:  { w: 4, h: 4 },
-      M:  { w: 5, h: 4 },
-      L:  { w: 12, h: 4 },
-      XL: { w: 12, h: 6 }
+      XS: { w: 8, h: 3 },
+      S:  { w: 8, h: 4 },
+      M:  { w: 10, h: 4 },
+      L:  { w: 24, h: 4 },
+      XL: { w: 24, h: 6 }
     },
     defaultSize: 'M'
   },
@@ -56,10 +59,10 @@ export const WIDGET_REGISTRY = [
     label: 'To-Do List',
     requires: 'todos',
     sizes: {
-      S:  { w: 4, h: 6 },
-      M:  { w: 5, h: 6 },
-      L:  { w: 6, h: 12 },
-      XL: { w: 12, h: 12 }
+      S:  { w: 8, h: 6 },
+      M:  { w: 10, h: 6 },
+      L:  { w: 12, h: 12 },
+      XL: { w: 24, h: 12 }
     },
     defaultSize: 'M'
   },
@@ -68,10 +71,10 @@ export const WIDGET_REGISTRY = [
     label: 'Calendar',
     requires: 'calendar',
     sizes: {
-      S: { w: 4, h: 4 },
-      M: { w: 5, h: 4 },
-      L: { w: 12, h: 4 },
-      XL: { w: 12, h: 8 }
+      S: { w: 8, h: 4 },
+      M: { w: 10, h: 4 },
+      L: { w: 24, h: 4 },
+      XL: { w: 24, h: 8 }
     },
     defaultSize: 'M'
   },
@@ -80,11 +83,11 @@ export const WIDGET_REGISTRY = [
     label: 'Black Bar',
     requires: 'spacer',
     sizes: {
-      XS: { w: 12, h: 1 },
-      S:  { w: 12, h: 2 },
-      M:  { w: 6,  h: 2 },
-      L:  { w: 4,  h: 12 },
-      XL: { w: 12, h: 4 }
+      XS: { w: 24, h: 1 },
+      S:  { w: 24, h: 2 },
+      M:  { w: 12, h: 2 },
+      L:  { w: 8,  h: 12 },
+      XL: { w: 24, h: 4 }
     },
     defaultSize: 'S'
   },
@@ -93,10 +96,10 @@ export const WIDGET_REGISTRY = [
     label: 'Text / Quote',
     requires: 'quote',
     sizes: {
-      S:  { w: 4, h: 4 },
-      M:  { w: 6, h: 6 },
-      L:  { w: 12, h: 6 },
-      XL: { w: 12, h: 12 }
+      S:  { w: 8, h: 4 },
+      M:  { w: 12, h: 6 },
+      L:  { w: 24, h: 6 },
+      XL: { w: 24, h: 12 }
     },
     defaultSize: 'M'
   },
@@ -105,11 +108,11 @@ export const WIDGET_REGISTRY = [
     label: 'Clock',
     requires: 'clock',
     sizes: {
-      XS: { w: 4, h: 3 },
-      S:  { w: 4, h: 4 },
-      M:  { w: 6, h: 4 },
-      L:  { w: 12, h: 4 },
-      XL: { w: 12, h: 6 }
+      XS: { w: 8, h: 3 },
+      S:  { w: 8, h: 4 },
+      M:  { w: 12, h: 4 },
+      L:  { w: 24, h: 4 },
+      XL: { w: 24, h: 6 }
     },
     defaultSize: 'M'
   },
@@ -118,9 +121,9 @@ export const WIDGET_REGISTRY = [
     label: 'WiFi QR Code',
     requires: 'wifi',
     sizes: {
-      S: { w: 3, h: 6 },
-      M: { w: 4, h: 8 },
-      L: { w: 6, h: 12 }
+      S: { w: 6, h: 6 },
+      M: { w: 8, h: 8 },
+      L: { w: 12, h: 12 }
     },
     defaultSize: 'M'
   },
@@ -129,9 +132,9 @@ export const WIDGET_REGISTRY = [
     label: 'Countdown',
     requires: 'countdowns',
     sizes: {
-      S: { w: 4, h: 4 },
-      M: { w: 6, h: 4 },
-      L: { w: 12, h: 4 }
+      S: { w: 8, h: 4 },
+      M: { w: 12, h: 4 },
+      L: { w: 24, h: 4 }
     },
     defaultSize: 'M'
   },
@@ -140,9 +143,9 @@ export const WIDGET_REGISTRY = [
     label: 'Air Quality',
     requires: 'aqi',
     sizes: {
-      S: { w: 4, h: 4 },
-      M: { w: 4, h: 6 },
-      L: { w: 6, h: 6 }
+      S: { w: 8, h: 4 },
+      M: { w: 8, h: 6 },
+      L: { w: 12, h: 6 }
     },
     defaultSize: 'M'
   },
@@ -151,9 +154,9 @@ export const WIDGET_REGISTRY = [
     label: 'Moon & Sun',
     requires: 'moonsun',
     sizes: {
-      S: { w: 4, h: 4 },
-      M: { w: 4, h: 6 },
-      L: { w: 6, h: 6 }
+      S: { w: 8, h: 4 },
+      M: { w: 8, h: 6 },
+      L: { w: 12, h: 6 }
     },
     defaultSize: 'M'
   },
@@ -162,9 +165,9 @@ export const WIDGET_REGISTRY = [
     label: 'News Headlines',
     requires: 'news',
     sizes: {
-      S: { w: 6, h: 6 },
-      M: { w: 6, h: 12 },
-      L: { w: 12, h: 12 }
+      S: { w: 12, h: 6 },
+      M: { w: 12, h: 12 },
+      L: { w: 24, h: 12 }
     },
     defaultSize: 'M'
   },
@@ -173,9 +176,9 @@ export const WIDGET_REGISTRY = [
     label: 'Stocks / Crypto',
     requires: 'stocks',
     sizes: {
-      S: { w: 4, h: 4 },
-      M: { w: 6, h: 6 },
-      L: { w: 12, h: 6 }
+      S: { w: 8, h: 4 },
+      M: { w: 12, h: 6 },
+      L: { w: 24, h: 6 }
     },
     defaultSize: 'M'
   },
@@ -184,9 +187,9 @@ export const WIDGET_REGISTRY = [
     label: 'Photo / Image',
     requires: 'photo',
     sizes: {
-      S: { w: 4, h: 6 },
-      M: { w: 6, h: 12 },
-      L: { w: 12, h: 12 }
+      S: { w: 8, h: 6 },
+      M: { w: 12, h: 12 },
+      L: { w: 24, h: 12 }
     },
     defaultSize: 'M'
   },
@@ -195,9 +198,9 @@ export const WIDGET_REGISTRY = [
     label: 'GitHub Activity',
     requires: 'github',
     sizes: {
-      S: { w: 6, h: 4 },
-      M: { w: 12, h: 4 },
-      L: { w: 12, h: 6 }
+      S: { w: 12, h: 4 },
+      M: { w: 24, h: 4 },
+      L: { w: 24, h: 6 }
     },
     defaultSize: 'M'
   }
@@ -208,16 +211,16 @@ export function widgetById(id) {
 }
 
 // Default positions for screen 1 (full editorial). Screen 2 = minimal hero only.
-// y-coords in 12x12 grid units.
+// x/y-coords in 24x12 grid units.
 const DEFAULT_LAYOUTS = {
   1: [
-    { id: 'weather_hero',     x: 0, y: 0, size: 'M', enabled: true },
-    { id: 'weather_forecast', x: 4, y: 0, size: 'M', enabled: true },
-    { id: 'message',          x: 7, y: 0, size: 'M', enabled: true },
-    { id: 'todos',            x: 7, y: 4, size: 'M', enabled: true },
-    { id: 'calendar',         x: 7, y: 8, size: 'M', enabled: false },
-    { id: 'spacer',           x: 0, y: 0, size: 'S', enabled: false },
-    { id: 'quote',            x: 0, y: 0, size: 'M', enabled: false }
+    { id: 'weather_hero',     x: 0,  y: 0, size: 'M', enabled: true },
+    { id: 'weather_forecast', x: 8,  y: 0, size: 'M', enabled: true },
+    { id: 'message',          x: 14, y: 0, size: 'M', enabled: true },
+    { id: 'todos',            x: 14, y: 4, size: 'M', enabled: true },
+    { id: 'calendar',         x: 14, y: 8, size: 'M', enabled: false },
+    { id: 'spacer',           x: 0,  y: 0, size: 'S', enabled: false },
+    { id: 'quote',            x: 0,  y: 0, size: 'M', enabled: false }
   ],
   2: [
     { id: 'weather_hero',     x: 0, y: 0, size: 'XL', enabled: true },
@@ -337,8 +340,7 @@ export function makeDefaultScreen(template = {}) {
 // Migrate old config shape (cfg.layouts + cfg.schedule + cfg.units +
 // cfg.refreshMinutes) into the new cfg.screens array. Idempotent —
 // once cfg.screens exists, return as-is.
-// Migrate a v1 (12x6) layout to v2 (12x12) by doubling y + h. x and w
-// are unchanged.
+// Migrate a v1 (12x6) layout to v2 (12x12) by doubling y + h. x and w unchanged.
 function migrateLayoutV1ToV2(layout) {
   return (layout || []).map(l => ({
     ...l,
@@ -346,14 +348,21 @@ function migrateLayoutV1ToV2(layout) {
     h: (Number.isFinite(l.h) ? l.h : 0) * 2 || undefined
   }));
 }
+// Migrate a v2 (12x12) layout to v3 (24x12) by doubling x + w. y + h unchanged.
+function migrateLayoutV2ToV3(layout) {
+  return (layout || []).map(l => ({
+    ...l,
+    x: (Number.isFinite(l.x) ? l.x : 0) * 2,
+    w: (Number.isFinite(l.w) ? l.w : 0) * 2 || undefined
+  }));
+}
 
 export function migrateConfigToScreens(cfg) {
   if (Array.isArray(cfg.screens) && cfg.screens.length) {
-    // Bump existing screens forward through any grid-version upgrades.
     let screens = cfg.screens;
-    if ((cfg.gridVersion || 1) < 2) {
-      screens = screens.map(s => ({ ...s, layout: migrateLayoutV1ToV2(s.layout) }));
-    }
+    const v = cfg.gridVersion || 1;
+    if (v < 2) screens = screens.map(s => ({ ...s, layout: migrateLayoutV1ToV2(s.layout) }));
+    if (v < 3) screens = screens.map(s => ({ ...s, layout: migrateLayoutV2ToV3(s.layout) }));
     screens = screens.map(s => s.chrome
       ? s
       : { ...s, chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)) });
@@ -363,8 +372,8 @@ export function migrateConfigToScreens(cfg) {
   const sched = cfg.schedule || {};
   const sActive = sched.active || {};
   const sQuiet  = sched.quiet  || {};
-  // Pre-screens configs were authored against the 12x6 grid → migrate.
-  const migrateOld = (l) => migrateLayoutV1ToV2((l || []).map(it => ({ ...it })));
+  // Pre-screens configs were authored against the 12x6 grid → walk both migrations.
+  const migrateOld = (l) => migrateLayoutV2ToV3(migrateLayoutV1ToV2((l || []).map(it => ({ ...it }))));
   const screens = [];
   screens.push({
     id: newScreenId(),

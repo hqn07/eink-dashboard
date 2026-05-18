@@ -499,7 +499,7 @@ input[type="text"], input[type="url"], textarea {
   background-image:
     linear-gradient(to right, var(--grid) 1px, transparent 1px),
     linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
-  background-size: calc(100% / 12) calc(100% / 12);
+  background-size: calc(100% / 24) calc(100% / 12);
 }
 .editor-aspect {
   position: relative;

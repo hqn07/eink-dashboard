@@ -66,7 +66,7 @@
   document.body.setAttribute('data-units', units);
 
   // ============ GRID CONFIG ============
-  const GRID_COLS = 12;
+  const GRID_COLS = 24;
   const GRID_ROWS = 12;
 
   function el(tag, cls, html) {
@@ -198,7 +198,7 @@
       id: 'weather_hero',
       label: 'Weather (current)',
       requires: 'weather',
-      sizes: { XS:{w:4,h:4}, S:{w:4,h:6}, M:{w:4,h:12}, L:{w:6,h:12}, XL:{w:12,h:12} },
+      sizes: { XS:{w:8,h:4}, S:{w:8,h:6}, M:{w:8,h:12}, L:{w:12,h:12}, XL:{w:24,h:12} },
       defaultSize: 'M',
       render: ({ weather, units, cellW, cellH, cfg }) => {
         if (!weather) {
@@ -220,7 +220,7 @@
         const showDesc   = h >= 4;
         const showStats  = h >= 6;
         const showAlert  = h >= 6;
-        const showExtras = h >= 12 && w >= 6;
+        const showExtras = h >= 12 && w >= 12;
         const iconSize   = h < 4 ? 60 : h < 8 ? 100 : 130;
 
         const hero = `
@@ -251,7 +251,7 @@
       id: 'weather_forecast',
       label: 'Weather Forecast',
       requires: 'weather',
-      sizes: { S:{w:3,h:8}, M:{w:3,h:12}, L:{w:6,h:12}, XL:{w:12,h:6} },
+      sizes: { S:{w:6,h:8}, M:{w:6,h:12}, L:{w:12,h:12}, XL:{w:24,h:6} },
       defaultSize: 'M',
       render: ({ weather, cellH, cfg }) => {
         if (!weather || !weather.forecast || !weather.forecast.length) {
@@ -285,7 +285,7 @@
       id: 'message',
       label: 'Custom Message',
       requires: 'message',
-      sizes: { XS:{w:4,h:3}, S:{w:4,h:4}, M:{w:5,h:4}, L:{w:12,h:4}, XL:{w:12,h:6} },
+      sizes: { XS:{w:8,h:3}, S:{w:8,h:4}, M:{w:10,h:4}, L:{w:24,h:4}, XL:{w:24,h:6} },
       defaultSize: 'M',
       render: ({ cfg, resolvedMessage, cellH }) => {
         const m = resolvedMessage || cfg.message;
@@ -306,7 +306,7 @@
       id: 'todos',
       label: 'To-Do List',
       requires: 'todos',
-      sizes: { S:{w:4,h:6}, M:{w:5,h:6}, L:{w:6,h:12}, XL:{w:12,h:12} },
+      sizes: { S:{w:8,h:6}, M:{w:10,h:6}, L:{w:12,h:12}, XL:{w:24,h:12} },
       defaultSize: 'M',
       render: ({ todos, cellH }) => {
         if (!todos || !todos.length) return placeholder('TODO', 'Add items in settings');
@@ -348,7 +348,7 @@
       id: 'calendar',
       label: 'Calendar',
       requires: 'calendar',
-      sizes: { S:{w:4,h:4}, M:{w:5,h:4}, L:{w:12,h:4}, XL:{w:12,h:8} },
+      sizes: { S:{w:8,h:4}, M:{w:10,h:4}, L:{w:24,h:4}, XL:{w:24,h:8} },
       defaultSize: 'M',
       render: ({ events, cfg, cellH }) => {
         const urls = (cfg.calendar && Array.isArray(cfg.calendar.icalUrls) && cfg.calendar.icalUrls.filter(Boolean).length)
@@ -406,7 +406,7 @@
       id: 'spacer',
       label: 'Black Bar',
       requires: 'spacer',
-      sizes: { XS:{w:12,h:1}, S:{w:12,h:2}, M:{w:6,h:2}, L:{w:4,h:12}, XL:{w:12,h:4} },
+      sizes: { XS:{w:24,h:1}, S:{w:24,h:2}, M:{w:12,h:2}, L:{w:8,h:12}, XL:{w:24,h:4} },
       defaultSize: 'S',
       render: ({ cfg }) => {
         const s = cfg.spacer || {};
@@ -419,7 +419,7 @@
       id: 'quote',
       label: 'Text / Quote',
       requires: 'quote',
-      sizes: { S:{w:4,h:4}, M:{w:6,h:6}, L:{w:12,h:6}, XL:{w:12,h:12} },
+      sizes: { S:{w:8,h:4}, M:{w:12,h:6}, L:{w:24,h:6}, XL:{w:24,h:12} },
       defaultSize: 'M',
       render: ({ cfg, resolvedQuote, cellH, cellW }) => {
         const q = resolvedQuote || cfg.quote || {};
@@ -433,7 +433,7 @@
         const cw = cellW || 0;
         const lengthBase = Math.max(14, Math.min(54, Math.round(560 / Math.max(8, body.length / 4))));
         const cellCap = ch < 3 ? 14 : ch < 5 ? 22 : ch < 8 ? 32 : ch < 12 ? 42 : 56;
-        const widthCap = cw < 5 ? 18 : cw < 8 ? 30 : 60;
+        const widthCap = cw < 10 ? 18 : cw < 16 ? 30 : 60;
         const finalSize = Math.min(lengthBase, cellCap, widthCap);
         const showAttr = attr && ch >= 4;
         return `
@@ -448,7 +448,7 @@
       id: 'clock',
       label: 'Clock',
       requires: 'clock',
-      sizes: { XS:{w:4,h:3}, S:{w:4,h:4}, M:{w:6,h:4}, L:{w:12,h:4}, XL:{w:12,h:6} },
+      sizes: { XS:{w:8,h:3}, S:{w:8,h:4}, M:{w:12,h:4}, L:{w:24,h:4}, XL:{w:24,h:6} },
       defaultSize: 'M',
       render: ({ cfg, clockNow, cellH, cellW }) => {
         const c = cfg.clock || {};
@@ -464,7 +464,7 @@
         const ch = cellH || 0;
         const cw = cellW || 0;
         const timeSize = ch < 4 ? 38 : ch < 5 ? 54 : ch < 7 ? 72 : 96;
-        const showDate = c.showDate !== false && ch >= 4 && cw >= 5;
+        const showDate = c.showDate !== false && ch >= 4 && cw >= 10;
         return `
           <div class="widget widget-clock">
             <div class="clock-time" style="font-size:${timeSize}px">${hh}:${mm}<span class="clock-ampm">${suffix}</span></div>
@@ -477,7 +477,7 @@
       id: 'wifi_qr',
       label: 'WiFi QR Code',
       requires: 'wifi',
-      sizes: { S:{w:3,h:6}, M:{w:4,h:8}, L:{w:6,h:12} },
+      sizes: { S:{w:6,h:6}, M:{w:8,h:8}, L:{w:12,h:12} },
       defaultSize: 'M',
       render: ({ cfg, wifiQrSvg, cellH, cellW }) => {
         const w = cfg.wifi || {};
@@ -485,7 +485,7 @@
         if (!wifiQrSvg) return placeholder('WIFI QR', 'QR generator not available');
         // Below ~6 rows the meta column gets too cramped — show QR only.
         const ch = cellH || 0, cw = cellW || 0;
-        const showMeta = ch >= 6 && cw >= 4;
+        const showMeta = ch >= 6 && cw >= 8;
         return `
           <div class="widget widget-wifi" style="${showMeta ? '' : 'justify-content:center'}">
             <div class="wifi-qr">${wifiQrSvg}</div>
@@ -503,7 +503,7 @@
       id: 'countdown',
       label: 'Countdown',
       requires: 'countdowns',
-      sizes: { S:{w:4,h:4}, M:{w:6,h:4}, L:{w:12,h:4} },
+      sizes: { S:{w:8,h:4}, M:{w:12,h:4}, L:{w:24,h:4} },
       defaultSize: 'M',
       render: ({ countdowns, cellH }) => {
         if (!countdowns || !countdowns.length) return placeholder('COUNTDOWN', 'Add a label + date in settings');
@@ -529,7 +529,7 @@
       id: 'aqi',
       label: 'Air Quality',
       requires: 'aqi',
-      sizes: { S:{w:4,h:4}, M:{w:4,h:6}, L:{w:6,h:6} },
+      sizes: { S:{w:8,h:4}, M:{w:8,h:6}, L:{w:12,h:6} },
       defaultSize: 'M',
       render: ({ aqi, cfg, cellH }) => {
         if (!aqi) {
@@ -561,7 +561,7 @@
       id: 'moonsun',
       label: 'Moon & Sun',
       requires: 'moonsun',
-      sizes: { S:{w:4,h:4}, M:{w:4,h:6}, L:{w:6,h:6} },
+      sizes: { S:{w:8,h:4}, M:{w:8,h:6}, L:{w:12,h:6} },
       defaultSize: 'M',
       render: ({ moonsun, cfg, cellH }) => {
         if (!moonsun) {
@@ -594,7 +594,7 @@
       id: 'news',
       label: 'News Headlines',
       requires: 'news',
-      sizes: { S:{w:6,h:6}, M:{w:6,h:12}, L:{w:12,h:12} },
+      sizes: { S:{w:12,h:6}, M:{w:12,h:12}, L:{w:24,h:12} },
       defaultSize: 'M',
       render: ({ news, cfg, cellH }) => {
         if (!cfg.news || !cfg.news.feedUrl) {
@@ -623,7 +623,7 @@
       id: 'stocks',
       label: 'Stocks / Crypto',
       requires: 'stocks',
-      sizes: { S:{w:4,h:4}, M:{w:6,h:6}, L:{w:12,h:6} },
+      sizes: { S:{w:8,h:4}, M:{w:12,h:6}, L:{w:24,h:6} },
       defaultSize: 'M',
       render: ({ stocks, cfg, cellH }) => {
         const syms = (cfg.stocks && cfg.stocks.symbols) || [];
@@ -652,7 +652,7 @@
       id: 'photo',
       label: 'Photo / Image',
       requires: 'photo',
-      sizes: { S:{w:4,h:6}, M:{w:6,h:12}, L:{w:12,h:12} },
+      sizes: { S:{w:8,h:6}, M:{w:12,h:12}, L:{w:24,h:12} },
       defaultSize: 'M',
       render: ({ cfg }) => {
         const p = cfg.photo || {};
@@ -669,7 +669,7 @@
       id: 'github',
       label: 'GitHub Activity',
       requires: 'github',
-      sizes: { S:{w:6,h:4}, M:{w:12,h:4}, L:{w:12,h:6} },
+      sizes: { S:{w:12,h:4}, M:{w:24,h:4}, L:{w:24,h:6} },
       defaultSize: 'M',
       render: ({ github, cfg, cellH, cellW }) => {
         if (!cfg.github || !cfg.github.user) {
@@ -706,11 +706,11 @@
   // Per-screen defaults — match control-src/widgets.js.
   const DEFAULT_LAYOUTS = {
     1: [
-      { id:'weather_hero',     x:0, y:0, size:'M', enabled:true },
-      { id:'weather_forecast', x:4, y:0, size:'M', enabled:true },
-      { id:'message',          x:7, y:0, size:'M', enabled:true },
-      { id:'todos',            x:7, y:4, size:'M', enabled:true },
-      { id:'calendar',         x:7, y:8, size:'M', enabled:false },
+      { id:'weather_hero',     x:0,  y:0, size:'M', enabled:true },
+      { id:'weather_forecast', x:8,  y:0, size:'M', enabled:true },
+      { id:'message',          x:14, y:0, size:'M', enabled:true },
+      { id:'todos',            x:14, y:4, size:'M', enabled:true },
+      { id:'calendar',         x:14, y:8, size:'M', enabled:false },
       { id:'spacer',           x:0, y:0, size:'S', enabled:false },
       { id:'quote',            x:0, y:0, size:'M', enabled:false }
     ],

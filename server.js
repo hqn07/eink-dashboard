@@ -267,7 +267,7 @@ const DEFAULT_CHROME = {
   }
 };
 
-const GRID_VERSION = 2;
+const GRID_VERSION = 3;
 function migrateLayoutV1ToV2(layout) {
   return (layout || []).map(l => ({
     ...l,
@@ -275,13 +275,20 @@ function migrateLayoutV1ToV2(layout) {
     h: (Number.isFinite(l.h) ? l.h : 0) * 2 || undefined
   }));
 }
+function migrateLayoutV2ToV3(layout) {
+  return (layout || []).map(l => ({
+    ...l,
+    x: (Number.isFinite(l.x) ? l.x : 0) * 2,
+    w: (Number.isFinite(l.w) ? l.w : 0) * 2 || undefined
+  }));
+}
 
 function migrateConfigToScreens(cfg) {
   if (Array.isArray(cfg.screens) && cfg.screens.length) {
     let screens = cfg.screens;
-    if ((cfg.gridVersion || 1) < 2) {
-      screens = screens.map(s => ({ ...s, layout: migrateLayoutV1ToV2(s.layout) }));
-    }
+    const v = cfg.gridVersion || 1;
+    if (v < 2) screens = screens.map(s => ({ ...s, layout: migrateLayoutV1ToV2(s.layout) }));
+    if (v < 3) screens = screens.map(s => ({ ...s, layout: migrateLayoutV2ToV3(s.layout) }));
     screens = screens.map(s => s.chrome
       ? s
       : { ...s, chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)) });
@@ -291,7 +298,7 @@ function migrateConfigToScreens(cfg) {
   const sched = cfg.schedule || {};
   const sActive = sched.active || {};
   const sQuiet  = sched.quiet  || {};
-  const migrateOld = (l) => migrateLayoutV1ToV2((l || []).map(it => ({ ...it })));
+  const migrateOld = (l) => migrateLayoutV2ToV3(migrateLayoutV1ToV2((l || []).map(it => ({ ...it }))));
   const screens = [];
   screens.push({
     id: newScreenId(),

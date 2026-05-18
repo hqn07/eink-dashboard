@@ -136,7 +136,7 @@ const RENDERERS = {
     const staleBadge = w.stale ? '<div class="stale-pill">CACHED</div>' : '';
     const showDesc   = ch >= 4;
     const showStats  = ch >= 6;
-    const showExtras = ch >= 12 && cw >= 6;
+    const showExtras = ch >= 12 && cw >= 12;
     const iconSize   = ch < 4 ? 60 : ch < 8 ? 100 : 110;
     const extras = showExtras ? `${sunBar(w)}${hourlyStrip(w)}` : '';
     const stats = showStats ? `
@@ -305,7 +305,7 @@ const RENDERERS = {
     const ch = cellH || 0, cw = cellW || 0;
     const lengthBase = Math.max(14, Math.min(54, Math.round(560 / Math.max(8, body.length / 4))));
     const cellCap = ch < 3 ? 14 : ch < 5 ? 22 : ch < 8 ? 32 : ch < 12 ? 42 : 56;
-    const widthCap = cw < 5 ? 18 : cw < 8 ? 30 : 60;
+    const widthCap = cw < 10 ? 18 : cw < 16 ? 30 : 60;
     const finalSize = Math.min(lengthBase, cellCap, widthCap);
     const showAttr = attr && ch >= 4;
     return `
@@ -328,7 +328,7 @@ const RENDERERS = {
     const ch = cellH || 0;
     const cw = cellW || 0;
     const timeSize = ch < 4 ? 38 : ch < 5 ? 54 : ch < 7 ? 72 : 96;
-    const showDate = c.showDate !== false && ch >= 4 && cw >= 5;
+    const showDate = c.showDate !== false && ch >= 4 && cw >= 10;
     return `
       <div class="widget widget-clock">
         <div class="clock-time" style="font-size:${timeSize}px">${hh}:${mm}<span class="clock-ampm">${suffix}</span></div>
@@ -341,7 +341,7 @@ const RENDERERS = {
     if (!w.ssid) return placeholder('WIFI QR', 'Enter WiFi SSID + password in settings');
     const qr = wifiQrSvg || '<div class="wifi-qr-placeholder">QR</div>';
     const ch = cellH || 0, cw = cellW || 0;
-    const showMeta = ch >= 6 && cw >= 4;
+    const showMeta = ch >= 6 && cw >= 8;
     return `
       <div class="widget widget-wifi" style="${showMeta ? '' : 'justify-content:center'}">
         <div class="wifi-qr">${qr}</div>
