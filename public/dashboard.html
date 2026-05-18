@@ -40,6 +40,20 @@
       .replace(/`(.+?)`/g, '<code>$1</code>');
   }
 
+  // Setup-needed placeholder. Used by widgets when required config is
+  // unset (e.g. no GitHub username, no photo uploaded). Renders a
+  // clearly-marked card so the user notices "this needs config" instead
+  // of the widget silently disappearing.
+  function placeholder(title, hint) {
+    return `
+      <div class="widget widget-placeholder">
+        <div class="ph-title">${title}</div>
+        <div class="ph-hint">${hint}</div>
+        <div class="ph-tag">SETUP NEEDED</div>
+      </div>
+    `;
+  }
+
   // Inject accent color as CSS variable, if set.
   if (cfg.accent) {
     document.documentElement.style.setProperty('--accent', cfg.accent);
@@ -183,8 +197,13 @@
       requires: 'weather',
       sizes: { S:{w:4,h:3}, M:{w:4,h:6}, L:{w:6,h:6}, XL:{w:12,h:6} },
       defaultSize: 'M',
-      render: ({ weather, units, cellW, cellH }) => {
-        if (!weather) return '';
+      render: ({ weather, units, cellW, cellH, cfg }) => {
+        if (!weather) {
+          if (!Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
+            return placeholder('WEATHER', 'Set your location in settings');
+          }
+          return placeholder('WEATHER', 'Data unavailable');
+        }
         const staleClass = weather.stale ? ' weather-stale' : '';
         const staleBadge = weather.stale ? '<div class="stale-pill">CACHED</div>' : '';
         // Extras only when there's vertical headroom + width.
@@ -217,8 +236,13 @@
       requires: 'weather',
       sizes: { S:{w:3,h:4}, M:{w:3,h:6}, L:{w:6,h:6}, XL:{w:12,h:3} },
       defaultSize: 'M',
-      render: ({ weather, cellH }) => {
-        if (!weather || !weather.forecast || !weather.forecast.length) return '';
+      render: ({ weather, cellH, cfg }) => {
+        if (!weather || !weather.forecast || !weather.forecast.length) {
+          if (!Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
+            return placeholder('FORECAST', 'Set your location in settings');
+          }
+          return placeholder('FORECAST', 'Data unavailable');
+        }
         // Number of days to render scales with vertical space.
         const max = (cellH || 0) >= 6 ? 7 : 3;
         const list = weather.forecast.slice(0, max);
@@ -247,7 +271,7 @@
       defaultSize: 'M',
       render: ({ cfg, resolvedMessage }) => {
         const m = resolvedMessage || cfg.message;
-        if (!m || !m.text) return '';
+        if (!m || !m.text) return placeholder('MESSAGE', 'Set a headline in settings');
         return `
           <div class="widget widget-msg">
             <div class="msg-text">${md(escapeHtml(m.text))}</div>
@@ -263,7 +287,7 @@
       sizes: { S:{w:4,h:3}, M:{w:5,h:3}, L:{w:6,h:6}, XL:{w:12,h:6} },
       defaultSize: 'M',
       render: ({ todos }) => {
-        if (!todos || !todos.length) return '';
+        if (!todos || !todos.length) return placeholder('TODO', 'Add items in settings');
         const today = (() => {
           const d = new Date();
           return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -298,8 +322,12 @@
       requires: 'calendar',
       sizes: { S:{w:4,h:2}, M:{w:5,h:2}, L:{w:12,h:2} },
       defaultSize: 'M',
-      render: ({ events }) => {
-        if (!events || !events.length) return '';
+      render: ({ events, cfg }) => {
+        const urls = (cfg.calendar && Array.isArray(cfg.calendar.icalUrls) && cfg.calendar.icalUrls.filter(Boolean).length)
+          ? cfg.calendar.icalUrls.filter(Boolean)
+          : (cfg.calendar && cfg.calendar.icalUrl ? [cfg.calendar.icalUrl] : []);
+        if (!urls.length) return placeholder('UPCOMING', 'Paste an iCal URL in settings');
+        if (!events || !events.length) return placeholder('UPCOMING', 'No events in the next 14 days');
         // Group by section. Limit total render to 6 to fit medium cell.
         const groups = {};
         const order = [];
@@ -349,7 +377,7 @@
       render: ({ cfg, resolvedQuote }) => {
         const q = resolvedQuote || cfg.quote || {};
         const body = (q.text || '').trim();
-        if (!body) return '';
+        if (!body) return placeholder('QUOTE', 'Add text or switch source in settings');
         const attr = (q.attribution || '').trim();
         const align = (q.align === 'left' || q.align === 'right') ? q.align : 'center';
         const baseSize = Math.max(14, Math.min(46, Math.round(420 / Math.max(8, body.length / 4))));
@@ -394,7 +422,8 @@
       defaultSize: 'M',
       render: ({ cfg, wifiQrSvg }) => {
         const w = cfg.wifi || {};
-        if (!w.ssid || !wifiQrSvg) return '';
+        if (!w.ssid) return placeholder('WIFI QR', 'Enter WiFi SSID + password in settings');
+        if (!wifiQrSvg) return placeholder('WIFI QR', 'QR generator not available');
         return `
           <div class="widget widget-wifi">
             <div class="wifi-qr">${wifiQrSvg}</div>
@@ -413,7 +442,7 @@
       sizes: { S:{w:4,h:2}, M:{w:6,h:2}, L:{w:12,h:2} },
       defaultSize: 'M',
       render: ({ countdowns }) => {
-        if (!countdowns || !countdowns.length) return '';
+        if (!countdowns || !countdowns.length) return placeholder('COUNTDOWN', 'Add a label + date in settings');
         return `
           <div class="widget widget-countdown">
             ${countdowns.slice(0, 3).map(c => `
@@ -435,8 +464,13 @@
       requires: 'aqi',
       sizes: { S:{w:4,h:2}, M:{w:4,h:3}, L:{w:6,h:3} },
       defaultSize: 'M',
-      render: ({ aqi }) => {
-        if (!aqi) return '';
+      render: ({ aqi, cfg }) => {
+        if (!aqi) {
+          if (!Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
+            return placeholder('AIR QUALITY', 'Set your location in settings');
+          }
+          return placeholder('AIR QUALITY', 'Data unavailable for this location');
+        }
         return `
           <div class="widget widget-aqi">
             <div class="widget-title">AIR QUALITY</div>
@@ -457,8 +491,13 @@
       requires: 'moonsun',
       sizes: { S:{w:4,h:2}, M:{w:4,h:3}, L:{w:6,h:3} },
       defaultSize: 'M',
-      render: ({ moonsun }) => {
-        if (!moonsun) return '';
+      render: ({ moonsun, cfg }) => {
+        if (!moonsun) {
+          if (!Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
+            return placeholder('MOON & SUN', 'Set your location in settings');
+          }
+          return placeholder('MOON & SUN', 'Data unavailable');
+        }
         return `
           <div class="widget widget-moonsun">
             <div class="widget-title">SKY</div>
@@ -483,8 +522,11 @@
       requires: 'news',
       sizes: { S:{w:6,h:3}, M:{w:6,h:6}, L:{w:12,h:6} },
       defaultSize: 'M',
-      render: ({ news }) => {
-        if (!news || !news.length) return '';
+      render: ({ news, cfg }) => {
+        if (!cfg.news || !cfg.news.feedUrl) {
+          return placeholder('NEWS HEADLINES', 'Paste an RSS or Atom feed URL in settings');
+        }
+        if (!news || !news.length) return placeholder('NEWS HEADLINES', 'Feed returned no items');
         return `
           <div class="widget widget-news">
             <div class="widget-title">HEADLINES</div>
@@ -506,8 +548,10 @@
       requires: 'stocks',
       sizes: { S:{w:4,h:2}, M:{w:6,h:3}, L:{w:12,h:3} },
       defaultSize: 'M',
-      render: ({ stocks }) => {
-        if (!stocks || !stocks.length) return '';
+      render: ({ stocks, cfg }) => {
+        const syms = (cfg.stocks && cfg.stocks.symbols) || [];
+        if (!syms.length) return placeholder('MARKETS', 'Add symbols (AAPL, BTC-USD) in settings');
+        if (!stocks || !stocks.length) return placeholder('MARKETS', 'Data unavailable — check symbols');
         return `
           <div class="widget widget-stocks">
             <div class="widget-title">MARKETS</div>
@@ -532,7 +576,7 @@
       defaultSize: 'M',
       render: ({ cfg }) => {
         const p = cfg.photo || {};
-        if (!p.dataUrl) return '';
+        if (!p.dataUrl) return placeholder('PHOTO', 'Upload an image in settings');
         const fit = p.fit === 'cover' ? 'cover' : 'contain';
         return `
           <div class="widget widget-photo">
@@ -547,8 +591,13 @@
       requires: 'github',
       sizes: { S:{w:6,h:2}, M:{w:12,h:2}, L:{w:12,h:3} },
       defaultSize: 'M',
-      render: ({ github }) => {
-        if (!github || !github.weeks || !github.weeks.length) return '';
+      render: ({ github, cfg }) => {
+        if (!cfg.github || !cfg.github.user) {
+          return placeholder('GITHUB', 'Enter a GitHub username in settings');
+        }
+        if (!github || !github.weeks || !github.weeks.length) {
+          return placeholder('GITHUB', 'Data unavailable for ' + escapeHtml(cfg.github.user));
+        }
         return `
           <div class="widget widget-github">
             <div class="widget-title">GITHUB · ${escapeHtml(github.user)} · ${github.total} CONTRIBUTIONS</div>

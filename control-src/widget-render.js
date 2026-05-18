@@ -17,6 +17,18 @@ function md(s) {
     .replace(/`(.+?)`/g, '<code>$1</code>');
 }
 
+// Setup-needed placeholder. Matches dashboard.html so what you see in the
+// editor previews matches what'll actually render on the device.
+function placeholder(title, hint) {
+  return `
+    <div class="widget widget-placeholder">
+      <div class="ph-title">${title}</div>
+      <div class="ph-hint">${hint}</div>
+      <div class="ph-tag">SETUP NEEDED</div>
+    </div>
+  `;
+}
+
 const ICONS = {
   Clear: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="22" fill="#000"/>
     ${Array.from({length:8}, (_,i)=>{
@@ -279,9 +291,7 @@ const RENDERERS = {
   },
   wifi_qr: ({ cfg, wifiQrSvg }) => {
     const w = (cfg && cfg.wifi) || {};
-    if (!w.ssid) {
-      return `<div class="widget widget-wifi"><div class="wifi-meta"><div class="wifi-ssid">SET WIFI IN SETTINGS</div></div></div>`;
-    }
+    if (!w.ssid) return placeholder('WIFI QR', 'Enter WiFi SSID + password in settings');
     const qr = wifiQrSvg || '<div class="wifi-qr-placeholder">QR</div>';
     return `
       <div class="widget widget-wifi">
@@ -295,7 +305,7 @@ const RENDERERS = {
   },
   countdown: ({ countdowns }) => {
     const list = countdowns || [];
-    if (!list.length) return `<div class="widget widget-countdown"><div class="cd-label">ADD A COUNTDOWN</div></div>`;
+    if (!list.length) return placeholder('COUNTDOWN', 'Add a label + date in settings');
     return `
       <div class="widget widget-countdown">
         ${list.slice(0, 3).map(c => `
@@ -310,8 +320,13 @@ const RENDERERS = {
       </div>
     `;
   },
-  aqi: ({ aqi }) => {
-    if (!aqi) return `<div class="widget widget-aqi"><div class="widget-title">AIR QUALITY</div><div class="aqi-num">--</div><div class="aqi-cat">NO LOCATION</div></div>`;
+  aqi: ({ aqi, cfg }) => {
+    if (!aqi) {
+      if (!cfg || !Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
+        return placeholder('AIR QUALITY', 'Set your location in settings');
+      }
+      return placeholder('AIR QUALITY', 'Data unavailable for this location');
+    }
     return `
       <div class="widget widget-aqi">
         <div class="widget-title">AIR QUALITY</div>
@@ -325,8 +340,13 @@ const RENDERERS = {
       </div>
     `;
   },
-  moonsun: ({ moonsun }) => {
-    if (!moonsun) return `<div class="widget widget-moonsun"><div class="widget-title">SKY</div><div class="moon-phase">—</div></div>`;
+  moonsun: ({ moonsun, cfg }) => {
+    if (!moonsun) {
+      if (!cfg || !Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
+        return placeholder('MOON & SUN', 'Set your location in settings');
+      }
+      return placeholder('MOON & SUN', 'Data unavailable');
+    }
     return `
       <div class="widget widget-moonsun">
         <div class="widget-title">SKY</div>
@@ -344,9 +364,12 @@ const RENDERERS = {
       </div>
     `;
   },
-  news: ({ news }) => {
+  news: ({ news, cfg }) => {
+    if (!cfg || !cfg.news || !cfg.news.feedUrl) {
+      return placeholder('NEWS HEADLINES', 'Paste an RSS or Atom feed URL in settings');
+    }
     const list = news || [];
-    if (!list.length) return `<div class="widget widget-news"><div class="widget-title">HEADLINES</div><div class="news-source">SET RSS URL IN SETTINGS</div></div>`;
+    if (!list.length) return placeholder('NEWS HEADLINES', 'Feed returned no items');
     return `
       <div class="widget widget-news">
         <div class="widget-title">HEADLINES</div>
@@ -361,9 +384,11 @@ const RENDERERS = {
       </div>
     `;
   },
-  stocks: ({ stocks }) => {
+  stocks: ({ stocks, cfg }) => {
+    const syms = (cfg && cfg.stocks && cfg.stocks.symbols) || [];
+    if (!syms.length) return placeholder('MARKETS', 'Add symbols (AAPL, BTC-USD) in settings');
     const list = stocks || [];
-    if (!list.length) return `<div class="widget widget-stocks"><div class="widget-title">MARKETS</div><div class="news-source">ADD SYMBOLS IN SETTINGS</div></div>`;
+    if (!list.length) return placeholder('MARKETS', 'Data unavailable — check symbols');
     return `
       <div class="widget widget-stocks">
         <div class="widget-title">MARKETS</div>
@@ -381,13 +406,16 @@ const RENDERERS = {
   },
   photo: ({ cfg }) => {
     const p = (cfg && cfg.photo) || {};
-    if (!p.dataUrl) return `<div class="widget widget-photo"><div class="news-source" style="padding:14px">UPLOAD PHOTO IN SETTINGS</div></div>`;
+    if (!p.dataUrl) return placeholder('PHOTO', 'Upload an image in settings');
     const fit = p.fit === 'cover' ? 'cover' : 'contain';
     return `<div class="widget widget-photo"><img src="${p.dataUrl}" style="object-fit:${fit}" alt="" /></div>`;
   },
-  github: ({ github }) => {
+  github: ({ github, cfg }) => {
+    if (!cfg || !cfg.github || !cfg.github.user) {
+      return placeholder('GITHUB', 'Enter a GitHub username in settings');
+    }
     if (!github || !github.weeks || !github.weeks.length) {
-      return `<div class="widget widget-github"><div class="widget-title">GITHUB</div><div class="news-source">SET USERNAME IN SETTINGS</div></div>`;
+      return placeholder('GITHUB', 'Data unavailable for ' + escapeHtml(cfg.github.user));
     }
     return `
       <div class="widget widget-github">
