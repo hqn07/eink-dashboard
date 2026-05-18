@@ -152,6 +152,11 @@ export default function App() {
     ? { ...previewData, cfg, layout: editScreen ? editScreen.layout : [], chrome: editScreen ? editScreen.chrome : null }
     : { cfg, weather: null, events: [], units: (editScreen && editScreen.units) || 'F', layout: editScreen ? editScreen.layout : [], chrome: editScreen ? editScreen.chrome : null };
 
+  // Data for the non-edit preview — uses the SCHEDULED-active screen.
+  const liveDashData = previewData
+    ? { ...previewData, cfg, layout: liveScreen ? liveScreen.layout : [], chrome: liveScreen ? liveScreen.chrome : null }
+    : { cfg, weather: null, events: [], units: (liveScreen && liveScreen.units) || 'F', layout: liveScreen ? liveScreen.layout : [], chrome: liveScreen ? liveScreen.chrome : null };
+
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(null), 1800);
@@ -360,7 +365,7 @@ export default function App() {
         {!editMode && (
           <div className="preview-stage">
             <Preview
-              screen={liveScreen ? liveScreen.id : ''}
+              data={liveDashData}
               cacheKey={`${previewKey}-${nowTick}`}
               onRefresh={refreshPreview}
             />

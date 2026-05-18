@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
+import LiveDashboard from './LiveDashboard.jsx';
 
-// Live preview: render the actual /dashboard HTML inside an iframe scaled
-// to fit our preview frame. This way the time / weather data in the
-// preview is always current, instead of showing whatever moment the
-// last screenshot was taken at.
+// Live preview: renders the dashboard directly as React (no iframe). The
+// 800×480 canvas sits inside a responsive frame and is visually scaled
+// via CSS transform to fit the parent's width while preserving aspect.
 //
-// The ESP32 still fetches /display.png — the iframe is only for the
-// control panel's WYSIWYG view.
-export default function Preview({ screen, cacheKey, onRefresh }) {
+// Because this is rendered with the same widget-render mirror the editor
+// uses, the preview reflects unsaved cfg changes instantly — no Puppeteer
+// round-trip, no iframe reload.
+export default function Preview({ data, cacheKey, onRefresh }) {
   const wrapRef = useRef(null);
   const [scale, setScale] = useState(1);
 
@@ -23,27 +24,27 @@ export default function Preview({ screen, cacheKey, onRefresh }) {
     return () => ro.disconnect();
   }, []);
 
-  // Reload the iframe when the parent asks for a refresh.
-  const src = `/dashboard?screen=${screen}&_=${cacheKey}`;
-
   return (
     <>
       <div className="preview-frame" ref={wrapRef}>
-        <iframe
-          key={src}
-          title="dashboard preview"
-          src={src}
+        <div
+          className="preview-canvas"
           style={{
             width: 800,
             height: 480,
-            border: 0,
             transform: `scale(${scale})`,
-            transformOrigin: 'top left'
+            transformOrigin: 'top left',
+            position: 'absolute',
+            top: 0,
+            left: 0
           }}
-        />
+          key={cacheKey}
+        >
+          <LiveDashboard data={data} />
+        </div>
       </div>
       <div className="preview-meta">
-        <span>LIVE PREVIEW · 800×480</span>
+        <span>LIVE PREVIEW · 800×480 · REACT</span>
         <button
           className="btn"
           onClick={onRefresh}
