@@ -271,6 +271,10 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
           resizeHandles={['se', 'sw', 'nw']}
           margin={[MARGIN, MARGIN]}
           containerPadding={[PAD, PAD]}
+          style={{
+            top: `${(HEADER_H / DASH_H) * 100}%`,
+            bottom: `${(FOOTER_H / DASH_H) * 100}%`
+          }}
           layout={rglLayout}
           onLayoutChange={handleLayoutChange}
           onDrag={onTileDrag}

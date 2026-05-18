@@ -490,11 +490,8 @@ input[type="text"], input[type="url"], textarea {
 }
 .editor-wrap .react-grid-layout {
   position: absolute;
-  /* Inset the RGL grid by the dashboard header / footer heights so
-   * widget tiles align 1:1 with the body area of the live dashboard.
-   * 60/480 = 12.5% from top; 28/480 ≈ 5.83% from bottom. */
-  top: 12.5%;
-  bottom: 5.83%;
+  /* Top/bottom inset are set inline by EditorGrid from the active
+   * screen's chrome state (60px header / 28px footer in dashboard pixels). */
   left: 0;
   right: 0;
   width: 100% !important;
