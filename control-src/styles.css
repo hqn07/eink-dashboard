@@ -675,6 +675,35 @@ input[type="text"], input[type="url"], textarea {
   padding: 2px 6px;
   letter-spacing: 2px;
 }
+.palette.collapsed { padding: 0; border: none; background: transparent; }
+.palette-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--ink);
+  color: var(--bg);
+  border: 2px solid var(--ink);
+  padding: 10px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.palette-toggle:hover { background: #000; }
+.palette-toggle .badge {
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 9px;
+  padding: 2px 6px;
+  letter-spacing: 2px;
+}
+.palette.open .palette-toggle {
+  margin-bottom: 12px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
 .palette-search {
   flex: 1;
   margin: 0 12px;

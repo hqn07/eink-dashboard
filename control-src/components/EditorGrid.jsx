@@ -48,6 +48,9 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
   // All items in `layout` are on the canvas (no more enabled flag).
   // Filter for the pool — narrows the list of templates by label.
   const [poolFilter, setPoolFilter] = useState('');
+  // Pool collapsed by default — saves vertical real estate now that the
+  // editor canvas is always visible (no more separate edit mode).
+  const [poolOpen, setPoolOpen] = useState(false);
 
   // Auto-scroll the page while a pool widget is being dragged near the
   // viewport edges. This is what lets the user grab a card and drop it
@@ -388,23 +391,33 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
         <span>&gt; DRAG TILE HERE TO REMOVE</span>
       </div>
 
-      <div className="palette">
-        <div className="palette-title">
-          <span>Widget Pool</span>
-          <input
-            type="text"
-            className="palette-search"
-            value={poolFilter}
-            onChange={e => setPoolFilter(e.target.value)}
-            placeholder="Search widgets…"
-          />
-          <span className="badge">{palette.length}</span>
-        </div>
-        {palette.length === 0 && (
+      <div className={`palette ${poolOpen ? 'open' : 'collapsed'}`}>
+        <button
+          className="palette-toggle"
+          onClick={() => setPoolOpen(o => !o)}
+        >
+          <span>{poolOpen ? '▾' : '▸'} {poolOpen ? 'HIDE WIDGET POOL' : '+ ADD WIDGET'}</span>
+          <span className="badge">{WIDGET_REGISTRY.length}</span>
+        </button>
+        {poolOpen && (
+          <div className="palette-title">
+            <input
+              type="text"
+              className="palette-search"
+              value={poolFilter}
+              onChange={e => setPoolFilter(e.target.value)}
+              placeholder="Search widgets…"
+              autoFocus
+            />
+            <span className="badge">{palette.length}</span>
+          </div>
+        )}
+        {poolOpen && palette.length === 0 && (
           <div className="terminal-line" style={{ padding: 12 }}>
             &gt; NO WIDGETS MATCH "{poolFilter}"
           </div>
         )}
+        {poolOpen && (
         <div className="palette-grid">
           {palette.map(def => {
             const sizeKey = smallestSizeKey(def);
@@ -447,6 +460,7 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
             );
           })}
         </div>
+        )}
       </div>
     </div>
   );

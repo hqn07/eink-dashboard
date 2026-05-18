@@ -34,12 +34,11 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested, focusedW
     ref: (el) => { refs.current[id] = el; },
     className: `card ${flashId === id ? 'card-flash' : ''}`
   });
-  const isOn = (id) => {
-    if (layout.some(l => (l.widgetId || l.id) === id)) return true;
-    const def = WIDGET_REGISTRY.find(w => w.id === id);
-    if (!def) return false;
-    return !!(cfg.widgets && cfg.widgets[def.requires]);
-  };
+  // A settings section only appears when at least one instance of that
+  // widget sits on the active screen's layout. The legacy cfg.widgets[]
+  // toggles are ignored here — they were a leftover from the pre-screens
+  // shape and would surface sections for widgets that aren't placed.
+  const isOn = (id) => layout.some(l => (l.widgetId || l.id) === id);
 
   const showMessage   = isOn('message');
   const showTodos     = isOn('todos');
