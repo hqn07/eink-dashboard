@@ -67,7 +67,7 @@
 
   // ============ GRID CONFIG ============
   const GRID_COLS = 12;
-  const GRID_ROWS = 6;
+  const GRID_ROWS = 12;
 
   function el(tag, cls, html) {
     const e = document.createElement(tag);
@@ -199,7 +199,7 @@
       id: 'weather_hero',
       label: 'Weather (current)',
       requires: 'weather',
-      sizes: { S:{w:4,h:3}, M:{w:4,h:6}, L:{w:6,h:6}, XL:{w:12,h:6} },
+      sizes: { XS:{w:4,h:4}, S:{w:4,h:6}, M:{w:4,h:12}, L:{w:6,h:12}, XL:{w:12,h:12} },
       defaultSize: 'M',
       render: ({ weather, units, cellW, cellH, cfg }) => {
         if (!weather) {
@@ -211,7 +211,7 @@
         const staleClass = weather.stale ? ' weather-stale' : '';
         const staleBadge = weather.stale ? '<div class="stale-pill">CACHED</div>' : '';
         // Extras only when there's vertical headroom + width.
-        const hasRoom = (cellH || 0) >= 6 && (cellW || 0) >= 6;
+        const hasRoom = (cellH || 0) >= 12 && (cellW || 0) >= 6;
         const extras = hasRoom ? `${sunBar(weather)}${hourlyStrip(weather)}` : '';
         return `
           <div class="weather-hero${staleClass}">
@@ -238,7 +238,7 @@
       id: 'weather_forecast',
       label: 'Weather Forecast',
       requires: 'weather',
-      sizes: { S:{w:3,h:4}, M:{w:3,h:6}, L:{w:6,h:6}, XL:{w:12,h:3} },
+      sizes: { S:{w:3,h:8}, M:{w:3,h:12}, L:{w:6,h:12}, XL:{w:12,h:6} },
       defaultSize: 'M',
       render: ({ weather, cellH, cfg }) => {
         if (!weather || !weather.forecast || !weather.forecast.length) {
@@ -249,7 +249,7 @@
         }
         // Number of days to render scales with vertical space.
         // Cap at 5 even at h=6 so SAT doesn't clip in a 392/452px cell.
-        const max = (cellH || 0) >= 6 ? 5 : 3;
+        const max = (cellH || 0) >= 12 ? 5 : 3;
         const list = weather.forecast.slice(0, max);
         return `
           <div class="col-title">${list.length}-DAY OUTLOOK</div>
@@ -272,7 +272,7 @@
       id: 'message',
       label: 'Custom Message',
       requires: 'message',
-      sizes: { S:{w:4,h:2}, M:{w:5,h:2}, L:{w:12,h:2}, XL:{w:12,h:3} },
+      sizes: { XS:{w:4,h:3}, S:{w:4,h:4}, M:{w:5,h:4}, L:{w:12,h:4}, XL:{w:12,h:6} },
       defaultSize: 'M',
       render: ({ cfg, resolvedMessage }) => {
         const m = resolvedMessage || cfg.message;
@@ -289,7 +289,7 @@
       id: 'todos',
       label: 'To-Do List',
       requires: 'todos',
-      sizes: { S:{w:4,h:3}, M:{w:5,h:3}, L:{w:6,h:6}, XL:{w:12,h:6} },
+      sizes: { S:{w:4,h:6}, M:{w:5,h:6}, L:{w:6,h:12}, XL:{w:12,h:12} },
       defaultSize: 'M',
       render: ({ todos }) => {
         if (!todos || !todos.length) return placeholder('TODO', 'Add items in settings');
@@ -325,7 +325,7 @@
       id: 'calendar',
       label: 'Calendar',
       requires: 'calendar',
-      sizes: { S:{w:4,h:2}, M:{w:5,h:2}, L:{w:12,h:2} },
+      sizes: { S:{w:4,h:4}, M:{w:5,h:4}, L:{w:12,h:4}, XL:{w:12,h:8} },
       defaultSize: 'M',
       render: ({ events, cfg }) => {
         const urls = (cfg.calendar && Array.isArray(cfg.calendar.icalUrls) && cfg.calendar.icalUrls.filter(Boolean).length)
@@ -364,7 +364,7 @@
       id: 'spacer',
       label: 'Black Bar',
       requires: 'spacer',
-      sizes: { S:{w:12,h:1}, M:{w:6,h:1}, L:{w:4,h:6}, XL:{w:12,h:2} },
+      sizes: { XS:{w:12,h:1}, S:{w:12,h:2}, M:{w:6,h:2}, L:{w:4,h:12}, XL:{w:12,h:4} },
       defaultSize: 'S',
       render: ({ cfg }) => {
         const s = cfg.spacer || {};
@@ -377,7 +377,7 @@
       id: 'quote',
       label: 'Text / Quote',
       requires: 'quote',
-      sizes: { S:{w:4,h:2}, M:{w:6,h:3}, L:{w:12,h:3}, XL:{w:12,h:6} },
+      sizes: { S:{w:4,h:4}, M:{w:6,h:6}, L:{w:12,h:6}, XL:{w:12,h:12} },
       defaultSize: 'M',
       render: ({ cfg, resolvedQuote }) => {
         const q = resolvedQuote || cfg.quote || {};
@@ -398,7 +398,7 @@
       id: 'clock',
       label: 'Clock',
       requires: 'clock',
-      sizes: { S:{w:4,h:2}, M:{w:6,h:2}, L:{w:12,h:2}, XL:{w:12,h:3} },
+      sizes: { XS:{w:4,h:3}, S:{w:4,h:4}, M:{w:6,h:4}, L:{w:12,h:4}, XL:{w:12,h:6} },
       defaultSize: 'M',
       render: ({ cfg, clockNow }) => {
         const c = cfg.clock || {};
@@ -422,7 +422,7 @@
       id: 'wifi_qr',
       label: 'WiFi QR Code',
       requires: 'wifi',
-      sizes: { S:{w:3,h:3}, M:{w:4,h:4}, L:{w:6,h:6} },
+      sizes: { S:{w:3,h:6}, M:{w:4,h:8}, L:{w:6,h:12} },
       defaultSize: 'M',
       render: ({ cfg, wifiQrSvg }) => {
         const w = cfg.wifi || {};
@@ -443,7 +443,7 @@
       id: 'countdown',
       label: 'Countdown',
       requires: 'countdowns',
-      sizes: { S:{w:4,h:2}, M:{w:6,h:2}, L:{w:12,h:2} },
+      sizes: { S:{w:4,h:4}, M:{w:6,h:4}, L:{w:12,h:4} },
       defaultSize: 'M',
       render: ({ countdowns }) => {
         if (!countdowns || !countdowns.length) return placeholder('COUNTDOWN', 'Add a label + date in settings');
@@ -466,7 +466,7 @@
       id: 'aqi',
       label: 'Air Quality',
       requires: 'aqi',
-      sizes: { S:{w:4,h:2}, M:{w:4,h:3}, L:{w:6,h:3} },
+      sizes: { S:{w:4,h:4}, M:{w:4,h:6}, L:{w:6,h:6} },
       defaultSize: 'M',
       render: ({ aqi, cfg }) => {
         if (!aqi) {
@@ -493,7 +493,7 @@
       id: 'moonsun',
       label: 'Moon & Sun',
       requires: 'moonsun',
-      sizes: { S:{w:4,h:2}, M:{w:4,h:3}, L:{w:6,h:3} },
+      sizes: { S:{w:4,h:4}, M:{w:4,h:6}, L:{w:6,h:6} },
       defaultSize: 'M',
       render: ({ moonsun, cfg }) => {
         if (!moonsun) {
@@ -524,7 +524,7 @@
       id: 'news',
       label: 'News Headlines',
       requires: 'news',
-      sizes: { S:{w:6,h:3}, M:{w:6,h:6}, L:{w:12,h:6} },
+      sizes: { S:{w:6,h:6}, M:{w:6,h:12}, L:{w:12,h:12} },
       defaultSize: 'M',
       render: ({ news, cfg }) => {
         if (!cfg.news || !cfg.news.feedUrl) {
@@ -550,7 +550,7 @@
       id: 'stocks',
       label: 'Stocks / Crypto',
       requires: 'stocks',
-      sizes: { S:{w:4,h:2}, M:{w:6,h:3}, L:{w:12,h:3} },
+      sizes: { S:{w:4,h:4}, M:{w:6,h:6}, L:{w:12,h:6} },
       defaultSize: 'M',
       render: ({ stocks, cfg }) => {
         const syms = (cfg.stocks && cfg.stocks.symbols) || [];
@@ -576,7 +576,7 @@
       id: 'photo',
       label: 'Photo / Image',
       requires: 'photo',
-      sizes: { S:{w:4,h:3}, M:{w:6,h:6}, L:{w:12,h:6} },
+      sizes: { S:{w:4,h:6}, M:{w:6,h:12}, L:{w:12,h:12} },
       defaultSize: 'M',
       render: ({ cfg }) => {
         const p = cfg.photo || {};
@@ -593,7 +593,7 @@
       id: 'github',
       label: 'GitHub Activity',
       requires: 'github',
-      sizes: { S:{w:6,h:2}, M:{w:12,h:2}, L:{w:12,h:3} },
+      sizes: { S:{w:6,h:4}, M:{w:12,h:4}, L:{w:12,h:6} },
       defaultSize: 'M',
       render: ({ github, cfg }) => {
         if (!cfg.github || !cfg.github.user) {
@@ -628,8 +628,8 @@
       { id:'weather_hero',     x:0, y:0, size:'M', enabled:true },
       { id:'weather_forecast', x:4, y:0, size:'M', enabled:true },
       { id:'message',          x:7, y:0, size:'M', enabled:true },
-      { id:'todos',            x:7, y:2, size:'M', enabled:true },
-      { id:'calendar',         x:7, y:4, size:'M', enabled:false },
+      { id:'todos',            x:7, y:4, size:'M', enabled:true },
+      { id:'calendar',         x:7, y:8, size:'M', enabled:false },
       { id:'spacer',           x:0, y:0, size:'S', enabled:false },
       { id:'quote',            x:0, y:0, size:'M', enabled:false }
     ],

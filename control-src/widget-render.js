@@ -130,7 +130,7 @@ const RENDERERS = {
     const w = weather || fakeWeather(units);
     const staleClass = w.stale ? ' weather-stale' : '';
     const staleBadge = w.stale ? '<div class="stale-pill">CACHED</div>' : '';
-    const hasRoom = (cellH || 0) >= 6 && (cellW || 0) >= 6;
+    const hasRoom = (cellH || 0) >= 12 && (cellW || 0) >= 6;
     const extras = hasRoom ? `${sunBar(w)}${hourlyStrip(w)}` : '';
     return `
       <div class="weather-hero${staleClass}">
@@ -156,7 +156,7 @@ const RENDERERS = {
     if (!w || !w.forecast || !w.forecast.length) {
       return `<div class="col-title">FORECAST</div><div class="empty" style="border:0;padding:14px 0">NO DATA</div>`;
     }
-    const max = (cellH || 0) >= 6 ? 5 : 3;
+    const max = (cellH || 0) >= 12 ? 5 : 3;
     const list = w.forecast.slice(0, max);
     return `
       <div class="col-title">${list.length}-DAY OUTLOOK</div>

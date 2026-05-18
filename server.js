@@ -267,18 +267,31 @@ const DEFAULT_CHROME = {
   }
 };
 
+const GRID_VERSION = 2;
+function migrateLayoutV1ToV2(layout) {
+  return (layout || []).map(l => ({
+    ...l,
+    y: (Number.isFinite(l.y) ? l.y : 0) * 2,
+    h: (Number.isFinite(l.h) ? l.h : 0) * 2 || undefined
+  }));
+}
+
 function migrateConfigToScreens(cfg) {
   if (Array.isArray(cfg.screens) && cfg.screens.length) {
-    // Backfill chrome on existing screens that pre-date this feature.
-    const screens = cfg.screens.map(s => s.chrome
+    let screens = cfg.screens;
+    if ((cfg.gridVersion || 1) < 2) {
+      screens = screens.map(s => ({ ...s, layout: migrateLayoutV1ToV2(s.layout) }));
+    }
+    screens = screens.map(s => s.chrome
       ? s
       : { ...s, chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)) });
-    return { ...cfg, screens };
+    return { ...cfg, screens, gridVersion: GRID_VERSION };
   }
   const oldLayouts = cfg.layouts || (Array.isArray(cfg.layout) ? { 1: cfg.layout } : { 1: [] });
   const sched = cfg.schedule || {};
   const sActive = sched.active || {};
   const sQuiet  = sched.quiet  || {};
+  const migrateOld = (l) => migrateLayoutV1ToV2((l || []).map(it => ({ ...it })));
   const screens = [];
   screens.push({
     id: newScreenId(),
@@ -290,7 +303,7 @@ function migrateConfigToScreens(cfg) {
     units: cfg.units || 'F',
     refreshMinutes: sActive.refreshMinutes || cfg.refreshMinutes || 30,
     chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)),
-    layout: (oldLayouts[1] || []).map(l => ({ ...l }))
+    layout: migrateOld(oldLayouts[1])
   });
   if (oldLayouts[2] && oldLayouts[2].length) {
     screens.push({
@@ -303,10 +316,10 @@ function migrateConfigToScreens(cfg) {
       units: cfg.units || 'F',
       refreshMinutes: sQuiet.refreshMinutes || 120,
       chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)),
-      layout: (oldLayouts[2] || []).map(l => ({ ...l }))
+      layout: migrateOld(oldLayouts[2])
     });
   }
-  return { ...cfg, screens };
+  return { ...cfg, screens, gridVersion: GRID_VERSION };
 }
 
 // Returns the active screen for the given cfg + current time. Falls

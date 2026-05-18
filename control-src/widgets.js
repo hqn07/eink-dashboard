@@ -4,19 +4,25 @@
 // rather than dragging arbitrary corners.
 
 export const GRID_COLS = 12;
-export const GRID_ROWS = 6;
+export const GRID_ROWS = 12;
+// Bump this whenever the grid resolution changes so old saved configs
+// can be migrated. v1 = 12x6 (Apr 2026 → May 2026), v2 = 12x12 (this).
+export const GRID_VERSION = 2;
 export const SCREENS = [1, 2];
 
+// Sizes are in 12x12 grid units. A row = ~32px at full 480px height (or
+// ~37px when chrome is off). Heights doubled vs the original 12x6 grid.
 export const WIDGET_REGISTRY = [
   {
     id: 'weather_hero',
     label: 'Weather · Current',
     requires: 'weather',
     sizes: {
-      S:  { w: 4, h: 3 },
-      M:  { w: 4, h: 6 },
-      L:  { w: 6, h: 6 },
-      XL: { w: 12, h: 6 }
+      XS: { w: 4, h: 4 },
+      S:  { w: 4, h: 6 },
+      M:  { w: 4, h: 12 },
+      L:  { w: 6, h: 12 },
+      XL: { w: 12, h: 12 }
     },
     defaultSize: 'M'
   },
@@ -25,10 +31,10 @@ export const WIDGET_REGISTRY = [
     label: 'Weather · Forecast',
     requires: 'weather',
     sizes: {
-      S: { w: 3, h: 4 },
-      M: { w: 3, h: 6 },
-      L: { w: 6, h: 6 },
-      XL: { w: 12, h: 3 }
+      S:  { w: 3, h: 8 },
+      M:  { w: 3, h: 12 },
+      L:  { w: 6, h: 12 },
+      XL: { w: 12, h: 6 }
     },
     defaultSize: 'M'
   },
@@ -37,10 +43,11 @@ export const WIDGET_REGISTRY = [
     label: 'Custom Message',
     requires: 'message',
     sizes: {
-      S:  { w: 4, h: 2 },
-      M:  { w: 5, h: 2 },
-      L:  { w: 12, h: 2 },
-      XL: { w: 12, h: 3 }
+      XS: { w: 4, h: 3 },
+      S:  { w: 4, h: 4 },
+      M:  { w: 5, h: 4 },
+      L:  { w: 12, h: 4 },
+      XL: { w: 12, h: 6 }
     },
     defaultSize: 'M'
   },
@@ -49,10 +56,10 @@ export const WIDGET_REGISTRY = [
     label: 'To-Do List',
     requires: 'todos',
     sizes: {
-      S:  { w: 4, h: 3 },
-      M:  { w: 5, h: 3 },
-      L:  { w: 6, h: 6 },
-      XL: { w: 12, h: 6 }
+      S:  { w: 4, h: 6 },
+      M:  { w: 5, h: 6 },
+      L:  { w: 6, h: 12 },
+      XL: { w: 12, h: 12 }
     },
     defaultSize: 'M'
   },
@@ -61,9 +68,10 @@ export const WIDGET_REGISTRY = [
     label: 'Calendar',
     requires: 'calendar',
     sizes: {
-      S: { w: 4, h: 2 },
-      M: { w: 5, h: 2 },
-      L: { w: 12, h: 2 }
+      S: { w: 4, h: 4 },
+      M: { w: 5, h: 4 },
+      L: { w: 12, h: 4 },
+      XL: { w: 12, h: 8 }
     },
     defaultSize: 'M'
   },
@@ -72,10 +80,11 @@ export const WIDGET_REGISTRY = [
     label: 'Black Bar',
     requires: 'spacer',
     sizes: {
-      S:  { w: 12, h: 1 },
-      M:  { w: 6,  h: 1 },
-      L:  { w: 4,  h: 6 },
-      XL: { w: 12, h: 2 }
+      XS: { w: 12, h: 1 },
+      S:  { w: 12, h: 2 },
+      M:  { w: 6,  h: 2 },
+      L:  { w: 4,  h: 12 },
+      XL: { w: 12, h: 4 }
     },
     defaultSize: 'S'
   },
@@ -84,10 +93,10 @@ export const WIDGET_REGISTRY = [
     label: 'Text / Quote',
     requires: 'quote',
     sizes: {
-      S:  { w: 4, h: 2 },
-      M:  { w: 6, h: 3 },
-      L:  { w: 12, h: 3 },
-      XL: { w: 12, h: 6 }
+      S:  { w: 4, h: 4 },
+      M:  { w: 6, h: 6 },
+      L:  { w: 12, h: 6 },
+      XL: { w: 12, h: 12 }
     },
     defaultSize: 'M'
   },
@@ -96,10 +105,11 @@ export const WIDGET_REGISTRY = [
     label: 'Clock',
     requires: 'clock',
     sizes: {
-      S:  { w: 4, h: 2 },
-      M:  { w: 6, h: 2 },
-      L:  { w: 12, h: 2 },
-      XL: { w: 12, h: 3 }
+      XS: { w: 4, h: 3 },
+      S:  { w: 4, h: 4 },
+      M:  { w: 6, h: 4 },
+      L:  { w: 12, h: 4 },
+      XL: { w: 12, h: 6 }
     },
     defaultSize: 'M'
   },
@@ -108,9 +118,9 @@ export const WIDGET_REGISTRY = [
     label: 'WiFi QR Code',
     requires: 'wifi',
     sizes: {
-      S: { w: 3, h: 3 },
-      M: { w: 4, h: 4 },
-      L: { w: 6, h: 6 }
+      S: { w: 3, h: 6 },
+      M: { w: 4, h: 8 },
+      L: { w: 6, h: 12 }
     },
     defaultSize: 'M'
   },
@@ -119,9 +129,9 @@ export const WIDGET_REGISTRY = [
     label: 'Countdown',
     requires: 'countdowns',
     sizes: {
-      S: { w: 4, h: 2 },
-      M: { w: 6, h: 2 },
-      L: { w: 12, h: 2 }
+      S: { w: 4, h: 4 },
+      M: { w: 6, h: 4 },
+      L: { w: 12, h: 4 }
     },
     defaultSize: 'M'
   },
@@ -130,9 +140,9 @@ export const WIDGET_REGISTRY = [
     label: 'Air Quality',
     requires: 'aqi',
     sizes: {
-      S: { w: 4, h: 2 },
-      M: { w: 4, h: 3 },
-      L: { w: 6, h: 3 }
+      S: { w: 4, h: 4 },
+      M: { w: 4, h: 6 },
+      L: { w: 6, h: 6 }
     },
     defaultSize: 'M'
   },
@@ -141,9 +151,9 @@ export const WIDGET_REGISTRY = [
     label: 'Moon & Sun',
     requires: 'moonsun',
     sizes: {
-      S: { w: 4, h: 2 },
-      M: { w: 4, h: 3 },
-      L: { w: 6, h: 3 }
+      S: { w: 4, h: 4 },
+      M: { w: 4, h: 6 },
+      L: { w: 6, h: 6 }
     },
     defaultSize: 'M'
   },
@@ -152,9 +162,9 @@ export const WIDGET_REGISTRY = [
     label: 'News Headlines',
     requires: 'news',
     sizes: {
-      S: { w: 6, h: 3 },
-      M: { w: 6, h: 6 },
-      L: { w: 12, h: 6 }
+      S: { w: 6, h: 6 },
+      M: { w: 6, h: 12 },
+      L: { w: 12, h: 12 }
     },
     defaultSize: 'M'
   },
@@ -163,9 +173,9 @@ export const WIDGET_REGISTRY = [
     label: 'Stocks / Crypto',
     requires: 'stocks',
     sizes: {
-      S: { w: 4, h: 2 },
-      M: { w: 6, h: 3 },
-      L: { w: 12, h: 3 }
+      S: { w: 4, h: 4 },
+      M: { w: 6, h: 6 },
+      L: { w: 12, h: 6 }
     },
     defaultSize: 'M'
   },
@@ -174,9 +184,9 @@ export const WIDGET_REGISTRY = [
     label: 'Photo / Image',
     requires: 'photo',
     sizes: {
-      S: { w: 4, h: 3 },
-      M: { w: 6, h: 6 },
-      L: { w: 12, h: 6 }
+      S: { w: 4, h: 6 },
+      M: { w: 6, h: 12 },
+      L: { w: 12, h: 12 }
     },
     defaultSize: 'M'
   },
@@ -185,9 +195,9 @@ export const WIDGET_REGISTRY = [
     label: 'GitHub Activity',
     requires: 'github',
     sizes: {
-      S: { w: 6, h: 2 },
-      M: { w: 12, h: 2 },
-      L: { w: 12, h: 3 }
+      S: { w: 6, h: 4 },
+      M: { w: 12, h: 4 },
+      L: { w: 12, h: 6 }
     },
     defaultSize: 'M'
   }
@@ -198,13 +208,14 @@ export function widgetById(id) {
 }
 
 // Default positions for screen 1 (full editorial). Screen 2 = minimal hero only.
+// y-coords in 12x12 grid units.
 const DEFAULT_LAYOUTS = {
   1: [
     { id: 'weather_hero',     x: 0, y: 0, size: 'M', enabled: true },
     { id: 'weather_forecast', x: 4, y: 0, size: 'M', enabled: true },
     { id: 'message',          x: 7, y: 0, size: 'M', enabled: true },
-    { id: 'todos',            x: 7, y: 2, size: 'M', enabled: true },
-    { id: 'calendar',         x: 7, y: 4, size: 'M', enabled: false },
+    { id: 'todos',            x: 7, y: 4, size: 'M', enabled: true },
+    { id: 'calendar',         x: 7, y: 8, size: 'M', enabled: false },
     { id: 'spacer',           x: 0, y: 0, size: 'S', enabled: false },
     { id: 'quote',            x: 0, y: 0, size: 'M', enabled: false }
   ],
@@ -326,12 +337,34 @@ export function makeDefaultScreen(template = {}) {
 // Migrate old config shape (cfg.layouts + cfg.schedule + cfg.units +
 // cfg.refreshMinutes) into the new cfg.screens array. Idempotent —
 // once cfg.screens exists, return as-is.
+// Migrate a v1 (12x6) layout to v2 (12x12) by doubling y + h. x and w
+// are unchanged.
+function migrateLayoutV1ToV2(layout) {
+  return (layout || []).map(l => ({
+    ...l,
+    y: (Number.isFinite(l.y) ? l.y : 0) * 2,
+    h: (Number.isFinite(l.h) ? l.h : 0) * 2 || undefined
+  }));
+}
+
 export function migrateConfigToScreens(cfg) {
-  if (Array.isArray(cfg.screens) && cfg.screens.length) return cfg;
+  if (Array.isArray(cfg.screens) && cfg.screens.length) {
+    // Bump existing screens forward through any grid-version upgrades.
+    let screens = cfg.screens;
+    if ((cfg.gridVersion || 1) < 2) {
+      screens = screens.map(s => ({ ...s, layout: migrateLayoutV1ToV2(s.layout) }));
+    }
+    screens = screens.map(s => s.chrome
+      ? s
+      : { ...s, chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)) });
+    return { ...cfg, screens, gridVersion: GRID_VERSION };
+  }
   const oldLayouts = cfg.layouts || (Array.isArray(cfg.layout) ? { 1: cfg.layout } : { 1: [] });
   const sched = cfg.schedule || {};
   const sActive = sched.active || {};
   const sQuiet  = sched.quiet  || {};
+  // Pre-screens configs were authored against the 12x6 grid → migrate.
+  const migrateOld = (l) => migrateLayoutV1ToV2((l || []).map(it => ({ ...it })));
   const screens = [];
   screens.push({
     id: newScreenId(),
@@ -343,7 +376,7 @@ export function migrateConfigToScreens(cfg) {
     units: cfg.units || 'F',
     refreshMinutes: sActive.refreshMinutes || cfg.refreshMinutes || 30,
     chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)),
-    layout: (oldLayouts[1] || []).map(l => ({ ...l }))
+    layout: migrateOld(oldLayouts[1])
   });
   if (oldLayouts[2] && oldLayouts[2].length) {
     screens.push({
@@ -356,12 +389,11 @@ export function migrateConfigToScreens(cfg) {
       units: cfg.units || 'F',
       refreshMinutes: sQuiet.refreshMinutes || 120,
       chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)),
-      layout: (oldLayouts[2] || []).map(l => ({ ...l }))
+      layout: migrateOld(oldLayouts[2])
     });
   }
-  // Backfill chrome on any existing screens that pre-date this feature.
   const ensured = screens.map(s => s.chrome ? s : { ...s, chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)) });
-  return { ...cfg, screens: ensured };
+  return { ...cfg, screens: ensured, gridVersion: GRID_VERSION };
 }
 
 // ============ TIME / SCHEDULE HELPERS ============
