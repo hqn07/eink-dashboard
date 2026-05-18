@@ -564,20 +564,34 @@ const RENDERERS = {
     if (!list.length) return placeholder('MARKETS', 'Data unavailable — check symbols');
     const tier = pickTier(cellW, cellH);
     const matrix = {
-      tiny:     { rows: 2, showChg: false },
-      compact:  { rows: 3, showChg: true  },
-      standard: { rows: 4, showChg: true  },
-      extended: { rows: 6, showChg: true  },
-      full:     { rows: 8, showChg: true  }
+      tiny:     { rows: 2, showChg: false, showSpark: false },
+      compact:  { rows: 3, showChg: true,  showSpark: false },
+      standard: { rows: 4, showChg: true,  showSpark: true  },
+      extended: { rows: 6, showChg: true,  showSpark: true  },
+      full:     { rows: 8, showChg: true,  showSpark: true  }
     };
     const t = matrix[tier];
+    function spark(points) {
+      if (!Array.isArray(points) || points.length < 2) return '';
+      const w = 60, h = 16, pad = 1;
+      const min = Math.min(...points), max = Math.max(...points);
+      const range = max - min || 1;
+      const step = (w - pad * 2) / (points.length - 1);
+      const path = points.map((v, i) => {
+        const x = pad + i * step;
+        const y = pad + (h - pad * 2) * (1 - (v - min) / range);
+        return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+      return `<svg class="stock-spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><path d="${path}" fill="none" stroke="#000" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+    }
     return `
       <div class="widget widget-stocks">
         <div class="widget-title">MARKETS</div>
         <div class="stock-rows">
           ${list.slice(0, t.rows).map(s => `
-            <div class="stock-row">
+            <div class="stock-row ${t.showSpark ? 'with-spark' : ''}">
               <span class="stock-sym">${escapeHtml(s.symbol)}</span>
+              ${t.showSpark ? spark(s.spark) : ''}
               <span class="stock-price">${s.price}</span>
               ${t.showChg ? `<span class="stock-chg ${s.change >= 0 ? 'up' : 'down'}">${s.change >= 0 ? '▲' : '▼'} ${Math.abs(s.changePct).toFixed(2)}%</span>` : ''}
             </div>
@@ -586,11 +600,26 @@ const RENDERERS = {
       </div>
     `;
   },
-  photo: ({ cfg }) => {
+  photo: ({ cfg, resolvedPhoto, cellW, cellH }) => {
     const p = (cfg && cfg.photo) || {};
-    if (!p.dataUrl) return placeholder('PHOTO', 'Upload an image in settings');
-    const fit = p.fit === 'cover' ? 'cover' : 'contain';
-    return `<div class="widget widget-photo"><img src="${p.dataUrl}" style="object-fit:${fit}" alt="" /></div>`;
+    const slides = Array.isArray(p.slides) && p.slides.length
+      ? p.slides
+      : (p.dataUrl ? [{ dataUrl: p.dataUrl }] : []);
+    const r = resolvedPhoto || (slides.length
+      ? { dataUrl: slides[0].dataUrl, caption: slides[0].caption || '', fit: p.fit, index: 0, total: slides.length }
+      : null);
+    if (!r || !r.dataUrl) return placeholder('PHOTO', 'Upload an image in settings');
+    const fit = r.fit === 'cover' ? 'cover' : 'contain';
+    const tier = pickTier(cellW, cellH);
+    const showCaption = r.caption && tier !== 'tiny';
+    const showCounter = r.total > 1 && (tier === 'extended' || tier === 'full');
+    return `
+      <div class="widget widget-photo">
+        <img src="${r.dataUrl}" style="object-fit:${fit}" alt="" />
+        ${showCaption ? `<div class="photo-caption">${escapeHtml(r.caption)}</div>` : ''}
+        ${showCounter ? `<div class="photo-counter">${r.index + 1}/${r.total}</div>` : ''}
+      </div>
+    `;
   },
   github: ({ github, cfg, cellW, cellH }) => {
     if (!cfg || !cfg.github || !cfg.github.user) {

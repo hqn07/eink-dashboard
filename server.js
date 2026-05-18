@@ -27,6 +27,7 @@ const { fetchAlerts } = require('./widgets/alerts');
 const { prepTodos } = require('./widgets/todos');
 const { resolveQuote } = require('./widgets/quote');
 const { resolveMessage, renderInlineMarkdown } = require('./widgets/message');
+const { resolvePhoto } = require('./widgets/photo');
 
 const PORT = process.env.PORT || 3000;
 const DEVICE_TOKEN = process.env.DEVICE_TOKEN || '';
@@ -434,6 +435,7 @@ async function buildWidgetData(cfg, units, layout) {
   const todos       = ids.has('todos') ? prepTodos(cfg.todos || [], cfg.timezone || 'UTC') : [];
   const resolvedQuote   = ids.has('quote')   ? await resolveQuote(cfg) : null;
   const resolvedMessage = ids.has('message') ? resolveMessage(cfg) : null;
+  const resolvedPhoto   = ids.has('photo')   ? resolvePhoto(cfg) : null;
 
   // Attach alerts onto weather so the renderer can show a banner without
   // a separate top-level lookup.
@@ -442,7 +444,7 @@ async function buildWidgetData(cfg, units, layout) {
   return {
     weather, events, aqi, news, stocks, github,
     wifiQrSvg, clockNow, countdowns, moonsun, todos,
-    resolvedQuote, resolvedMessage
+    resolvedQuote, resolvedMessage, resolvedPhoto
   };
 }
 

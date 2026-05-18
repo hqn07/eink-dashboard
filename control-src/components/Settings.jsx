@@ -505,39 +505,74 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested, focusedW
         </section>
       )}
 
-      {showPhoto && (
-        <section {...sectionProps('photo')}>
-          <div className="section-title">Photo / Image</div>
-          <label className="field">
-            <span className="label">Upload image</span>
-            <input type="file" accept="image/png,image/jpeg,image/svg+xml"
-              onChange={async (e) => {
-                const file = e.target.files && e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = () => onPatchNested('photo', { dataUrl: reader.result });
-                reader.readAsDataURL(file);
-              }} />
-          </label>
-          <div className="toggle-row">
-            <span className="toggle-label">Fit</span>
-            <div className="btn-row" style={{ marginTop: 0 }}>
-              {['contain', 'cover'].map(f => (
-                <button key={f}
-                  className={`btn ${(cfg.photo?.fit || 'contain') === f ? 'btn-primary' : ''}`}
-                  onClick={() => onPatchNested('photo', { fit: f })}>{f.toUpperCase()}</button>
-              ))}
+      {showPhoto && (() => {
+        const photo = cfg.photo || {};
+        const slides = Array.isArray(photo.slides) && photo.slides.length
+          ? photo.slides
+          : (photo.dataUrl ? [{ dataUrl: photo.dataUrl }] : []);
+        const setSlides = (next) => onPatchNested('photo', {
+          slides: next,
+          // Keep dataUrl synced to the first slide for the legacy path.
+          dataUrl: next[0]?.dataUrl || ''
+        });
+        return (
+          <section {...sectionProps('photo')}>
+            <div className="section-title">Photo / Slideshow</div>
+            <div className="terminal-line" style={{ fontSize: 10, marginBottom: 8 }}>
+              &gt; UPLOAD MULTIPLE IMAGES · ROTATES BY INTERVAL
             </div>
-          </div>
-          {cfg.photo?.dataUrl && (
-            <div className="btn-row">
-              <button className="btn btn-danger" onClick={() => onPatchNested('photo', { dataUrl: '' })}>
-                Remove photo
-              </button>
+            <label className="field">
+              <span className="label">Add image</span>
+              <input type="file" accept="image/png,image/jpeg,image/svg+xml" multiple
+                onChange={async (e) => {
+                  const files = Array.from(e.target.files || []);
+                  if (!files.length) return;
+                  const reads = await Promise.all(files.map(f => new Promise(res => {
+                    const r = new FileReader();
+                    r.onload = () => res({ dataUrl: r.result });
+                    r.readAsDataURL(f);
+                  })));
+                  setSlides([...slides, ...reads]);
+                  e.target.value = '';
+                }} />
+            </label>
+            {slides.length > 0 && (
+              <div className="photo-slides">
+                {slides.map((s, idx) => (
+                  <div key={idx} className="photo-slide-row">
+                    <img className="photo-slide-thumb" src={s.dataUrl} alt="" />
+                    <input type="text" placeholder="Caption (optional)"
+                      value={s.caption || ''}
+                      onChange={e => {
+                        const next = [...slides];
+                        next[idx] = { ...next[idx], caption: e.target.value };
+                        setSlides(next);
+                      }} />
+                    <button className="btn btn-danger" style={{ padding: '4px 8px' }}
+                      onClick={() => setSlides(slides.filter((_, i) => i !== idx))}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <label className="field">
+              <span className="label">Rotate every (minutes · 0 = no rotate)</span>
+              <input type="number" min={0} max={1440}
+                value={photo.rotateMinutes ?? 0}
+                onChange={e => onPatchNested('photo', { rotateMinutes: parseInt(e.target.value, 10) || 0 })} />
+            </label>
+            <div className="toggle-row">
+              <span className="toggle-label">Fit</span>
+              <div className="btn-row" style={{ marginTop: 0 }}>
+                {['contain', 'cover'].map(f => (
+                  <button key={f}
+                    className={`btn ${(photo.fit || 'contain') === f ? 'btn-primary' : ''}`}
+                    onClick={() => onPatchNested('photo', { fit: f })}>{f.toUpperCase()}</button>
+                ))}
+              </div>
             </div>
-          )}
-        </section>
-      )}
+          </section>
+        );
+      })()}
 
     </div>
   );

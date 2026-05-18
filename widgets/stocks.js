@@ -12,8 +12,9 @@ function formatPrice(p) {
 }
 
 async function fetchOneSymbol(sym) {
-  // Use the chart endpoint with 1d interval — gives close + previousClose.
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=2d`;
+  // Use the 1d range with 1h interval — gives ~24 hourly closes for a
+  // sparkline + the latest meta for price/previousClose.
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1h&range=1d`;
   const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 eink-dashboard' } });
   if (!r.ok) return null;
   const j = await r.json();
@@ -25,11 +26,28 @@ async function fetchOneSymbol(sym) {
   if (!Number.isFinite(price)) return null;
   const change = Number.isFinite(prev) ? (price - prev) : 0;
   const changePct = Number.isFinite(prev) && prev !== 0 ? (change / prev) * 100 : 0;
+
+  // Pull the close series for a sparkline. Filter out null gaps.
+  const closes = ((result.indicators
+    && result.indicators.quote
+    && result.indicators.quote[0]
+    && result.indicators.quote[0].close) || [])
+    .filter(v => Number.isFinite(v));
+  // Cap to ~20 points so the SVG isn't enormous.
+  let points = closes;
+  if (points.length > 24) {
+    const step = points.length / 24;
+    const sampled = [];
+    for (let i = 0; i < 24; i++) sampled.push(points[Math.floor(i * step)]);
+    points = sampled;
+  }
+
   return {
     symbol: sym.toUpperCase(),
     price: formatPrice(price),
     change,
-    changePct
+    changePct,
+    spark: points
   };
 }
 

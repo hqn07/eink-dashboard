@@ -646,6 +646,24 @@ input[type="text"], input[type="url"], textarea {
   padding: 0 4px;
 }
 .todo-grip:active { cursor: grabbing; }
+
+.photo-slides {
+  display: flex; flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.photo-slide-row {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--line);
+  padding: 4px;
+}
+.photo-slide-thumb {
+  width: 60px; height: 36px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  flex: 0 0 auto;
+}
+.photo-slide-row input[type="text"] { flex: 1; }
 .tile-flush.on { background: var(--ink); color: #fff; }
 
 /* ============ PALETTE ============ */
