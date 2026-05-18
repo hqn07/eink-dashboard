@@ -843,29 +843,40 @@ html, body {
 
 /* ============ GITHUB GRID ============ */
 .widget-github {
-  padding: 8px; height: 100%;
+  padding: 8px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 .widget-github .widget-title {
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
   letter-spacing: 3px;
   margin-bottom: 6px;
+  flex: 0 0 auto;
 }
+/* Columns flex horizontally; rows inside each column stretch to fill
+ * available height. Cells therefore fit the cell allotment in BOTH
+ * dimensions instead of computing from width alone (the previous
+ * aspect-ratio:1/1 caused overflow when the cell was short). */
 .gh-grid {
   display: flex;
-  gap: 2px;
-  height: calc(100% - 20px);
-  align-items: flex-start;
+  gap: 1.5px;
+  flex: 1 1 auto;
+  min-height: 0;
+  align-items: stretch;
 }
 .gh-col {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  flex: 1;
+  gap: 1.5px;
+  flex: 1 1 0;
+  min-width: 0;
 }
 .gh-cell {
-  width: 100%;
-  aspect-ratio: 1 / 1;
+  flex: 1 1 0;
+  min-height: 0;
   background: #fff;
   border: 1px solid #000;
 }
