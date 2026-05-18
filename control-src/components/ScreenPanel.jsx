@@ -3,9 +3,17 @@ import React from 'react';
 // Merged Display + Refresh + Schedule for one screen. Sits at the top
 // of the settings panel (above shared widget config like message,
 // todos, calendar).
+const DEFAULT_CHROME = {
+  header: { enabled: true, left: '{city}', leftSub: '{date}', right: '{time}', rightSub: 'EDITION No. {edition}' },
+  footer: { enabled: true, text: 'UPDATED {time} · REFRESH {refresh}MIN · THE DAILY {city}' }
+};
+
 export default function ScreenPanel({ screen, isOverlap, onUpdate, onSetDefault, onDelete, canDelete }) {
   const sch = screen.schedule || { enabled: false, from: '07:00', to: '22:00' };
   const setSch = (patch) => onUpdate({ schedule: { ...sch, ...patch } });
+  const chrome = screen.chrome || DEFAULT_CHROME;
+  const setHeader = (patch) => onUpdate({ chrome: { ...chrome, header: { ...(chrome.header || {}), ...patch } } });
+  const setFooter = (patch) => onUpdate({ chrome: { ...chrome, footer: { ...(chrome.footer || {}), ...patch } } });
 
   return (
     <section className={`card screen-panel ${isOverlap ? 'invalid' : ''}`}>
@@ -101,6 +109,63 @@ export default function ScreenPanel({ screen, isOverlap, onUpdate, onSetDefault,
           </div>
         )}
       </div>
+
+      <div className="section-title" style={{ marginTop: 16 }}>Header & Footer</div>
+      <div className="terminal-line" style={{ fontSize: 10, marginBottom: 8 }}>
+        &gt; TOKENS: <code>{'{city}'}</code> <code>{'{time}'}</code> <code>{'{date}'}</code> <code>{'{refresh}'}</code> <code>{'{edition}'}</code>
+      </div>
+
+      <div className="toggle-row">
+        <span className="toggle-label">Show header</span>
+        <div className={`toggle ${chrome.header?.enabled !== false ? 'on' : ''}`}
+          onClick={() => setHeader({ enabled: !(chrome.header?.enabled !== false) })} />
+      </div>
+      {chrome.header?.enabled !== false && (
+        <>
+          <div className="btn-row" style={{ marginTop: 0, gap: 6 }}>
+            <label className="field" style={{ flex: 1, marginTop: 0 }}>
+              <span className="label">Header left</span>
+              <input type="text" value={chrome.header?.left || ''}
+                onChange={e => setHeader({ left: e.target.value })}
+                placeholder="{city}" />
+            </label>
+            <label className="field" style={{ flex: 1, marginTop: 0 }}>
+              <span className="label">Left subtitle</span>
+              <input type="text" value={chrome.header?.leftSub || ''}
+                onChange={e => setHeader({ leftSub: e.target.value })}
+                placeholder="{date}" />
+            </label>
+          </div>
+          <div className="btn-row" style={{ marginTop: 6, gap: 6 }}>
+            <label className="field" style={{ flex: 1, marginTop: 0 }}>
+              <span className="label">Header right</span>
+              <input type="text" value={chrome.header?.right || ''}
+                onChange={e => setHeader({ right: e.target.value })}
+                placeholder="{time}" />
+            </label>
+            <label className="field" style={{ flex: 1, marginTop: 0 }}>
+              <span className="label">Right subtitle</span>
+              <input type="text" value={chrome.header?.rightSub || ''}
+                onChange={e => setHeader({ rightSub: e.target.value })}
+                placeholder="EDITION No. {edition}" />
+            </label>
+          </div>
+        </>
+      )}
+
+      <div className="toggle-row" style={{ marginTop: 12 }}>
+        <span className="toggle-label">Show footer</span>
+        <div className={`toggle ${chrome.footer?.enabled !== false ? 'on' : ''}`}
+          onClick={() => setFooter({ enabled: !(chrome.footer?.enabled !== false) })} />
+      </div>
+      {chrome.footer?.enabled !== false && (
+        <label className="field">
+          <span className="label">Footer text</span>
+          <input type="text" value={chrome.footer?.text || ''}
+            onChange={e => setFooter({ text: e.target.value })}
+            placeholder="UPDATED {time} · REFRESH {refresh}MIN · THE DAILY {city}" />
+        </label>
+      )}
     </section>
   );
 }

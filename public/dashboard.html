@@ -31,6 +31,10 @@
   const moonsun = D.moonsun || null;
   const resolvedQuote = D.resolvedQuote || null;
   const resolvedMessage = D.resolvedMessage || null;
+  const chrome = D.chrome || {
+    header: { enabled: true, left: '{city}', leftSub: '{date}', right: '{time}', rightSub: 'EDITION No. {edition}' },
+    footer: { enabled: true, text: 'UPDATED {time} · REFRESH {refresh}MIN · THE DAILY {city}' }
+  };
 
   // Minimal inline markdown (escaped first).
   function md(s) {
@@ -716,18 +720,46 @@
     dateStr = now.toDateString().toUpperCase();
   }
 
-  const header = el('header', 'hdr');
-  header.innerHTML = `
-    <div class="hdr-left">
-      <div class="hdr-city">${cityLabel}</div>
-      <div class="hdr-date">${dateStr}</div>
-    </div>
-    <div class="hdr-right">
-      <div class="hdr-time">${timeStr}</div>
-      <div class="hdr-meta">EDITION No. ${Math.floor(Date.now()/3600000) % 9999}</div>
-    </div>
-  `;
-  page.appendChild(header);
+  // Token substitution for header/footer chrome.
+  const editionNo = Math.floor(Date.now() / 3600000) % 9999;
+  const tokens = {
+    '{city}': cityLabel || '',
+    '{time}': timeStr || '',
+    '{date}': dateStr || '',
+    '{refresh}': String(cfg.refreshMinutes || 30),
+    '{edition}': String(editionNo)
+  };
+  function tpl(s) {
+    let out = String(s || '');
+    for (const k in tokens) out = out.split(k).join(tokens[k]);
+    return out;
+  }
+
+  // Page grid rows depend on which chrome bars are enabled.
+  const headerOn = chrome.header && chrome.header.enabled !== false;
+  const footerOn = chrome.footer && chrome.footer.enabled !== false;
+  const headerRow = headerOn ? '60px' : '0';
+  const footerRow = footerOn ? '28px' : '0';
+  page.style.gridTemplateRows = `${headerRow} 1fr ${footerRow}`;
+
+  if (headerOn) {
+    const h = chrome.header || {};
+    const header = el('header', 'hdr');
+    header.innerHTML = `
+      <div class="hdr-left">
+        <div class="hdr-city">${tpl(h.left)}</div>
+        ${h.leftSub ? `<div class="hdr-date">${tpl(h.leftSub)}</div>` : ''}
+      </div>
+      <div class="hdr-right">
+        <div class="hdr-time">${tpl(h.right)}</div>
+        ${h.rightSub ? `<div class="hdr-meta">${tpl(h.rightSub)}</div>` : ''}
+      </div>
+    `;
+    page.appendChild(header);
+  } else {
+    // CSS grid still expects a row 1 child — render a zero-height stub.
+    page.appendChild(el('div', 'hdr-stub'));
+  }
 
   // ============ MAIN BODY — CSS GRID ============
   const body = el('main', 'body body-grid');
@@ -800,16 +832,16 @@
   }
 
   // ============ FOOTER ============
-  const footer = el('footer', 'ftr');
-  footer.innerHTML = `
-    <span class="ftr-bullet">●</span>
-    UPDATED ${timeStr || '—'}
-    <span class="ftr-sep">·</span>
-    REFRESH ${cfg.refreshMinutes || 30}MIN
-    <span class="ftr-sep">·</span>
-    THE DAILY ${(cityLabel || 'DASHBOARD').split(' ')[0]}
-  `;
-  page.appendChild(footer);
+  if (footerOn) {
+    const f = chrome.footer || {};
+    const footer = el('footer', 'ftr');
+    // Render with a leading bullet so the editorial rhythm is preserved
+    // even when the user customizes the text.
+    footer.innerHTML = `<span class="ftr-bullet">●</span> ${tpl(f.text)}`;
+    page.appendChild(footer);
+  } else {
+    page.appendChild(el('div', 'ftr-stub'));
+  }
 
 })();
 </script>

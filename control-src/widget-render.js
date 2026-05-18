@@ -438,38 +438,78 @@ export function renderWidget(id, data) {
   try { return fn(data || {}); } catch { return ''; }
 }
 
+// Default chrome — used when the screen's chrome is missing.
+const DEFAULT_CHROME = {
+  header: { enabled: true, left: '{city}', leftSub: '{date}', right: '{time}', rightSub: 'EDITION No. {edition}' },
+  footer: { enabled: true, text: 'UPDATED {time} · REFRESH {refresh}MIN · THE DAILY {city}' }
+};
+
+function chromeTokens(data) {
+  const cfg = (data && data.cfg) || {};
+  const w = data && data.weather;
+  // Always use the live wall clock — same fix as dashboard.html.
+  const tz = cfg.timezone || 'UTC';
+  const now = new Date();
+  let timeStr = '', dateStr = '';
+  try {
+    timeStr = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, hour: 'numeric', minute: '2-digit', hour12: true
+    }).format(now).toUpperCase();
+    dateStr = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+    }).format(now).toUpperCase();
+  } catch {
+    timeStr = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    dateStr = now.toDateString().toUpperCase();
+  }
+  return {
+    '{city}': (cfg.cityLabel || cfg.city || '').toString(),
+    '{time}': timeStr,
+    '{date}': dateStr,
+    '{refresh}': String(cfg.refreshMinutes || 30),
+    '{edition}': String(Math.floor(Date.now() / 3600000) % 9999)
+  };
+}
+
+function tplString(s, tokens) {
+  let out = String(s || '');
+  for (const k in tokens) out = out.split(k).join(tokens[k]);
+  return out;
+}
+
 // Header/footer chrome the dashboard wraps around the body grid. The
 // editor renders these in fixed top/bottom strips so the body area
 // exactly matches the dashboard's body grid pixel-for-pixel.
 export function renderHeader(data) {
-  const cfg = (data && data.cfg) || {};
-  const w   = data && data.weather;
-  const cityLabel = (cfg.cityLabel || cfg.city || '').toString();
-  const dateStr = w ? w.currentDate : new Date().toDateString().toUpperCase();
-  const timeStr = w ? w.currentTime : '';
+  const chrome = (data && data.chrome) || DEFAULT_CHROME;
+  const h = chrome.header || {};
+  if (h.enabled === false) return '';
+  const tokens = chromeTokens(data);
   return `
     <div class="hdr-left">
-      <div class="hdr-city">${escapeHtml(cityLabel)}</div>
-      <div class="hdr-date">${escapeHtml(dateStr)}</div>
+      <div class="hdr-city">${escapeHtml(tplString(h.left, tokens))}</div>
+      ${h.leftSub ? `<div class="hdr-date">${escapeHtml(tplString(h.leftSub, tokens))}</div>` : ''}
     </div>
     <div class="hdr-right">
-      <div class="hdr-time">${escapeHtml(timeStr)}</div>
-      <div class="hdr-meta">EDITION No. ${Math.floor(Date.now()/3600000) % 9999}</div>
+      <div class="hdr-time">${escapeHtml(tplString(h.right, tokens))}</div>
+      ${h.rightSub ? `<div class="hdr-meta">${escapeHtml(tplString(h.rightSub, tokens))}</div>` : ''}
     </div>
   `;
 }
 
 export function renderFooter(data) {
-  const cfg = (data && data.cfg) || {};
-  const w   = data && data.weather;
-  const cityLabel = (cfg.cityLabel || cfg.city || '').toString();
-  const timeStr = w ? w.currentTime : '—';
-  return `
-    <span class="ftr-bullet">●</span>
-    UPDATED ${escapeHtml(timeStr || '—')}
-    <span class="ftr-sep">·</span>
-    REFRESH ${cfg.refreshMinutes || 30}MIN
-    <span class="ftr-sep">·</span>
-    THE DAILY ${escapeHtml((cityLabel || 'DASHBOARD').split(' ')[0])}
-  `;
+  const chrome = (data && data.chrome) || DEFAULT_CHROME;
+  const f = chrome.footer || {};
+  if (f.enabled === false) return '';
+  const tokens = chromeTokens(data);
+  return `<span class="ftr-bullet">●</span> ${escapeHtml(tplString(f.text, tokens))}`;
+}
+
+export function isHeaderOn(data) {
+  const chrome = (data && data.chrome) || DEFAULT_CHROME;
+  return (chrome.header || {}).enabled !== false;
+}
+export function isFooterOn(data) {
+  const chrome = (data && data.chrome) || DEFAULT_CHROME;
+  return (chrome.footer || {}).enabled !== false;
 }

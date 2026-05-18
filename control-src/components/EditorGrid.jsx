@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import GridLayout from 'react-grid-layout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById, makeInstance } from '../widgets.js';
-import { renderWidget, renderHeader, renderFooter } from '../widget-render.js';
+import { renderWidget, renderHeader, renderFooter, isHeaderOn, isFooterOn } from '../widget-render.js';
 
 // Editor cells must align 1:1 with dashboard cells so widget previews
 // scale cleanly. Any padding/margin would offset cells from the
@@ -14,9 +14,8 @@ const MARGIN = 0;
 // grid-template-rows: 60px 1fr 28px on a 480px-tall canvas).
 const DASH_W = 800;
 const DASH_H = 480;
-const HEADER_H = 60;
-const FOOTER_H = 28;
-const BODY_H = DASH_H - HEADER_H - FOOTER_H;
+const HEADER_H_BASE = 60;
+const FOOTER_H_BASE = 28;
 
 // Pick a widget's smallest registered size by area — used for the pool
 // preview and for the initial drop size when a widget is added.
@@ -97,6 +96,12 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
   // Editor canvas is sized to the full dashboard aspect; the body
   // section we hand to RGL is BODY_H/DASH_H of that height. Row
   // height inside the body matches the dashboard's body row height.
+  // Chrome rows collapse when disabled, which gives the body more room.
+  const headerOn = isHeaderOn(previewData);
+  const footerOn = isFooterOn(previewData);
+  const HEADER_H = headerOn ? HEADER_H_BASE : 0;
+  const FOOTER_H = footerOn ? FOOTER_H_BASE : 0;
+  const BODY_H = DASH_H - HEADER_H - FOOTER_H;
   const scale = size.w > 0 ? size.w / DASH_W : 1;
   const bodyHeight = size.h * (BODY_H / DASH_H);
   const rowHeight = bodyHeight / GRID_ROWS;
@@ -242,16 +247,18 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
         onDrop={onCanvasDrop}
       >
         {/* Header chrome — purely visual; matches dashboard.css `.hdr`. */}
-        <div
-          className="editor-chrome hdr"
-          style={{
-            position: 'absolute', top: 0, left: 0,
-            width: DASH_W, height: HEADER_H,
-            transform: `scale(${scale})`, transformOrigin: 'top left',
-            pointerEvents: 'none'
-          }}
-          dangerouslySetInnerHTML={{ __html: renderHeader(previewData) }}
-        />
+        {headerOn && (
+          <div
+            className="editor-chrome hdr"
+            style={{
+              position: 'absolute', top: 0, left: 0,
+              width: DASH_W, height: HEADER_H,
+              transform: `scale(${scale})`, transformOrigin: 'top left',
+              pointerEvents: 'none'
+            }}
+            dangerouslySetInnerHTML={{ __html: renderHeader(previewData) }}
+          />
+        )}
         <GridLayout
           className="layout"
           cols={GRID_COLS}
@@ -350,16 +357,18 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
         )}
 
         {/* Footer chrome */}
-        <div
-          className="editor-chrome ftr"
-          style={{
-            position: 'absolute', bottom: 0, left: 0,
-            width: DASH_W, height: FOOTER_H,
-            transform: `scale(${scale})`, transformOrigin: 'bottom left',
-            pointerEvents: 'none'
-          }}
-          dangerouslySetInnerHTML={{ __html: renderFooter(previewData) }}
-        />
+        {footerOn && (
+          <div
+            className="editor-chrome ftr"
+            style={{
+              position: 'absolute', bottom: 0, left: 0,
+              width: DASH_W, height: FOOTER_H,
+              transform: `scale(${scale})`, transformOrigin: 'bottom left',
+              pointerEvents: 'none'
+            }}
+            dangerouslySetInnerHTML={{ __html: renderFooter(previewData) }}
+          />
+        )}
       </motion.div>
 
       <div

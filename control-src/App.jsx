@@ -155,8 +155,8 @@ export default function App() {
   // Splice live cfg edits + the current screen's layout into the
   // preview data so editor tiles update instantly while typing.
   const livePreviewData = previewData
-    ? { ...previewData, cfg, layout: editScreen ? editScreen.layout : [] }
-    : { cfg, weather: null, events: [], units: (editScreen && editScreen.units) || 'F', layout: editScreen ? editScreen.layout : [] };
+    ? { ...previewData, cfg, layout: editScreen ? editScreen.layout : [], chrome: editScreen ? editScreen.chrome : null }
+    : { cfg, weather: null, events: [], units: (editScreen && editScreen.units) || 'F', layout: editScreen ? editScreen.layout : [], chrome: editScreen ? editScreen.chrome : null };
 
   const showToast = (msg) => {
     setToast(msg);

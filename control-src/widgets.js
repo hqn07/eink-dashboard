@@ -296,6 +296,20 @@ export function newScreenId() {
   return `scr-${Date.now().toString(36)}-${_screenCounter}`;
 }
 
+export const DEFAULT_CHROME = {
+  header: {
+    enabled: true,
+    left: '{city}',
+    leftSub: '{date}',
+    right: '{time}',
+    rightSub: 'EDITION No. {edition}'
+  },
+  footer: {
+    enabled: true,
+    text: 'UPDATED {time} · REFRESH {refresh}MIN · THE DAILY {city}'
+  }
+};
+
 export function makeDefaultScreen(template = {}) {
   return {
     id: newScreenId(),
@@ -304,6 +318,7 @@ export function makeDefaultScreen(template = {}) {
     schedule: { enabled: false, from: '07:00', to: '22:00' },
     units: template.units || 'F',
     refreshMinutes: Number.isFinite(template.refreshMinutes) ? template.refreshMinutes : 30,
+    chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)),
     layout: template.layout ? template.layout.map(l => ({ ...l })) : []
   };
 }
@@ -327,6 +342,7 @@ export function migrateConfigToScreens(cfg) {
       : { enabled: false, from: '07:00', to: '22:00' },
     units: cfg.units || 'F',
     refreshMinutes: sActive.refreshMinutes || cfg.refreshMinutes || 30,
+    chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)),
     layout: (oldLayouts[1] || []).map(l => ({ ...l }))
   });
   if (oldLayouts[2] && oldLayouts[2].length) {
@@ -339,10 +355,13 @@ export function migrateConfigToScreens(cfg) {
         : { enabled: false, from: '22:00', to: '07:00' },
       units: cfg.units || 'F',
       refreshMinutes: sQuiet.refreshMinutes || 120,
+      chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)),
       layout: (oldLayouts[2] || []).map(l => ({ ...l }))
     });
   }
-  return { ...cfg, screens };
+  // Backfill chrome on any existing screens that pre-date this feature.
+  const ensured = screens.map(s => s.chrome ? s : { ...s, chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)) });
+  return { ...cfg, screens: ensured };
 }
 
 // ============ TIME / SCHEDULE HELPERS ============

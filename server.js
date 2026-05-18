@@ -253,8 +253,28 @@ function newScreenId() {
 // Migrate legacy cfg.layouts/cfg.schedule into the new cfg.screens
 // array. Idempotent — returns cfg unchanged when screens already
 // exist.
+const DEFAULT_CHROME = {
+  header: {
+    enabled: true,
+    left: '{city}',
+    leftSub: '{date}',
+    right: '{time}',
+    rightSub: 'EDITION No. {edition}'
+  },
+  footer: {
+    enabled: true,
+    text: 'UPDATED {time} · REFRESH {refresh}MIN · THE DAILY {city}'
+  }
+};
+
 function migrateConfigToScreens(cfg) {
-  if (Array.isArray(cfg.screens) && cfg.screens.length) return cfg;
+  if (Array.isArray(cfg.screens) && cfg.screens.length) {
+    // Backfill chrome on existing screens that pre-date this feature.
+    const screens = cfg.screens.map(s => s.chrome
+      ? s
+      : { ...s, chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)) });
+    return { ...cfg, screens };
+  }
   const oldLayouts = cfg.layouts || (Array.isArray(cfg.layout) ? { 1: cfg.layout } : { 1: [] });
   const sched = cfg.schedule || {};
   const sActive = sched.active || {};
@@ -269,6 +289,7 @@ function migrateConfigToScreens(cfg) {
       : { enabled: false, from: '07:00', to: '22:00' },
     units: cfg.units || 'F',
     refreshMinutes: sActive.refreshMinutes || cfg.refreshMinutes || 30,
+    chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)),
     layout: (oldLayouts[1] || []).map(l => ({ ...l }))
   });
   if (oldLayouts[2] && oldLayouts[2].length) {
@@ -281,6 +302,7 @@ function migrateConfigToScreens(cfg) {
         : { enabled: false, from: '22:00', to: '07:00' },
       units: cfg.units || 'F',
       refreshMinutes: sQuiet.refreshMinutes || 120,
+      chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)),
       layout: (oldLayouts[2] || []).map(l => ({ ...l }))
     });
   }
@@ -431,8 +453,9 @@ app.get('/dashboard', async (req, res) => {
     const data = await buildWidgetData(cfg, units, layout);
 
     const html = await fsp.readFile(path.join(__dirname, 'public', 'dashboard.html'), 'utf8');
+    const chrome = (activeScreen && activeScreen.chrome) || DEFAULT_CHROME;
     const payload = {
-      cfg, units, screen, layout,
+      cfg, units, screen, layout, chrome,
       ...data,
       generatedAt: new Date().toISOString()
     };
@@ -608,8 +631,9 @@ app.get('/api/preview-data', async (req, res) => {
     const { units, screen, activeScreen } = resolveVariant(req, cfg);
     const layout = activeScreen ? activeScreen.layout : [];
     const data = await buildWidgetData(cfg, units, layout);
+    const chrome = (activeScreen && activeScreen.chrome) || DEFAULT_CHROME;
     res.json({
-      cfg, units, screen, layout,
+      cfg, units, screen, layout, chrome,
       ...data,
       generatedAt: new Date().toISOString()
     });
