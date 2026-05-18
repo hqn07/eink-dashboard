@@ -174,24 +174,33 @@ const RENDERERS = {
         </div>${statsBlock()}${sunBar(w)}${hourlyStrip(w)}`;
     }
   },
-  weather_forecast: ({ weather, cellH }) => {
+  weather_forecast: ({ weather, cellW, cellH }) => {
     const w = weather;
     if (!w || !w.forecast || !w.forecast.length) {
       return `<div class="col-title">FORECAST</div><div class="empty" style="border:0;padding:14px 0">NO DATA</div>`;
     }
-    const max = (cellH || 0) >= 12 ? 5 : 3;
+    const tier = pickTier(cellW, cellH);
+    const matrix = {
+      tiny:     { days: 1, iconPx: 30, showPrecip: false },
+      compact:  { days: 2, iconPx: 30, showPrecip: false },
+      standard: { days: 3, iconPx: 34, showPrecip: true  },
+      extended: { days: 4, iconPx: 36, showPrecip: true  },
+      full:     { days: 5, iconPx: 38, showPrecip: true  }
+    };
+    const t = matrix[tier];
+    const max = t.days;
     const list = w.forecast.slice(0, max);
     return `
       <div class="col-title">${list.length}-DAY OUTLOOK</div>
       ${list.map(f => `
         <div class="fc-row">
           <div class="fc-day">${f.name}</div>
-          <div class="fc-icon">${icon(f.main, 38)}</div>
+          <div class="fc-icon">${icon(f.main, t.iconPx)}</div>
           <div class="fc-hilo">
             <div class="fc-hi">${f.hi}°</div>
             <div class="fc-lo">${f.lo}°</div>
           </div>
-          ${Number.isFinite(f.precip) && f.precip > 0
+          ${t.showPrecip && Number.isFinite(f.precip) && f.precip > 0
             ? `<div class="fc-precip">${f.precip}%</div>` : '<div class="fc-precip"></div>'}
         </div>
       `).join('')}
@@ -317,42 +326,54 @@ const RENDERERS = {
     const cls = s.invert ? ' invert' : '';
     return `<div class="widget widget-spacer${cls}">${text ? escapeHtml(text) : ''}</div>`;
   },
-  quote: ({ cfg, resolvedQuote, cellH, cellW }) => {
+  quote: ({ cfg, resolvedQuote, cellW, cellH }) => {
     const q = resolvedQuote || (cfg && cfg.quote) || {};
     const body = (q.text || '').trim() || 'Type a quote in settings.';
     const attr = (q.attribution || '').trim();
     const align = (q.align === 'left' || q.align === 'right') ? q.align : 'center';
-    const ch = cellH || 0, cw = cellW || 0;
-    const lengthBase = Math.max(14, Math.min(54, Math.round(560 / Math.max(8, body.length / 4))));
-    const cellCap = ch < 3 ? 14 : ch < 5 ? 22 : ch < 8 ? 32 : ch < 12 ? 42 : 56;
-    const widthCap = cw < 10 ? 18 : cw < 16 ? 30 : 60;
-    const finalSize = Math.min(lengthBase, cellCap, widthCap);
-    const showAttr = attr && ch >= 4;
+    const tier = pickTier(cellW, cellH);
+    const matrix = {
+      tiny:     { cap: 18, showAttr: false, padding: 4  },
+      compact:  { cap: 26, showAttr: false, padding: 8  },
+      standard: { cap: 36, showAttr: true,  padding: 12 },
+      extended: { cap: 48, showAttr: true,  padding: 16 },
+      full:     { cap: 64, showAttr: true,  padding: 24 }
+    };
+    const t = matrix[tier];
+    const lengthBase = Math.max(14, Math.min(64, Math.round(560 / Math.max(8, body.length / 4))));
+    const finalSize = Math.min(lengthBase, t.cap);
     return `
-      <div class="widget widget-quote" style="text-align:${align}">
+      <div class="widget widget-quote" style="text-align:${align};padding:${t.padding}px">
         <div class="quote-body" style="font-size:${finalSize}px">${md(escapeHtml(body))}</div>
-        ${showAttr ? `<div class="quote-attr">— ${escapeHtml(attr)}</div>` : ''}
+        ${t.showAttr && attr ? `<div class="quote-attr">— ${escapeHtml(attr)}</div>` : ''}
       </div>
     `;
   },
-  clock: ({ cfg, clockNow, cellH, cellW }) => {
+  clock: ({ cfg, clockNow, cellW, cellH }) => {
     const c = (cfg && cfg.clock) || {};
-    const t = clockNow || { hour: 12, minute: 0, dateLabel: 'PREVIEW' };
-    let h = t.hour;
+    const tnow = clockNow || { hour: 12, minute: 0, dateLabel: 'PREVIEW' };
+    let h = tnow.hour;
     const fmt = c.format === 24 ? 24 : 12;
     const ampm = h >= 12 ? 'PM' : 'AM';
     if (fmt === 12) { h = h % 12; if (h === 0) h = 12; }
     const hh = fmt === 24 ? String(h).padStart(2, '0') : String(h);
-    const mm = String(t.minute).padStart(2, '0');
+    const mm = String(tnow.minute).padStart(2, '0');
     const suffix = fmt === 12 ? ` ${ampm}` : '';
-    const ch = cellH || 0;
-    const cw = cellW || 0;
-    const timeSize = ch < 4 ? 38 : ch < 5 ? 54 : ch < 7 ? 72 : 96;
-    const showDate = c.showDate !== false && ch >= 4 && cw >= 10;
+    const tier = pickTier(cellW, cellH);
+    const matrix = {
+      tiny:     { timeSize: 34, showAmpm: false, showDate: false },
+      compact:  { timeSize: 48, showAmpm: true,  showDate: false },
+      standard: { timeSize: 64, showAmpm: true,  showDate: true  },
+      extended: { timeSize: 84, showAmpm: true,  showDate: true  },
+      full:     { timeSize: 104,showAmpm: true,  showDate: true  }
+    };
+    const t = matrix[tier];
+    const ampmHtml = t.showAmpm && fmt === 12 ? `<span class="clock-ampm">${suffix}</span>` : '';
+    const dateOk = c.showDate !== false && t.showDate;
     return `
       <div class="widget widget-clock">
-        <div class="clock-time" style="font-size:${timeSize}px">${hh}:${mm}<span class="clock-ampm">${suffix}</span></div>
-        ${showDate ? `<div class="clock-date">${escapeHtml(t.dateLabel)}</div>` : ''}
+        <div class="clock-time" style="font-size:${t.timeSize}px">${hh}:${mm}${ampmHtml}</div>
+        ${dateOk ? `<div class="clock-date">${escapeHtml(tnow.dateLabel)}</div>` : ''}
       </div>
     `;
   },
@@ -394,22 +415,37 @@ const RENDERERS = {
       </div>
     `;
   },
-  aqi: ({ aqi, cfg, cellH }) => {
+  aqi: ({ aqi, cfg, cellW, cellH }) => {
     if (!aqi) {
       if (!cfg || !Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
         return placeholder('AIR QUALITY', 'Set your location in settings');
       }
       return placeholder('AIR QUALITY', 'Data unavailable for this location');
     }
-    const ch = cellH || 0;
-    const showStats = ch >= 6;
-    const numSize = ch < 4 ? 36 : ch < 6 ? 48 : 56;
+    const advice = {
+      'GOOD': 'Breathe easy.',
+      'MODERATE': 'OK for most. Sensitive groups: caution.',
+      'UNHEALTHY FOR SENSITIVE': 'Sensitive groups limit outdoor.',
+      'UNHEALTHY': 'Limit outdoor activity.',
+      'VERY UNHEALTHY': 'Avoid outdoor activity.',
+      'HAZARDOUS': 'Stay indoors.'
+    };
+    const tier = pickTier(cellW, cellH);
+    const matrix = {
+      tiny:     { showCat: false, showStats: false, showAdvice: false, numSize: 36 },
+      compact:  { showCat: true,  showStats: false, showAdvice: false, numSize: 48 },
+      standard: { showCat: true,  showStats: false, showAdvice: true,  numSize: 56 },
+      extended: { showCat: true,  showStats: true,  showAdvice: true,  numSize: 64 },
+      full:     { showCat: true,  showStats: true,  showAdvice: true,  numSize: 72 }
+    };
+    const t = matrix[tier];
     return `
       <div class="widget widget-aqi">
         <div class="widget-title">AIR QUALITY</div>
-        <div class="aqi-num" style="font-size:${numSize}px">${aqi.aqi}</div>
-        <div class="aqi-cat">${aqi.category}</div>
-        ${showStats ? `
+        <div class="aqi-num" style="font-size:${t.numSize}px">${aqi.aqi}</div>
+        ${t.showCat ? `<div class="aqi-cat">${aqi.category}</div>` : ''}
+        ${t.showAdvice ? `<div class="aqi-advice">${advice[aqi.category] || ''}</div>` : ''}
+        ${t.showStats ? `
           <div class="aqi-stats">
             <div class="stat"><span class="stat-k">PM2.5</span><span class="stat-v">${aqi.pm25 ?? '--'}</span></div>
             <div class="stat"><span class="stat-k">PM10</span><span class="stat-v">${aqi.pm10 ?? '--'}</span></div>
@@ -509,28 +545,46 @@ const RENDERERS = {
     const fit = p.fit === 'cover' ? 'cover' : 'contain';
     return `<div class="widget widget-photo"><img src="${p.dataUrl}" style="object-fit:${fit}" alt="" /></div>`;
   },
-  github: ({ github, cfg, cellH }) => {
+  github: ({ github, cfg, cellW, cellH }) => {
     if (!cfg || !cfg.github || !cfg.github.user) {
       return placeholder('GITHUB', 'Enter a GitHub username in settings');
     }
     if (!github || !github.weeks || !github.weeks.length) {
       return placeholder('GITHUB', 'Data unavailable for ' + escapeHtml(cfg.github.user));
     }
-    const ch = cellH || 0;
-    const showTitle = ch >= 3;
-    const titleText = ch < 5
+    const flat = [];
+    for (const wk of github.weeks) for (const lvl of wk) flat.push(lvl);
+    let curStreak = 0, longest = 0, run = 0;
+    for (let i = flat.length - 1; i >= 0; i--) {
+      if (flat[i] > 0) curStreak += 1; else break;
+    }
+    for (const lvl of flat) {
+      if (lvl > 0) { run += 1; longest = Math.max(longest, run); } else run = 0;
+    }
+    const tier = pickTier(cellW, cellH);
+    const matrix = {
+      tiny:     { showTitle: false, weeksTail: 12, footer: '' },
+      compact:  { showTitle: true,  weeksTail: 26, footer: '' },
+      standard: { showTitle: true,  weeksTail: 53, footer: `STREAK ${curStreak}D` },
+      extended: { showTitle: true,  weeksTail: 53, footer: `STREAK ${curStreak}D · LONGEST ${longest}D` },
+      full:     { showTitle: true,  weeksTail: 53, footer: `STREAK ${curStreak}D · LONGEST ${longest}D · ${github.total} TOTAL` }
+    };
+    const t = matrix[tier];
+    const weeks = github.weeks.slice(-t.weeksTail);
+    const titleText = tier === 'compact'
       ? `${escapeHtml(github.user)} · ${github.total}`
       : `GITHUB · ${escapeHtml(github.user)} · ${github.total} CONTRIBUTIONS`;
     return `
       <div class="widget widget-github">
-        ${showTitle ? `<div class="widget-title">${titleText}</div>` : ''}
+        ${t.showTitle ? `<div class="widget-title">${titleText}</div>` : ''}
         <div class="gh-grid">
-          ${github.weeks.map(week => `
+          ${weeks.map(week => `
             <div class="gh-col">
               ${week.map(d => `<div class="gh-cell" data-l="${d}"></div>`).join('')}
             </div>
           `).join('')}
         </div>
+        ${t.footer ? `<div class="gh-footer">${t.footer}</div>` : ''}
       </div>
     `;
   }
