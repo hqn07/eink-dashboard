@@ -47,10 +47,52 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
   }, []);
 
   // All items in `layout` are on the canvas (no more enabled flag).
+  // Filter for the pool — narrows the list of templates by label.
+  const [poolFilter, setPoolFilter] = useState('');
+
+  // Auto-scroll the page while a pool widget is being dragged near the
+  // viewport edges. This is what lets the user grab a card and drop it
+  // onto the canvas even when the canvas has scrolled out of view.
+  useEffect(() => {
+    let raf = null;
+    let velocity = 0;
+    const EDGE = 80;     // px from edge before scroll kicks in
+    const MAX_VEL = 24;  // px per frame at the edge
+    const tick = () => {
+      raf = null;
+      if (velocity !== 0) {
+        window.scrollBy(0, velocity);
+        raf = requestAnimationFrame(tick);
+      }
+    };
+    const onDragOver = (e) => {
+      const y = e.clientY;
+      const h = window.innerHeight;
+      if (y < EDGE)        velocity = -Math.round(((EDGE - y) / EDGE) * MAX_VEL);
+      else if (y > h - EDGE) velocity =  Math.round(((y - (h - EDGE)) / EDGE) * MAX_VEL);
+      else                 velocity = 0;
+      if (velocity !== 0 && raf == null) raf = requestAnimationFrame(tick);
+    };
+    const onDragEnd = () => { velocity = 0; if (raf) { cancelAnimationFrame(raf); raf = null; } };
+    window.addEventListener('dragover', onDragOver);
+    window.addEventListener('dragend', onDragEnd);
+    window.addEventListener('drop', onDragEnd);
+    return () => {
+      window.removeEventListener('dragover', onDragOver);
+      window.removeEventListener('dragend', onDragEnd);
+      window.removeEventListener('drop', onDragEnd);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+
   // The pool is a fixed list of widget templates from the registry —
   // each card creates a NEW instance when added.
   const enabled = layout;
-  const palette = WIDGET_REGISTRY;
+  const palette = poolFilter.trim()
+    ? WIDGET_REGISTRY.filter(d =>
+        d.label.toLowerCase().includes(poolFilter.toLowerCase()) ||
+        d.id.toLowerCase().includes(poolFilter.toLowerCase()))
+    : WIDGET_REGISTRY;
 
   // Editor canvas is sized to the full dashboard aspect; the body
   // section we hand to RGL is BODY_H/DASH_H of that height. Row
@@ -330,8 +372,20 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
       <div className="palette">
         <div className="palette-title">
           <span>Widget Pool</span>
+          <input
+            type="text"
+            className="palette-search"
+            value={poolFilter}
+            onChange={e => setPoolFilter(e.target.value)}
+            placeholder="Search widgets…"
+          />
           <span className="badge">{palette.length}</span>
         </div>
+        {palette.length === 0 && (
+          <div className="terminal-line" style={{ padding: 12 }}>
+            &gt; NO WIDGETS MATCH "{poolFilter}"
+          </div>
+        )}
         <div className="palette-grid">
           {palette.map(def => {
             const sizeKey = smallestSizeKey(def);
