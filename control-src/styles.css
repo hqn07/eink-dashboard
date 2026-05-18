@@ -644,6 +644,15 @@ input[type="text"], input[type="url"], textarea {
   padding: 0;
 }
 .tile-remove:hover, .tile-flush:hover, .tile-settings:hover, .tile-border:hover { background: var(--ink); color: #fff; }
+
+.todo-grip {
+  cursor: grab;
+  user-select: none;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--mute);
+  padding: 0 4px;
+}
+.todo-grip:active { cursor: grabbing; }
 .tile-flush.on { background: var(--ink); color: #fff; }
 
 /* ============ PALETTE ============ */

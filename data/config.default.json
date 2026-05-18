@@ -8,21 +8,25 @@
   },
   "message": {
     "text": "Welcome home.",
-    "subtitle": "Your dashboard is live."
+    "subtitle": "Your dashboard is live.",
+    "schedule": []
   },
   "todos": [
-    { "text": "Hook up Google Calendar", "done": false },
-    { "text": "Pick a font you actually love", "done": false }
+    { "text": "Hook up Google Calendar", "done": false, "dueDate": null, "recurring": null, "completedAt": null },
+    { "text": "Pick a font you actually love", "done": false, "dueDate": null, "recurring": null, "completedAt": null }
   ],
   "calendar": {
-    "icalUrl": ""
+    "icalUrl": "",
+    "icalUrls": []
   },
   "spacer": {
     "text": ""
   },
   "quote": {
     "text": "Make each day your masterpiece.",
-    "attribution": "John Wooden"
+    "attribution": "John Wooden",
+    "source": "static",
+    "list": []
   },
   "clock": {
     "format": 12,

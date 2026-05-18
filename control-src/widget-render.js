@@ -9,6 +9,14 @@ function escapeHtml(s) {
   }[c]));
 }
 
+// Minimal inline markdown: caller must escapeHtml first to keep this safe.
+function md(s) {
+  return String(s || '')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code>$1</code>');
+}
+
 const ICONS = {
   Clear: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="22" fill="#000"/>
     ${Array.from({length:8}, (_,i)=>{
@@ -131,14 +139,16 @@ const RENDERERS = {
       ${extras}
     `;
   },
-  weather_forecast: ({ weather }) => {
+  weather_forecast: ({ weather, cellH }) => {
     const w = weather;
     if (!w || !w.forecast || !w.forecast.length) {
-      return `<div class="col-title">3-DAY OUTLOOK</div><div class="empty" style="border:0;padding:14px 0">NO DATA</div>`;
+      return `<div class="col-title">FORECAST</div><div class="empty" style="border:0;padding:14px 0">NO DATA</div>`;
     }
+    const max = (cellH || 0) >= 6 ? 7 : 3;
+    const list = w.forecast.slice(0, max);
     return `
-      <div class="col-title">3-DAY OUTLOOK</div>
-      ${w.forecast.map(f => `
+      <div class="col-title">${list.length}-DAY OUTLOOK</div>
+      ${list.map(f => `
         <div class="fc-row">
           <div class="fc-day">${f.name}</div>
           <div class="fc-icon">${icon(f.main, 38)}</div>
@@ -146,23 +156,25 @@ const RENDERERS = {
             <div class="fc-hi">${f.hi}°</div>
             <div class="fc-lo">${f.lo}°</div>
           </div>
+          ${Number.isFinite(f.precip) && f.precip > 0
+            ? `<div class="fc-precip">${f.precip}%</div>` : '<div class="fc-precip"></div>'}
         </div>
       `).join('')}
     `;
   },
-  message: ({ cfg }) => {
-    const m = (cfg && cfg.message) || {};
+  message: ({ cfg, resolvedMessage }) => {
+    const m = resolvedMessage || (cfg && cfg.message) || {};
     const text = m.text || 'Custom message';
     const sub  = m.subtitle || '';
     return `
       <div class="widget widget-msg">
-        <div class="msg-text">${escapeHtml(text)}</div>
-        ${sub ? `<div class="msg-sub">${escapeHtml(sub)}</div>` : ''}
+        <div class="msg-text">${md(escapeHtml(text))}</div>
+        ${sub ? `<div class="msg-sub">${md(escapeHtml(sub))}</div>` : ''}
       </div>
     `;
   },
   todos: ({ cfg }) => {
-    const todos = ((cfg && cfg.todos) || []).slice(0, 6);
+    const todos = ((cfg && cfg.todos) || []).slice(0, 8);
     if (!todos.length) {
       return `
         <div class="widget widget-todos">
@@ -171,36 +183,60 @@ const RENDERERS = {
         </div>
       `;
     }
+    const today = (() => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    })();
     return `
       <div class="widget widget-todos">
         <div class="widget-title">TODO</div>
         <ul class="todo-list">
-          ${todos.map(t => `
-            <li class="${t.done ? 'done' : ''}">
-              <span class="checkbox"></span>
-              <span class="todo-text">${escapeHtml(t.text)}</span>
-            </li>
-          `).join('')}
+          ${todos.map(t => {
+            const overdue = t.dueDate && !t.done && t.dueDate < today;
+            const due = t.dueDate && !t.done
+              ? `<span class="todo-due ${overdue ? 'overdue' : ''}">${t.dueDate === today ? 'TODAY' : (overdue ? 'LATE' : t.dueDate.slice(5))}</span>`
+              : '';
+            const recur = t.recurring === 'daily' ? '<span class="todo-recur">↻</span>' : '';
+            return `
+              <li class="${t.done ? 'done' : ''}">
+                <span class="checkbox">${t.done ? '✓' : ''}</span>
+                <span class="todo-text">${escapeHtml(t.text)}</span>
+                ${recur}
+                ${due}
+              </li>
+            `;
+          }).join('')}
         </ul>
       </div>
     `;
   },
   calendar: ({ events }) => {
-    const list = (events || []).slice(0, 3);
+    const list = (events || []).slice(0, 8);
+    if (!list.length) {
+      return `<div class="widget widget-cal"><div class="widget-title">UPCOMING</div><div class="cal-row"><div class="cal-info"><div class="cal-title">No events</div></div></div></div>`;
+    }
+    const groups = {};
+    const order = [];
+    for (const ev of list) {
+      const s = ev.section || 'LATER';
+      if (!groups[s]) { groups[s] = []; order.push(s); }
+      groups[s].push(ev);
+    }
     return `
       <div class="widget widget-cal">
         <div class="widget-title">UPCOMING</div>
-        ${list.length
-          ? list.map(ev => `
-            <div class="cal-row">
+        ${order.map(s => `
+          <div class="cal-section-title">${s}</div>
+          ${groups[s].map(ev => `
+            <div class="cal-row ${ev.isAllDay ? 'allday' : ''}">
               <div class="cal-day">${escapeHtml(ev.dayLabel || '')}</div>
               <div class="cal-info">
                 <div class="cal-title">${escapeHtml(ev.title || '')}</div>
                 <div class="cal-time">${escapeHtml(ev.startLabel || '')}</div>
               </div>
             </div>
-          `).join('')
-          : `<div class="cal-row"><div class="cal-info"><div class="cal-title">No events</div></div></div>`}
+          `).join('')}
+        `).join('')}
       </div>
     `;
   },
@@ -210,15 +246,15 @@ const RENDERERS = {
     const cls = s.invert ? ' invert' : '';
     return `<div class="widget widget-spacer${cls}">${text ? escapeHtml(text) : ''}</div>`;
   },
-  quote: ({ cfg }) => {
-    const q = (cfg && cfg.quote) || {};
+  quote: ({ cfg, resolvedQuote }) => {
+    const q = resolvedQuote || (cfg && cfg.quote) || {};
     const body = (q.text || '').trim() || 'Type a quote in settings.';
     const attr = (q.attribution || '').trim();
     const align = (q.align === 'left' || q.align === 'right') ? q.align : 'center';
     const baseSize = Math.max(14, Math.min(46, Math.round(420 / Math.max(8, body.length / 4))));
     return `
       <div class="widget widget-quote" style="text-align:${align}">
-        <div class="quote-body" style="font-size:${baseSize}px">${escapeHtml(body)}</div>
+        <div class="quote-body" style="font-size:${baseSize}px">${md(escapeHtml(body))}</div>
         ${attr ? `<div class="quote-attr">— ${escapeHtml(attr)}</div>` : ''}
       </div>
     `;

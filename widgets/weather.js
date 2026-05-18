@@ -162,11 +162,11 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
   const params = new URLSearchParams({
     latitude: String(lat),
     longitude: String(lon),
-    current: 'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m',
-    hourly: 'temperature_2m,weather_code',
-    daily: 'temperature_2m_max,temperature_2m_min,weather_code,sunrise,sunset',
+    current: 'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover',
+    hourly: 'temperature_2m,weather_code,precipitation_probability,cloud_cover',
+    daily: 'temperature_2m_max,temperature_2m_min,weather_code,sunrise,sunset,precipitation_probability_max',
     timezone: 'auto',
-    forecast_days: '4',
+    forecast_days: '7',
     temperature_unit: tempUnit,
     wind_speed_unit: windUnitParam
   });
@@ -191,7 +191,6 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
       let startIdx = 0;
       for (let i = 0; i < htimes.length; i++) {
         const m = minutesOM(htimes[i]);
-        // Match by date prefix + hour ≥ now.
         if (htimes[i].slice(0, 10) === (cur.time || '').slice(0, 10) && m >= nowM) {
           startIdx = i;
           break;
@@ -207,20 +206,23 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
         hourly.push({
           label: `${h}${ampm}`,
           temp: Math.round(hr.temperature_2m[i]),
-          main: wf.main
+          main: wf.main,
+          precip: Math.round(hr.precipitation_probability ? hr.precipitation_probability[i] : 0)
         });
         if (hourly.length >= 6) break;
       }
     }
 
+    // Full 7-day forecast (some renderers only show 3; widget can decide).
     const forecast = [];
     const dlen = (daily.time || []).length;
-    for (let i = 1; i < Math.min(dlen, 4); i++) {
+    for (let i = 1; i < Math.min(dlen, 8); i++) {
       const f = wmo(daily.weather_code[i]);
       forecast.push({
         name: dayLabel(daily.time[i]),
         hi: Math.round(daily.temperature_2m_max[i]),
         lo: Math.round(daily.temperature_2m_min[i]),
+        precip: Math.round(daily.precipitation_probability_max ? daily.precipitation_probability_max[i] : 0),
         main: f.main,
         desc: f.desc
       });
@@ -233,7 +235,9 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
       tempMax: Math.round(daily.temperature_2m_max ? daily.temperature_2m_max[0] : cur.temperature_2m),
       humidity: Math.round(cur.relative_humidity_2m),
       windSpeed: Math.round(cur.wind_speed_10m),
+      windGust: Number.isFinite(cur.wind_gusts_10m) ? Math.round(cur.wind_gusts_10m) : null,
       windDir: windDir(cur.wind_direction_10m),
+      cloudCover: Number.isFinite(cur.cloud_cover) ? Math.round(cur.cloud_cover) : null,
       desc: curWmo.desc,
       main: curWmo.main,
       sunrise: formatTimeOM(daily.sunrise && daily.sunrise[0]),

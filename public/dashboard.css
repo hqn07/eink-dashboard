@@ -861,3 +861,109 @@ html, body {
 .gh-cell[data-l="2"] { background: #888; }
 .gh-cell[data-l="3"] { background: #444; }
 .gh-cell[data-l="4"] { background: #000; }
+
+/* ============ HOURLY PRECIP BARS ============ */
+.hr-precip {
+  position: relative;
+  width: 100%;
+  height: 18px;
+  margin-top: 2px;
+  border: 1px solid #000;
+  display: flex;
+  align-items: flex-end;
+}
+.hr-precip-bar {
+  width: 100%;
+  background: #000;
+}
+.hr-precip-pct {
+  position: absolute;
+  inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  font-weight: 600;
+  color: #000;
+  mix-blend-mode: difference;
+  filter: invert(1);
+}
+
+/* ============ WEATHER ALERT BANNER ============ */
+.weather-alert {
+  margin: 6px 0 4px;
+  padding: 4px 8px;
+  border: 2px solid #000;
+  background: #000;
+  color: #fff;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.alert-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  font-weight: 700;
+}
+.alert-text {
+  font-family: 'Oswald', sans-serif;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ============ FORECAST PRECIP COL ============ */
+.fc-row { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; }
+.fc-precip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  min-width: 32px;
+  text-align: right;
+  color: #444;
+}
+
+/* ============ CAL SECTIONS + ALL-DAY ============ */
+.cal-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 3px;
+  margin: 6px 0 2px;
+  color: #444;
+  padding-bottom: 1px;
+  border-bottom: 1px solid rgba(0,0,0,0.2);
+}
+.cal-row.allday .cal-time {
+  background: #000;
+  color: #fff;
+  padding: 1px 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 2px;
+  display: inline-block;
+}
+
+/* ============ TODO EXTRAS ============ */
+.todo-list li .todo-due {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 1px 4px;
+  border: 1px solid #000;
+}
+.todo-list li .todo-due.overdue {
+  background: #000;
+  color: #fff;
+}
+.todo-list li .todo-recur {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  margin-left: 4px;
+  color: #555;
+}
+.todo-list li.done .todo-text { text-decoration: line-through; opacity: 0.5; }

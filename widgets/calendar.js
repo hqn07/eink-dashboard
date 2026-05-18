@@ -4,15 +4,14 @@
 const ical = require('node-ical');
 
 const CACHE_MS = 10 * 60 * 1000;
-let cache = { at: 0, url: null, events: [] };
+const cache = new Map(); // url → { at, events }
 
 async function fetchEvents(icalUrl, limit = 5) {
   if (!icalUrl) return [];
 
   const now = Date.now();
-  if (cache.url === icalUrl && (now - cache.at) < CACHE_MS) {
-    return cache.events;
-  }
+  const hit = cache.get(icalUrl);
+  if (hit && (now - hit.at) < CACHE_MS) return hit.events;
 
   try {
     const data = await ical.async.fromURL(icalUrl);
@@ -27,21 +26,28 @@ async function fetchEvents(icalUrl, limit = 5) {
       if (!start) continue;
       if (start < nowDate || start > horizon) continue;
 
+      // iCal all-day events arrive with start.dateOnly === true or
+      // datetype === 'date' depending on parser version.
+      const isAllDay = !!(start.dateOnly || ev.datetype === 'date');
+
       upcoming.push({
         title: (ev.summary || 'Untitled').toString(),
         start,
-        startLabel: formatEventTime(start),
-        dayLabel: formatEventDay(start)
+        startISO: start.toISOString ? start.toISOString() : new Date(start).toISOString(),
+        startLabel: isAllDay ? 'ALL DAY' : formatEventTime(start),
+        dayLabel: formatEventDay(start),
+        section: sectionFor(start),
+        isAllDay
       });
     }
 
     upcoming.sort((a, b) => a.start - b.start);
     const trimmed = upcoming.slice(0, limit);
-    cache = { at: now, url: icalUrl, events: trimmed };
+    cache.set(icalUrl, { at: now, events: trimmed });
     return trimmed;
   } catch (err) {
     console.error('Calendar error:', err.message);
-    return cache.events;
+    return hit?.events || [];
   }
 }
 
@@ -61,6 +67,16 @@ function formatEventDay(d) {
   if (diff === 0) return 'TODAY';
   if (diff === 1) return 'TMRW';
   return DAYS[d.getDay()];
+}
+
+function sectionFor(d) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const evDay = new Date(d); evDay.setHours(0,0,0,0);
+  const diff = Math.round((evDay - today) / (24 * 3600 * 1000));
+  if (diff === 0) return 'TODAY';
+  if (diff === 1) return 'TOMORROW';
+  if (diff < 7)   return 'THIS WEEK';
+  return 'LATER';
 }
 
 module.exports = { fetchEvents };

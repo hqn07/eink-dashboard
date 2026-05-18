@@ -23,6 +23,10 @@ const { fetchAqi } = require('./widgets/aqi');
 const { fetchNews } = require('./widgets/news');
 const { fetchStocks } = require('./widgets/stocks');
 const { fetchGithub } = require('./widgets/github');
+const { fetchAlerts } = require('./widgets/alerts');
+const { prepTodos } = require('./widgets/todos');
+const { resolveQuote } = require('./widgets/quote');
+const { resolveMessage, renderInlineMarkdown } = require('./widgets/message');
 
 const PORT = process.env.PORT || 3000;
 const DEVICE_TOKEN = process.env.DEVICE_TOKEN || '';
@@ -358,9 +362,17 @@ async function buildWidgetData(cfg, units, layout) {
     ? { lat: cfg.lat, lon: cfg.lon }
     : cfg.city;
 
-  const [weather, events, aqi, news, stocks, github, wifiQrSvg] = await Promise.all([
+  // Merge legacy single icalUrl into icalUrls array so the calendar
+  // fetcher always sees one shape.
+  const icalUrls = (cfg.calendar && Array.isArray(cfg.calendar.icalUrls) && cfg.calendar.icalUrls.length)
+    ? cfg.calendar.icalUrls.filter(Boolean)
+    : (cfg.calendar && cfg.calendar.icalUrl ? [cfg.calendar.icalUrl] : []);
+
+  const [weather, events, aqi, news, stocks, github, wifiQrSvg, alerts] = await Promise.all([
     wantWeather ? fetchWeather(loc, process.env.OPENWEATHER_API_KEY, units) : null,
-    (ids.has('calendar') && cfg.calendar && cfg.calendar.icalUrl) ? fetchEvents(cfg.calendar.icalUrl) : [],
+    (ids.has('calendar') && icalUrls.length)
+      ? Promise.all(icalUrls.map(u => fetchEvents(u))).then(lists => mergeEvents(lists.flat()))
+      : [],
     (ids.has('aqi') && Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon))
       ? fetchAqi({ lat: cfg.lat, lon: cfg.lon }) : null,
     (ids.has('news') && cfg.news && cfg.news.feedUrl)
@@ -369,18 +381,45 @@ async function buildWidgetData(cfg, units, layout) {
       ? fetchStocks(cfg.stocks.symbols) : [],
     (ids.has('github') && cfg.github && cfg.github.user)
       ? fetchGithub(cfg.github.user) : null,
-    ids.has('wifi_qr') ? buildWifiQrSvg(cfg.wifi || {}) : null
+    ids.has('wifi_qr') ? buildWifiQrSvg(cfg.wifi || {}) : null,
+    (wantWeather && cfg.alerts !== false && Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon))
+      ? fetchAlerts({ lat: cfg.lat, lon: cfg.lon }) : []
   ]);
 
   const clockNow    = ids.has('clock')     ? buildClockNow(cfg.timezone || 'UTC') : null;
   const countdowns  = ids.has('countdown') ? buildCountdowns(cfg.countdowns || [], cfg.timezone || 'UTC') : [];
   const moonsun     = ids.has('moonsun')   ? buildMoonSun(weather) : null;
-  const todos       = ids.has('todos') ? (cfg.todos || []) : [];
+  const todos       = ids.has('todos') ? prepTodos(cfg.todos || [], cfg.timezone || 'UTC') : [];
+  const resolvedQuote   = ids.has('quote')   ? await resolveQuote(cfg) : null;
+  const resolvedMessage = ids.has('message') ? resolveMessage(cfg) : null;
+
+  // Attach alerts onto weather so the renderer can show a banner without
+  // a separate top-level lookup.
+  if (weather && alerts && alerts.length) weather.alerts = alerts;
 
   return {
     weather, events, aqi, news, stocks, github,
-    wifiQrSvg, clockNow, countdowns, moonsun, todos
+    wifiQrSvg, clockNow, countdowns, moonsun, todos,
+    resolvedQuote, resolvedMessage
   };
+}
+
+// Sort + dedupe merged calendar events. Keys by title+startISO so the same
+// event coming from two feeds doesn't double-render.
+function mergeEvents(list) {
+  const seen = new Set();
+  const out = [];
+  for (const e of list) {
+    const k = `${e.title}|${e.startISO || e.startLabel || ''}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(e);
+  }
+  return out.sort((a, b) => {
+    const ka = a.startISO || '';
+    const kb = b.startISO || '';
+    return ka.localeCompare(kb);
+  });
 }
 
 // Dashboard HTML — built from the active screen's layout + live data

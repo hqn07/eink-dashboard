@@ -22,12 +22,13 @@ export const WIDGET_REGISTRY = [
   },
   {
     id: 'weather_forecast',
-    label: 'Weather · 3-Day Forecast',
+    label: 'Weather · Forecast',
     requires: 'weather',
     sizes: {
       S: { w: 3, h: 4 },
       M: { w: 3, h: 6 },
-      L: { w: 6, h: 6 }
+      L: { w: 6, h: 6 },
+      XL: { w: 12, h: 3 }
     },
     defaultSize: 'M'
   },

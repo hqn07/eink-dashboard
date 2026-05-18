@@ -29,6 +29,16 @@
   const clockNow = D.clockNow || null;
   const countdowns = D.countdowns || [];
   const moonsun = D.moonsun || null;
+  const resolvedQuote = D.resolvedQuote || null;
+  const resolvedMessage = D.resolvedMessage || null;
+
+  // Minimal inline markdown (escaped first).
+  function md(s) {
+    return String(s || '')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/`(.+?)`/g, '<code>$1</code>');
+  }
 
   // Inject accent color as CSS variable, if set.
   if (cfg.accent) {
@@ -139,8 +149,25 @@
             <div class="hr-time">${h.label}</div>
             ${icon(h.main, 22)}
             <div class="hr-temp">${h.temp}°</div>
+            ${Number.isFinite(h.precip) && h.precip > 0
+              ? `<div class="hr-precip" title="${h.precip}% chance">
+                   <div class="hr-precip-bar" style="height:${Math.min(100, h.precip)}%"></div>
+                   <div class="hr-precip-pct">${h.precip}%</div>
+                 </div>`
+              : ''}
           </div>
         `).join('')}
+      </div>
+    `;
+  }
+
+  function alertBanner(w) {
+    if (!w || !Array.isArray(w.alerts) || !w.alerts.length) return '';
+    const a = w.alerts[0];
+    return `
+      <div class="weather-alert">
+        <span class="alert-tag">⚠ ${a.severity || 'ALERT'}</span>
+        <span class="alert-text">${a.event}</span>
       </div>
     `;
   }
@@ -173,11 +200,12 @@
             <div class="weather-desc">${weather.desc}</div>
             <div class="weather-hilo">HIGH ${weather.tempMax}° &nbsp;·&nbsp; LOW ${weather.tempMin}°</div>
           </div>
+          ${alertBanner(weather)}
           <div class="weather-stats">
             <div class="stat"><span class="stat-k">FEELS</span><span class="stat-v">${weather.feelsLike}°</span></div>
             <div class="stat"><span class="stat-k">HUMID</span><span class="stat-v">${weather.humidity}%</span></div>
-            <div class="stat"><span class="stat-k">WIND</span><span class="stat-v">${weather.windDir} ${weather.windSpeed} ${weather.windUnit || ''}</span></div>
-            <div class="stat"><span class="stat-k">RISE</span><span class="stat-v">${weather.sunrise}</span></div>
+            <div class="stat"><span class="stat-k">WIND</span><span class="stat-v">${weather.windDir} ${weather.windSpeed}${weather.windGust ? ` (G${weather.windGust})` : ''} ${weather.windUnit || ''}</span></div>
+            <div class="stat"><span class="stat-k">${Number.isFinite(weather.cloudCover) ? 'CLOUD' : 'RISE'}</span><span class="stat-v">${Number.isFinite(weather.cloudCover) ? weather.cloudCover + '%' : weather.sunrise}</span></div>
           </div>
           ${extras}
         `;
@@ -185,15 +213,18 @@
     },
     {
       id: 'weather_forecast',
-      label: '3-Day Forecast',
+      label: 'Weather Forecast',
       requires: 'weather',
-      sizes: { S:{w:3,h:4}, M:{w:3,h:6}, L:{w:6,h:6} },
+      sizes: { S:{w:3,h:4}, M:{w:3,h:6}, L:{w:6,h:6}, XL:{w:12,h:3} },
       defaultSize: 'M',
-      render: ({ weather }) => {
+      render: ({ weather, cellH }) => {
         if (!weather || !weather.forecast || !weather.forecast.length) return '';
+        // Number of days to render scales with vertical space.
+        const max = (cellH || 0) >= 6 ? 7 : 3;
+        const list = weather.forecast.slice(0, max);
         return `
-          <div class="col-title">3-DAY OUTLOOK</div>
-          ${weather.forecast.map(f => `
+          <div class="col-title">${list.length}-DAY OUTLOOK</div>
+          ${list.map(f => `
             <div class="fc-row">
               <div class="fc-day">${f.name}</div>
               <div class="fc-icon">${icon(f.main, 38)}</div>
@@ -201,6 +232,8 @@
                 <div class="fc-hi">${f.hi}°</div>
                 <div class="fc-lo">${f.lo}°</div>
               </div>
+              ${Number.isFinite(f.precip) && f.precip > 0
+                ? `<div class="fc-precip">${f.precip}%</div>` : '<div class="fc-precip"></div>'}
             </div>
           `).join('')}
         `;
@@ -212,13 +245,13 @@
       requires: 'message',
       sizes: { S:{w:4,h:2}, M:{w:5,h:2}, L:{w:12,h:2}, XL:{w:12,h:3} },
       defaultSize: 'M',
-      render: ({ cfg }) => {
-        const m = cfg.message;
+      render: ({ cfg, resolvedMessage }) => {
+        const m = resolvedMessage || cfg.message;
         if (!m || !m.text) return '';
         return `
           <div class="widget widget-msg">
-            <div class="msg-text">${escapeHtml(m.text)}</div>
-            ${m.subtitle ? `<div class="msg-sub">${escapeHtml(m.subtitle)}</div>` : ''}
+            <div class="msg-text">${md(escapeHtml(m.text))}</div>
+            ${m.subtitle ? `<div class="msg-sub">${md(escapeHtml(m.subtitle))}</div>` : ''}
           </div>
         `;
       }
@@ -231,16 +264,29 @@
       defaultSize: 'M',
       render: ({ todos }) => {
         if (!todos || !todos.length) return '';
+        const today = (() => {
+          const d = new Date();
+          return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        })();
         return `
           <div class="widget widget-todos">
             <div class="widget-title">TODO</div>
             <ul class="todo-list">
-              ${todos.map(t => `
-                <li class="${t.done ? 'done' : ''}">
-                  <span class="checkbox"></span>
-                  <span class="todo-text">${escapeHtml(t.text)}</span>
-                </li>
-              `).join('')}
+              ${todos.map(t => {
+                const overdue = t.dueDate && !t.done && t.dueDate < today;
+                const due = t.dueDate && !t.done
+                  ? `<span class="todo-due ${overdue ? 'overdue' : ''}">${t.dueDate === today ? 'TODAY' : (overdue ? 'LATE' : t.dueDate.slice(5))}</span>`
+                  : '';
+                const recur = t.recurring === 'daily' ? '<span class="todo-recur">↻</span>' : '';
+                return `
+                  <li class="${t.done ? 'done' : ''}">
+                    <span class="checkbox">${t.done ? '✓' : ''}</span>
+                    <span class="todo-text">${escapeHtml(t.text)}</span>
+                    ${recur}
+                    ${due}
+                  </li>
+                `;
+              }).join('')}
             </ul>
           </div>
         `;
@@ -254,17 +300,28 @@
       defaultSize: 'M',
       render: ({ events }) => {
         if (!events || !events.length) return '';
+        // Group by section. Limit total render to 6 to fit medium cell.
+        const groups = {};
+        const order = [];
+        for (const ev of events.slice(0, 8)) {
+          const s = ev.section || 'LATER';
+          if (!groups[s]) { groups[s] = []; order.push(s); }
+          groups[s].push(ev);
+        }
         return `
           <div class="widget widget-cal">
             <div class="widget-title">UPCOMING</div>
-            ${events.slice(0,3).map(ev => `
-              <div class="cal-row">
-                <div class="cal-day">${ev.dayLabel}</div>
-                <div class="cal-info">
-                  <div class="cal-title">${escapeHtml(ev.title)}</div>
-                  <div class="cal-time">${ev.startLabel}</div>
+            ${order.map(s => `
+              <div class="cal-section-title">${s}</div>
+              ${groups[s].map(ev => `
+                <div class="cal-row ${ev.isAllDay ? 'allday' : ''}">
+                  <div class="cal-day">${ev.dayLabel}</div>
+                  <div class="cal-info">
+                    <div class="cal-title">${escapeHtml(ev.title)}</div>
+                    <div class="cal-time">${ev.startLabel}</div>
+                  </div>
                 </div>
-              </div>
+              `).join('')}
             `).join('')}
           </div>
         `;
@@ -289,8 +346,8 @@
       requires: 'quote',
       sizes: { S:{w:4,h:2}, M:{w:6,h:3}, L:{w:12,h:3}, XL:{w:12,h:6} },
       defaultSize: 'M',
-      render: ({ cfg }) => {
-        const q = cfg.quote || {};
+      render: ({ cfg, resolvedQuote }) => {
+        const q = resolvedQuote || cfg.quote || {};
         const body = (q.text || '').trim();
         if (!body) return '';
         const attr = (q.attribution || '').trim();
@@ -298,7 +355,7 @@
         const baseSize = Math.max(14, Math.min(46, Math.round(420 / Math.max(8, body.length / 4))));
         return `
           <div class="widget widget-quote" style="text-align:${align}">
-            <div class="quote-body" style="font-size:${baseSize}px">${escapeHtml(body)}</div>
+            <div class="quote-body" style="font-size:${baseSize}px">${md(escapeHtml(body))}</div>
             ${attr ? `<div class="quote-attr">— ${escapeHtml(attr)}</div>` : ''}
           </div>
         `;
@@ -631,7 +688,8 @@
 
   const ctx = {
     cfg, weather: w, events, todos, units,
-    aqi, news, stocks, github, wifiQrSvg, clockNow, countdowns, moonsun
+    aqi, news, stocks, github, wifiQrSvg, clockNow, countdowns, moonsun,
+    resolvedQuote, resolvedMessage
   };
   const layout = resolveLayout();
 
