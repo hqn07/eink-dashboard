@@ -21,6 +21,7 @@ import Preview from './components/Preview.jsx';
 import SaveBar from './components/SaveBar.jsx';
 import ScreenTabs from './components/ScreenTabs.jsx';
 import ScreenPanel from './components/ScreenPanel.jsx';
+import ChromePanel from './components/ChromePanel.jsx';
 import ScheduleTimeline from './components/ScheduleTimeline.jsx';
 import SetupWizard from './components/SetupWizard.jsx';
 
@@ -65,9 +66,6 @@ export default function App() {
   const [previewKey, setPreviewKey] = useState(Date.now());
   const [previewData, setPreviewData] = useState(null);
   const [toast, setToast] = useState(null);
-  const [theme, setTheme] = useState(() => {
-    try { return localStorage.getItem('ctrl.theme') || 'light'; } catch { return 'light'; }
-  });
   const [undoCfg, setUndoCfg] = useState(null);
   const [focusedWidgetId, setFocusedWidgetId] = useState(null);
 
@@ -94,10 +92,6 @@ export default function App() {
   useEffect(() => {
     try { if (editScreenId) localStorage.setItem('ctrl.editScreenId', editScreenId); } catch {}
   }, [editScreenId]);
-  useEffect(() => {
-    try { localStorage.setItem('ctrl.theme', theme); } catch {}
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
 
   const screens = cfg ? (cfg.screens || []) : [];
   const editScreen = screens.find(s => s.id === editScreenId) || screens[0];
@@ -329,14 +323,6 @@ export default function App() {
         <div className="actions">
           <motion.button
             whileTap={{ scale: 0.96 }}
-            className="btn btn-ghost"
-            title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
-            onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
-          >
-            {theme === 'dark' ? '☀' : '☾'}
-          </motion.button>
-          <motion.button
-            whileTap={{ scale: 0.96 }}
             className={`btn ${editMode ? 'btn-primary' : ''}`}
             title="Toggle edit mode (E)"
             onClick={toggleEditMode}
@@ -420,6 +406,12 @@ export default function App() {
               <div className="editor-help">
                 DRAG TILE TO MOVE · CORNER TO RESIZE · × OR DRAG TO TRASH · DRAG POOL CARD ONTO CANVAS
               </div>
+              {editScreen && (
+                <ChromePanel
+                  screen={editScreen}
+                  onUpdate={(patch) => updateScreen(editScreen.id, patch)}
+                />
+              )}
             </section>
           ) : (
             <>

@@ -921,63 +921,6 @@ input[type="text"], input[type="url"], textarea {
   animation: card-flash 1.4s ease-out;
 }
 
-/* ============ DARK MODE ============
- * Inverts the canvas while leaving the actual e-ink preview untouched
- * (it must keep its newspaper look so what you see = what gets printed).
- * Text is dialed down from pure white (#e8e6df) to softer warm grey so it
- * doesn't blast at night. */
-html[data-theme="dark"] {
-  --bg: #1a1d22;
-  --ink: #b6b3a8;
-  --line: #5a5953;
-  --accent: #d97a72;
-  --mute: #74726a;
-  --grid: rgba(182, 179, 168, 0.06);
-}
-html[data-theme="dark"] .card,
-html[data-theme="dark"] .wizard-modal,
-html[data-theme="dark"] .save-bar {
-  background: #23272d;
-  border-color: var(--line);
-  color: var(--ink);
-}
-html[data-theme="dark"] input,
-html[data-theme="dark"] textarea,
-html[data-theme="dark"] select {
-  background: #14171c;
-  color: var(--ink);
-  border-color: var(--line);
-}
-html[data-theme="dark"] .btn {
-  background: #23272d;
-  color: var(--ink);
-  border-color: var(--line);
-}
-html[data-theme="dark"] .btn-primary {
-  background: var(--ink);
-  color: #14171c;
-}
-html[data-theme="dark"] h1,
-html[data-theme="dark"] h2,
-html[data-theme="dark"] h3,
-html[data-theme="dark"] .section-title,
-html[data-theme="dark"] .app-header h1 {
-  color: var(--ink);
-}
-html[data-theme="dark"] .btn-ghost {
-  background: transparent;
-}
-/* Keep the actual e-ink preview iframe content as-is (newspaper white).
- * Only re-tint the surrounding stage. */
-html[data-theme="dark"] .preview-frame {
-  background: #0f1115;
-  border-color: var(--line);
-}
-html[data-theme="dark"] .toast {
-  background: var(--ink);
-  color: #14171c;
-}
-
 /* ============ MOBILE / RESPONSIVE ============ */
 @media (max-width: 768px) {
   #root { padding: 10px; }

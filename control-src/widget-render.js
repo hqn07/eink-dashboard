@@ -156,7 +156,7 @@ const RENDERERS = {
     if (!w || !w.forecast || !w.forecast.length) {
       return `<div class="col-title">FORECAST</div><div class="empty" style="border:0;padding:14px 0">NO DATA</div>`;
     }
-    const max = (cellH || 0) >= 6 ? 7 : 3;
+    const max = (cellH || 0) >= 6 ? 5 : 3;
     const list = w.forecast.slice(0, max);
     return `
       <div class="col-title">${list.length}-DAY OUTLOOK</div>
@@ -273,19 +273,18 @@ const RENDERERS = {
   },
   clock: ({ cfg, clockNow }) => {
     const c = (cfg && cfg.clock) || {};
-    const t = clockNow || { hour: 12, minute: 0, second: 0, dateLabel: 'PREVIEW' };
+    const t = clockNow || { hour: 12, minute: 0, dateLabel: 'PREVIEW' };
     let h = t.hour;
     const fmt = c.format === 24 ? 24 : 12;
     const ampm = h >= 12 ? 'PM' : 'AM';
     if (fmt === 12) { h = h % 12; if (h === 0) h = 12; }
     const hh = fmt === 24 ? String(h).padStart(2, '0') : String(h);
     const mm = String(t.minute).padStart(2, '0');
-    const ss = c.showSeconds ? `:${String(t.second).padStart(2,'0')}` : '';
     const suffix = fmt === 12 ? ` ${ampm}` : '';
     return `
       <div class="widget widget-clock">
-        <div class="clock-time">${hh}:${mm}${ss}<span class="clock-ampm">${suffix}</span></div>
-        ${c.showDate ? `<div class="clock-date">${escapeHtml(t.dateLabel)}</div>` : ''}
+        <div class="clock-time">${hh}:${mm}<span class="clock-ampm">${suffix}</span></div>
+        ${c.showDate !== false ? `<div class="clock-date">${escapeHtml(t.dateLabel)}</div>` : ''}
       </div>
     `;
   },

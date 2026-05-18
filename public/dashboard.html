@@ -248,7 +248,8 @@
           return placeholder('FORECAST', 'Data unavailable');
         }
         // Number of days to render scales with vertical space.
-        const max = (cellH || 0) >= 6 ? 7 : 3;
+        // Cap at 5 even at h=6 so SAT doesn't clip in a 392/452px cell.
+        const max = (cellH || 0) >= 6 ? 5 : 3;
         const list = weather.forecast.slice(0, max);
         return `
           <div class="col-title">${list.length}-DAY OUTLOOK</div>
@@ -401,19 +402,18 @@
       defaultSize: 'M',
       render: ({ cfg, clockNow }) => {
         const c = cfg.clock || {};
-        const t = clockNow || { hour: 0, minute: 0, second: 0, dateLabel: '' };
+        const t = clockNow || { hour: 0, minute: 0, dateLabel: '' };
         let h = t.hour;
         const fmt = c.format === 24 ? 24 : 12;
         const ampm = h >= 12 ? 'PM' : 'AM';
         if (fmt === 12) { h = h % 12; if (h === 0) h = 12; }
         const hh = fmt === 24 ? String(h).padStart(2, '0') : String(h);
         const mm = String(t.minute).padStart(2, '0');
-        const ss = c.showSeconds ? `:${String(t.second).padStart(2,'0')}` : '';
         const suffix = fmt === 12 ? ` ${ampm}` : '';
         return `
           <div class="widget widget-clock">
-            <div class="clock-time">${hh}:${mm}${ss}<span class="clock-ampm">${suffix}</span></div>
-            ${c.showDate ? `<div class="clock-date">${t.dateLabel}</div>` : ''}
+            <div class="clock-time">${hh}:${mm}<span class="clock-ampm">${suffix}</span></div>
+            ${c.showDate !== false ? `<div class="clock-date">${t.dateLabel}</div>` : ''}
           </div>
         `;
       }

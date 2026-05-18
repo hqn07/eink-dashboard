@@ -378,16 +378,15 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested, focusedW
       {showClock && (
         <section {...sectionProps('clock')}>
           <div className="section-title">Clock</div>
+          <div className="terminal-line" style={{ fontSize: 10, marginBottom: 8 }}>
+            &gt; E-INK REFRESH = MINUTES · SECONDS WOULD ALWAYS BE STALE
+          </div>
           <div className="toggle-row">
             <span className="toggle-label">12-hour format</span>
             <Toggle
               on={(cfg.clock?.format || 12) === 12}
               onClick={() => onPatchNested('clock', { format: (cfg.clock?.format || 12) === 12 ? 24 : 12 })}
             />
-          </div>
-          <div className="toggle-row">
-            <span className="toggle-label">Show seconds</span>
-            <Toggle on={!!cfg.clock?.showSeconds} onClick={() => onPatchNested('clock', { showSeconds: !cfg.clock?.showSeconds })} />
           </div>
           <div className="toggle-row">
             <span className="toggle-label">Show date</span>
