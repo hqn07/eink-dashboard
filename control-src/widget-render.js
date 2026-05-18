@@ -206,17 +206,23 @@ const RENDERERS = {
       `).join('')}
     `;
   },
-  message: ({ cfg, resolvedMessage, cellH }) => {
+  message: ({ cfg, resolvedMessage, cellW, cellH }) => {
     const m = resolvedMessage || (cfg && cfg.message) || {};
     const text = m.text || 'Custom message';
     const sub  = m.subtitle || '';
-    const ch = cellH || 0;
-    const showSub = ch >= 3;
-    const txtSize = ch < 3 ? 14 : ch < 5 ? 18 : ch < 8 ? 22 : 28;
+    const tier = pickTier(cellW, cellH);
+    const matrix = {
+      tiny:     { txtSize: 14, subSize: 10, showSub: false },
+      compact:  { txtSize: 18, subSize: 11, showSub: true  },
+      standard: { txtSize: 22, subSize: 12, showSub: true  },
+      extended: { txtSize: 28, subSize: 13, showSub: true  },
+      full:     { txtSize: 36, subSize: 14, showSub: true  }
+    };
+    const t = matrix[tier];
     return `
       <div class="widget widget-msg">
-        <div class="msg-text" style="font-size:${txtSize}px">${md(escapeHtml(text))}</div>
-        ${showSub && sub ? `<div class="msg-sub">${md(escapeHtml(sub))}</div>` : ''}
+        <div class="msg-text" style="font-size:${t.txtSize}px">${md(escapeHtml(text))}</div>
+        ${t.showSub && sub ? `<div class="msg-sub" style="font-size:${t.subSize}px">${md(escapeHtml(sub))}</div>` : ''}
       </div>
     `;
   },
@@ -377,38 +383,52 @@ const RENDERERS = {
       </div>
     `;
   },
-  wifi_qr: ({ cfg, wifiQrSvg, cellH, cellW }) => {
+  wifi_qr: ({ cfg, wifiQrSvg, cellW, cellH }) => {
     const w = (cfg && cfg.wifi) || {};
     if (!w.ssid) return placeholder('WIFI QR', 'Enter WiFi SSID + password in settings');
     const qr = wifiQrSvg || '<div class="wifi-qr-placeholder">QR</div>';
-    const ch = cellH || 0, cw = cellW || 0;
-    const showMeta = ch >= 6 && cw >= 8;
+    const tier = pickTier(cellW, cellH);
+    const matrix = {
+      tiny:     { showSSID: false, showHint: false, ssidSize: 14 },
+      compact:  { showSSID: true,  showHint: false, ssidSize: 16 },
+      standard: { showSSID: true,  showHint: true,  ssidSize: 18 },
+      extended: { showSSID: true,  showHint: true,  ssidSize: 22 },
+      full:     { showSSID: true,  showHint: true,  ssidSize: 26 }
+    };
+    const t = matrix[tier];
+    const showMeta = t.showSSID || t.showHint;
     return `
       <div class="widget widget-wifi" style="${showMeta ? '' : 'justify-content:center'}">
         <div class="wifi-qr">${qr}</div>
         ${showMeta ? `
           <div class="wifi-meta">
-            <div class="wifi-ssid">${escapeHtml(w.ssid)}</div>
-            <div class="wifi-hint">SCAN TO CONNECT</div>
+            ${t.showSSID ? `<div class="wifi-ssid" style="font-size:${t.ssidSize}px">${escapeHtml(w.ssid)}</div>` : ''}
+            ${t.showHint ? `<div class="wifi-hint">SCAN TO CONNECT</div>` : ''}
           </div>
         ` : ''}
       </div>
     `;
   },
-  countdown: ({ countdowns, cellH }) => {
+  countdown: ({ countdowns, cellW, cellH }) => {
     const list = countdowns || [];
     if (!list.length) return placeholder('COUNTDOWN', 'Add a label + date in settings');
-    const ch = cellH || 0;
-    const maxRows = ch < 4 ? 1 : ch < 8 ? 3 : 5;
-    const numSize = ch < 4 ? 28 : ch < 6 ? 36 : ch < 9 ? 44 : 56;
+    const tier = pickTier(cellW, cellH);
+    const matrix = {
+      tiny:     { rows: 1, numSize: 28, showLabel: false },
+      compact:  { rows: 2, numSize: 36, showLabel: true  },
+      standard: { rows: 3, numSize: 44, showLabel: true  },
+      extended: { rows: 4, numSize: 52, showLabel: true  },
+      full:     { rows: 5, numSize: 64, showLabel: true  }
+    };
+    const t = matrix[tier];
     return `
       <div class="widget widget-countdown">
-        ${list.slice(0, maxRows).map(c => `
+        ${list.slice(0, t.rows).map(c => `
           <div class="cd-row">
-            <div class="cd-num" style="font-size:${numSize}px">${c.days}</div>
+            <div class="cd-num" style="font-size:${t.numSize}px">${c.days}</div>
             <div class="cd-meta">
               <div class="cd-unit">${c.unit}</div>
-              <div class="cd-label">${escapeHtml(c.label)}</div>
+              ${t.showLabel ? `<div class="cd-label">${escapeHtml(c.label)}</div>` : ''}
             </div>
           </div>
         `).join('')}
@@ -455,29 +475,56 @@ const RENDERERS = {
       </div>
     `;
   },
-  moonsun: ({ moonsun, cfg, cellH }) => {
+  moonsun: ({ moonsun, cfg, cellW, cellH }) => {
     if (!moonsun) {
       if (!cfg || !Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
         return placeholder('MOON & SUN', 'Set your location in settings');
       }
       return placeholder('MOON & SUN', 'Data unavailable');
     }
-    const ch = cellH || 0;
-    const showSunRow = ch >= 5;
+    function parseClock(s) {
+      if (!s || s === '--:--') return null;
+      const m = String(s).match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+      if (!m) return null;
+      let h = parseInt(m[1], 10);
+      const min = parseInt(m[2], 10);
+      const ap = (m[3] || '').toUpperCase();
+      if (ap === 'PM' && h !== 12) h += 12;
+      if (ap === 'AM' && h === 12) h = 0;
+      return h * 60 + min;
+    }
+    const srM = parseClock(moonsun.sunrise);
+    const ssM = parseClock(moonsun.sunset);
+    let daylight = '';
+    if (srM != null && ssM != null) {
+      let mins = ssM - srM;
+      if (mins < 0) mins += 24 * 60;
+      daylight = `${Math.floor(mins / 60)}h ${mins % 60}m daylight`;
+    }
+    const tier = pickTier(cellW, cellH);
+    const matrix = {
+      tiny:     { showDisc: false, showSunRow: false, showDaylight: false },
+      compact:  { showDisc: true,  showSunRow: false, showDaylight: false },
+      standard: { showDisc: true,  showSunRow: true,  showDaylight: false },
+      extended: { showDisc: true,  showSunRow: true,  showDaylight: true  },
+      full:     { showDisc: true,  showSunRow: true,  showDaylight: true  }
+    };
+    const t = matrix[tier];
     return `
       <div class="widget widget-moonsun">
         <div class="widget-title">SKY</div>
         <div class="moon-row">
-          <div class="moon-disc">${moonsun.moonSvg}</div>
+          ${t.showDisc ? `<div class="moon-disc">${moonsun.moonSvg}</div>` : ''}
           <div class="moon-meta">
             <div class="moon-phase">${moonsun.phase}</div>
             <div class="moon-illum">${moonsun.illuminationPct}% lit</div>
           </div>
         </div>
-        ${showSunRow ? `<div class="sun-row">
+        ${t.showSunRow ? `<div class="sun-row">
           <span>↑ ${moonsun.sunrise}</span>
           <span>↓ ${moonsun.sunset}</span>
         </div>` : ''}
+        ${t.showDaylight && daylight ? `<div class="moon-daylight">${daylight}</div>` : ''}
       </div>
     `;
   },

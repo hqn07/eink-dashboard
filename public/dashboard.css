@@ -789,6 +789,13 @@ html, body {
   font-size: 11px;
   letter-spacing: 2px;
 }
+.moon-daylight {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  margin-top: 4px;
+  color: #000;
+}
 
 /* ============ NEWS ============ */
 .widget-news {
