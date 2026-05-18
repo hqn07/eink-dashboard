@@ -179,15 +179,13 @@ const RENDERERS = {
     if (!w || !w.forecast || !w.forecast.length) {
       return `<div class="col-title">FORECAST</div><div class="empty" style="border:0;padding:14px 0">NO DATA</div>`;
     }
-    const tier = pickTier(cellW, cellH);
-    const matrix = {
-      tiny:     { days: 1, iconPx: 30, showPrecip: false },
-      compact:  { days: 2, iconPx: 30, showPrecip: false },
-      standard: { days: 3, iconPx: 34, showPrecip: true  },
-      extended: { days: 4, iconPx: 36, showPrecip: true  },
-      full:     { days: 5, iconPx: 38, showPrecip: true  }
-    };
-    const t = matrix[tier];
+    // Vertical list — drive day count off cellH alone. Width only
+    // gates the precip column.
+    const ch = cellH || 0, cw = cellW || 0;
+    const days = ch < 4 ? 1 : ch < 6 ? 2 : ch < 8 ? 3 : ch < 12 ? 4 : 5;
+    const iconPx = ch < 4 ? 28 : ch < 6 ? 30 : ch < 8 ? 34 : 38;
+    const showPrecip = cw >= 8;
+    const t = { days, iconPx, showPrecip };
     const max = t.days;
     const list = w.forecast.slice(0, max);
     return `
