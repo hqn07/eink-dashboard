@@ -1,6 +1,7 @@
 // GitHub contributions grid scraper. Uses the public profile-contributions
 // HTML page (no auth). Returns weeks[][] of intensity levels 0-4 + total count.
 // 1-hour cache.
+const { fetchWithTimeout } = require('./_fetch');
 const CACHE_MS = 60 * 60 * 1000;
 const cache = new Map();
 
@@ -10,7 +11,7 @@ async function fetchGithub(user) {
   if (hit && (Date.now() - hit.at) < CACHE_MS) return hit.data;
   try {
     const url = `https://github.com/users/${encodeURIComponent(user)}/contributions`;
-    const r = await fetch(url, { headers: { 'User-Agent': 'eink-dashboard/1.0' } });
+    const r = await fetchWithTimeout(url, { headers: { 'User-Agent': 'eink-dashboard/1.0' } });
     if (!r.ok) return hit?.data || null;
     const html = await r.text();
 

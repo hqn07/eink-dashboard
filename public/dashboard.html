@@ -433,10 +433,10 @@
         const slice = events.slice(0, t.events);
         const row = ev => `
           <div class="cal-row ${ev.isAllDay ? 'allday' : ''}">
-            <div class="cal-day">${ev.dayLabel}</div>
+            <div class="cal-day">${escapeHtml(ev.dayLabel || '')}</div>
             <div class="cal-info">
               <div class="cal-title">${escapeHtml(ev.title)}</div>
-              <div class="cal-time">${ev.startLabel}</div>
+              <div class="cal-time">${escapeHtml(ev.startLabel || '')}</div>
             </div>
           </div>`;
         if (!t.sections) {
@@ -1036,12 +1036,12 @@
     const header = el('header', 'hdr');
     header.innerHTML = `
       <div class="hdr-left">
-        <div class="hdr-city">${tpl(h.left)}</div>
-        ${h.leftSub ? `<div class="hdr-date">${tpl(h.leftSub)}</div>` : ''}
+        <div class="hdr-city">${escapeHtml(tpl(h.left))}</div>
+        ${h.leftSub ? `<div class="hdr-date">${escapeHtml(tpl(h.leftSub))}</div>` : ''}
       </div>
       <div class="hdr-right">
-        <div class="hdr-time">${tpl(h.right)}</div>
-        ${h.rightSub ? `<div class="hdr-meta">${tpl(h.rightSub)}</div>` : ''}
+        <div class="hdr-time">${escapeHtml(tpl(h.right))}</div>
+        ${h.rightSub ? `<div class="hdr-meta">${escapeHtml(tpl(h.rightSub))}</div>` : ''}
       </div>
     `;
     page.appendChild(header);
@@ -1130,7 +1130,7 @@
     const footer = el('footer', 'ftr');
     // Render with a leading bullet so the editorial rhythm is preserved
     // even when the user customizes the text.
-    footer.innerHTML = `<span class="ftr-bullet">●</span> ${tpl(f.text)}`;
+    footer.innerHTML = `<span class="ftr-bullet">●</span> ${escapeHtml(tpl(f.text))}`;
     page.appendChild(footer);
   } else {
     page.appendChild(el('div', 'ftr-stub'));

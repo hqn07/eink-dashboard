@@ -2,6 +2,7 @@
 // Open-Meteo weather fetcher. No API key, no signup. Caches each
 // resolved {lat, lon, units} tuple for 10 minutes.
 
+const { fetchWithTimeout } = require('./_fetch');
 const CACHE_MS = 10 * 60 * 1000;
 const cacheMap = new Map(); // key: "lat,lon|F" → { at, data }
 
@@ -111,7 +112,7 @@ async function geocodeCity(city) {
     // to nail it down with lat/lon.
     const cleanName = city.split(',')[0].trim();
     const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cleanName)}&count=1&language=en&format=json`;
-    const r = await fetch(url);
+    const r = await fetchWithTimeout(url);
     if (!r.ok) return null;
     const data = await r.json();
     const first = data && data.results && data.results[0];
@@ -172,7 +173,7 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
   });
 
   try {
-    const r = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+    const r = await fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?${params}`);
     if (!r.ok) {
       console.warn('Open-Meteo fetch non-OK:', r.status);
       return cached?.data || stubData(u);

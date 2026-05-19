@@ -1,5 +1,6 @@
 // Air quality fetcher via Open-Meteo air-quality-api. Same {lat,lon}
 // contract as the weather fetcher. 30-min cache.
+const { fetchWithTimeout } = require('./_fetch');
 const CACHE_MS = 30 * 60 * 1000;
 const cache = new Map();
 
@@ -30,7 +31,7 @@ async function fetchAqi({ lat, lon }) {
       current: 'us_aqi,pm2_5,pm10,ozone',
       timezone: 'auto'
     });
-    const r = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?${params}`);
+    const r = await fetchWithTimeout(`https://air-quality-api.open-meteo.com/v1/air-quality?${params}`);
     if (!r.ok) return hit?.data || null;
     const data = await r.json();
     const c = data.current || {};

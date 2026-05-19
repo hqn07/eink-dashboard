@@ -1,5 +1,6 @@
 // NWS severe-weather alerts for US points. Free, no auth. Graceful no-op
 // for non-US locations.
+const { fetchWithTimeout } = require('./_fetch');
 const CACHE_MS = 10 * 60 * 1000;
 const cache = new Map();
 
@@ -10,7 +11,7 @@ async function fetchAlerts({ lat, lon }) {
   if (hit && (Date.now() - hit.at) < CACHE_MS) return hit.data;
   try {
     const url = `https://api.weather.gov/alerts/active?point=${lat},${lon}`;
-    const r = await fetch(url, {
+    const r = await fetchWithTimeout(url, {
       headers: {
         'User-Agent': 'eink-dashboard (github.com/hqn07/eink-dashboard)',
         'Accept': 'application/geo+json'

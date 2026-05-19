@@ -1,6 +1,7 @@
 // Stocks/crypto via Yahoo Finance unofficial quote endpoint.
 // Symbols like 'AAPL', 'GOOG', 'BTC-USD', 'ETH-USD'.
 // 15-min cache.
+const { fetchWithTimeout } = require('./_fetch');
 const CACHE_MS = 15 * 60 * 1000;
 const cache = new Map();
 
@@ -15,7 +16,7 @@ async function fetchOneSymbol(sym) {
   // Use the 1d range with 1h interval — gives ~24 hourly closes for a
   // sparkline + the latest meta for price/previousClose.
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1h&range=1d`;
-  const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 eink-dashboard' } });
+  const r = await fetchWithTimeout(url, { headers: { 'User-Agent': 'Mozilla/5.0 eink-dashboard' } });
   if (!r.ok) return null;
   const j = await r.json();
   const result = j.chart && j.chart.result && j.chart.result[0];

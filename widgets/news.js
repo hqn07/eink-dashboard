@@ -1,5 +1,6 @@
 // RSS/Atom headline fetcher. 15-min cache per feed URL.
 const { XMLParser } = require('fast-xml-parser');
+const { fetchWithTimeout } = require('./_fetch');
 
 const CACHE_MS = 15 * 60 * 1000;
 const cache = new Map();
@@ -27,7 +28,7 @@ async function fetchNews(url, maxItems = 5) {
   const hit = cache.get(url);
   if (hit && (Date.now() - hit.at) < CACHE_MS) return hit.data;
   try {
-    const r = await fetch(url, { headers: { 'User-Agent': 'eink-dashboard/1.0' } });
+    const r = await fetchWithTimeout(url, { headers: { 'User-Agent': 'eink-dashboard/1.0' } });
     if (!r.ok) return hit?.data || [];
     const xml = await r.text();
     const j = parser.parse(xml);

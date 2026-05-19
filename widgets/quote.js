@@ -1,3 +1,4 @@
+const { fetchWithTimeout } = require('./_fetch');
 // Pick the current quote payload. Three modes:
 //   - static: use cfg.quote.text + attribution
 //   - list:   rotate cfg.quote.list[] by day-of-year
@@ -21,7 +22,7 @@ async function resolveQuote(cfg) {
     const now = Date.now();
     if (apiCache.data && (now - apiCache.at) < CACHE_MS) return apiCache.data;
     try {
-      const r = await fetch('https://zenquotes.io/api/today');
+      const r = await fetchWithTimeout('https://zenquotes.io/api/today');
       if (r.ok) {
         const arr = await r.json();
         const item = Array.isArray(arr) && arr[0];
