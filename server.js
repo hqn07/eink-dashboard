@@ -35,6 +35,22 @@ const DEVICE_TOKEN = process.env.DEVICE_TOKEN || '';
 const CONFIG_PATH = path.join(__dirname, 'data', 'config.json');
 const DEFAULT_CONFIG_PATH = path.join(__dirname, 'data', 'config.default.json');
 
+// Loud warning when no DEVICE_TOKEN is set in production: the control
+// panel + config API end up wide-open. Local dev intentionally allows
+// missing token so first-run friction stays low.
+const IS_PROD = process.env.NODE_ENV === 'production'
+  || !!process.env.RAILWAY_ENVIRONMENT
+  || !!process.env.RENDER
+  || !!process.env.FLY_APP_NAME;
+if (!DEVICE_TOKEN) {
+  const msg = '[security] DEVICE_TOKEN env var is not set — /api/* config endpoints are PUBLIC.';
+  if (IS_PROD) {
+    console.error(`\n${msg}\n[security] Set DEVICE_TOKEN before exposing this server to the internet.\n`);
+  } else {
+    console.warn('[security] DEVICE_TOKEN unset (local dev) — set it in .env for any non-localhost deploy.');
+  }
+}
+
 const SCREEN_W = 800;
 const SCREEN_H = 480;
 
@@ -415,11 +431,33 @@ function checkDeviceAuth(req, res, next) {
   next();
 }
 
+// Generic error body so we don't leak internals (e.g. file paths,
+// upstream API failure URLs) to anyone hitting the public endpoints.
+// Full error stays in the server log via the caller's console.error.
+function safeError(err) {
+  if (IS_PROD) return { error: 'internal_error' };
+  return { error: err && err.message ? err.message : String(err) };
+}
+
 // ---------- App ----------
 
 const app = express();
 app.use(express.json({ limit: '10mb' })); // photo widget can carry a base64 image
 app.use('/static', express.static(path.join(__dirname, 'public')));
+
+// Rate limit only the proxy + write endpoints. The display.png/.bin
+// fetch is intentionally uncapped so the ESP32 isn't blocked. Anything
+// in /api/* gets 60 req / min / IP — well above legitimate use, low
+// enough to make abuse expensive.
+const rateLimit = require('express-rate-limit');
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 60,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'rate_limited' }
+});
+app.use('/api/', apiLimiter);
 
 // React control panel build output (built by Vite via `npm run build`).
 const CONTROL_APP_DIR = path.join(__dirname, 'public', 'control-app');
@@ -520,13 +558,13 @@ app.get('/dashboard', async (req, res) => {
     res.send(injected);
   } catch (err) {
     console.error('Dashboard render error:', err);
-    res.status(500).send(err.message);
+    res.status(500).send(safeError(err).error);
   }
 });
 
 // Reset config back to data/config.default.json. Destructive — the
 // client side confirms before calling.
-app.post('/api/config/reset', async (req, res) => {
+app.post('/api/config/reset', checkDeviceAuth, async (req, res) => {
   try {
     const raw = await fsp.readFile(DEFAULT_CONFIG_PATH, 'utf8');
     await fsp.writeFile(CONFIG_PATH, raw);
@@ -534,13 +572,13 @@ app.post('/api/config/reset', async (req, res) => {
     const cfg = migrateConfigToScreens(JSON.parse(raw));
     res.json(cfg);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json(safeError(err));
   }
 });
 
 // Visual matrix — every widget at every preset size, top-to-bottom.
 // Pure dev tooling for spotting layout bugs before they hit the panel.
-app.get('/widgets-matrix', async (req, res) => {
+app.get('/widgets-matrix', checkDeviceAuth, async (req, res) => {
   try {
     const cfg = await loadConfig();
     const units = cfg.units || 'F';
@@ -570,7 +608,7 @@ app.get('/widgets-matrix', async (req, res) => {
     res.send(injected);
   } catch (err) {
     console.error('Matrix render error:', err);
-    res.status(500).send(err.message);
+    res.status(500).send(safeError(err).error);
   }
 });
 
@@ -585,7 +623,7 @@ app.get('/display.png', checkDeviceAuth, async (req, res) => {
     res.send(png);
   } catch (err) {
     console.error('PNG error:', err);
-    res.status(500).send(err.message);
+    res.status(500).send(safeError(err).error);
   }
 });
 
@@ -603,7 +641,7 @@ app.get('/display.bin', checkDeviceAuth, async (req, res) => {
     res.send(bin);
   } catch (err) {
     console.error('BIN error:', err);
-    res.status(500).send(err.message);
+    res.status(500).send(safeError(err).error);
   }
 });
 
@@ -648,7 +686,7 @@ async function jsonFetch(url, opts = {}) {
   return r.json();
 }
 
-app.get('/api/geocode', async (req, res) => {
+app.get('/api/geocode', checkDeviceAuth, async (req, res) => {
   const q = (req.query.q || '').trim();
   if (!q || q.length < 2) return res.json([]);
   const cacheKey = q.toLowerCase();
@@ -670,11 +708,11 @@ app.get('/api/geocode', async (req, res) => {
     geocodeCache.set(cacheKey, { at: Date.now(), data: shaped });
     res.json(shaped);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json(safeError(err));
   }
 });
 
-app.get('/api/reverse-geocode', async (req, res) => {
+app.get('/api/reverse-geocode', checkDeviceAuth, async (req, res) => {
   const lat = parseFloat(req.query.lat);
   const lon = parseFloat(req.query.lon);
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
@@ -697,11 +735,11 @@ app.get('/api/reverse-geocode', async (req, res) => {
       lon: parseFloat(data.lon) || lon
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json(safeError(err));
   }
 });
 
-app.get('/api/weather-check', async (req, res) => {
+app.get('/api/weather-check', checkDeviceAuth, async (req, res) => {
   const city = (req.query.city || '').trim();
   const lat = parseFloat(req.query.lat);
   const lon = parseFloat(req.query.lon);
@@ -722,13 +760,13 @@ app.get('/api/weather-check', async (req, res) => {
       country: w.country || null
     });
   } catch (err) {
-    res.json({ ok: false, error: err.message });
+    res.json({ ok: false, ...safeError(err) });
   }
 });
 
 // Returns the full payload the dashboard would render — minus the
 // HTML. The React editor uses this to render live widget tiles locally.
-app.get('/api/preview-data', async (req, res) => {
+app.get('/api/preview-data', checkDeviceAuth, async (req, res) => {
   try {
     const cfg = await loadConfig();
     const { units, screen, activeScreen } = resolveVariant(req, cfg);
@@ -741,16 +779,16 @@ app.get('/api/preview-data', async (req, res) => {
       generatedAt: new Date().toISOString()
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json(safeError(err));
   }
 });
 
 // Config API
-app.get('/api/config', async (req, res) => {
+app.get('/api/config', checkDeviceAuth, async (req, res) => {
   res.json(await loadConfig());
 });
 
-app.post('/api/config', async (req, res) => {
+app.post('/api/config', checkDeviceAuth, async (req, res) => {
   try {
     const current = await loadConfig();
     // Top-level fields the client may send. `screens` is treated as
@@ -782,12 +820,12 @@ app.post('/api/config', async (req, res) => {
     invalidateImage();
     res.json({ ok: true, config: merged });
   } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
+    res.status(500).json({ ok: false, ...safeError(err) });
   }
 });
 
 // Todos quick endpoints
-app.post('/api/todos', async (req, res) => {
+app.post('/api/todos', checkDeviceAuth, async (req, res) => {
   const cfg = await loadConfig();
   cfg.todos = req.body.todos || [];
   await saveConfig(cfg);

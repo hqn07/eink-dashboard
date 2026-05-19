@@ -20,17 +20,9 @@
 #include <SPI.h>
 
 // =================== CONFIG ===================
-const char* ssid     = "SETUP-755E";
-const char* password = "REDACTED";
-
-// Your dashboard server. Change to your Railway URL once deployed.
-// Examples:
-//   "http://192.168.1.42:3000"   <- local Node dev server during testing
-//   "https://your-app.up.railway.app"  <- deployed
-const char* serverBase = "https://eink-dashboard-production.up.railway.app";
-
-// Optional shared secret. Set this if you set DEVICE_TOKEN in the server's .env
-const char* deviceToken = "";
+// Per-device secrets live in secrets.h (gitignored). Copy
+// secrets.h.example to secrets.h and fill in your values.
+#include "secrets.h"
 
 #define DEFAULT_SLEEP_MIN 30
 #define BATTERY_PIN 34

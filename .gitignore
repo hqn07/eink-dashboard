@@ -1,10 +1,23 @@
 node_modules/
 .env
+.env.*
+!.env.example
 .DS_Store
 data/config.json
+data/device-token.txt
 *.log
 .cache/
 .vscode/
+.idea/
+
+# Secrets / keys — never commit
+*.pem
+*.key
+credentials.json
+service-account*.json
+
+# Per-device firmware secrets
+esp32/secrets.h
 
 # Vite build output for the React control app (built on deploy)
 public/control-app/
