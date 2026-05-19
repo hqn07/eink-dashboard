@@ -507,6 +507,20 @@ export function migrateConfigToScreens(cfg) {
     screens = screens.map(s => s.chrome
       ? s
       : { ...s, chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)) });
+    // If the default screen still has zero widgets (legacy empty install),
+    // seed it with the Editorial preset so the user sees something.
+    if (!cfg.firstRunSeeded) {
+      const def = screens.find(s => s.isDefault) || screens[0];
+      if (def && (!def.layout || def.layout.length === 0)) {
+        const editorial = SCREEN_PRESETS.find(p => p.id === 'editorial');
+        if (editorial) {
+          def.layout = inflatePresetLayout(editorial);
+          cfg = { ...cfg, firstRunSeeded: true };
+        }
+      } else {
+        cfg = { ...cfg, firstRunSeeded: true };
+      }
+    }
     return { ...cfg, screens, gridVersion: GRID_VERSION };
   }
   const oldLayouts = cfg.layouts || (Array.isArray(cfg.layout) ? { 1: cfg.layout } : { 1: [] });
@@ -515,6 +529,11 @@ export function migrateConfigToScreens(cfg) {
   const sQuiet  = sched.quiet  || {};
   // Pre-screens configs were authored against the 12x6 grid → walk both migrations.
   const migrateOld = (l) => migrateLayoutV2ToV3(migrateLayoutV1ToV2((l || []).map(it => ({ ...it }))));
+  // Brand-new installs (no legacy layout, no screens) get the Editorial
+  // preset so they don't land on a blank canvas.
+  const editorialPreset = SCREEN_PRESETS.find(p => p.id === 'editorial');
+  const seedLayout = migrateOld(oldLayouts[1]);
+  const dayLayout = seedLayout.length ? seedLayout : inflatePresetLayout(editorialPreset);
   const screens = [];
   screens.push({
     id: newScreenId(),
@@ -526,7 +545,7 @@ export function migrateConfigToScreens(cfg) {
     units: cfg.units || 'F',
     refreshMinutes: sActive.refreshMinutes || cfg.refreshMinutes || 30,
     chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)),
-    layout: migrateOld(oldLayouts[1])
+    layout: dayLayout
   });
   if (oldLayouts[2] && oldLayouts[2].length) {
     screens.push({

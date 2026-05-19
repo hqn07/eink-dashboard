@@ -285,6 +285,24 @@ function migrateLayoutV2ToV3(layout) {
   }));
 }
 
+// Editorial preset layout (24x12 grid). Mirrors SCREEN_PRESETS.editorial
+// in control-src/widgets.js. Server can't import that ESM module, so
+// we inline a copy here for first-install seeding.
+const EDITORIAL_LAYOUT = [
+  { widgetId: 'weather_hero',     x: 0,  y: 0, w: 8,  h: 12 },
+  { widgetId: 'weather_forecast', x: 8,  y: 0, w: 6,  h: 12 },
+  { widgetId: 'message',          x: 14, y: 0, w: 10, h: 4 },
+  { widgetId: 'todos',            x: 14, y: 4, w: 10, h: 8 }
+];
+function seedLayoutFromEditorial() {
+  return EDITORIAL_LAYOUT.map((it, i) => ({
+    id: `seed-${it.widgetId}-${i}`,
+    widgetId: it.widgetId,
+    x: it.x, y: it.y, w: it.w, h: it.h,
+    flush: false
+  }));
+}
+
 function migrateConfigToScreens(cfg) {
   if (Array.isArray(cfg.screens) && cfg.screens.length) {
     let screens = cfg.screens;
@@ -294,6 +312,14 @@ function migrateConfigToScreens(cfg) {
     screens = screens.map(s => s.chrome
       ? s
       : { ...s, chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)) });
+    // Seed an empty default screen with the Editorial preset (one-time).
+    if (!cfg.firstRunSeeded) {
+      const def = screens.find(s => s.isDefault) || screens[0];
+      if (def && (!def.layout || def.layout.length === 0)) {
+        def.layout = seedLayoutFromEditorial();
+      }
+      cfg = { ...cfg, firstRunSeeded: true };
+    }
     return { ...cfg, screens, gridVersion: GRID_VERSION };
   }
   const oldLayouts = cfg.layouts || (Array.isArray(cfg.layout) ? { 1: cfg.layout } : { 1: [] });
@@ -302,6 +328,7 @@ function migrateConfigToScreens(cfg) {
   const sQuiet  = sched.quiet  || {};
   const migrateOld = (l) => migrateLayoutV2ToV3(migrateLayoutV1ToV2((l || []).map(it => ({ ...it }))));
   const screens = [];
+  const oldLayout = migrateOld(oldLayouts[1]);
   screens.push({
     id: newScreenId(),
     name: 'Day',
@@ -312,7 +339,7 @@ function migrateConfigToScreens(cfg) {
     units: cfg.units || 'F',
     refreshMinutes: sActive.refreshMinutes || cfg.refreshMinutes || 30,
     chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)),
-    layout: migrateOld(oldLayouts[1])
+    layout: oldLayout.length ? oldLayout : seedLayoutFromEditorial()
   });
   if (oldLayouts[2] && oldLayouts[2].length) {
     screens.push({
@@ -328,7 +355,7 @@ function migrateConfigToScreens(cfg) {
       layout: migrateOld(oldLayouts[2])
     });
   }
-  return { ...cfg, screens, gridVersion: GRID_VERSION };
+  return { ...cfg, screens, gridVersion: GRID_VERSION, firstRunSeeded: true };
 }
 
 // Returns the active screen for the given cfg + current time. Falls
