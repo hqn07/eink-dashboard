@@ -78,11 +78,19 @@ export default function LiveDashboard({
   useEffect(() => {
     if (!rootRef.current) return;
     let cancelled = false;
-    const id = requestAnimationFrame(() => {
-      if (cancelled) return;
-      rootRef.current.querySelectorAll('.autofit').forEach(autofitText);
-    });
-    return () => { cancelled = true; cancelAnimationFrame(id); };
+    let rafId = 0;
+    const run = () => {
+      rafId = requestAnimationFrame(() => {
+        if (cancelled || !rootRef.current) return;
+        rootRef.current.querySelectorAll('.autofit').forEach(autofitText);
+      });
+    };
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => { if (!cancelled) run(); });
+    } else {
+      run();
+    }
+    return () => { cancelled = true; if (rafId) cancelAnimationFrame(rafId); };
   });
   const cfg = (data && data.cfg) || {};
   const layout = (data && data.layout) || [];

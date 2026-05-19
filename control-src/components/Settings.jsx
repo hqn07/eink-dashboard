@@ -7,6 +7,29 @@ function Toggle({ on, onClick }) {
   return <div className={`toggle ${on ? 'on' : ''}`} onClick={onClick} />;
 }
 
+function StockSymbolsInput({ symbols, onCommit }) {
+  const joined = (symbols || []).join(', ');
+  const [raw, setRaw] = useState(joined);
+  const [focused, setFocused] = useState(false);
+  useEffect(() => {
+    if (!focused) setRaw(joined);
+  }, [joined, focused]);
+  const commit = () => {
+    const arr = raw.split(',').map(s => s.trim()).filter(Boolean);
+    setRaw(arr.join(', '));
+    onCommit(arr);
+  };
+  return (
+    <input type="text"
+      value={raw}
+      onChange={e => setRaw(e.target.value)}
+      onFocus={() => setFocused(true)}
+      onBlur={() => { setFocused(false); commit(); }}
+      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
+      placeholder="AAPL, BTC-USD, ETH-USD" />
+  );
+}
+
 // Settings panel below the screen card. Holds GLOBAL settings shared
 // across all screens (location, timezone, calendar URL, etc.) plus the
 // per-widget content sections. Each content section appears only when
@@ -478,12 +501,10 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested, focusedW
           <div className="section-title">Stocks / Crypto</div>
           <label className="field">
             <span className="label">Symbols (comma-separated · Yahoo Finance format)</span>
-            <input type="text"
-              value={(cfg.stocks?.symbols || []).join(', ')}
-              onChange={e => onPatchNested('stocks', {
-                symbols: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
-              })}
-              placeholder="AAPL, BTC-USD, ETH-USD" />
+            <StockSymbolsInput
+              symbols={cfg.stocks?.symbols || []}
+              onCommit={(arr) => onPatchNested('stocks', { symbols: arr })}
+            />
           </label>
           <div className="terminal-line" style={{ fontSize: 10, marginTop: 4 }}>
             &gt; CRYPTO USE -USD SUFFIX (BTC-USD, ETH-USD) · STOCKS USE TICKER ONLY

@@ -28,6 +28,8 @@ async function fetchOneSymbol(sym) {
   if (!Number.isFinite(price)) return null;
   const change = Number.isFinite(prev) ? (price - prev) : 0;
   const changePct = Number.isFinite(prev) && prev !== 0 ? (change / prev) * 100 : 0;
+  const dayHigh = meta.regularMarketDayHigh;
+  const dayLow = meta.regularMarketDayLow;
 
   // Pull the close series for a sparkline. Filter out null gaps.
   const closes = ((result.indicators
@@ -49,6 +51,8 @@ async function fetchOneSymbol(sym) {
     price: formatPrice(price),
     change,
     changePct,
+    dayHigh: Number.isFinite(dayHigh) ? formatPrice(dayHigh) : null,
+    dayLow:  Number.isFinite(dayLow)  ? formatPrice(dayLow)  : null,
     spark: points
   };
 }

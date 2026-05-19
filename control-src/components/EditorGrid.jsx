@@ -109,11 +109,19 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
   useEffect(() => {
     if (!wrapRef.current) return;
     let cancelled = false;
-    const id = requestAnimationFrame(() => {
-      if (cancelled) return;
-      wrapRef.current.querySelectorAll('.autofit').forEach(autofitText);
-    });
-    return () => { cancelled = true; cancelAnimationFrame(id); };
+    let rafId = 0;
+    const run = () => {
+      rafId = requestAnimationFrame(() => {
+        if (cancelled || !wrapRef.current) return;
+        wrapRef.current.querySelectorAll('.autofit').forEach(autofitText);
+      });
+    };
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => { if (!cancelled) run(); });
+    } else {
+      run();
+    }
+    return () => { cancelled = true; if (rafId) cancelAnimationFrame(rafId); };
   });
 
   // The pool is a fixed list of widget templates from the registry —

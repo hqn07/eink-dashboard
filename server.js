@@ -130,6 +130,9 @@ async function renderDashboardPng({ units, screen }) {
       page.evaluate(() => document.fonts && document.fonts.ready),
       new Promise(r => setTimeout(r, 4000))
     ]);
+    // Wait for the page's autofit pass to finish so clock/aqi/quote text
+    // measures at final glyph metrics, not the fallback serif default.
+    await page.waitForFunction(() => window.__autofitDone === true, { timeout: 4000 }).catch(() => {});
     const buf = await page.screenshot({
       type: 'png',
       clip: { x: 0, y: 0, width: SCREEN_W, height: SCREEN_H }

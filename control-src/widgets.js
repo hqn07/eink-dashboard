@@ -192,7 +192,8 @@ export const WIDGET_REGISTRY = [
     sizes: {
       S: { w: 8, h: 4 },
       M: { w: 12, h: 6 },
-      L: { w: 24, h: 6 }
+      L: { w: 24, h: 6 },
+      XL: { w: 24, h: 12 }
     },
     defaultSize: 'M'
   },
