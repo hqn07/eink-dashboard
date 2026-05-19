@@ -72,7 +72,10 @@
   }
 
   // Resolve a cell size to a layout tier name (matches widgets.js pickTier).
-  function pickTier(cellW, cellH) {
+  // density: 'rich' shifts tier up one step, 'sparse' shifts down one;
+  // null/undefined/'balanced' = no change. Lets users dial info density
+  // per tile without resizing.
+  function pickTier(cellW, cellH, density) {
     const w = cellW || 0, h = cellH || 0;
     let byH = 'full';
     if (h < 4)       byH = 'tiny';
@@ -85,7 +88,10 @@
     else if (w < 12) byW = 'standard';
     else if (w < 18) byW = 'extended';
     const order = ['tiny', 'compact', 'standard', 'extended', 'full'];
-    return order[Math.min(order.indexOf(byH), order.indexOf(byW))];
+    let idx = Math.min(order.indexOf(byH), order.indexOf(byW));
+    if (density === 'rich')   idx = Math.min(idx + 1, order.length - 1);
+    if (density === 'sparse') idx = Math.max(idx - 1, 0);
+    return order[idx];
   }
 
   // Per-widget placeholder glyphs. Keep these chunky (stroke-width 4+)
@@ -267,7 +273,7 @@
           }
           return placeholder('WEATHER', 'Data unavailable', 'weather');
         }
-        const tier = pickTier(cellW, cellH);
+        const tier = pickTier(cellW, cellH, density);
         const staleClass = weather.stale ? ' weather-stale' : '';
         const staleBadge = weather.stale ? '<div class="stale-pill">CACHED</div>' : '';
 
@@ -362,10 +368,10 @@
       requires: 'message',
       sizes: { XS:{w:8,h:3}, S:{w:8,h:4}, M:{w:10,h:4}, L:{w:24,h:4}, XL:{w:24,h:6} },
       defaultSize: 'M',
-      render: ({ cfg, resolvedMessage, cellW, cellH }) => {
+      render: ({ cfg, resolvedMessage, cellW, cellH, density }) => {
         const m = resolvedMessage || cfg.message;
         if (!m || !m.text) return placeholder('MESSAGE', 'Set a headline in settings', 'quote');
-        const tier = pickTier(cellW, cellH);
+        const tier = pickTier(cellW, cellH, density);
         const matrix = {
           tiny:     { txtSize: 14, subSize: 10, showSub: false },
           compact:  { txtSize: 18, subSize: 11, showSub: true  },
@@ -388,13 +394,13 @@
       requires: 'todos',
       sizes: { S:{w:8,h:6}, M:{w:10,h:6}, L:{w:12,h:12}, XL:{w:24,h:12} },
       defaultSize: 'M',
-      render: ({ todos, cellW, cellH }) => {
+      render: ({ todos, cellW, cellH, density }) => {
         if (!todos || !todos.length) return placeholder('TODO', 'Add items in settings', 'todos');
         const today = (() => {
           const d = new Date();
           return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         })();
-        const tier = pickTier(cellW, cellH);
+        const tier = pickTier(cellW, cellH, density);
         const matrix = {
           tiny:     { items: 2,  showDue: false, showRecur: false, showFooter: false },
           compact:  { items: 4,  showDue: false, showRecur: true,  showFooter: false },
@@ -439,13 +445,13 @@
       requires: 'calendar',
       sizes: { S:{w:8,h:4}, M:{w:10,h:4}, L:{w:24,h:4}, XL:{w:24,h:8} },
       defaultSize: 'M',
-      render: ({ events, cfg, cellW, cellH }) => {
+      render: ({ events, cfg, cellW, cellH, density }) => {
         const urls = (cfg.calendar && Array.isArray(cfg.calendar.icalUrls) && cfg.calendar.icalUrls.filter(Boolean).length)
           ? cfg.calendar.icalUrls.filter(Boolean)
           : (cfg.calendar && cfg.calendar.icalUrl ? [cfg.calendar.icalUrl] : []);
         if (!urls.length) return placeholder('UPCOMING', 'Paste an iCal URL in settings', 'calendar');
         if (!events || !events.length) return placeholder('UPCOMING', 'No events in the next 14 days', 'calendar');
-        const tier = pickTier(cellW, cellH);
+        const tier = pickTier(cellW, cellH, density);
         const matrix = {
           tiny:     { events: 1, sections: false },
           compact:  { events: 2, sections: false },
@@ -508,13 +514,13 @@
       requires: 'quote',
       sizes: { S:{w:8,h:4}, M:{w:12,h:6}, L:{w:24,h:6}, XL:{w:24,h:12} },
       defaultSize: 'M',
-      render: ({ cfg, resolvedQuote, cellW, cellH }) => {
+      render: ({ cfg, resolvedQuote, cellW, cellH, density }) => {
         const q = resolvedQuote || cfg.quote || {};
         const body = (q.text || '').trim();
         if (!body) return placeholder('QUOTE', 'Add text or switch source in settings', 'quote');
         const attr = (q.attribution || '').trim();
         const align = (q.align === 'left' || q.align === 'right') ? q.align : 'center';
-        const tier = pickTier(cellW, cellH);
+        const tier = pickTier(cellW, cellH, density);
         const padding = tier === 'tiny' ? 4 : tier === 'compact' ? 8 : tier === 'standard' ? 12 : tier === 'extended' ? 16 : 24;
         const showAttr = attr && tier !== 'tiny' && tier !== 'compact';
         return `
@@ -531,7 +537,7 @@
       requires: 'clock',
       sizes: { XS:{w:8,h:3}, S:{w:8,h:4}, M:{w:12,h:4}, L:{w:24,h:4}, XL:{w:24,h:6} },
       defaultSize: 'M',
-      render: ({ cfg, clockNow, cellW, cellH }) => {
+      render: ({ cfg, clockNow, cellW, cellH, density }) => {
         const c = cfg.clock || {};
         const tnow = clockNow || { hour: 0, minute: 0, dateLabel: '' };
         let h = tnow.hour;
@@ -541,7 +547,7 @@
         const hh = fmt === 24 ? String(h).padStart(2, '0') : String(h);
         const mm = String(tnow.minute).padStart(2, '0');
         const suffix = fmt === 12 ? ` ${ampm}` : '';
-        const tier = pickTier(cellW, cellH);
+        const tier = pickTier(cellW, cellH, density);
         const showAmpm = tier !== 'tiny';
         const showDate = c.showDate !== false && tier !== 'tiny' && tier !== 'compact';
         const ampmHtml = showAmpm && fmt === 12 ? `<span class="clock-ampm">${suffix}</span>` : '';
@@ -559,11 +565,11 @@
       requires: 'wifi',
       sizes: { S:{w:6,h:6}, M:{w:8,h:8}, L:{w:12,h:12} },
       defaultSize: 'M',
-      render: ({ cfg, wifiQrSvg, cellW, cellH }) => {
+      render: ({ cfg, wifiQrSvg, cellW, cellH, density }) => {
         const w = cfg.wifi || {};
         if (!w.ssid) return placeholder('WIFI QR', 'Enter WiFi SSID + password in settings', 'wifi');
         if (!wifiQrSvg) return placeholder('WIFI QR', 'QR generator not available', 'wifi');
-        const tier = pickTier(cellW, cellH);
+        const tier = pickTier(cellW, cellH, density);
         const matrix = {
           tiny:     { showSSID: false, showHint: false, ssidSize: 14 },
           compact:  { showSSID: true,  showHint: false, ssidSize: 16 },
@@ -592,9 +598,9 @@
       requires: 'countdowns',
       sizes: { S:{w:8,h:4}, M:{w:12,h:4}, L:{w:24,h:4} },
       defaultSize: 'M',
-      render: ({ countdowns, cellW, cellH }) => {
+      render: ({ countdowns, cellW, cellH, density }) => {
         if (!countdowns || !countdowns.length) return placeholder('COUNTDOWN', 'Add a label + date in settings', 'countdown');
-        const tier = pickTier(cellW, cellH);
+        const tier = pickTier(cellW, cellH, density);
         const matrix = {
           tiny:     { rows: 1, numSize: 28, showLabel: false },
           compact:  { rows: 2, numSize: 36, showLabel: true  },
@@ -624,14 +630,14 @@
       requires: 'aqi',
       sizes: { S:{w:8,h:4}, M:{w:8,h:6}, L:{w:12,h:6} },
       defaultSize: 'M',
-      render: ({ aqi, cfg, cellW, cellH }) => {
+      render: ({ aqi, cfg, cellW, cellH, density }) => {
         if (!aqi) {
           if (!Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
             return placeholder('AIR QUALITY', 'Set your location in settings', 'aqi');
           }
           return placeholder('AIR QUALITY', 'Data unavailable for this location', 'aqi');
         }
-        const tier = pickTier(cellW, cellH);
+        const tier = pickTier(cellW, cellH, density);
         const advice = {
           'GOOD': 'Breathe easy.',
           'MODERATE': 'OK for most. Sensitive groups: caution.',
@@ -671,7 +677,7 @@
       requires: 'moonsun',
       sizes: { S:{w:8,h:4}, M:{w:8,h:6}, L:{w:12,h:6} },
       defaultSize: 'M',
-      render: ({ moonsun, cfg, cellW, cellH }) => {
+      render: ({ moonsun, cfg, cellW, cellH, density }) => {
         if (!moonsun) {
           if (!Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
             return placeholder('MOON & SUN', 'Set your location in settings', 'moonsun');
@@ -698,7 +704,7 @@
           if (mins < 0) mins += 24 * 60;
           daylight = `${Math.floor(mins / 60)}h ${mins % 60}m daylight`;
         }
-        const tier = pickTier(cellW, cellH);
+        const tier = pickTier(cellW, cellH, density);
         const matrix = {
           tiny:     { showDisc: false, showSunRow: false, showDaylight: false },
           compact:  { showDisc: true,  showSunRow: false, showDaylight: false },
@@ -732,12 +738,12 @@
       requires: 'news',
       sizes: { S:{w:12,h:6}, M:{w:12,h:12}, L:{w:24,h:12} },
       defaultSize: 'M',
-      render: ({ news, cfg, cellW, cellH }) => {
+      render: ({ news, cfg, cellW, cellH, density }) => {
         if (!cfg.news || !cfg.news.feedUrl) {
           return placeholder('NEWS HEADLINES', 'Paste an RSS or Atom feed URL in settings', 'news');
         }
         if (!news || !news.length) return placeholder('NEWS HEADLINES', 'Feed returned no items', 'news');
-        const tier = pickTier(cellW, cellH);
+        const tier = pickTier(cellW, cellH, density);
         const matrix = {
           tiny:     { items: 1, showSource: false, titleClamp: 2 },
           compact:  { items: 2, showSource: false, titleClamp: 2 },
@@ -767,11 +773,11 @@
       requires: 'stocks',
       sizes: { S:{w:8,h:4}, M:{w:12,h:6}, L:{w:24,h:6}, XL:{w:24,h:12} },
       defaultSize: 'M',
-      render: ({ stocks, cfg, cellW, cellH }) => {
+      render: ({ stocks, cfg, cellW, cellH, density }) => {
         const syms = (cfg && cfg.stocks && cfg.stocks.symbols) || [];
         if (!syms.length) return placeholder('MARKETS', 'Add symbols (AAPL, BTC-USD) in settings', 'stocks');
         if (!stocks || !stocks.length) return placeholder('MARKETS', 'Data unavailable — check symbols', 'stocks');
-        const tier = pickTier(cellW, cellH);
+        const tier = pickTier(cellW, cellH, density);
         // Hero + watchlist (newspaper market lead).
         const matrix = {
           tiny:     { watch: 0, heroSpark: false, heroMeta: false, heroChg: false, watchSpark: false, watchChg: false },
@@ -841,13 +847,13 @@
       requires: 'photo',
       sizes: { S:{w:8,h:6}, M:{w:12,h:12}, L:{w:24,h:12} },
       defaultSize: 'M',
-      render: ({ cfg, resolvedPhoto, cellW, cellH }) => {
+      render: ({ cfg, resolvedPhoto, cellW, cellH, density }) => {
         const r = resolvedPhoto || (cfg.photo && cfg.photo.dataUrl
           ? { dataUrl: cfg.photo.dataUrl, fit: cfg.photo.fit, caption: '', index: 0, total: 1 }
           : null);
         if (!r || !r.dataUrl) return placeholder('PHOTO', 'Upload an image in settings', 'photo');
         const fit = r.fit === 'cover' ? 'cover' : 'contain';
-        const tier = pickTier(cellW, cellH);
+        const tier = pickTier(cellW, cellH, density);
         const showCaption = r.caption && tier !== 'tiny';
         const showCounter = r.total > 1 && (tier === 'extended' || tier === 'full');
         return `
@@ -865,7 +871,7 @@
       requires: 'github',
       sizes: { S:{w:12,h:4}, M:{w:24,h:4}, L:{w:24,h:6} },
       defaultSize: 'M',
-      render: ({ github, cfg, cellW, cellH }) => {
+      render: ({ github, cfg, cellW, cellH, density }) => {
         if (!cfg.github || !cfg.github.user) {
           return placeholder('GITHUB', 'Enter a GitHub username in settings', 'github');
         }
@@ -883,7 +889,7 @@
           if (lvl > 0) { run += 1; longest = Math.max(longest, run); }
           else { run = 0; }
         }
-        const tier = pickTier(cellW, cellH);
+        const tier = pickTier(cellW, cellH, density);
         const matrix = {
           tiny:     { showTitle: false, weeksTail: 12, footer: '' },
           compact:  { showTitle: true,  weeksTail: 26, footer: '' },
@@ -1162,7 +1168,7 @@
     const def = widgetById(item.widgetId || item.id);
     if (!def) continue;
     if (!withinVisibility(item.visibility, nowM)) continue;
-    const itemCtx = { ...ctx, cellW: item.w, cellH: item.h };
+    const itemCtx = { ...ctx, cellW: item.w, cellH: item.h, density: item.density };
     const inner = def.render(itemCtx);
     if (!inner) continue;
     const classes = ['cell', `cell-${def.id}`];

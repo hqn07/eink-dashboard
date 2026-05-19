@@ -114,7 +114,7 @@ export default function LiveDashboard({
     const def = widgetById(item.widgetId || item.id);
     if (!def) continue;
     if (!withinVisibility(item.visibility, nowM)) continue;
-    const inner = renderWidget(item.widgetId || item.id, { ...data, cellW: item.w, cellH: item.h }) || '';
+    const inner = renderWidget(item.widgetId || item.id, { ...data, cellW: item.w, cellH: item.h, density: item.density }) || '';
     if (!inner) continue;
     const classes = ['cell', `cell-${def.id}`];
     if (item.x + item.w >= GRID_COLS) classes.push('cell-edge-right');

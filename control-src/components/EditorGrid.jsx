@@ -181,6 +181,34 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
   // of committing the new position.
   const trashRef = useRef(null);
   const [trashHover, setTrashHover] = useState(false);
+  const [snapGuides, setSnapGuides] = useState({ xCols: [], yRows: [] });
+
+  // Compare the in-flight tile's four edges (in grid cells) against every
+  // other tile's edges. Edges that match exactly become snap guides — a
+  // visual hint that the user has nailed alignment. Only emits if the
+  // dragged tile actually overlaps the same row/column band as the
+  // anchor, so we don't flag distant coincidences.
+  const computeSnapGuides = (item, others) => {
+    const xCols = new Set();
+    const yRows = new Set();
+    const left = item.x, right = item.x + item.w;
+    const top = item.y, bottom = item.y + item.h;
+    for (const o of others) {
+      if (o.i === item.i) continue;
+      const oL = o.x, oR = o.x + o.w, oT = o.y, oB = o.y + o.h;
+      const overlapY = !(bottom <= oT || top >= oB);
+      const overlapX = !(right <= oL || left >= oR);
+      if (overlapY) {
+        if (left === oL || left === oR) xCols.add(left);
+        if (right === oL || right === oR) xCols.add(right);
+      }
+      if (overlapX) {
+        if (top === oT || top === oB) yRows.add(top);
+        if (bottom === oT || bottom === oB) yRows.add(bottom);
+      }
+    }
+    return { xCols: [...xCols], yRows: [...yRows] };
+  };
 
   const pointerOverTrash = (event) => {
     if (!trashRef.current || !event) return false;
@@ -192,8 +220,9 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
     return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
   };
 
-  const onTileDrag = (_, __, ___, ____, event) => {
+  const onTileDrag = (rglItems, _oldItem, newItem, _placeholder, event) => {
     setTrashHover(pointerOverTrash(event));
+    setSnapGuides(computeSnapGuides(newItem, rglItems));
   };
 
   const onTileDragStop = (_, __, newItem, ___, event) => {
@@ -201,6 +230,13 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
       removeFromCanvas(newItem.i);
     }
     setTrashHover(false);
+    setSnapGuides({ xCols: [], yRows: [] });
+  };
+  const onTileResize = (rglItems, _oldItem, newItem) => {
+    setSnapGuides(computeSnapGuides(newItem, rglItems));
+  };
+  const onTileResizeStop = () => {
+    setSnapGuides({ xCols: [], yRows: [] });
   };
 
   const clampPos = (x, y, w, h) => ({
@@ -330,9 +366,11 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
           onLayoutChange={handleLayoutChange}
           onDrag={onTileDrag}
           onDragStop={onTileDragStop}
+          onResize={onTileResize}
+          onResizeStop={onTileResizeStop}
         >
           {enabled.map(l => {
-            const inner = renderWidget(l.widgetId, { ...previewData, cellW: l.w, cellH: l.h }) || '';
+            const inner = renderWidget(l.widgetId, { ...previewData, cellW: l.w, cellH: l.h, density: l.density }) || '';
             const dashW = l.w * (DASH_W / GRID_COLS);
             const dashH = l.h * (BODY_H / GRID_ROWS);
             const classes = ['cell', `cell-${l.widgetId}`];
@@ -382,6 +420,20 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
                       }}
                     >▢</button>
                     <button
+                      className={`tile-density ${l.density ? 'on' : ''}`}
+                      title={`Density: ${l.density || 'balanced'} — click to cycle (balanced → rich → sparse)`}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const order = [undefined, 'rich', 'sparse'];
+                        const cur = l.density;
+                        const idx = order.indexOf(cur);
+                        const next = order[(idx + 1 + order.length) % order.length];
+                        onChange(layout.map(it => it.id === l.id ? { ...it, density: next } : it));
+                      }}
+                    >{l.density === 'rich' ? '▰' : l.density === 'sparse' ? '▱' : '▥'}</button>
+                    <button
                       className="tile-remove"
                       title="Remove"
                       onMouseDown={(e) => e.stopPropagation()}
@@ -404,6 +456,20 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
             );
           })}
         </GridLayout>
+        {(snapGuides.xCols.length || snapGuides.yRows.length) ? (
+          <div className="snap-guides">
+            {snapGuides.xCols.map(col => (
+              <div key={`x${col}`}
+                className="snap-line snap-line-x"
+                style={{ left: `${(col / GRID_COLS) * 100}%` }} />
+            ))}
+            {snapGuides.yRows.map(row => (
+              <div key={`y${row}`}
+                className="snap-line snap-line-y"
+                style={{ top: `${(row / GRID_ROWS) * 100}%` }} />
+            ))}
+          </div>
+        ) : null}
         </div>
 
         {enabled.length === 0 && (

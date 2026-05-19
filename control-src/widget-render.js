@@ -150,9 +150,9 @@ function hourlyStrip(w) {
 }
 
 const RENDERERS = {
-  weather_hero: ({ weather, units, cellW, cellH }) => {
+  weather_hero: ({ weather, units, cellW, cellH, density }) => {
     const w = weather || fakeWeather(units);
-    const tier = pickTier(cellW, cellH);
+    const tier = pickTier(cellW, cellH, density);
     const staleClass = w.stale ? ' weather-stale' : '';
     const staleBadge = w.stale ? '<div class="stale-pill">CACHED</div>' : '';
     const tempBlock = (size) => `
@@ -193,7 +193,7 @@ const RENDERERS = {
         </div>${statsBlock()}${sunBar(w)}${hourlyStrip(w)}`;
     }
   },
-  weather_forecast: ({ weather, cellW, cellH }) => {
+  weather_forecast: ({ weather, cellW, cellH, density }) => {
     const w = weather;
     if (!w || !w.forecast || !w.forecast.length) {
       return `<div class="col-title">FORECAST</div><div class="empty" style="border:0;padding:14px 0">NO DATA</div>`;
@@ -223,11 +223,11 @@ const RENDERERS = {
       `).join('')}
     `;
   },
-  message: ({ cfg, resolvedMessage, cellW, cellH }) => {
+  message: ({ cfg, resolvedMessage, cellW, cellH, density }) => {
     const m = resolvedMessage || (cfg && cfg.message) || {};
     const text = m.text || 'Custom message';
     const sub  = m.subtitle || '';
-    const tier = pickTier(cellW, cellH);
+    const tier = pickTier(cellW, cellH, density);
     const matrix = {
       tiny:     { txtSize: 14, subSize: 10, showSub: false },
       compact:  { txtSize: 18, subSize: 11, showSub: true  },
@@ -243,7 +243,7 @@ const RENDERERS = {
       </div>
     `;
   },
-  todos: ({ cfg, cellW, cellH }) => {
+  todos: ({ cfg, cellW, cellH, density }) => {
     const all = ((cfg && cfg.todos) || []);
     if (!all.length) {
       return `
@@ -257,7 +257,7 @@ const RENDERERS = {
       const d = new Date();
       return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     })();
-    const tier = pickTier(cellW, cellH);
+    const tier = pickTier(cellW, cellH, density);
     const matrix = {
       tiny:     { items: 2,  showDue: false, showRecur: false, showFooter: false },
       compact:  { items: 4,  showDue: false, showRecur: true,  showFooter: false },
@@ -295,12 +295,12 @@ const RENDERERS = {
       </div>
     `;
   },
-  calendar: ({ events, cellW, cellH }) => {
+  calendar: ({ events, cellW, cellH, density }) => {
     const all = (events || []);
     if (!all.length) {
       return `<div class="widget widget-cal"><div class="widget-title">UPCOMING</div><div class="cal-row"><div class="cal-info"><div class="cal-title">No events</div></div></div></div>`;
     }
-    const tier = pickTier(cellW, cellH);
+    const tier = pickTier(cellW, cellH, density);
     const matrix = {
       tiny:     { events: 1, sections: false },
       compact:  { events: 2, sections: false },
@@ -349,12 +349,12 @@ const RENDERERS = {
     const cls = s.invert ? ' invert' : '';
     return `<div class="widget widget-spacer${cls}">${text ? escapeHtml(text) : ''}</div>`;
   },
-  quote: ({ cfg, resolvedQuote, cellW, cellH }) => {
+  quote: ({ cfg, resolvedQuote, cellW, cellH, density }) => {
     const q = resolvedQuote || (cfg && cfg.quote) || {};
     const body = (q.text || '').trim() || 'Type a quote in settings.';
     const attr = (q.attribution || '').trim();
     const align = (q.align === 'left' || q.align === 'right') ? q.align : 'center';
-    const tier = pickTier(cellW, cellH);
+    const tier = pickTier(cellW, cellH, density);
     const padding = tier === 'tiny' ? 4 : tier === 'compact' ? 8 : tier === 'standard' ? 12 : tier === 'extended' ? 16 : 24;
     const showAttr = attr && tier !== 'tiny' && tier !== 'compact';
     return `
@@ -364,7 +364,7 @@ const RENDERERS = {
       </div>
     `;
   },
-  clock: ({ cfg, clockNow, cellW, cellH }) => {
+  clock: ({ cfg, clockNow, cellW, cellH, density }) => {
     const c = (cfg && cfg.clock) || {};
     const tnow = clockNow || { hour: 12, minute: 0, dateLabel: 'PREVIEW' };
     let h = tnow.hour;
@@ -374,7 +374,7 @@ const RENDERERS = {
     const hh = fmt === 24 ? String(h).padStart(2, '0') : String(h);
     const mm = String(tnow.minute).padStart(2, '0');
     const suffix = fmt === 12 ? ` ${ampm}` : '';
-    const tier = pickTier(cellW, cellH);
+    const tier = pickTier(cellW, cellH, density);
     const showAmpm = tier !== 'tiny';
     const showDate = c.showDate !== false && tier !== 'tiny' && tier !== 'compact';
     const ampmHtml = showAmpm && fmt === 12 ? `<span class="clock-ampm">${suffix}</span>` : '';
@@ -385,11 +385,11 @@ const RENDERERS = {
       </div>
     `;
   },
-  wifi_qr: ({ cfg, wifiQrSvg, cellW, cellH }) => {
+  wifi_qr: ({ cfg, wifiQrSvg, cellW, cellH, density }) => {
     const w = (cfg && cfg.wifi) || {};
     if (!w.ssid) return placeholder('WIFI QR', 'Enter WiFi SSID + password in settings', 'wifi');
     const qr = wifiQrSvg || '<div class="wifi-qr-placeholder">QR</div>';
-    const tier = pickTier(cellW, cellH);
+    const tier = pickTier(cellW, cellH, density);
     const matrix = {
       tiny:     { showSSID: false, showHint: false, ssidSize: 14 },
       compact:  { showSSID: true,  showHint: false, ssidSize: 16 },
@@ -411,10 +411,10 @@ const RENDERERS = {
       </div>
     `;
   },
-  countdown: ({ countdowns, cellW, cellH }) => {
+  countdown: ({ countdowns, cellW, cellH, density }) => {
     const list = countdowns || [];
     if (!list.length) return placeholder('COUNTDOWN', 'Add a label + date in settings', 'countdown');
-    const tier = pickTier(cellW, cellH);
+    const tier = pickTier(cellW, cellH, density);
     const matrix = {
       tiny:     { rows: 1, numSize: 28, showLabel: false },
       compact:  { rows: 2, numSize: 36, showLabel: true  },
@@ -437,7 +437,7 @@ const RENDERERS = {
       </div>
     `;
   },
-  aqi: ({ aqi, cfg, cellW, cellH }) => {
+  aqi: ({ aqi, cfg, cellW, cellH, density }) => {
     if (!aqi) {
       if (!cfg || !Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
         return placeholder('AIR QUALITY', 'Set your location in settings', 'aqi');
@@ -452,7 +452,7 @@ const RENDERERS = {
       'VERY UNHEALTHY': 'Avoid outdoor activity.',
       'HAZARDOUS': 'Stay indoors.'
     };
-    const tier = pickTier(cellW, cellH);
+    const tier = pickTier(cellW, cellH, density);
     const matrix = {
       tiny:     { showCat: false, showStats: false, showAdvice: false },
       compact:  { showCat: true,  showStats: false, showAdvice: false },
@@ -477,7 +477,7 @@ const RENDERERS = {
       </div>
     `;
   },
-  moonsun: ({ moonsun, cfg, cellW, cellH }) => {
+  moonsun: ({ moonsun, cfg, cellW, cellH, density }) => {
     if (!moonsun) {
       if (!cfg || !Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
         return placeholder('MOON & SUN', 'Set your location in settings', 'moonsun');
@@ -503,7 +503,7 @@ const RENDERERS = {
       if (mins < 0) mins += 24 * 60;
       daylight = `${Math.floor(mins / 60)}h ${mins % 60}m daylight`;
     }
-    const tier = pickTier(cellW, cellH);
+    const tier = pickTier(cellW, cellH, density);
     const matrix = {
       tiny:     { showDisc: false, showSunRow: false, showDaylight: false },
       compact:  { showDisc: true,  showSunRow: false, showDaylight: false },
@@ -530,13 +530,13 @@ const RENDERERS = {
       </div>
     `;
   },
-  news: ({ news, cfg, cellW, cellH }) => {
+  news: ({ news, cfg, cellW, cellH, density }) => {
     if (!cfg || !cfg.news || !cfg.news.feedUrl) {
       return placeholder('NEWS HEADLINES', 'Paste an RSS or Atom feed URL in settings', 'news');
     }
     const list = news || [];
     if (!list.length) return placeholder('NEWS HEADLINES', 'Feed returned no items', 'news');
-    const tier = pickTier(cellW, cellH);
+    const tier = pickTier(cellW, cellH, density);
     const matrix = {
       tiny:     { items: 1, showSource: false, titleClamp: 2 },
       compact:  { items: 2, showSource: false, titleClamp: 2 },
@@ -559,12 +559,12 @@ const RENDERERS = {
       </div>
     `;
   },
-  stocks: ({ stocks, cfg, cellW, cellH }) => {
+  stocks: ({ stocks, cfg, cellW, cellH, density }) => {
     const syms = (cfg && cfg.stocks && cfg.stocks.symbols) || [];
     if (!syms.length) return placeholder('MARKETS', 'Add symbols (AAPL, BTC-USD) in settings', 'stocks');
     const list = stocks || [];
     if (!list.length) return placeholder('MARKETS', 'Data unavailable — check symbols', 'stocks');
-    const tier = pickTier(cellW, cellH);
+    const tier = pickTier(cellW, cellH, density);
     const matrix = {
       tiny:     { watch: 0, heroSpark: false, heroMeta: false, heroChg: false, watchSpark: false, watchChg: false },
       compact:  { watch: 0, heroSpark: true,  heroMeta: false, heroChg: true,  watchSpark: false, watchChg: false },
@@ -626,7 +626,7 @@ const RENDERERS = {
       </div>
     `;
   },
-  photo: ({ cfg, resolvedPhoto, cellW, cellH }) => {
+  photo: ({ cfg, resolvedPhoto, cellW, cellH, density }) => {
     const p = (cfg && cfg.photo) || {};
     const slides = Array.isArray(p.slides) && p.slides.length
       ? p.slides
@@ -636,7 +636,7 @@ const RENDERERS = {
       : null);
     if (!r || !r.dataUrl) return placeholder('PHOTO', 'Upload an image in settings', 'photo');
     const fit = r.fit === 'cover' ? 'cover' : 'contain';
-    const tier = pickTier(cellW, cellH);
+    const tier = pickTier(cellW, cellH, density);
     const showCaption = r.caption && tier !== 'tiny';
     const showCounter = r.total > 1 && (tier === 'extended' || tier === 'full');
     return `
@@ -647,7 +647,7 @@ const RENDERERS = {
       </div>
     `;
   },
-  github: ({ github, cfg, cellW, cellH }) => {
+  github: ({ github, cfg, cellW, cellH, density }) => {
     if (!cfg || !cfg.github || !cfg.github.user) {
       return placeholder('GITHUB', 'Enter a GitHub username in settings', 'github');
     }
@@ -663,7 +663,7 @@ const RENDERERS = {
     for (const lvl of flat) {
       if (lvl > 0) { run += 1; longest = Math.max(longest, run); } else run = 0;
     }
-    const tier = pickTier(cellW, cellH);
+    const tier = pickTier(cellW, cellH, density);
     const matrix = {
       tiny:     { showTitle: false, weeksTail: 12, footer: '' },
       compact:  { showTitle: true,  weeksTail: 26, footer: '' },

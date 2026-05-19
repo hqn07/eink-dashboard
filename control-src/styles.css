@@ -632,7 +632,7 @@ input[type="text"], input[type="url"], textarea {
   gap: 4px;
   z-index: 5;
 }
-.tile-remove, .tile-flush, .tile-settings, .tile-border {
+.tile-remove, .tile-flush, .tile-settings, .tile-border, .tile-density {
   width: 20px;
   height: 20px;
   background: #fff;
@@ -648,7 +648,35 @@ input[type="text"], input[type="url"], textarea {
   justify-content: center;
   padding: 0;
 }
-.tile-remove:hover, .tile-flush:hover, .tile-settings:hover, .tile-border:hover { background: var(--ink); color: #fff; }
+.tile-remove:hover, .tile-flush:hover, .tile-settings:hover, .tile-border:hover, .tile-density:hover { background: var(--ink); color: #fff; }
+.tile-density.on { background: var(--ink); color: #fff; }
+
+/* Snap guides — visible while a tile is being dragged or resized.
+ * Each guide is a 2px dashed line spanning the body grid where the
+ * dragged tile's edge lines up with another tile's edge. Strictly
+ * visual; doesn't intercept events. */
+.snap-guides {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+.snap-line {
+  position: absolute;
+  background: transparent;
+}
+.snap-line-x {
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 2px dashed var(--ink);
+}
+.snap-line-y {
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 2px dashed var(--ink);
+}
 
 .todo-grip {
   cursor: grab;

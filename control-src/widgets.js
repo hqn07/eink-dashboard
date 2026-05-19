@@ -227,23 +227,25 @@ export const WIDGET_REGISTRY = [
 // Widgets use this to pick a layout that fits the cell. Width and height
 // are both considered; the lower-cap wins so a very wide but short cell
 // gets the shorter tier.
-export function pickTier(cellW, cellH) {
+export function pickTier(cellW, cellH, density) {
   const w = cellW || 0, h = cellH || 0;
-  // Height-driven default
   let byH = 'full';
   if (h < 4)       byH = 'tiny';
   else if (h < 6)  byH = 'compact';
   else if (h < 8)  byH = 'standard';
   else if (h < 12) byH = 'extended';
-  // Width can pull us down a tier if the cell is short on width
   let byW = 'full';
   if (w < 6)       byW = 'tiny';
   else if (w < 8)  byW = 'compact';
   else if (w < 12) byW = 'standard';
   else if (w < 18) byW = 'extended';
   const order = ['tiny', 'compact', 'standard', 'extended', 'full'];
-  const lower = order[Math.min(order.indexOf(byH), order.indexOf(byW))];
-  return lower;
+  let idx = Math.min(order.indexOf(byH), order.indexOf(byW));
+  // Per-tile density override — bumps the tier up or down one step
+  // without changing the actual cell size.
+  if (density === 'rich')   idx = Math.min(idx + 1, order.length - 1);
+  if (density === 'sparse') idx = Math.max(idx - 1, 0);
+  return order[idx];
 }
 
 export function widgetById(id) {
