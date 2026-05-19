@@ -283,12 +283,11 @@ main.layout {
   border: 1px solid #ddd;
   overflow: hidden;
 }
-/* 1-bit mode: simulates the server's contrast-boost + threshold pipeline
- * so the user sees roughly what the real e-ink panel will render. CSS
- * filters are an approximation — actual output may still differ slightly
- * for very thin lines or anti-aliased fonts. */
+/* 1-bit mode: SVG feComponentTransfer thresholds each channel at 0.5,
+ * matching the server's sharp .threshold(128) step. Same filter id used
+ * by the editor-canvas toggle so both previews match. */
 .preview-frame.preview-1bit .preview-canvas {
-  filter: grayscale(1) contrast(1000%);
+  filter: url(#eink-threshold);
 }
 .preview-frame.preview-1bit {
   outline: 2px dashed #000;
@@ -651,12 +650,14 @@ input[type="text"], input[type="url"], textarea {
 .tile-remove:hover, .tile-flush:hover, .tile-settings:hover, .tile-border:hover, .tile-density:hover { background: var(--ink); color: #fff; }
 .tile-density.on { background: var(--ink); color: #fff; }
 
-/* Editor 1-bit preview — same CSS filter approach used in Preview.jsx.
- * Only the widget render + chrome get the filter, so tile-action buttons
- * stay legible / clickable. */
+/* Editor 1-bit preview — uses an SVG feComponentTransfer filter that
+ * actually thresholds each channel at 0.5 (matches the server's sharp
+ * .threshold(128) pipeline). Plain CSS grayscale+contrast can't replicate
+ * the discrete cutoff; this can. Only widget render + chrome get the
+ * filter so tile-action buttons stay clickable. */
 .editor-wrap.editor-1bit .live-tile-body,
 .editor-wrap.editor-1bit .editor-chrome {
-  filter: grayscale(1) contrast(1000%);
+  filter: url(#eink-threshold);
 }
 .editor-wrap.editor-1bit {
   outline: 2px dashed var(--ink);

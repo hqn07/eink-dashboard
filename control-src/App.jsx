@@ -342,6 +342,24 @@ export default function App() {
 
   return (
     <div className="shell">
+      {/* SVG filter used by the 1-BIT preview toggle. feComponentTransfer
+       * with discrete tableValues "0 1" thresholds each channel at 0.5,
+       * which is the actual 1-bit pipeline the server runs. Applies wherever
+       * `filter: url(#eink-threshold)` is set. */}
+      <svg width="0" height="0" style={{ position: 'absolute' }}>
+        <filter id="eink-threshold" colorInterpolationFilters="sRGB">
+          <feColorMatrix type="matrix"
+            values="0.299 0.587 0.114 0 0
+                    0.299 0.587 0.114 0 0
+                    0.299 0.587 0.114 0 0
+                    0     0     0     1 0" />
+          <feComponentTransfer>
+            <feFuncR type="discrete" tableValues="0 1" />
+            <feFuncG type="discrete" tableValues="0 1" />
+            <feFuncB type="discrete" tableValues="0 1" />
+          </feComponentTransfer>
+        </filter>
+      </svg>
       <header className="app-header">
         <div>
           <h1>Dashboard Control</h1>
