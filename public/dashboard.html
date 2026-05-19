@@ -310,7 +310,7 @@
         // Forecast is a vertical list — pick day count off cellH alone.
         // Width only matters for whether the precip column fits.
         const h = cellH || 0, w = cellW || 0;
-        const days = h < 4 ? 1 : h < 6 ? 2 : h < 8 ? 3 : h < 12 ? 4 : 5;
+        const days = h < 4 ? 1 : h < 6 ? 2 : h < 8 ? 3 : h < 12 ? 3 : 4;
         const iconPx = h < 4 ? 28 : h < 6 ? 30 : h < 8 ? 34 : 38;
         const showPrecip = w >= 8;
         const t = { days, iconPx, showPrecip };

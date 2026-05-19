@@ -182,7 +182,7 @@ const RENDERERS = {
     // Vertical list — drive day count off cellH alone. Width only
     // gates the precip column.
     const ch = cellH || 0, cw = cellW || 0;
-    const days = ch < 4 ? 1 : ch < 6 ? 2 : ch < 8 ? 3 : ch < 12 ? 4 : 5;
+    const days = ch < 4 ? 1 : ch < 6 ? 2 : ch < 8 ? 3 : ch < 12 ? 3 : 4;
     const iconPx = ch < 4 ? 28 : ch < 6 ? 30 : ch < 8 ? 34 : 38;
     const showPrecip = cw >= 8;
     const t = { days, iconPx, showPrecip };
