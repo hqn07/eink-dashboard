@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   renderWidget,
   renderHeader,
@@ -7,6 +7,23 @@ import {
   isFooterOn
 } from '../widget-render.js';
 import { widgetById } from '../widgets.js';
+
+// Binary-search a font-size that lets the element's content fit its
+// bounding box. Matches autofitText in public/dashboard.html.
+function autofitText(el) {
+  if (!el) return;
+  const maxW = el.clientWidth;
+  const maxH = el.clientHeight;
+  if (maxW <= 0 || maxH <= 0) return;
+  let lo = 8, hi = 260;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    el.style.fontSize = mid + 'px';
+    if (el.scrollWidth <= maxW + 1 && el.scrollHeight <= maxH + 1) lo = mid;
+    else hi = mid - 1;
+  }
+  el.style.fontSize = lo + 'px';
+}
 
 const DASH_W = 800;
 const DASH_H = 480;
@@ -55,6 +72,18 @@ export default function LiveDashboard({
   editingTileId,
   renderTileOverlay
 }) {
+  const rootRef = useRef(null);
+  // Run autofit after every render so .autofit elements grow/shrink as
+  // the cell dims change. requestAnimationFrame so layout has settled.
+  useEffect(() => {
+    if (!rootRef.current) return;
+    let cancelled = false;
+    const id = requestAnimationFrame(() => {
+      if (cancelled) return;
+      rootRef.current.querySelectorAll('.autofit').forEach(autofitText);
+    });
+    return () => { cancelled = true; cancelAnimationFrame(id); };
+  });
   const cfg = (data && data.cfg) || {};
   const layout = (data && data.layout) || [];
   const headerOn = isHeaderOn(data);
@@ -117,7 +146,7 @@ export default function LiveDashboard({
   }
 
   return (
-    <div className="page" style={pageStyle}>
+    <div className="page" style={pageStyle} ref={rootRef}>
       {headerOn ? (
         <header className="hdr" dangerouslySetInnerHTML={{ __html: renderHeader(data) }} />
       ) : (

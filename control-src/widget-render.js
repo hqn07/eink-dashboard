@@ -336,20 +336,12 @@ const RENDERERS = {
     const attr = (q.attribution || '').trim();
     const align = (q.align === 'left' || q.align === 'right') ? q.align : 'center';
     const tier = pickTier(cellW, cellH);
-    const matrix = {
-      tiny:     { cap: 18, showAttr: false, padding: 4  },
-      compact:  { cap: 26, showAttr: false, padding: 8  },
-      standard: { cap: 36, showAttr: true,  padding: 12 },
-      extended: { cap: 48, showAttr: true,  padding: 16 },
-      full:     { cap: 64, showAttr: true,  padding: 24 }
-    };
-    const t = matrix[tier];
-    const lengthBase = Math.max(14, Math.min(64, Math.round(560 / Math.max(8, body.length / 4))));
-    const finalSize = Math.min(lengthBase, t.cap);
+    const padding = tier === 'tiny' ? 4 : tier === 'compact' ? 8 : tier === 'standard' ? 12 : tier === 'extended' ? 16 : 24;
+    const showAttr = attr && tier !== 'tiny' && tier !== 'compact';
     return `
-      <div class="widget widget-quote" style="text-align:${align};padding:${t.padding}px">
-        <div class="quote-body" style="font-size:${finalSize}px">${md(escapeHtml(body))}</div>
-        ${t.showAttr && attr ? `<div class="quote-attr">— ${escapeHtml(attr)}</div>` : ''}
+      <div class="widget widget-quote" style="text-align:${align};padding:${padding}px">
+        <div class="quote-body autofit multiline">${md(escapeHtml(body))}</div>
+        ${showAttr ? `<div class="quote-attr">— ${escapeHtml(attr)}</div>` : ''}
       </div>
     `;
   },
@@ -364,20 +356,13 @@ const RENDERERS = {
     const mm = String(tnow.minute).padStart(2, '0');
     const suffix = fmt === 12 ? ` ${ampm}` : '';
     const tier = pickTier(cellW, cellH);
-    const matrix = {
-      tiny:     { timeSize: 34, showAmpm: false, showDate: false },
-      compact:  { timeSize: 48, showAmpm: true,  showDate: false },
-      standard: { timeSize: 64, showAmpm: true,  showDate: true  },
-      extended: { timeSize: 84, showAmpm: true,  showDate: true  },
-      full:     { timeSize: 104,showAmpm: true,  showDate: true  }
-    };
-    const t = matrix[tier];
-    const ampmHtml = t.showAmpm && fmt === 12 ? `<span class="clock-ampm">${suffix}</span>` : '';
-    const dateOk = c.showDate !== false && t.showDate;
+    const showAmpm = tier !== 'tiny';
+    const showDate = c.showDate !== false && tier !== 'tiny' && tier !== 'compact';
+    const ampmHtml = showAmpm && fmt === 12 ? `<span class="clock-ampm">${suffix}</span>` : '';
     return `
       <div class="widget widget-clock">
-        <div class="clock-time" style="font-size:${t.timeSize}px">${hh}:${mm}${ampmHtml}</div>
-        ${dateOk ? `<div class="clock-date">${escapeHtml(tnow.dateLabel)}</div>` : ''}
+        <div class="clock-time autofit">${hh}:${mm}${ampmHtml}</div>
+        ${showDate ? `<div class="clock-date">${escapeHtml(tnow.dateLabel)}</div>` : ''}
       </div>
     `;
   },
@@ -450,17 +435,17 @@ const RENDERERS = {
     };
     const tier = pickTier(cellW, cellH);
     const matrix = {
-      tiny:     { showCat: false, showStats: false, showAdvice: false, numSize: 36 },
-      compact:  { showCat: true,  showStats: false, showAdvice: false, numSize: 48 },
-      standard: { showCat: true,  showStats: false, showAdvice: true,  numSize: 56 },
-      extended: { showCat: true,  showStats: true,  showAdvice: true,  numSize: 64 },
-      full:     { showCat: true,  showStats: true,  showAdvice: true,  numSize: 72 }
+      tiny:     { showCat: false, showStats: false, showAdvice: false },
+      compact:  { showCat: true,  showStats: false, showAdvice: false },
+      standard: { showCat: true,  showStats: false, showAdvice: true  },
+      extended: { showCat: true,  showStats: true,  showAdvice: true  },
+      full:     { showCat: true,  showStats: true,  showAdvice: true  }
     };
     const t = matrix[tier];
     return `
       <div class="widget widget-aqi">
         <div class="widget-title">AIR QUALITY</div>
-        <div class="aqi-num" style="font-size:${t.numSize}px">${aqi.aqi}</div>
+        <div class="aqi-num autofit">${aqi.aqi}</div>
         ${t.showCat ? `<div class="aqi-cat">${aqi.category}</div>` : ''}
         ${t.showAdvice ? `<div class="aqi-advice">${advice[aqi.category] || ''}</div>` : ''}
         ${t.showStats ? `

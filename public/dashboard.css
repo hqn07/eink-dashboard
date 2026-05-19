@@ -436,7 +436,6 @@ html, body {
 .widget-quote {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   height: 100%;
   padding: 4px 6px;
   gap: 8px;
@@ -456,6 +455,8 @@ html, body {
   border-top: 2px solid #000;
   padding-top: 6px;
   margin-top: 4px;
+  flex: 0 0 auto;
+  text-align: center;
 }
 
 /* ============ ICON UTIL ============ */
@@ -640,18 +641,39 @@ html, body {
 .cell.cell-border-dashed { border-right-style: dashed; border-bottom-style: dashed; }
 .cell.cell-border-none   { border: 0; }
 
+/* ============ AUTOFIT TEXT ============
+ * Elements with this class are sized by JS (autofitText) to the largest
+ * font size that fits their bounding box. They must have an explicit
+ * box via flex layout for measurement to work. */
+.autofit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  line-height: 1;
+  white-space: nowrap;
+  text-align: center;
+}
+.autofit.multiline {
+  white-space: normal;
+  line-height: 1.15;
+}
+
 /* ============ CLOCK WIDGET ============ */
 .widget-clock {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  display: flex; flex-direction: column;
   height: 100%;
   padding: 8px;
+  gap: 4px;
 }
 .clock-time {
   font-family: 'DM Serif Display', serif;
-  font-size: 64px;
   line-height: 1;
   letter-spacing: -2px;
-  white-space: nowrap;
+  text-align: center;
 }
 .clock-ampm {
   font-family: 'JetBrains Mono', monospace;
@@ -664,8 +686,9 @@ html, body {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   letter-spacing: 3px;
-  margin-top: 6px;
+  text-align: center;
   color: #000;
+  flex: 0 0 auto;
 }
 
 /* ============ WIFI QR ============ */

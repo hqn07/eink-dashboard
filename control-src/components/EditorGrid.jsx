@@ -32,6 +32,23 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
   const [shake, setShake] = useState(false);
   const [dropHover, setDropHover] = useState(false);
 
+  // autofit runner — matches the helper in dashboard.html. Binary-search
+  // the largest font size that fits inside each .autofit element's box.
+  function autofitText(el) {
+    if (!el) return;
+    const maxW = el.clientWidth;
+    const maxH = el.clientHeight;
+    if (maxW <= 0 || maxH <= 0) return;
+    let lo = 8, hi = 260;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      el.style.fontSize = mid + 'px';
+      if (el.scrollWidth <= maxW + 1 && el.scrollHeight <= maxH + 1) lo = mid;
+      else hi = mid - 1;
+    }
+    el.style.fontSize = lo + 'px';
+  }
+
   useEffect(() => {
     if (!wrapRef.current) return;
     const ro = new ResizeObserver(entries => {
@@ -86,6 +103,18 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
       if (raf) cancelAnimationFrame(raf);
     };
   }, []);
+
+  // Run autofit on every .autofit element under the editor wrap after
+  // each render. requestAnimationFrame so layout has settled.
+  useEffect(() => {
+    if (!wrapRef.current) return;
+    let cancelled = false;
+    const id = requestAnimationFrame(() => {
+      if (cancelled) return;
+      wrapRef.current.querySelectorAll('.autofit').forEach(autofitText);
+    });
+    return () => { cancelled = true; cancelAnimationFrame(id); };
+  });
 
   // The pool is a fixed list of widget templates from the registry —
   // each card creates a NEW instance when added.
