@@ -266,7 +266,7 @@
       requires: 'weather',
       sizes: { XS:{w:8,h:4}, S:{w:8,h:6}, M:{w:8,h:12}, L:{w:12,h:12}, XL:{w:24,h:12} },
       defaultSize: 'M',
-      render: ({ weather, units, cellW, cellH, cfg }) => {
+      render: ({ weather, units, cellW, cellH, cfg, density }) => {
         if (!weather) {
           if (!Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
             return placeholder('WEATHER', 'Set your location in settings', 'weather');
@@ -330,7 +330,7 @@
       requires: 'weather',
       sizes: { S:{w:6,h:8}, M:{w:6,h:12}, L:{w:12,h:12}, XL:{w:24,h:6} },
       defaultSize: 'M',
-      render: ({ weather, cellW, cellH, cfg }) => {
+      render: ({ weather, cellW, cellH, cfg, density }) => {
         if (!weather || !weather.forecast || !weather.forecast.length) {
           if (!Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
             return placeholder('FORECAST', 'Set your location in settings', 'weather');
