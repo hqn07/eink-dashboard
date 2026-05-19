@@ -814,8 +814,29 @@ input[type="text"], input[type="url"], textarea {
 
 /* Drop hint when the user drags a pool card over the canvas. */
 .editor-wrap.drop-target {
-  outline: 3px dashed var(--ink);
+  outline: 3px dashed var(--accent);
   outline-offset: -3px;
+}
+.editor-wrap.drop-target::before {
+  content: '+ DROP TO ADD';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: var(--accent);
+  background: var(--bg);
+  padding: 8px 18px;
+  border: 2px solid var(--accent);
+  pointer-events: none;
+  z-index: 50;
+  animation: drop-pulse 800ms ease-in-out infinite alternate;
+}
+@keyframes drop-pulse {
+  from { transform: translate(-50%, -50%) scale(1); }
+  to   { transform: translate(-50%, -50%) scale(1.06); }
 }
 
 /* ============ SETUP WIZARD ============ */

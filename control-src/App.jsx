@@ -272,7 +272,12 @@ export default function App() {
     return () => clearTimeout(t);
   }, [status, canSave, cfg]);
 
-  // Keyboard shortcuts: cmd+s save, cmd+z undo.
+  // Keyboard shortcuts:
+  //   cmd+s        — save now
+  //   cmd+z        — undo last change
+  //   1..9         — jump to screen N
+  //   [ / ]        — prev / next screen
+  //   shift+a      — open the Add Screen preset picker
   useEffect(() => {
     function onKey(e) {
       const t = e.target;
@@ -286,11 +291,37 @@ export default function App() {
       if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey) {
         e.preventDefault();
         undo();
+        return;
+      }
+      if (inField || mod) return;
+      // Number key to switch screens
+      if (/^[1-9]$/.test(e.key)) {
+        const idx = parseInt(e.key, 10) - 1;
+        const s = screens[idx];
+        if (s) {
+          e.preventDefault();
+          setEditScreenId(s.id);
+        }
+        return;
+      }
+      // Bracket keys to nav prev/next screen
+      if (e.key === '[' || e.key === ']') {
+        const i = screens.findIndex(s => s.id === editScreenId);
+        if (i < 0) return;
+        const next = e.key === ']' ? (i + 1) % screens.length : (i - 1 + screens.length) % screens.length;
+        e.preventDefault();
+        setEditScreenId(screens[next].id);
+        return;
+      }
+      // Shift+A — add screen
+      if (e.shiftKey && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        addScreen();
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [canSave, cfg, undoCfg, status]);
+  }, [canSave, cfg, undoCfg, status, screens, editScreenId]);
 
   if (!cfg) {
     return (
@@ -424,6 +455,13 @@ export default function App() {
         <SetupWizard
           cfg={cfg}
           onPatch={patchCfg}
+          onApplyPreset={(preset) => {
+            // Replace the default screen's layout with the chosen preset.
+            const defaultId = (screens.find(s => s.isDefault) || screens[0])?.id;
+            if (!defaultId) return;
+            const layout = inflatePresetLayout(preset);
+            updateScreenLayout(defaultId, layout);
+          }}
           onClose={() => {}}
         />
       )}
