@@ -2,6 +2,7 @@
 // Symbols like 'AAPL', 'GOOG', 'BTC-USD', 'ETH-USD'.
 // 15-min cache.
 const { fetchWithTimeout } = require('./_fetch');
+const status = require('./_status');
 const CACHE_MS = 15 * 60 * 1000;
 const cache = new Map();
 
@@ -56,13 +57,20 @@ async function fetchStocks(symbols) {
   if (!Array.isArray(symbols) || !symbols.length) return [];
   const key = symbols.join(',');
   const hit = cache.get(key);
-  if (hit && (Date.now() - hit.at) < CACHE_MS) return hit.data;
+  if (hit && (Date.now() - hit.at) < CACHE_MS) { status.cacheHit('stocks'); return hit.data; }
+  const t0 = Date.now();
   try {
     const results = await Promise.all(symbols.slice(0, 8).map(s => fetchOneSymbol(s).catch(() => null)));
     const filtered = results.filter(Boolean);
     if (filtered.length) cache.set(key, { at: Date.now(), data: filtered });
+    status.record('stocks', {
+      ok: filtered.length > 0,
+      ms: Date.now() - t0,
+      err: filtered.length === 0 ? `0 of ${symbols.length} symbols returned` : undefined
+    });
     return filtered;
-  } catch {
+  } catch (e) {
+    status.record('stocks', { ok: false, ms: Date.now() - t0, err: e.message || String(e) });
     return hit?.data || [];
   }
 }

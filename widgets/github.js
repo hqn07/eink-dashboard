@@ -2,17 +2,22 @@
 // HTML page (no auth). Returns weeks[][] of intensity levels 0-4 + total count.
 // 1-hour cache.
 const { fetchWithTimeout } = require('./_fetch');
+const status = require('./_status');
 const CACHE_MS = 60 * 60 * 1000;
 const cache = new Map();
 
 async function fetchGithub(user) {
   if (!user) return null;
   const hit = cache.get(user);
-  if (hit && (Date.now() - hit.at) < CACHE_MS) return hit.data;
+  if (hit && (Date.now() - hit.at) < CACHE_MS) { status.cacheHit('github'); return hit.data; }
+  const t0 = Date.now();
   try {
     const url = `https://github.com/users/${encodeURIComponent(user)}/contributions`;
     const r = await fetchWithTimeout(url, { headers: { 'User-Agent': 'eink-dashboard/1.0' } });
-    if (!r.ok) return hit?.data || null;
+    if (!r.ok) {
+      status.record('github', { ok: false, ms: Date.now() - t0, err: `HTTP ${r.status}` });
+      return hit?.data || null;
+    }
     const html = await r.text();
 
     const totalMatch = html.match(/(\d[\d,]*)\s+contribution/i);
@@ -56,8 +61,10 @@ async function fetchGithub(user) {
 
     const result = { user, total, weeks };
     cache.set(user, { at: Date.now(), data: result });
+    status.record('github', { ok: true, ms: Date.now() - t0 });
     return result;
-  } catch {
+  } catch (e) {
+    status.record('github', { ok: false, ms: Date.now() - t0, err: e.message || String(e) });
     return hit?.data || null;
   }
 }

@@ -744,7 +744,7 @@
       sizes: { S:{w:8,h:4}, M:{w:12,h:6}, L:{w:24,h:6} },
       defaultSize: 'M',
       render: ({ stocks, cfg, cellW, cellH }) => {
-        const syms = (cfg.stocks && cfg.stocks.symbols) || [];
+        const syms = (cfg && cfg.stocks && cfg.stocks.symbols) || [];
         if (!syms.length) return placeholder('MARKETS', 'Add symbols (AAPL, BTC-USD) in settings');
         if (!stocks || !stocks.length) return placeholder('MARKETS', 'Data unavailable — check symbols');
         const tier = pickTier(cellW, cellH);

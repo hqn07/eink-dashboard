@@ -3,6 +3,7 @@
 // resolved {lat, lon, units} tuple for 10 minutes.
 
 const { fetchWithTimeout } = require('./_fetch');
+const status = require('./_status');
 const CACHE_MS = 10 * 60 * 1000;
 const cacheMap = new Map(); // key: "lat,lon|F" → { at, data }
 
@@ -155,8 +156,10 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
   const cacheKey = `${lat.toFixed(3)},${lon.toFixed(3)}|${u}`;
   const cached = cacheMap.get(cacheKey);
   if (cached && (Date.now() - cached.at) < CACHE_MS) {
+    status.cacheHit('weather');
     return cached.data;
   }
+  const t0 = Date.now();
 
   const tempUnit = u === 'C' ? 'celsius' : 'fahrenheit';
   const windUnitParam = u === 'C' ? 'ms' : 'mph';
@@ -176,6 +179,7 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
     const r = await fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?${params}`);
     if (!r.ok) {
       console.warn('Open-Meteo fetch non-OK:', r.status);
+      status.record('weather', { ok: false, ms: Date.now() - t0, err: `HTTP ${r.status}` });
       return cached?.data || stubData(u);
     }
     const data = await r.json();
@@ -257,9 +261,11 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
     };
 
     cacheMap.set(cacheKey, { at: Date.now(), data: result });
+    status.record('weather', { ok: true, ms: Date.now() - t0 });
     return result;
   } catch (err) {
     console.error('Open-Meteo error:', err.message);
+    status.record('weather', { ok: false, ms: Date.now() - t0, err: err.message || String(err) });
     return cached?.data ? { ...cached.data, stale: true } : stubData(u);
   }
 }

@@ -1,6 +1,7 @@
 // RSS/Atom headline fetcher. 15-min cache per feed URL.
 const { XMLParser } = require('fast-xml-parser');
 const { fetchWithTimeout } = require('./_fetch');
+const status = require('./_status');
 
 const CACHE_MS = 15 * 60 * 1000;
 const cache = new Map();
@@ -26,10 +27,14 @@ function clean(t) {
 async function fetchNews(url, maxItems = 5) {
   if (!url) return [];
   const hit = cache.get(url);
-  if (hit && (Date.now() - hit.at) < CACHE_MS) return hit.data;
+  if (hit && (Date.now() - hit.at) < CACHE_MS) { status.cacheHit('news'); return hit.data; }
+  const t0 = Date.now();
   try {
     const r = await fetchWithTimeout(url, { headers: { 'User-Agent': 'eink-dashboard/1.0' } });
-    if (!r.ok) return hit?.data || [];
+    if (!r.ok) {
+      status.record('news', { ok: false, ms: Date.now() - t0, err: `HTTP ${r.status}` });
+      return hit?.data || [];
+    }
     const xml = await r.text();
     const j = parser.parse(xml);
 
@@ -53,8 +58,10 @@ async function fetchNews(url, maxItems = 5) {
 
     const result = items.filter(i => i.title).slice(0, maxItems);
     cache.set(url, { at: Date.now(), data: result });
+    status.record('news', { ok: true, ms: Date.now() - t0 });
     return result;
-  } catch {
+  } catch (e) {
+    status.record('news', { ok: false, ms: Date.now() - t0, err: e.message || String(e) });
     return hit?.data || [];
   }
 }

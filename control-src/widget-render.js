@@ -598,7 +598,7 @@ const RENDERERS = {
     const showCounter = r.total > 1 && (tier === 'extended' || tier === 'full');
     return `
       <div class="widget widget-photo">
-        <img src="${r.dataUrl}" style="object-fit:${fit}" alt="" />
+        <img src="${escapeHtml(r.dataUrl)}" style="object-fit:${fit}" alt="" />
         ${showCaption ? `<div class="photo-caption">${escapeHtml(r.caption)}</div>` : ''}
         ${showCounter ? `<div class="photo-counter">${r.index + 1}/${r.total}</div>` : ''}
       </div>

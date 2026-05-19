@@ -25,6 +25,7 @@ const { fetchStocks } = require('./widgets/stocks');
 const { fetchGithub } = require('./widgets/github');
 const { fetchAlerts } = require('./widgets/alerts');
 const { prepTodos } = require('./widgets/todos');
+const widgetStatus = require('./widgets/_status');
 const { resolveQuote } = require('./widgets/quote');
 const { resolveMessage, renderInlineMarkdown } = require('./widgets/message');
 const { resolvePhoto } = require('./widgets/photo');
@@ -766,6 +767,75 @@ app.post('/api/todos', async (req, res) => {
 
 // Health
 app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
+
+// JSON dump of every data-widget's last fetch outcome.
+app.get('/api/health/widgets', (req, res) => {
+  res.json({ now: Date.now(), widgets: widgetStatus.snapshot() });
+});
+
+// Human-readable status dashboard. Each fetched widget gets a row:
+// last call time, success rate, latency, cache state, last error.
+app.get('/health/widgets', (req, res) => {
+  const snap = widgetStatus.snapshot();
+  const now = Date.now();
+  const fmtAgo = (ms) => {
+    if (!ms) return '—';
+    const s = Math.round((now - ms) / 1000);
+    if (s < 60) return s + 's ago';
+    if (s < 3600) return Math.round(s / 60) + 'm ago';
+    return Math.round(s / 3600) + 'h ago';
+  };
+  const escapeHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  const widgetNames = ['weather','calendar','aqi','alerts','news','stocks','github','quote'];
+  const rows = widgetNames.map(name => {
+    const e = snap[name];
+    if (!e) {
+      return `<tr><td>${name}</td><td colspan="6" class="muted">no calls yet</td></tr>`;
+    }
+    const okRate = e.calls > 0 ? Math.round((e.ok / e.calls) * 100) : 0;
+    const statusCell = e.lastErr && e.lastAt > (e.lastOk || 0)
+      ? `<span class="bad">FAIL</span>`
+      : e.lastCacheHit ? `<span class="cached">CACHED</span>` : `<span class="ok">OK</span>`;
+    return `<tr>
+      <td>${name}</td>
+      <td>${statusCell}</td>
+      <td>${e.calls}</td>
+      <td>${okRate}%</td>
+      <td>${fmtAgo(e.lastAt)}</td>
+      <td>${e.lastLatencyMs != null ? e.lastLatencyMs + 'ms' : '—'}</td>
+      <td class="err">${escapeHtml(e.lastErr || '')}</td>
+    </tr>`;
+  }).join('');
+  res.set('Content-Type', 'text/html; charset=utf-8');
+  res.send(`<!doctype html>
+<html><head>
+<meta charset="utf-8">
+<title>Widget health</title>
+<style>
+  body { font-family: ui-monospace, 'JetBrains Mono', monospace; background: #faf8f3; color: #000; margin: 0; padding: 24px; }
+  h1 { font-family: 'DM Serif Display', Georgia, serif; font-weight: 400; letter-spacing: -1px; }
+  .muted { color: #999; }
+  table { border-collapse: collapse; width: 100%; max-width: 980px; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1.5px solid #000; font-size: 12px; }
+  th { background: #000; color: #fff; text-transform: uppercase; letter-spacing: 2px; font-size: 11px; }
+  td.err { color: #c8302a; max-width: 360px; overflow-wrap: anywhere; }
+  .ok { color: #000; font-weight: 700; }
+  .bad { color: #c8302a; font-weight: 700; }
+  .cached { color: #666; font-weight: 700; }
+  .note { font-size: 11px; color: #555; margin-top: 16px; max-width: 980px; line-height: 1.5; }
+</style>
+</head><body>
+<h1>Widget health</h1>
+<div class="note">Counts reset whenever the server process restarts. Cache hits don't increment call/ok/fail.</div>
+<table>
+  <thead><tr><th>Widget</th><th>Status</th><th>Calls</th><th>OK%</th><th>Last call</th><th>Latency</th><th>Last error</th></tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<div class="note">Auto-refreshes every 15s. <a href="/api/health/widgets">JSON</a></div>
+<script>setTimeout(() => location.reload(), 15000);</script>
+</body></html>`);
+});
 
 app.listen(PORT, () => {
   console.log(`E-ink dashboard listening on http://localhost:${PORT}`);

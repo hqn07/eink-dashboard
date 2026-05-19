@@ -1,6 +1,7 @@
 // Air quality fetcher via Open-Meteo air-quality-api. Same {lat,lon}
 // contract as the weather fetcher. 30-min cache.
 const { fetchWithTimeout } = require('./_fetch');
+const status = require('./_status');
 const CACHE_MS = 30 * 60 * 1000;
 const cache = new Map();
 
@@ -23,7 +24,8 @@ async function fetchAqi({ lat, lon }) {
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
   const key = `${lat},${lon}`;
   const hit = cache.get(key);
-  if (hit && (Date.now() - hit.at) < CACHE_MS) return hit.data;
+  if (hit && (Date.now() - hit.at) < CACHE_MS) { status.cacheHit('aqi'); return hit.data; }
+  const t0 = Date.now();
   try {
     const params = new URLSearchParams({
       latitude: String(lat),
@@ -32,7 +34,10 @@ async function fetchAqi({ lat, lon }) {
       timezone: 'auto'
     });
     const r = await fetchWithTimeout(`https://air-quality-api.open-meteo.com/v1/air-quality?${params}`);
-    if (!r.ok) return hit?.data || null;
+    if (!r.ok) {
+      status.record('aqi', { ok: false, ms: Date.now() - t0, err: `HTTP ${r.status}` });
+      return hit?.data || null;
+    }
     const data = await r.json();
     const c = data.current || {};
     const result = {
@@ -44,8 +49,10 @@ async function fetchAqi({ lat, lon }) {
       stale: false
     };
     cache.set(key, { at: Date.now(), data: result });
+    status.record('aqi', { ok: true, ms: Date.now() - t0 });
     return result;
-  } catch {
+  } catch (e) {
+    status.record('aqi', { ok: false, ms: Date.now() - t0, err: e.message || String(e) });
     return hit?.data ? { ...hit.data, stale: true } : null;
   }
 }
