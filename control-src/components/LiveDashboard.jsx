@@ -4,7 +4,9 @@ import {
   renderHeader,
   renderFooter,
   isHeaderOn,
-  isFooterOn
+  isFooterOn,
+  headerVariant,
+  footerVariant
 } from '../widget-render.js';
 import { widgetById } from '../widgets.js';
 
@@ -15,7 +17,8 @@ function autofitText(el) {
   const maxW = el.clientWidth;
   const maxH = el.clientHeight;
   if (maxW <= 0 || maxH <= 0) return;
-  let lo = 8, hi = 260;
+  const minFont = Math.max(8, parseInt(el.getAttribute('data-min-font') || '11', 10));
+  let lo = minFont, hi = 260;
   while (lo < hi) {
     const mid = Math.ceil((lo + hi) / 2);
     el.style.fontSize = mid + 'px';
@@ -156,7 +159,7 @@ export default function LiveDashboard({
   return (
     <div className="page" style={pageStyle} ref={rootRef}>
       {headerOn ? (
-        <header className="hdr" dangerouslySetInnerHTML={{ __html: renderHeader(data) }} />
+        <header className={`hdr hdr-${headerVariant(data)}`} dangerouslySetInnerHTML={{ __html: renderHeader(data) }} />
       ) : (
         <div className="hdr-stub" />
       )}
@@ -168,7 +171,7 @@ export default function LiveDashboard({
         )}
       </main>
       {footerOn ? (
-        <footer className="ftr" dangerouslySetInnerHTML={{ __html: renderFooter(data) }} />
+        <footer className={`ftr ftr-${footerVariant(data)}`} dangerouslySetInnerHTML={{ __html: renderFooter(data) }} />
       ) : (
         <div className="ftr-stub" />
       )}

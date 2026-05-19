@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import GridLayout from 'react-grid-layout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById, makeInstance } from '../widgets.js';
-import { renderWidget, renderHeader, renderFooter, isHeaderOn, isFooterOn } from '../widget-render.js';
+import { renderWidget, renderHeader, renderFooter, isHeaderOn, isFooterOn, headerVariant, footerVariant } from '../widget-render.js';
 
 // Editor cells must align 1:1 with dashboard cells so widget previews
 // scale cleanly. Any padding/margin would offset cells from the
@@ -39,7 +39,8 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
     const maxW = el.clientWidth;
     const maxH = el.clientHeight;
     if (maxW <= 0 || maxH <= 0) return;
-    let lo = 8, hi = 260;
+    const minFont = Math.max(8, parseInt(el.getAttribute('data-min-font') || '11', 10));
+    let lo = minFont, hi = 260;
     while (lo < hi) {
       const mid = Math.ceil((lo + hi) / 2);
       el.style.fontSize = mid + 'px';
@@ -294,7 +295,7 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
         {/* Header chrome — purely visual; matches dashboard.css `.hdr`. */}
         {headerOn && (
           <div
-            className="editor-chrome hdr"
+            className={`editor-chrome hdr hdr-${headerVariant(previewData)}`}
             style={{
               position: 'absolute', top: 0, left: 0,
               width: DASH_W, height: HEADER_H,
@@ -414,7 +415,7 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
         {/* Footer chrome */}
         {footerOn && (
           <div
-            className="editor-chrome ftr"
+            className={`editor-chrome ftr ftr-${footerVariant(previewData)}`}
             style={{
               position: 'absolute', bottom: 0, left: 0,
               width: DASH_W, height: FOOTER_H,

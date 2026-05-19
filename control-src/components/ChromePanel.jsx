@@ -29,7 +29,16 @@ export default function ChromePanel({ screen, onUpdate }) {
       </div>
       {headerOn && (
         <>
-          <div className="btn-row" style={{ marginTop: 0, gap: 6 }}>
+          <label className="field" style={{ marginTop: 6 }}>
+            <span className="label">Header style</span>
+            <select value={chrome.header?.variant || 'masthead'}
+              onChange={e => setHeader({ variant: e.target.value })}>
+              <option value="masthead">Masthead (default · big newspaper)</option>
+              <option value="minimal">Minimal (small mono · white)</option>
+              <option value="band">Band (full-black tracking-wide)</option>
+            </select>
+          </label>
+          <div className="btn-row" style={{ marginTop: 6, gap: 6 }}>
             <label className="field" style={{ flex: 1, marginTop: 0 }}>
               <span className="label">Header left</span>
               <input type="text" value={chrome.header?.left || ''}
@@ -66,12 +75,23 @@ export default function ChromePanel({ screen, onUpdate }) {
           onClick={() => setFooter({ enabled: !footerOn })} />
       </div>
       {footerOn && (
-        <label className="field">
-          <span className="label">Footer text</span>
-          <input type="text" value={chrome.footer?.text || ''}
-            onChange={e => setFooter({ text: e.target.value })}
-            placeholder="UPDATED {time} · REFRESH {refresh}MIN · THE DAILY {city}" />
-        </label>
+        <>
+          <label className="field">
+            <span className="label">Footer style</span>
+            <select value={chrome.footer?.variant || 'editorial'}
+              onChange={e => setFooter({ variant: e.target.value })}>
+              <option value="editorial">Editorial (default · black band)</option>
+              <option value="dotted">Dotted (dashed underline · white)</option>
+              <option value="compact">Compact (small mono · white)</option>
+            </select>
+          </label>
+          <label className="field">
+            <span className="label">Footer text</span>
+            <input type="text" value={chrome.footer?.text || ''}
+              onChange={e => setFooter({ text: e.target.value })}
+              placeholder="UPDATED {time} · REFRESH {refresh}MIN · THE DAILY {city}" />
+          </label>
+        </>
       )}
     </div>
   );

@@ -19,11 +19,30 @@ function md(s) {
     .replace(/`(.+?)`/g, '<code>$1</code>');
 }
 
+// Per-widget placeholder glyphs. Chunky strokes survive 1-bit threshold.
+const PLACEHOLDER_ICONS = {
+  clock:    '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="24" fill="none" stroke="#000" stroke-width="4"/><line x1="32" y1="32" x2="32" y2="18" stroke="#000" stroke-width="4" stroke-linecap="round"/><line x1="32" y1="32" x2="42" y2="38" stroke="#000" stroke-width="4" stroke-linecap="round"/></svg>',
+  weather:  '<svg viewBox="0 0 64 64"><path d="M 18 40 Q 10 40 10 32 Q 10 24 18 24 Q 18 14 28 14 Q 38 14 40 24 Q 52 24 52 34 Q 52 42 44 42 L 18 42 Z" fill="none" stroke="#000" stroke-width="4"/></svg>',
+  calendar: '<svg viewBox="0 0 64 64"><rect x="8" y="14" width="48" height="42" fill="none" stroke="#000" stroke-width="4"/><line x1="8" y1="24" x2="56" y2="24" stroke="#000" stroke-width="4"/><line x1="20" y1="8" x2="20" y2="20" stroke="#000" stroke-width="4" stroke-linecap="round"/><line x1="44" y1="8" x2="44" y2="20" stroke="#000" stroke-width="4" stroke-linecap="round"/></svg>',
+  todos:    '<svg viewBox="0 0 64 64"><rect x="12" y="14" width="14" height="14" fill="none" stroke="#000" stroke-width="4"/><line x1="32" y1="21" x2="56" y2="21" stroke="#000" stroke-width="4" stroke-linecap="round"/><rect x="12" y="38" width="14" height="14" fill="#000"/><polyline points="16,44 20,48 24,40" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><line x1="32" y1="45" x2="56" y2="45" stroke="#000" stroke-width="4" stroke-linecap="round"/></svg>',
+  stocks:   '<svg viewBox="0 0 64 64"><polyline points="6,46 20,32 30,38 44,18 58,24" fill="none" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><line x1="6" y1="56" x2="58" y2="56" stroke="#000" stroke-width="4"/></svg>',
+  photo:    '<svg viewBox="0 0 64 64"><rect x="6" y="10" width="52" height="44" fill="none" stroke="#000" stroke-width="4"/><circle cx="22" cy="24" r="4" fill="#000"/><polyline points="10,46 22,34 32,42 46,28 56,38" fill="none" stroke="#000" stroke-width="4" stroke-linejoin="round"/></svg>',
+  news:     '<svg viewBox="0 0 64 64"><rect x="8" y="10" width="48" height="44" fill="none" stroke="#000" stroke-width="4"/><line x1="14" y1="22" x2="50" y2="22" stroke="#000" stroke-width="4"/><line x1="14" y1="32" x2="40" y2="32" stroke="#000" stroke-width="4"/><line x1="14" y1="40" x2="50" y2="40" stroke="#000" stroke-width="4"/><line x1="14" y1="48" x2="34" y2="48" stroke="#000" stroke-width="4"/></svg>',
+  aqi:      '<svg viewBox="0 0 64 64"><path d="M 32 8 Q 14 22 14 38 Q 14 52 32 52 Q 50 52 50 38 Q 50 22 32 8 Z" fill="none" stroke="#000" stroke-width="4"/><path d="M 32 28 Q 28 36 32 44" fill="none" stroke="#000" stroke-width="4" stroke-linecap="round"/></svg>',
+  moonsun:  '<svg viewBox="0 0 64 64"><circle cx="22" cy="32" r="14" fill="#000"/><circle cx="28" cy="28" r="10" fill="#fff"/><path d="M 44 22 L 58 22 M 51 14 L 51 30" stroke="#000" stroke-width="4" stroke-linecap="round"/></svg>',
+  wifi:     '<svg viewBox="0 0 64 64"><rect x="14" y="14" width="36" height="36" fill="none" stroke="#000" stroke-width="4"/><rect x="22" y="22" width="6" height="6" fill="#000"/><rect x="36" y="22" width="6" height="6" fill="#000"/><rect x="22" y="36" width="6" height="6" fill="#000"/><rect x="36" y="36" width="6" height="6" fill="#000"/></svg>',
+  quote:    '<svg viewBox="0 0 64 64"><path d="M 12 24 Q 12 14 22 14 L 22 24 L 18 24 Q 18 32 22 32 L 22 38 Q 12 38 12 28 Z" fill="#000"/><path d="M 36 24 Q 36 14 46 14 L 46 24 L 42 24 Q 42 32 46 32 L 46 38 Q 36 38 36 28 Z" fill="#000"/></svg>',
+  countdown:'<svg viewBox="0 0 64 64"><path d="M 18 8 L 46 8 L 46 18 Q 46 24 38 28 Q 38 32 38 36 Q 46 40 46 46 L 46 56 L 18 56 L 18 46 Q 18 40 26 36 Q 26 32 26 28 Q 18 24 18 18 Z" fill="none" stroke="#000" stroke-width="4"/><path d="M 24 18 L 40 18 L 32 28 Z" fill="#000"/></svg>',
+  github:   '<svg viewBox="0 0 64 64"><rect x="6" y="20" width="10" height="10" fill="#000"/><rect x="20" y="20" width="10" height="10" fill="#fff" stroke="#000" stroke-width="4"/><rect x="34" y="20" width="10" height="10" fill="#000"/><rect x="48" y="20" width="10" height="10" fill="#fff" stroke="#000" stroke-width="4"/><rect x="6" y="34" width="10" height="10" fill="#fff" stroke="#000" stroke-width="4"/><rect x="20" y="34" width="10" height="10" fill="#000"/><rect x="34" y="34" width="10" height="10" fill="#000"/><rect x="48" y="34" width="10" height="10" fill="#fff" stroke="#000" stroke-width="4"/></svg>'
+};
+
 // Setup-needed placeholder. Matches dashboard.html so what you see in the
 // editor previews matches what'll actually render on the device.
-function placeholder(title, hint) {
+function placeholder(title, hint, iconKey) {
+  const ic = iconKey && PLACEHOLDER_ICONS[iconKey];
   return `
     <div class="widget widget-placeholder">
+      ${ic ? `<div class="ph-icon">${ic}</div>` : ''}
       <div class="ph-title">${title}</div>
       <div class="ph-hint">${hint}</div>
       <div class="ph-tag">SETUP NEEDED</div>
@@ -340,7 +359,7 @@ const RENDERERS = {
     const showAttr = attr && tier !== 'tiny' && tier !== 'compact';
     return `
       <div class="widget widget-quote" style="text-align:${align};padding:${padding}px">
-        <div class="quote-body autofit multiline">${md(escapeHtml(body))}</div>
+        <div class="quote-body autofit multiline" data-min-font="12">${md(escapeHtml(body))}</div>
         ${showAttr ? `<div class="quote-attr">— ${escapeHtml(attr)}</div>` : ''}
       </div>
     `;
@@ -361,14 +380,14 @@ const RENDERERS = {
     const ampmHtml = showAmpm && fmt === 12 ? `<span class="clock-ampm">${suffix}</span>` : '';
     return `
       <div class="widget widget-clock">
-        <div class="clock-time autofit">${hh}:${mm}${ampmHtml}</div>
+        <div class="clock-time autofit" data-min-font="28">${hh}:${mm}${ampmHtml}</div>
         ${showDate ? `<div class="clock-date">${escapeHtml(tnow.dateLabel)}</div>` : ''}
       </div>
     `;
   },
   wifi_qr: ({ cfg, wifiQrSvg, cellW, cellH }) => {
     const w = (cfg && cfg.wifi) || {};
-    if (!w.ssid) return placeholder('WIFI QR', 'Enter WiFi SSID + password in settings');
+    if (!w.ssid) return placeholder('WIFI QR', 'Enter WiFi SSID + password in settings', 'wifi');
     const qr = wifiQrSvg || '<div class="wifi-qr-placeholder">QR</div>';
     const tier = pickTier(cellW, cellH);
     const matrix = {
@@ -394,7 +413,7 @@ const RENDERERS = {
   },
   countdown: ({ countdowns, cellW, cellH }) => {
     const list = countdowns || [];
-    if (!list.length) return placeholder('COUNTDOWN', 'Add a label + date in settings');
+    if (!list.length) return placeholder('COUNTDOWN', 'Add a label + date in settings', 'countdown');
     const tier = pickTier(cellW, cellH);
     const matrix = {
       tiny:     { rows: 1, numSize: 28, showLabel: false },
@@ -421,9 +440,9 @@ const RENDERERS = {
   aqi: ({ aqi, cfg, cellW, cellH }) => {
     if (!aqi) {
       if (!cfg || !Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
-        return placeholder('AIR QUALITY', 'Set your location in settings');
+        return placeholder('AIR QUALITY', 'Set your location in settings', 'aqi');
       }
-      return placeholder('AIR QUALITY', 'Data unavailable for this location');
+      return placeholder('AIR QUALITY', 'Data unavailable for this location', 'aqi');
     }
     const advice = {
       'GOOD': 'Breathe easy.',
@@ -445,7 +464,7 @@ const RENDERERS = {
     return `
       <div class="widget widget-aqi">
         <div class="widget-title">AIR QUALITY</div>
-        <div class="aqi-num autofit">${aqi.aqi}</div>
+        <div class="aqi-num autofit" data-min-font="28">${aqi.aqi}</div>
         ${t.showCat ? `<div class="aqi-cat">${aqi.category}</div>` : ''}
         ${t.showAdvice ? `<div class="aqi-advice">${advice[aqi.category] || ''}</div>` : ''}
         ${t.showStats ? `
@@ -461,9 +480,9 @@ const RENDERERS = {
   moonsun: ({ moonsun, cfg, cellW, cellH }) => {
     if (!moonsun) {
       if (!cfg || !Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
-        return placeholder('MOON & SUN', 'Set your location in settings');
+        return placeholder('MOON & SUN', 'Set your location in settings', 'moonsun');
       }
-      return placeholder('MOON & SUN', 'Data unavailable');
+      return placeholder('MOON & SUN', 'Data unavailable', 'moonsun');
     }
     function parseClock(s) {
       if (!s || s === '--:--') return null;
@@ -513,10 +532,10 @@ const RENDERERS = {
   },
   news: ({ news, cfg, cellW, cellH }) => {
     if (!cfg || !cfg.news || !cfg.news.feedUrl) {
-      return placeholder('NEWS HEADLINES', 'Paste an RSS or Atom feed URL in settings');
+      return placeholder('NEWS HEADLINES', 'Paste an RSS or Atom feed URL in settings', 'news');
     }
     const list = news || [];
-    if (!list.length) return placeholder('NEWS HEADLINES', 'Feed returned no items');
+    if (!list.length) return placeholder('NEWS HEADLINES', 'Feed returned no items', 'news');
     const tier = pickTier(cellW, cellH);
     const matrix = {
       tiny:     { items: 1, showSource: false, titleClamp: 2 },
@@ -542,9 +561,9 @@ const RENDERERS = {
   },
   stocks: ({ stocks, cfg, cellW, cellH }) => {
     const syms = (cfg && cfg.stocks && cfg.stocks.symbols) || [];
-    if (!syms.length) return placeholder('MARKETS', 'Add symbols (AAPL, BTC-USD) in settings');
+    if (!syms.length) return placeholder('MARKETS', 'Add symbols (AAPL, BTC-USD) in settings', 'stocks');
     const list = stocks || [];
-    if (!list.length) return placeholder('MARKETS', 'Data unavailable — check symbols');
+    if (!list.length) return placeholder('MARKETS', 'Data unavailable — check symbols', 'stocks');
     const tier = pickTier(cellW, cellH);
     const matrix = {
       tiny:     { watch: 0, heroSpark: false, heroMeta: false, heroChg: false, watchSpark: false, watchChg: false },
@@ -599,7 +618,7 @@ const RENDERERS = {
             <span class="hero-sym">${escapeHtml(hero.symbol)}</span>
             ${heroChg}
           </div>
-          <div class="hero-price autofit">${hero.price}</div>
+          <div class="hero-price autofit" data-min-font="22">${hero.price}</div>
           ${heroMeta}
           ${heroSparkHtml}
         </div>
@@ -615,7 +634,7 @@ const RENDERERS = {
     const r = resolvedPhoto || (slides.length
       ? { dataUrl: slides[0].dataUrl, caption: slides[0].caption || '', fit: p.fit, index: 0, total: slides.length }
       : null);
-    if (!r || !r.dataUrl) return placeholder('PHOTO', 'Upload an image in settings');
+    if (!r || !r.dataUrl) return placeholder('PHOTO', 'Upload an image in settings', 'photo');
     const fit = r.fit === 'cover' ? 'cover' : 'contain';
     const tier = pickTier(cellW, cellH);
     const showCaption = r.caption && tier !== 'tiny';
@@ -630,10 +649,10 @@ const RENDERERS = {
   },
   github: ({ github, cfg, cellW, cellH }) => {
     if (!cfg || !cfg.github || !cfg.github.user) {
-      return placeholder('GITHUB', 'Enter a GitHub username in settings');
+      return placeholder('GITHUB', 'Enter a GitHub username in settings', 'github');
     }
     if (!github || !github.weeks || !github.weeks.length) {
-      return placeholder('GITHUB', 'Data unavailable for ' + escapeHtml(cfg.github.user));
+      return placeholder('GITHUB', 'Data unavailable for ' + escapeHtml(cfg.github.user), 'github');
     }
     const flat = [];
     for (const wk of github.weeks) for (const lvl of wk) flat.push(lvl);
@@ -753,4 +772,12 @@ export function isHeaderOn(data) {
 export function isFooterOn(data) {
   const chrome = (data && data.chrome) || DEFAULT_CHROME;
   return (chrome.footer || {}).enabled !== false;
+}
+export function headerVariant(data) {
+  const chrome = (data && data.chrome) || DEFAULT_CHROME;
+  return ((chrome.header || {}).variant || 'masthead').toLowerCase();
+}
+export function footerVariant(data) {
+  const chrome = (data && data.chrome) || DEFAULT_CHROME;
+  return ((chrome.footer || {}).variant || 'editorial').toLowerCase();
 }
