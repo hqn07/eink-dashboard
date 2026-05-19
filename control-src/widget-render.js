@@ -193,16 +193,25 @@ const RENDERERS = {
         </div>${statsBlock()}${sunBar(w)}${hourlyStrip(w)}`;
     }
   },
-  weather_forecast: ({ weather, cellW, cellH, density }) => {
+  weather_forecast: ({ weather, cfg, cellW, cellH, density }) => {
     const w = weather;
     if (!w || !w.forecast || !w.forecast.length) {
       return `<div class="col-title">FORECAST</div><div class="empty" style="border:0;padding:14px 0">NO DATA</div>`;
     }
-    // Vertical list — drive day count off cellH alone. Width only
-    // gates the precip column.
+    // Day count is user-configurable via cfg.weather.forecastDays (1-7);
+    // auto by cellH otherwise.
     const ch = cellH || 0, cw = cellW || 0;
-    const days = ch < 4 ? 1 : ch < 6 ? 2 : ch < 8 ? 3 : ch < 12 ? 3 : 4;
-    const iconPx = ch < 4 ? 28 : ch < 6 ? 30 : ch < 8 ? 34 : 38;
+    const userDays = parseInt((cfg && cfg.weather && cfg.weather.forecastDays), 10);
+    const autoDays = ch < 4 ? 1
+                   : ch < 6 ? 2
+                   : ch < 8 ? 3
+                   : ch < 10 ? 4
+                   : ch < 12 ? 5
+                   : 7;
+    const days = Number.isFinite(userDays)
+      ? Math.max(1, Math.min(7, userDays))
+      : autoDays;
+    const iconPx = ch < 4 ? 26 : ch < 6 ? 28 : ch < 8 ? 32 : ch < 12 ? 34 : 38;
     const showPrecip = cw >= 8;
     const t = { days, iconPx, showPrecip };
     const max = t.days;

@@ -817,6 +817,7 @@ app.post('/api/config', checkDeviceAuth, async (req, res) => {
       github:   { ...(current.github   || {}), ...(req.body.github   || {}) },
       photo:    { ...(current.photo    || {}), ...(req.body.photo    || {}) },
       aqi:      { ...(current.aqi      || {}), ...(req.body.aqi      || {}) },
+      weather:  { ...(current.weather  || {}), ...(req.body.weather  || {}) },
     };
     if (Array.isArray(req.body.screens)) {
       merged.screens = req.body.screens;

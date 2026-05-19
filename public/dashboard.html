@@ -337,11 +337,22 @@
           }
           return placeholder('FORECAST', 'Data unavailable', 'weather');
         }
-        // Forecast is a vertical list — pick day count off cellH alone.
-        // Width only matters for whether the precip column fits.
+        // Forecast is a vertical list. Day count is user-configurable
+        // via cfg.weather.forecastDays (1-7); falls back to a cellH-driven
+        // auto value when unset. Auto packs the cell tighter at large
+        // sizes than the old fixed cap.
         const h = cellH || 0, w = cellW || 0;
-        const days = h < 4 ? 1 : h < 6 ? 2 : h < 8 ? 3 : h < 12 ? 3 : 4;
-        const iconPx = h < 4 ? 28 : h < 6 ? 30 : h < 8 ? 34 : 38;
+        const userDays = parseInt((cfg && cfg.weather && cfg.weather.forecastDays), 10);
+        const autoDays = h < 4 ? 1
+                       : h < 6 ? 2
+                       : h < 8 ? 3
+                       : h < 10 ? 4
+                       : h < 12 ? 5
+                       : 7;
+        const days = Number.isFinite(userDays)
+          ? Math.max(1, Math.min(7, userDays))
+          : autoDays;
+        const iconPx = h < 4 ? 26 : h < 6 ? 28 : h < 8 ? 32 : h < 12 ? 34 : 38;
         const showPrecip = w >= 8;
         const t = { days, iconPx, showPrecip };
         const list = weather.forecast.slice(0, t.days);

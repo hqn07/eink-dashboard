@@ -76,6 +76,7 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested, focusedW
   const showStocks    = isOn('stocks');
   const showGithub    = isOn('github');
   const showPhoto     = isOn('photo');
+  const showForecast  = isOn('weather_forecast');
 
   // Weather widgets share LocationPanel — flash + scroll the same target.
   const locWrap = (
@@ -90,6 +91,27 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested, focusedW
   return (
     <div>
       {locWrap}
+
+      {showForecast && (
+        <section {...sectionProps('weather_forecast')}>
+          <div className="section-title">Weather Forecast</div>
+          <label className="field">
+            <span className="label">Days to show (1–7 · blank = auto by tile height)</span>
+            <input type="number" min={1} max={7}
+              value={cfg.weather?.forecastDays ?? ''}
+              onChange={e => {
+                const v = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                onPatchNested('weather', {
+                  forecastDays: Number.isFinite(v) ? Math.max(1, Math.min(7, v)) : null
+                });
+              }}
+              placeholder="auto" />
+          </label>
+          <div className="terminal-line" style={{ fontSize: 10, marginTop: 4 }}>
+            &gt; OPEN-METEO RETURNS UP TO 7 DAYS · LARGER TILES FIT MORE
+          </div>
+        </section>
+      )}
 
       {showMessage && (
         <section {...sectionProps('message')}>
