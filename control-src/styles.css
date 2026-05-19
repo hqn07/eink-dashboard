@@ -283,6 +283,17 @@ main.layout {
   border: 1px solid #ddd;
   overflow: hidden;
 }
+/* 1-bit mode: simulates the server's contrast-boost + threshold pipeline
+ * so the user sees roughly what the real e-ink panel will render. CSS
+ * filters are an approximation — actual output may still differ slightly
+ * for very thin lines or anti-aliased fonts. */
+.preview-frame.preview-1bit .preview-canvas {
+  filter: grayscale(1) contrast(1000%);
+}
+.preview-frame.preview-1bit {
+  outline: 2px dashed #000;
+  outline-offset: -2px;
+}
 .preview-frame iframe {
   position: absolute;
   top: 0;
@@ -405,6 +416,7 @@ input[type="text"], input[type="url"], textarea {
 }
 .btn:hover { background: #f0ece2; }
 .btn:active { transform: translateY(1px); }
+.btn.btn-active { background: var(--ink); color: #fff; }
 .btn-primary { background: var(--ink); color: #fff; }
 .btn-primary:hover { background: #222; }
 .btn-ghost { background: transparent; border-color: var(--mute); color: var(--mute); }

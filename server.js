@@ -166,11 +166,20 @@ async function renderDashboardPng({ units, screen }) {
   }
 }
 
+// Contrast boost pushes near-128 anti-aliased font edges to either
+// pure black or pure white before the threshold step. Without this,
+// AA pixels at ~128 produce salt-and-pepper noise on the real 1-bit
+// e-ink panel. linear(a, b) is per-channel: out = a*in + b.
+// a=1.6, b=-77 maps 0..255 -> roughly clamp-around-128 with a steep slope.
+function preThreshold(pipe) {
+  return pipe.greyscale().linear(1.6, -77).normalise();
+}
+
 // Convert RGBA PNG to 1-bit black/white PNG
 async function toMonoPng(rgbaPng) {
-  const { data, info } = await sharp(rgbaPng)
-    .resize(SCREEN_W, SCREEN_H, { fit: 'fill' })
-    .greyscale()
+  const { data, info } = await preThreshold(
+    sharp(rgbaPng).resize(SCREEN_W, SCREEN_H, { fit: 'fill' })
+  )
     .threshold(128)
     .raw()
     .toBuffer({ resolveWithObject: true });
@@ -183,9 +192,9 @@ async function toMonoPng(rgbaPng) {
 // Pack 1-bit pixels into bytes, MSB-first, the way GxEPD2 expects.
 // Returns SCREEN_W * SCREEN_H / 8 bytes.
 async function toMonoBin(rgbaPng) {
-  const { data, info } = await sharp(rgbaPng)
-    .resize(SCREEN_W, SCREEN_H, { fit: 'fill' })
-    .greyscale()
+  const { data, info } = await preThreshold(
+    sharp(rgbaPng).resize(SCREEN_W, SCREEN_H, { fit: 'fill' })
+  )
     .threshold(128)
     .raw()
     .toBuffer({ resolveWithObject: true });
