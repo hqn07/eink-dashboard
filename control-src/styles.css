@@ -651,6 +651,18 @@ input[type="text"], input[type="url"], textarea {
 .tile-remove:hover, .tile-flush:hover, .tile-settings:hover, .tile-border:hover, .tile-density:hover { background: var(--ink); color: #fff; }
 .tile-density.on { background: var(--ink); color: #fff; }
 
+/* Editor 1-bit preview — same CSS filter approach used in Preview.jsx.
+ * Only the widget render + chrome get the filter, so tile-action buttons
+ * stay legible / clickable. */
+.editor-wrap.editor-1bit .live-tile-body,
+.editor-wrap.editor-1bit .editor-chrome {
+  filter: grayscale(1) contrast(1000%);
+}
+.editor-wrap.editor-1bit {
+  outline: 2px dashed var(--ink);
+  outline-offset: -2px;
+}
+
 /* Snap guides — visible while a tile is being dragged or resized.
  * Each guide is a 2px dashed line spanning the body grid where the
  * dragged tile's edge lines up with another tile's edge. Strictly

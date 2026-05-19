@@ -62,6 +62,12 @@ export default function App() {
     try { return localStorage.getItem('ctrl.editScreenId') || null; } catch { return null; }
   });
   const [showGrid, setShowGrid] = useState(true);
+  const [editorOneBit, setEditorOneBit] = useState(() => {
+    try { return localStorage.getItem('editor1bit') === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('editor1bit', editorOneBit ? '1' : '0'); } catch (_) {}
+  }, [editorOneBit]);
   const [previewKey, setPreviewKey] = useState(Date.now());
   const [previewData, setPreviewData] = useState(null);
   const [toast, setToast] = useState(null);
@@ -381,6 +387,13 @@ export default function App() {
                   style={{ padding: '4px 10px', fontSize: 11 }}>
                   {showGrid ? '◧ HIDE GRID' : '◧ SHOW GRID'}
                 </button>
+                <button
+                  className={`btn ${editorOneBit ? 'btn-active' : ''}`}
+                  style={{ padding: '4px 10px', fontSize: 11 }}
+                  title="Preview as the real e-ink panel will render"
+                  onClick={() => setEditorOneBit(v => !v)}>
+                  {editorOneBit ? '● 1-BIT ON' : '○ 1-BIT'}
+                </button>
                 <button className="btn btn-ghost"
                   style={{ padding: '4px 10px', fontSize: 11 }}
                   onClick={() => updateScreenLayout(editScreen.id, [])}>
@@ -391,6 +404,7 @@ export default function App() {
             <EditorGrid
               layout={layout}
               showGrid={showGrid}
+              oneBit={editorOneBit}
               previewData={livePreviewData}
               onChange={(next) => updateScreenLayout(editScreen.id, next)}
               onError={showToast}
