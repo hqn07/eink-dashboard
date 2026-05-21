@@ -19,6 +19,7 @@ service-account*.json
 
 # Per-device firmware secrets
 esp32/secrets.h
+esp32/weather_station/secrets.h
 
 # Vite build output for the React control app (built on deploy)
 public/control-app/
