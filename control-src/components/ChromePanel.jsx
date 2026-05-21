@@ -21,6 +21,9 @@ export default function ChromePanel({ screen, onUpdate }) {
       <div className="terminal-line" style={{ fontSize: 10, marginBottom: 8 }}>
         &gt; TOKENS: <code>{'{city}'}</code> <code>{'{time}'}</code> <code>{'{date}'}</code> <code>{'{refresh}'}</code> <code>{'{edition}'}</code>
       </div>
+      <div className="terminal-line" style={{ fontSize: 10, marginBottom: 8 }}>
+        &gt; BATTERY: <code>{'{battery}'}</code> <code>{'{battpct}'}</code> <code>{'{battv}'}</code> <code>{'{battage}'}</code>
+      </div>
 
       <div className="toggle-row">
         <span className="toggle-label">Show header</span>
