@@ -949,12 +949,25 @@ function chromeTokens(data) {
     timeStr = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     dateStr = now.toDateString().toUpperCase();
   }
+  const battery = (data && data.battery) || null;
+  const battPct = battery && Number.isFinite(battery.pct) ? battery.pct : null;
+  const battV   = battery && Number.isFinite(battery.v)   ? battery.v   : null;
+  const battAgeMin = battery && Number.isFinite(battery.at)
+    ? Math.max(0, Math.round((Date.now() - battery.at) / 60000))
+    : null;
+  const battAgeLabel = battAgeMin == null ? '—'
+    : battAgeMin < 60 ? `${battAgeMin}m`
+    : `${Math.round(battAgeMin / 60)}h`;
   return {
     '{city}': (cfg.cityLabel || cfg.city || '').toString(),
     '{time}': timeStr,
     '{date}': dateStr,
     '{refresh}': String(cfg.refreshMinutes || 30),
-    '{edition}': String(Math.floor(Date.now() / 3600000) % 9999)
+    '{edition}': String(Math.floor(Date.now() / 3600000) % 9999),
+    '{battery}': battPct != null ? `${battPct}%` : '—',
+    '{battpct}': battPct != null ? String(battPct) : '—',
+    '{battv}':   battV   != null ? `${battV.toFixed(2)}V` : '—',
+    '{battage}': battAgeLabel
   };
 }
 

@@ -42,6 +42,7 @@ const PORT = process.env.PORT || 3000;
 const DEVICE_TOKEN = process.env.DEVICE_TOKEN || '';
 const CONFIG_PATH = path.join(__dirname, 'data', 'config.json');
 const DEFAULT_CONFIG_PATH = path.join(__dirname, 'data', 'config.default.json');
+const BATTERY_PATH = path.join(__dirname, 'data', 'battery.json');
 
 // Loud warning when no DEVICE_TOKEN is set in production: the control
 // panel + config API end up wide-open. Local dev intentionally allows
@@ -90,6 +91,34 @@ async function loadConfig() {
 async function saveConfig(cfg) {
   await fsp.writeFile(CONFIG_PATH, JSON.stringify(cfg, null, 2));
   _configCache = null;
+}
+
+// Battery state from the ESP32. ESP32 POSTs once per wake; we persist to
+// disk so the value survives server restart (panel only POSTs every
+// ~30min so an in-memory-only value would be stale after every redeploy).
+let _batteryState = null; // { v, pct, at } or null until first POST
+async function loadBatteryState() {
+  if (_batteryState !== null) return _batteryState;
+  try {
+    const raw = await fsp.readFile(BATTERY_PATH, 'utf8');
+    const obj = JSON.parse(raw);
+    if (obj && Number.isFinite(obj.v) && Number.isFinite(obj.pct) && Number.isFinite(obj.at)) {
+      _batteryState = obj;
+    } else {
+      _batteryState = null;
+    }
+  } catch {
+    _batteryState = null;
+  }
+  return _batteryState;
+}
+async function saveBatteryState(state) {
+  _batteryState = state;
+  try {
+    await fsp.writeFile(BATTERY_PATH, JSON.stringify(state));
+  } catch (err) {
+    console.warn('Battery persist failed:', err.message);
+  }
 }
 
 // Dashboard HTML template — read once, then cached. We refresh from disk
@@ -622,8 +651,9 @@ app.get('/dashboard', async (req, res) => {
 
     const html = await loadDashboardHtml();
     const chrome = (activeScreen && activeScreen.chrome) || DEFAULT_CHROME;
+    const battery = await loadBatteryState();
     const payload = {
-      cfg, units, screen, layout, chrome,
+      cfg, units, screen, layout, chrome, battery,
       ...data,
       generatedAt: new Date().toISOString()
     };
@@ -853,8 +883,9 @@ app.get('/api/preview-data', checkDeviceAuth, async (req, res) => {
     const layout = activeScreen ? activeScreen.layout : [];
     const data = await buildWidgetData(cfg, units, layout);
     const chrome = (activeScreen && activeScreen.chrome) || DEFAULT_CHROME;
+    const battery = await loadBatteryState();
     res.json({
-      cfg, units, screen, layout, chrome,
+      cfg, units, screen, layout, chrome, battery,
       ...data,
       generatedAt: new Date().toISOString()
     });
@@ -908,6 +939,28 @@ app.post('/api/config', checkDeviceAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ ok: false, ...safeError(err) });
   }
+});
+
+// Battery report from the ESP32. Stored to disk so it survives a server
+// restart (panel only POSTs once per wake — every ~30min — so an
+// in-memory-only value would frequently be missing).
+app.post('/api/battery', checkDeviceAuth, async (req, res) => {
+  const v = parseFloat(req.body && req.body.v);
+  const pct = parseInt(req.body && req.body.pct, 10);
+  if (!Number.isFinite(v) || v < 0 || v > 6) {
+    return res.status(400).json({ error: 'bad voltage' });
+  }
+  if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
+    return res.status(400).json({ error: 'bad pct' });
+  }
+  await saveBatteryState({ v, pct, at: Date.now() });
+  invalidateImage(); // so the next render shows the fresh value
+  res.json({ ok: true });
+});
+
+app.get('/api/battery', checkDeviceAuth, async (req, res) => {
+  const b = await loadBatteryState();
+  res.json(b || { v: null, pct: null, at: null });
 });
 
 // Todos quick endpoints

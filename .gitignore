@@ -5,6 +5,7 @@ node_modules/
 .DS_Store
 data/config.json
 data/device-token.txt
+data/battery.json
 *.log
 .cache/
 .vscode/
