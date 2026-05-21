@@ -29,6 +29,14 @@ const widgetStatus = require('./widgets/_status');
 const { resolveQuote } = require('./widgets/quote');
 const { resolveMessage, renderInlineMarkdown } = require('./widgets/message');
 const { resolvePhoto } = require('./widgets/photo');
+const { buildCounters } = require('./widgets/counter');
+const { buildLinkQrSvg } = require('./widgets/linkqr');
+const { fetchFx } = require('./widgets/fx');
+const { fetchIss } = require('./widgets/iss');
+const { buildHabits } = require('./widgets/habit');
+const { fetchWordOfDay } = require('./widgets/wod');
+const { fetchSports } = require('./widgets/sports');
+const { buildChores } = require('./widgets/chore');
 
 const PORT = process.env.PORT || 3000;
 const DEVICE_TOKEN = process.env.DEVICE_TOKEN || '';
@@ -535,7 +543,10 @@ async function buildWidgetData(cfg, units, layout) {
     ? cfg.calendar.icalUrls.filter(Boolean)
     : (cfg.calendar && cfg.calendar.icalUrl ? [cfg.calendar.icalUrl] : []);
 
-  const [weather, events, aqi, news, stocks, github, wifiQrSvg, alerts] = await Promise.all([
+  const [
+    weather, events, aqi, news, stocks, github, wifiQrSvg, alerts,
+    fx, iss, wod, sports, linkQrSvg
+  ] = await Promise.all([
     wantWeather ? fetchWeather(loc, process.env.OPENWEATHER_API_KEY, units) : null,
     (ids.has('calendar') && icalUrls.length)
       ? Promise.all(icalUrls.map(u => fetchEvents(u))).then(lists => mergeEvents(lists.flat()))
@@ -550,11 +561,21 @@ async function buildWidgetData(cfg, units, layout) {
       ? fetchGithub(cfg.github.user) : null,
     ids.has('wifi_qr') ? buildWifiQrSvg(cfg.wifi || {}) : null,
     (wantWeather && cfg.alerts !== false && Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon))
-      ? fetchAlerts({ lat: cfg.lat, lon: cfg.lon }) : []
+      ? fetchAlerts({ lat: cfg.lat, lon: cfg.lon }) : [],
+    (ids.has('fx') && cfg.fx && Array.isArray(cfg.fx.pairs) && cfg.fx.pairs.length)
+      ? fetchFx(cfg.fx.pairs) : [],
+    ids.has('iss') ? fetchIss() : null,
+    ids.has('wod') ? fetchWordOfDay(cfg.wod && cfg.wod.feedUrl) : null,
+    (ids.has('sports') && cfg.sports && cfg.sports.teamId)
+      ? fetchSports(cfg.sports.teamId) : null,
+    ids.has('link_qr') ? buildLinkQrSvg(cfg.linkQr || {}) : null
   ]);
 
   const clockNow    = ids.has('clock')     ? buildClockNow(cfg.timezone || 'UTC') : null;
   const countdowns  = ids.has('countdown') ? buildCountdowns(cfg.countdowns || [], cfg.timezone || 'UTC') : [];
+  const counters    = ids.has('counter')   ? buildCounters(cfg.counters || [], cfg.timezone || 'UTC') : [];
+  const habits      = ids.has('habit')     ? buildHabits(cfg.habits || [], cfg.timezone || 'UTC') : [];
+  const chores      = ids.has('chore')     ? buildChores(cfg.chores || [], cfg.timezone || 'UTC') : [];
   const moonsun     = ids.has('moonsun')   ? buildMoonSun(weather) : null;
   const todos       = ids.has('todos') ? prepTodos(cfg.todos || [], cfg.timezone || 'UTC') : [];
   const resolvedQuote   = ids.has('quote')   ? await resolveQuote(cfg) : null;
@@ -568,7 +589,8 @@ async function buildWidgetData(cfg, units, layout) {
   return {
     weather, events, aqi, news, stocks, github,
     wifiQrSvg, clockNow, countdowns, moonsun, todos,
-    resolvedQuote, resolvedMessage, resolvedPhoto
+    resolvedQuote, resolvedMessage, resolvedPhoto,
+    counters, linkQrSvg, fx, iss, habits, wod, sports, chores
   };
 }
 
@@ -644,7 +666,10 @@ app.get('/widgets-matrix', checkDeviceAuth, async (req, res) => {
       { widgetId: 'quote' }, { widgetId: 'clock' }, { widgetId: 'wifi_qr' },
       { widgetId: 'countdown' }, { widgetId: 'aqi' }, { widgetId: 'moonsun' },
       { widgetId: 'news' }, { widgetId: 'stocks' }, { widgetId: 'photo' },
-      { widgetId: 'github' }, { widgetId: 'spacer' }
+      { widgetId: 'github' }, { widgetId: 'spacer' },
+      { widgetId: 'counter' }, { widgetId: 'link_qr' }, { widgetId: 'fx' },
+      { widgetId: 'iss' }, { widgetId: 'habit' }, { widgetId: 'wod' },
+      { widgetId: 'sports' }, { widgetId: 'chore' }
     ];
     const data = await buildWidgetData(cfg, units, fakeLayout);
     const html = await loadDashboardHtml();
@@ -864,6 +889,11 @@ app.post('/api/config', checkDeviceAuth, async (req, res) => {
       photo:    { ...(current.photo    || {}), ...(req.body.photo    || {}) },
       aqi:      { ...(current.aqi      || {}), ...(req.body.aqi      || {}) },
       weather:  { ...(current.weather  || {}), ...(req.body.weather  || {}) },
+      linkQr:   { ...(current.linkQr   || {}), ...(req.body.linkQr   || {}) },
+      fx:       { ...(current.fx       || {}), ...(req.body.fx       || {}) },
+      iss:      { ...(current.iss      || {}), ...(req.body.iss      || {}) },
+      wod:      { ...(current.wod      || {}), ...(req.body.wod      || {}) },
+      sports:   { ...(current.sports   || {}), ...(req.body.sports   || {}) },
     };
     if (Array.isArray(req.body.screens)) {
       merged.screens = req.body.screens;

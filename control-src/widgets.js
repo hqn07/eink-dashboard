@@ -220,6 +220,80 @@ export const WIDGET_REGISTRY = [
       L: { w: 24, h: 6 }
     },
     defaultSize: 'M'
+  },
+  {
+    id: 'counter',
+    label: 'Days Counter',
+    requires: 'counters',
+    minSize: { w: 6, h: 3 },
+    sizes: { S: { w: 8, h: 4 }, M: { w: 12, h: 4 }, L: { w: 24, h: 4 } },
+    defaultSize: 'M'
+  },
+  {
+    id: 'link_qr',
+    label: 'Link QR Code',
+    requires: 'linkQr',
+    minSize: { w: 4, h: 4 },
+    sizes: { S: { w: 6, h: 6 }, M: { w: 8, h: 8 }, L: { w: 12, h: 12 } },
+    defaultSize: 'M'
+  },
+  {
+    id: 'fx',
+    label: 'Currency / FX',
+    requires: 'fx',
+    minSize: { w: 6, h: 3 },
+    sizes: {
+      S:  { w: 8,  h: 4 },
+      M:  { w: 12, h: 6 },
+      L:  { w: 24, h: 6 },
+      XL: { w: 24, h: 12 }
+    },
+    defaultSize: 'M'
+  },
+  {
+    id: 'iss',
+    label: 'ISS Tracker',
+    requires: 'iss',
+    minSize: { w: 6, h: 3 },
+    sizes: { S: { w: 8, h: 4 }, M: { w: 12, h: 6 }, L: { w: 24, h: 6 } },
+    defaultSize: 'M'
+  },
+  {
+    id: 'habit',
+    label: 'Habit Tracker',
+    requires: 'habits',
+    minSize: { w: 8, h: 4 },
+    sizes: { S: { w: 12, h: 6 }, M: { w: 12, h: 12 }, L: { w: 24, h: 12 } },
+    defaultSize: 'M'
+  },
+  {
+    id: 'wod',
+    label: 'Word of the Day',
+    requires: 'wod',
+    minSize: { w: 6, h: 3 },
+    sizes: {
+      XS: { w: 8,  h: 3 },
+      S:  { w: 12, h: 4 },
+      M:  { w: 12, h: 6 },
+      L:  { w: 24, h: 6 }
+    },
+    defaultSize: 'M'
+  },
+  {
+    id: 'sports',
+    label: 'Sports Score',
+    requires: 'sports',
+    minSize: { w: 6, h: 4 },
+    sizes: { S: { w: 8, h: 6 }, M: { w: 12, h: 6 }, L: { w: 24, h: 6 } },
+    defaultSize: 'M'
+  },
+  {
+    id: 'chore',
+    label: 'Chore Reminder',
+    requires: 'chores',
+    minSize: { w: 6, h: 3 },
+    sizes: { S: { w: 8, h: 4 }, M: { w: 12, h: 4 }, L: { w: 24, h: 4 } },
+    defaultSize: 'M'
   }
 ];
 

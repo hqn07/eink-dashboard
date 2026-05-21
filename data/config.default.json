@@ -42,6 +42,32 @@
   "countdowns": [
     { "label": "NEW YEAR", "date": "2027-01-01" }
   ],
+  "counters": [
+    { "label": "DAYS LIVING HERE", "since": "2024-01-01", "unit": "DAYS" }
+  ],
+  "linkQr": {
+    "url": "https://example.com",
+    "label": "SCAN"
+  },
+  "fx": {
+    "pairs": ["USD/EUR", "USD/JPY"]
+  },
+  "iss": {
+    "enabled": true
+  },
+  "habits": [
+    { "label": "MEDITATE", "doneDates": [] },
+    { "label": "READ",     "doneDates": [] }
+  ],
+  "wod": {
+    "feedUrl": ""
+  },
+  "sports": {
+    "teamId": ""
+  },
+  "chores": [
+    { "label": "TRASH OUT", "weekday": 0, "time": "20:00" }
+  ],
   "aqi": {
     "showPollutants": true
   },

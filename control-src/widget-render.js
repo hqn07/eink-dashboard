@@ -698,6 +698,224 @@ const RENDERERS = {
         ${t.footer ? `<div class="gh-footer">${t.footer}</div>` : ''}
       </div>
     `;
+  },
+  counter: ({ counters, cellW, cellH, density }) => {
+    const list = counters || [];
+    if (!list.length) return placeholder('COUNTER', 'Add a label + start date in settings', 'countdown');
+    const tier = pickTier(cellW, cellH, density);
+    const matrix = {
+      tiny:     { rows: 1, numSize: 28, showLabel: false },
+      compact:  { rows: 2, numSize: 36, showLabel: true  },
+      standard: { rows: 3, numSize: 44, showLabel: true  },
+      extended: { rows: 4, numSize: 52, showLabel: true  },
+      full:     { rows: 5, numSize: 64, showLabel: true  }
+    };
+    const t = matrix[tier];
+    return `
+      <div class="widget widget-countdown">
+        ${list.slice(0, t.rows).map(c => `
+          <div class="cd-row">
+            <div class="cd-num" style="font-size:${t.numSize}px">${c.count}</div>
+            <div class="cd-meta">
+              <div class="cd-unit">${c.unit}</div>
+              ${t.showLabel ? `<div class="cd-label">${escapeHtml(c.label)}</div>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  },
+  link_qr: ({ cfg, linkQrSvg, cellW, cellH, density }) => {
+    const lq = (cfg && cfg.linkQr) || {};
+    if (!lq.url) return placeholder('LINK QR', 'Set a URL in settings', 'wifi');
+    if (!linkQrSvg) return placeholder('LINK QR', 'QR generator not available', 'wifi');
+    const tier = pickTier(cellW, cellH, density);
+    const matrix = {
+      tiny:     { showLabel: false, showHint: false, labelSize: 14 },
+      compact:  { showLabel: true,  showHint: false, labelSize: 16 },
+      standard: { showLabel: true,  showHint: true,  labelSize: 18 },
+      extended: { showLabel: true,  showHint: true,  labelSize: 22 },
+      full:     { showLabel: true,  showHint: true,  labelSize: 26 }
+    };
+    const t = matrix[tier];
+    const showMeta = t.showLabel || t.showHint;
+    const label = (lq.label || '').trim() || 'SCAN';
+    return `
+      <div class="widget widget-wifi" style="${showMeta ? '' : 'justify-content:center'}">
+        <div class="wifi-qr">${linkQrSvg}</div>
+        ${showMeta ? `
+          <div class="wifi-meta">
+            ${t.showLabel ? `<div class="wifi-ssid" style="font-size:${t.labelSize}px">${escapeHtml(label)}</div>` : ''}
+            ${t.showHint ? `<div class="wifi-hint">SCAN TO OPEN</div>` : ''}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  },
+  fx: ({ fx, cfg, cellW, cellH, density }) => {
+    const pairs = (cfg && cfg.fx && cfg.fx.pairs) || [];
+    if (!pairs.length) return placeholder('FX', 'Add pairs like USD/EUR in settings', 'stocks');
+    const list = fx || [];
+    if (!list.length) return placeholder('FX', 'Data unavailable — check pairs', 'stocks');
+    const tier = pickTier(cellW, cellH, density);
+    const matrix = {
+      tiny:     { rows: 2, showDate: false },
+      compact:  { rows: 3, showDate: false },
+      standard: { rows: 5, showDate: true  },
+      extended: { rows: 8, showDate: true  },
+      full:     { rows: 12, showDate: true }
+    };
+    const t = matrix[tier];
+    const slice = list.slice(0, t.rows);
+    const date = slice.find(r => r.date) ? slice.find(r => r.date).date : '';
+    return `
+      <div class="widget widget-stocks">
+        <div class="widget-title">FX${t.showDate && date ? ` · ${date}` : ''}</div>
+        ${slice.map(r => `
+          <div class="stock-watch-row">
+            <span class="watch-sym">${escapeHtml(r.pair)}</span>
+            <span></span>
+            <span class="watch-price">${r.rateLabel}</span>
+            <span></span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  },
+  iss: ({ iss, cellW, cellH, density }) => {
+    if (!iss) return placeholder('ISS', 'Data unavailable', 'moonsun');
+    const tier = pickTier(cellW, cellH, density);
+    const matrix = {
+      tiny:     { showStats: false, placeSize: 22 },
+      compact:  { showStats: false, placeSize: 26 },
+      standard: { showStats: true,  placeSize: 30 },
+      extended: { showStats: true,  placeSize: 36 },
+      full:     { showStats: true,  placeSize: 44 }
+    };
+    const t = matrix[tier];
+    const latLabel = (iss.lat != null && iss.lon != null)
+      ? `${iss.lat.toFixed(1)}°, ${iss.lon.toFixed(1)}°`
+      : '—';
+    return `
+      <div class="widget widget-iss">
+        <div class="widget-title">ISS · OVERHEAD</div>
+        <div class="iss-place autofit" data-min-font="18" style="font-size:${t.placeSize}px">${escapeHtml(iss.place || '—')}</div>
+        <div class="iss-coord">${latLabel}</div>
+        ${t.showStats ? `
+          <div class="weather-stats">
+            <div class="stat"><span class="stat-k">ALT</span><span class="stat-v">${iss.altKm != null ? iss.altKm + ' km' : '—'}</span></div>
+            <div class="stat"><span class="stat-k">VEL</span><span class="stat-v">${iss.velKmh != null ? iss.velKmh + ' km/h' : '—'}</span></div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  },
+  habit: ({ habits, cellW, cellH, density }) => {
+    const list = habits || [];
+    if (!list.length) return placeholder('HABITS', 'Add habits in settings', 'todos');
+    const tier = pickTier(cellW, cellH, density);
+    const matrix = {
+      tiny:     { rows: 2, daysShown: 7,  showStreak: false },
+      compact:  { rows: 3, daysShown: 7,  showStreak: false },
+      standard: { rows: 4, daysShown: 14, showStreak: true  },
+      extended: { rows: 6, daysShown: 14, showStreak: true  },
+      full:     { rows: 8, daysShown: 14, showStreak: true  }
+    };
+    const t = matrix[tier];
+    return `
+      <div class="widget widget-habit">
+        <div class="widget-title">HABITS</div>
+        ${list.slice(0, t.rows).map(h => {
+          const days = (h.days || []).slice(-t.daysShown);
+          return `
+            <div class="habit-row">
+              <div class="habit-label">${escapeHtml(h.label || '—')}</div>
+              <div class="habit-cells">
+                ${days.map(d => `<span class="habit-cell ${d.done ? 'done' : ''}"></span>`).join('')}
+              </div>
+              ${t.showStreak ? `<div class="habit-streak">${h.currentStreak}D</div>` : ''}
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  },
+  wod: ({ wod, cellW, cellH, density }) => {
+    if (!wod || !wod.word) return placeholder('WORD', 'Data unavailable', 'quote');
+    const tier = pickTier(cellW, cellH, density);
+    const matrix = {
+      tiny:     { wordSize: 28, showPos: false, showDef: false },
+      compact:  { wordSize: 36, showPos: true,  showDef: false },
+      standard: { wordSize: 48, showPos: true,  showDef: true  },
+      extended: { wordSize: 60, showPos: true,  showDef: true  },
+      full:     { wordSize: 80, showPos: true,  showDef: true  }
+    };
+    const t = matrix[tier];
+    return `
+      <div class="widget widget-wod">
+        <div class="widget-title">WORD OF THE DAY</div>
+        <div class="wod-word" style="font-size:${t.wordSize}px">${escapeHtml(wod.word)}</div>
+        ${t.showPos && wod.partOfSpeech ? `<div class="wod-pos">${escapeHtml(wod.partOfSpeech)}</div>` : ''}
+        ${t.showDef && wod.definition ? `<div class="wod-def">${escapeHtml(wod.definition)}</div>` : ''}
+      </div>
+    `;
+  },
+  sports: ({ sports, cfg, cellW, cellH, density }) => {
+    if (!cfg || !cfg.sports || !cfg.sports.teamId) return placeholder('SPORTS', 'Enter a TheSportsDB team ID', 'stocks');
+    if (!sports || (!sports.last && !sports.next)) return placeholder('SPORTS', 'Data unavailable', 'stocks');
+    const tier = pickTier(cellW, cellH, density);
+    const matrix = {
+      tiny:     { showLast: true,  showNext: false, showLeague: false },
+      compact:  { showLast: true,  showNext: true,  showLeague: false },
+      standard: { showLast: true,  showNext: true,  showLeague: true  },
+      extended: { showLast: true,  showNext: true,  showLeague: true  },
+      full:     { showLast: true,  showNext: true,  showLeague: true  }
+    };
+    const t = matrix[tier];
+    const lastBlock = (g) => g ? `
+      <div class="sports-block">
+        <div class="sports-tag">LAST</div>
+        <div class="sports-teams">${escapeHtml(g.home)} <span class="sports-vs">vs</span> ${escapeHtml(g.away)}</div>
+        <div class="sports-score">${g.homeScore ?? '—'} – ${g.awayScore ?? '—'}</div>
+      </div>` : '';
+    const nextBlock = (g) => g ? `
+      <div class="sports-block">
+        <div class="sports-tag">NEXT</div>
+        <div class="sports-teams">${escapeHtml(g.home)} <span class="sports-vs">vs</span> ${escapeHtml(g.away)}</div>
+        <div class="sports-when">${escapeHtml(g.dateLocal || '')} ${escapeHtml(g.timeLocal || '')}</div>
+      </div>` : '';
+    return `
+      <div class="widget widget-sports">
+        <div class="widget-title">${escapeHtml(sports.teamName || 'SPORTS')}${t.showLeague && sports.league ? ` · ${escapeHtml(sports.league)}` : ''}</div>
+        ${t.showLast ? lastBlock(sports.last) : ''}
+        ${t.showNext ? nextBlock(sports.next) : ''}
+      </div>
+    `;
+  },
+  chore: ({ chores, cellW, cellH, density }) => {
+    const list = chores || [];
+    if (!list.length) return placeholder('CHORES', 'Add a chore + weekday in settings', 'todos');
+    const tier = pickTier(cellW, cellH, density);
+    const matrix = {
+      tiny:     { rows: 1, showTime: false },
+      compact:  { rows: 2, showTime: false },
+      standard: { rows: 3, showTime: true  },
+      extended: { rows: 4, showTime: true  },
+      full:     { rows: 6, showTime: true  }
+    };
+    const t = matrix[tier];
+    return `
+      <div class="widget widget-chore">
+        <div class="widget-title">CHORES</div>
+        ${list.slice(0, t.rows).map(c => `
+          <div class="chore-row">
+            <span class="chore-when">${escapeHtml(c.dueLabel)}</span>
+            <span class="chore-label">${escapeHtml(c.label)}</span>
+            ${t.showTime && c.time ? `<span class="chore-time">${escapeHtml(c.time)}</span>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    `;
   }
 };
 

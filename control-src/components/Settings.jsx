@@ -77,6 +77,14 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested, focusedW
   const showGithub    = isOn('github');
   const showPhoto     = isOn('photo');
   const showForecast  = isOn('weather_forecast');
+  const showCounter   = isOn('counter');
+  const showLinkQr    = isOn('link_qr');
+  const showFx        = isOn('fx');
+  const showIss       = isOn('iss');
+  const showHabit     = isOn('habit');
+  const showWod       = isOn('wod');
+  const showSports    = isOn('sports');
+  const showChore     = isOn('chore');
 
   // Weather widgets share LocationPanel — flash + scroll the same target.
   const locWrap = (
@@ -617,6 +625,191 @@ export default function Settings({ cfg, layout, onPatch, onPatchNested, focusedW
           </section>
         );
       })()}
+
+      {showCounter && (
+        <section {...sectionProps('counter')}>
+          <div className="section-title">Days Counters</div>
+          {(cfg.counters || []).map((c, idx) => (
+            <div key={idx} className="todo-row">
+              <input type="text" placeholder="Label"
+                value={c.label || ''}
+                onChange={e => {
+                  const next = [...(cfg.counters || [])];
+                  next[idx] = { ...next[idx], label: e.target.value };
+                  onPatch({ counters: next });
+                }} />
+              <input type="date" value={c.since || ''}
+                onChange={e => {
+                  const next = [...(cfg.counters || [])];
+                  next[idx] = { ...next[idx], since: e.target.value };
+                  onPatch({ counters: next });
+                }} />
+              <input type="text" placeholder="Unit" style={{ maxWidth: 80 }}
+                value={c.unit || 'DAYS'}
+                onChange={e => {
+                  const next = [...(cfg.counters || [])];
+                  next[idx] = { ...next[idx], unit: e.target.value };
+                  onPatch({ counters: next });
+                }} />
+              <button className="btn btn-danger" style={{ padding: '6px 10px' }}
+                onClick={() => onPatch({ counters: (cfg.counters || []).filter((_, i) => i !== idx) })}>×</button>
+            </div>
+          ))}
+          <div className="btn-row">
+            <button className="btn" onClick={() => onPatch({
+              counters: [...(cfg.counters || []), { label: '', since: '', unit: 'DAYS' }]
+            })}>+ Add counter</button>
+          </div>
+        </section>
+      )}
+
+      {showLinkQr && (
+        <section {...sectionProps('link_qr')}>
+          <div className="section-title">Link QR Code</div>
+          <label className="field">
+            <span className="label">URL</span>
+            <input type="url" value={cfg.linkQr?.url || ''}
+              onChange={e => onPatchNested('linkQr', { url: e.target.value })}
+              placeholder="https://example.com" />
+          </label>
+          <label className="field">
+            <span className="label">Label</span>
+            <input type="text" value={cfg.linkQr?.label || ''}
+              onChange={e => onPatchNested('linkQr', { label: e.target.value })}
+              placeholder="SCAN" />
+          </label>
+        </section>
+      )}
+
+      {showFx && (
+        <section {...sectionProps('fx')}>
+          <div className="section-title">Currency / FX</div>
+          <label className="field">
+            <span className="label">Pairs (comma-separated, e.g. USD/EUR, USD/JPY)</span>
+            <input type="text"
+              defaultValue={(cfg.fx?.pairs || []).join(', ')}
+              onBlur={e => {
+                const arr = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                onPatchNested('fx', { pairs: arr });
+              }} />
+          </label>
+          <div className="terminal-line" style={{ fontSize: 10, marginTop: 4 }}>
+            &gt; FREE ECB RATES VIA FRANKFURTER.APP · UPDATES HOURLY
+          </div>
+        </section>
+      )}
+
+      {showIss && (
+        <section {...sectionProps('iss')}>
+          <div className="section-title">ISS Tracker</div>
+          <div className="terminal-line" style={{ fontSize: 10 }}>
+            &gt; SHOWS CURRENT OVERHEAD POSITION · NO CONFIG NEEDED · 60S REFRESH
+          </div>
+        </section>
+      )}
+
+      {showHabit && (
+        <section {...sectionProps('habit')}>
+          <div className="section-title">Habits</div>
+          {(cfg.habits || []).map((h, idx) => {
+            const today = new Date();
+            const ymd = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+            const doneToday = (h.doneDates || []).includes(ymd);
+            return (
+              <div key={idx} className="todo-row">
+                <input type="text" placeholder="Habit"
+                  value={h.label || ''}
+                  onChange={e => {
+                    const next = [...(cfg.habits || [])];
+                    next[idx] = { ...next[idx], label: e.target.value };
+                    onPatch({ habits: next });
+                  }} />
+                <Toggle on={doneToday} onClick={() => {
+                  const next = [...(cfg.habits || [])];
+                  const cur = new Set(next[idx].doneDates || []);
+                  if (cur.has(ymd)) cur.delete(ymd); else cur.add(ymd);
+                  next[idx] = { ...next[idx], doneDates: Array.from(cur).sort() };
+                  onPatch({ habits: next });
+                }} />
+                <button className="btn btn-danger" style={{ padding: '6px 10px' }}
+                  onClick={() => onPatch({ habits: (cfg.habits || []).filter((_, i) => i !== idx) })}>×</button>
+              </div>
+            );
+          })}
+          <div className="btn-row">
+            <button className="btn" onClick={() => onPatch({
+              habits: [...(cfg.habits || []), { label: '', doneDates: [] }]
+            })}>+ Add habit</button>
+          </div>
+        </section>
+      )}
+
+      {showWod && (
+        <section {...sectionProps('wod')}>
+          <div className="section-title">Word of the Day</div>
+          <label className="field">
+            <span className="label">Feed URL (optional — defaults to Wiktionary)</span>
+            <input type="url" value={cfg.wod?.feedUrl || ''}
+              onChange={e => onPatchNested('wod', { feedUrl: e.target.value })}
+              placeholder="https://en.wiktionary.org/...&feed=wotd&feedformat=rss" />
+          </label>
+        </section>
+      )}
+
+      {showSports && (
+        <section {...sectionProps('sports')}>
+          <div className="section-title">Sports Score</div>
+          <label className="field">
+            <span className="label">Team ID (from thesportsdb.com)</span>
+            <input type="text" value={cfg.sports?.teamId || ''}
+              onChange={e => onPatchNested('sports', { teamId: e.target.value.trim() })}
+              placeholder="134860" />
+          </label>
+          <div className="terminal-line" style={{ fontSize: 10, marginTop: 4 }}>
+            &gt; LOOK UP NUMERIC ID AT THESPORTSDB.COM · FREE KEY '3'
+          </div>
+        </section>
+      )}
+
+      {showChore && (
+        <section {...sectionProps('chore')}>
+          <div className="section-title">Chores</div>
+          {(cfg.chores || []).map((c, idx) => (
+            <div key={idx} className="todo-row">
+              <input type="text" placeholder="Chore"
+                value={c.label || ''}
+                onChange={e => {
+                  const next = [...(cfg.chores || [])];
+                  next[idx] = { ...next[idx], label: e.target.value };
+                  onPatch({ chores: next });
+                }} />
+              <select value={c.weekday ?? 0}
+                onChange={e => {
+                  const next = [...(cfg.chores || [])];
+                  next[idx] = { ...next[idx], weekday: parseInt(e.target.value, 10) };
+                  onPatch({ chores: next });
+                }}>
+                {['SUN','MON','TUE','WED','THU','FRI','SAT'].map((d, i) => (
+                  <option key={i} value={i}>{d}</option>
+                ))}
+              </select>
+              <input type="time" value={c.time || ''}
+                onChange={e => {
+                  const next = [...(cfg.chores || [])];
+                  next[idx] = { ...next[idx], time: e.target.value };
+                  onPatch({ chores: next });
+                }} />
+              <button className="btn btn-danger" style={{ padding: '6px 10px' }}
+                onClick={() => onPatch({ chores: (cfg.chores || []).filter((_, i) => i !== idx) })}>×</button>
+            </div>
+          ))}
+          <div className="btn-row">
+            <button className="btn" onClick={() => onPatch({
+              chores: [...(cfg.chores || []), { label: '', weekday: 0, time: '20:00' }]
+            })}>+ Add chore</button>
+          </div>
+        </section>
+      )}
 
       <section {...sectionProps('backup')}>
         <div className="section-title">Backup & Reset</div>
