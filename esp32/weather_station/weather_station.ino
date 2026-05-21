@@ -18,7 +18,6 @@
 #include <ArduinoJson.h>
 #include <GxEPD2_BW.h>
 #include <SPI.h>
-#include <driver/rtc_io.h>
 
 // =================== CONFIG ===================
 // Per-device secrets live in secrets.h (gitignored). Copy
@@ -297,12 +296,6 @@ void setup() {
   delay(200);
   Serial.println("\n=== E-Ink Dashboard Client ===");
 
-  // Release the deep-sleep pin holds set before the previous sleep so
-  // GxEPD2 can drive RST / CS during this boot's init.
-  gpio_deep_sleep_hold_dis();
-  gpio_hold_dis((gpio_num_t)EPD_RST);
-  gpio_hold_dis((gpio_num_t)EPD_CS);
-
   hspi.begin(EPD_SCK, -1, EPD_MOSI, EPD_CS);
   display.epd2.selectSPI(hspi, SPISettings(4000000, MSBFIRST, SPI_MODE0));
   display.init(115200, true, 2, false);
@@ -341,14 +334,6 @@ void setup() {
 
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
-
-  // Pin the EPD control lines HIGH through deep sleep. Without this, RST
-  // floats LOW once the GPIO matrix powers down → panel resets out of
-  // hibernation → image wipes to white. CS also held HIGH so the panel
-  // doesn't see spurious selects during the sleep entry transient.
-  gpio_hold_en((gpio_num_t)EPD_RST);
-  gpio_hold_en((gpio_num_t)EPD_CS);
-  gpio_deep_sleep_hold_en();
 
   esp_sleep_enable_timer_wakeup((uint64_t)sleepMin * 60ULL * 1000000ULL);
   Serial.flush();
