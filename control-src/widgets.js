@@ -527,6 +527,58 @@ export const SCREEN_PRESETS = [
       { widgetId: 'moonsun',   x: 8,  y: 8, w: 8,  h: 4 },
       { widgetId: 'clock',     x: 16, y: 8, w: 8,  h: 4 }
     ]
+  },
+  {
+    id: 'home_setup',
+    name: 'Home Setup',
+    description: 'Guest wall — WiFi QR + a link QR side by side.',
+    layout: [
+      { widgetId: 'wifi_qr', x: 0,  y: 0, w: 12, h: 12 },
+      { widgetId: 'link_qr', x: 12, y: 0, w: 12, h: 12 }
+    ]
+  },
+  {
+    id: 'newsstand',
+    name: 'Newsstand',
+    description: 'News column + word of the day + a clock.',
+    layout: [
+      { widgetId: 'news',  x: 0,  y: 0, w: 12, h: 12 },
+      { widgetId: 'wod',   x: 12, y: 0, w: 12, h: 6 },
+      { widgetId: 'clock', x: 12, y: 6, w: 12, h: 4 }
+    ]
+  },
+  {
+    id: 'markets',
+    name: 'Markets',
+    description: 'Stocks lead, FX strip, news below.',
+    layout: [
+      { widgetId: 'stocks', x: 0,  y: 0, w: 24, h: 6 },
+      { widgetId: 'fx',     x: 0,  y: 6, w: 12, h: 6 },
+      { widgetId: 'news',   x: 12, y: 6, w: 12, h: 6 }
+    ]
+  },
+  {
+    id: 'date_anniversary',
+    name: 'Date / Anniversary',
+    description: 'Countdown + days-since counter + a quote.',
+    layout: [
+      { widgetId: 'countdown', x: 0,  y: 0,  w: 12, h: 4 },
+      { widgetId: 'counter',   x: 12, y: 0,  w: 12, h: 4 },
+      { widgetId: 'quote',     x: 0,  y: 4,  w: 24, h: 6 },
+      { widgetId: 'spacer',    x: 0,  y: 10, w: 24, h: 2 }
+    ]
+  },
+  {
+    id: 'kitchen',
+    name: 'Kitchen',
+    description: 'Chores band, weather, calendar, message, WiFi QR.',
+    layout: [
+      { widgetId: 'chore',         x: 0,  y: 0, w: 24, h: 4 },
+      { widgetId: 'weather_hero',  x: 0,  y: 4, w: 8,  h: 6 },
+      { widgetId: 'calendar',      x: 8,  y: 4, w: 10, h: 4 },
+      { widgetId: 'message',       x: 8,  y: 8, w: 10, h: 4 },
+      { widgetId: 'wifi_qr',       x: 18, y: 4, w: 6,  h: 6 }
+    ]
   }
 ];
 
