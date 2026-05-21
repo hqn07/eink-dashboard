@@ -1002,7 +1002,10 @@ export function renderFooter(data) {
   const f = chrome.footer || {};
   if (f.enabled === false) return '';
   const tokens = chromeTokens(data);
-  return `<span class="ftr-bullet">●</span> ${escapeHtml(tplString(f.text, tokens))}`;
+  const battBadge = f.showBattery
+    ? `<span class="ftr-battery">BAT ${escapeHtml(tokens['{battery}'])}${tokens['{battage}'] !== '—' ? ` · ${escapeHtml(tokens['{battage}'])}` : ''}</span>`
+    : '';
+  return `<span class="ftr-bullet">●</span> ${escapeHtml(tplString(f.text, tokens))}${battBadge}`;
 }
 
 export function isHeaderOn(data) {

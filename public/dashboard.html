@@ -1503,7 +1503,10 @@
     const footer = el('footer', `ftr ftr-${variant}`);
     // Render with a leading bullet so the editorial rhythm is preserved
     // even when the user customizes the text.
-    footer.innerHTML = `<span class="ftr-bullet">●</span> ${escapeHtml(tpl(f.text))}`;
+    const battBadge = f.showBattery
+      ? `<span class="ftr-battery">BAT ${escapeHtml(tokens['{battery}'])}${battAgeMin != null ? ` · ${escapeHtml(battAgeLabel)}` : ''}</span>`
+      : '';
+    footer.innerHTML = `<span class="ftr-bullet">●</span> ${escapeHtml(tpl(f.text))}${battBadge}`;
     page.appendChild(footer);
   } else {
     page.appendChild(el('div', 'ftr-stub'));

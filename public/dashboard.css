@@ -453,6 +453,23 @@ html, body {
 .ftr-sep { opacity: 1; }
 .ftr-bullet { font-size: 12px; }
 
+/* Battery badge — opt-in via chrome.footer.showBattery. Anchored right
+ * so the centered footer text reads naturally; the badge is a separate
+ * slot, not part of the user's tokenized text. */
+.ftr { position: relative; }
+.ftr-battery {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 2px;
+}
+.ftr.ftr-dotted .ftr-battery,
+.ftr.ftr-compact .ftr-battery { color: #000; }
+
 /* Footer variants — pick one per screen via cfg.screens[i].chrome.footer.variant.
  * Default is .ftr-editorial (matches base .ftr above). */
 .ftr.ftr-dotted {

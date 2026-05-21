@@ -94,6 +94,14 @@ export default function ChromePanel({ screen, onUpdate }) {
               onChange={e => setFooter({ text: e.target.value })}
               placeholder="UPDATED {time} · REFRESH {refresh}MIN · THE DAILY {city}" />
           </label>
+          <div className="toggle-row">
+            <span className="toggle-label">Show battery indicator</span>
+            <div className={`toggle ${chrome.footer?.showBattery ? 'on' : ''}`}
+              onClick={() => setFooter({ showBattery: !chrome.footer?.showBattery })} />
+          </div>
+          <div className="terminal-line" style={{ fontSize: 10 }}>
+            &gt; APPENDS A SMALL BAT% BADGE RIGHT-ALIGNED IN FOOTER
+          </div>
         </>
       )}
     </div>
