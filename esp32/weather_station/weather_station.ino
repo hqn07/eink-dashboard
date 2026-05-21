@@ -296,9 +296,17 @@ void setup() {
   delay(200);
   Serial.println("\n=== E-Ink Dashboard Client ===");
 
+  // initial=true in GxEPD2 runs the panel through its full init + clear
+  // pass. That's needed exactly once on a cold boot; on a deep-sleep wake
+  // it just wipes the previously-displayed image to white before the new
+  // one paints. Branch on the wake cause so we only clear when we have to.
+  esp_sleep_wakeup_cause_t wakeCause = esp_sleep_get_wakeup_cause();
+  bool coldBoot = (wakeCause == ESP_SLEEP_WAKEUP_UNDEFINED);
+  Serial.printf("Wake cause: %d (%s)\n", wakeCause, coldBoot ? "cold/POR" : "deep-sleep");
+
   hspi.begin(EPD_SCK, -1, EPD_MOSI, EPD_CS);
   display.epd2.selectSPI(hspi, SPISettings(4000000, MSBFIRST, SPI_MODE0));
-  display.init(115200, true, 2, false);
+  display.init(115200, coldBoot, 2, false);
 
   // Read battery early — voltage is most accurate before WiFi pulls
   // current. We POST it after the radio is up.
@@ -334,6 +342,11 @@ void setup() {
 
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
+
+  // Hold the painted image visible for a few seconds before deep sleep.
+  // Lets us verify with the naked eye that the refresh produced the
+  // right image (and not, say, a transient white frame from a glitch).
+  delay(3000);
 
   esp_sleep_enable_timer_wakeup((uint64_t)sleepMin * 60ULL * 1000000ULL);
   Serial.flush();
