@@ -25,7 +25,14 @@
 #include "secrets.h"
 
 #define DEFAULT_SLEEP_MIN 30
-#define BATTERY_PIN 34
+
+// Battery sense — 1MΩ + 1MΩ divider from V_batt to GND, mid-point on GPIO34.
+// V_batt = V_GPIO34 × 2.0. Equal resistors keep V_GPIO34 ≤ 2.1V at full
+// charge (well within the 11dB ADC range, no risk of pin damage).
+#define BATTERY_PIN  34
+#define BATT_FULL_V  4.2f
+#define BATT_EMPTY_V 3.3f
+#define DIVIDER_RATIO 2.0f
 
 // Display geometry — matches server's render
 #define SW 800
@@ -181,6 +188,48 @@ uint8_t* downloadImage() {
   return buf;
 }
 
+// =================== BATTERY ===================
+
+void setupBattery() {
+  analogReadResolution(12);
+  analogSetPinAttenuation(BATTERY_PIN, ADC_11db);
+}
+
+// Returns battery voltage in volts. Averages 16 calibrated samples
+// (analogReadMilliVolts applies the per-chip eFuse Vref so we don't have
+// to assume Vref = 3.3V).
+float readBatteryVoltage() {
+  long sumMv = 0;
+  for (int i = 0; i < 16; i++) {
+    sumMv += analogReadMilliVolts(BATTERY_PIN);
+    delay(2);
+  }
+  float v_gpio = (sumMv / 16.0f) / 1000.0f;
+  return v_gpio * DIVIDER_RATIO;
+}
+
+int batteryPctFromVoltage(float v) {
+  int pct = (int)((v - BATT_EMPTY_V) / (BATT_FULL_V - BATT_EMPTY_V) * 100.0f);
+  if (pct > 100) pct = 100;
+  if (pct < 0)   pct = 0;
+  return pct;
+}
+
+// Fire-and-forget POST. Battery telemetry is non-critical — short timeout,
+// don't block the image refresh if the endpoint is slow.
+void postBattery(float v, int pct) {
+  String url = addToken(String(serverBase) + "/api/battery");
+  HTTPClient http;
+  http.setTimeout(5000);
+  http.begin(url);
+  http.addHeader("Content-Type", "application/json");
+  char body[80];
+  snprintf(body, sizeof(body), "{\"v\":%.2f,\"pct\":%d}", v, pct);
+  int code = http.POST(body);
+  Serial.printf("Battery POST: %.2fV %d%% → HTTP %d\n", v, pct, code);
+  http.end();
+}
+
 int fetchSleepMinutes() {
   String url = addToken(String(serverBase) + "/sleep");
   HTTPClient http;
@@ -251,6 +300,13 @@ void setup() {
   display.epd2.selectSPI(hspi, SPISettings(4000000, MSBFIRST, SPI_MODE0));
   display.init(115200, true, 2, false);
 
+  // Read battery early — voltage is most accurate before WiFi pulls
+  // current. We POST it after the radio is up.
+  setupBattery();
+  float battV   = readBatteryVoltage();
+  int   battPct = batteryPctFromVoltage(battV);
+  Serial.printf("Battery: %.2fV (%d%%)\n", battV, battPct);
+
   int sleepMin = DEFAULT_SLEEP_MIN;
 
   if (!connectWiFi()) {
@@ -258,6 +314,7 @@ void setup() {
     sleepMin = 5;
   } else {
     warmServer();   // wake Railway dyno before the big download
+    postBattery(battV, battPct);
     uint8_t* img = downloadImage();
     if (!img) {
       Serial.println("Retry download once after 2s");
