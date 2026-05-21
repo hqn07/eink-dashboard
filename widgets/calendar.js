@@ -2,6 +2,8 @@
 // Fetches an iCal feed (Google Calendar, iCloud, etc.) and returns upcoming events.
 
 const ical = require('node-ical');
+const { fetchWithTimeout } = require('./_fetch');
+const status = require('./_status');
 
 const CACHE_MS = 10 * 60 * 1000;
 const cache = new Map(); // url → { at, events }
@@ -11,10 +13,17 @@ async function fetchEvents(icalUrl, limit = 5) {
 
   const now = Date.now();
   const hit = cache.get(icalUrl);
-  if (hit && (now - hit.at) < CACHE_MS) return hit.events;
+  if (hit && (now - hit.at) < CACHE_MS) { status.cacheHit('calendar'); return hit.events; }
 
+  const t0 = Date.now();
   try {
-    const data = await ical.async.fromURL(icalUrl);
+    const r = await fetchWithTimeout(icalUrl, { headers: { 'User-Agent': 'eink-dashboard/1.0' } });
+    if (!r.ok) {
+      status.record('calendar', { ok: false, ms: Date.now() - t0, err: `HTTP ${r.status}` });
+      return hit?.events || [];
+    }
+    const text = await r.text();
+    const data = ical.sync.parseICS(text);
     const upcoming = [];
     const nowDate = new Date();
     const horizon = new Date(nowDate.getTime() + 14 * 24 * 3600 * 1000);
@@ -44,9 +53,10 @@ async function fetchEvents(icalUrl, limit = 5) {
     upcoming.sort((a, b) => a.start - b.start);
     const trimmed = upcoming.slice(0, limit);
     cache.set(icalUrl, { at: now, events: trimmed });
+    status.record('calendar', { ok: true, ms: Date.now() - t0 });
     return trimmed;
   } catch (err) {
-    console.error('Calendar error:', err.message);
+    status.record('calendar', { ok: false, ms: Date.now() - t0, err: err.message || String(err) });
     return hit?.events || [];
   }
 }

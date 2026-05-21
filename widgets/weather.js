@@ -207,12 +207,14 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
         let h = t.hour;
         const ampm = h >= 12 ? 'p' : 'a';
         h = h % 12; if (h === 0) h = 12;
-        const wf = wmo(hr.weather_code[i]);
+        const wf = wmo(hr.weather_code?.[i]);
+        const hTemp = hr.temperature_2m?.[i];
+        const hPrecip = hr.precipitation_probability?.[i];
         hourly.push({
           label: `${h}${ampm}`,
-          temp: Math.round(hr.temperature_2m[i]),
+          temp: Number.isFinite(hTemp) ? Math.round(hTemp) : '--',
           main: wf.main,
-          precip: Math.round(hr.precipitation_probability ? hr.precipitation_probability[i] : 0)
+          precip: Number.isFinite(hPrecip) ? Math.round(hPrecip) : 0
         });
         if (hourly.length >= 6) break;
       }
@@ -222,24 +224,28 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
     const forecast = [];
     const dlen = (daily.time || []).length;
     for (let i = 1; i < Math.min(dlen, 8); i++) {
-      const f = wmo(daily.weather_code[i]);
+      const f = wmo(daily.weather_code?.[i]);
+      const dHi = daily.temperature_2m_max?.[i];
+      const dLo = daily.temperature_2m_min?.[i];
+      const dPrecip = daily.precipitation_probability_max?.[i];
       forecast.push({
         name: dayLabel(daily.time[i]),
-        hi: Math.round(daily.temperature_2m_max[i]),
-        lo: Math.round(daily.temperature_2m_min[i]),
-        precip: Math.round(daily.precipitation_probability_max ? daily.precipitation_probability_max[i] : 0),
+        hi: Number.isFinite(dHi) ? Math.round(dHi) : '--',
+        lo: Number.isFinite(dLo) ? Math.round(dLo) : '--',
+        precip: Number.isFinite(dPrecip) ? Math.round(dPrecip) : 0,
         main: f.main,
         desc: f.desc
       });
     }
 
+    const safeRound = (v, fallback = '--') => Number.isFinite(v) ? Math.round(v) : fallback;
     const result = {
-      temp: Math.round(cur.temperature_2m),
-      feelsLike: Math.round(cur.apparent_temperature),
-      tempMin: Math.round(daily.temperature_2m_min ? daily.temperature_2m_min[0] : cur.temperature_2m),
-      tempMax: Math.round(daily.temperature_2m_max ? daily.temperature_2m_max[0] : cur.temperature_2m),
-      humidity: Math.round(cur.relative_humidity_2m),
-      windSpeed: Math.round(cur.wind_speed_10m),
+      temp: safeRound(cur.temperature_2m),
+      feelsLike: safeRound(cur.apparent_temperature),
+      tempMin: safeRound(daily.temperature_2m_min?.[0] ?? cur.temperature_2m),
+      tempMax: safeRound(daily.temperature_2m_max?.[0] ?? cur.temperature_2m),
+      humidity: safeRound(cur.relative_humidity_2m),
+      windSpeed: safeRound(cur.wind_speed_10m),
       windGust: Number.isFinite(cur.wind_gusts_10m) ? Math.round(cur.wind_gusts_10m) : null,
       windDir: windDir(cur.wind_direction_10m),
       cloudCover: Number.isFinite(cur.cloud_cover) ? Math.round(cur.cloud_cover) : null,

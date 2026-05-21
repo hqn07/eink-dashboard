@@ -56,24 +56,44 @@ const SCREEN_H = 480;
 
 // ---------- Config persistence ----------
 
+// In-memory config cache. Invalidated by saveConfig() and skipped when
+// the file's mtime advances (covers out-of-process edits to config.json).
+let _configCache = null; // { mtimeMs, cfg }
 async function loadConfig() {
-  let raw;
   try {
-    raw = await fsp.readFile(CONFIG_PATH, 'utf8');
+    const st = await fsp.stat(CONFIG_PATH);
+    if (_configCache && _configCache.mtimeMs === st.mtimeMs) {
+      return _configCache.cfg;
+    }
+    const raw = await fsp.readFile(CONFIG_PATH, 'utf8');
+    const cfg = migrateConfigToScreens(JSON.parse(raw));
+    _configCache = { mtimeMs: st.mtimeMs, cfg };
+    return cfg;
   } catch {
-    raw = await fsp.readFile(DEFAULT_CONFIG_PATH, 'utf8');
+    const raw = await fsp.readFile(DEFAULT_CONFIG_PATH, 'utf8');
     await fsp.writeFile(CONFIG_PATH, raw);
+    const cfg = migrateConfigToScreens(JSON.parse(raw));
+    const st = await fsp.stat(CONFIG_PATH).catch(() => null);
+    _configCache = { mtimeMs: st ? st.mtimeMs : 0, cfg };
+    return cfg;
   }
-  let cfg = JSON.parse(raw);
-  // Lazy-migrate to the screens schema. We don't immediately rewrite
-  // the file here — saveConfig() will persist the new shape next time
-  // the user saves through the control panel.
-  cfg = migrateConfigToScreens(cfg);
-  return cfg;
 }
 
 async function saveConfig(cfg) {
   await fsp.writeFile(CONFIG_PATH, JSON.stringify(cfg, null, 2));
+  _configCache = null;
+}
+
+// Dashboard HTML template — read once, then cached. We refresh from disk
+// on mtime change so editing public/dashboard.html in dev hot-applies.
+let _htmlCache = null; // { mtimeMs, html }
+const DASHBOARD_HTML_PATH = path.join(__dirname, 'public', 'dashboard.html');
+async function loadDashboardHtml() {
+  const st = await fsp.stat(DASHBOARD_HTML_PATH);
+  if (_htmlCache && _htmlCache.mtimeMs === st.mtimeMs) return _htmlCache.html;
+  const html = await fsp.readFile(DASHBOARD_HTML_PATH, 'utf8');
+  _htmlCache = { mtimeMs: st.mtimeMs, html };
+  return html;
 }
 
 // ---------- Puppeteer (one persistent browser, auto-relaunch if it dies) ----------
@@ -175,38 +195,41 @@ function preThreshold(pipe) {
   return pipe.greyscale().linear(1.6, -77).normalise();
 }
 
-// Convert RGBA PNG to 1-bit black/white PNG
-async function toMonoPng(rgbaPng) {
+// Single sharp pipeline that produces (a) the raw 1-bit pixel plane and
+// (b) a palette PNG. PNG + BIN derivations share this so we don't run
+// the resize/contrast/threshold pipeline twice.
+async function rgbaToMono(rgbaPng) {
   const { data, info } = await preThreshold(
     sharp(rgbaPng).resize(SCREEN_W, SCREEN_H, { fit: 'fill' })
   )
     .threshold(128)
     .raw()
     .toBuffer({ resolveWithObject: true });
-
-  return sharp(data, {
+  const png = await sharp(data, {
     raw: { width: info.width, height: info.height, channels: 1 }
   }).png({ palette: true, colors: 2 }).toBuffer();
+  return { rawMono: data, info, png };
 }
 
 // Pack 1-bit pixels into bytes, MSB-first, the way GxEPD2 expects.
-// Returns SCREEN_W * SCREEN_H / 8 bytes.
-async function toMonoBin(rgbaPng) {
-  const { data, info } = await preThreshold(
-    sharp(rgbaPng).resize(SCREEN_W, SCREEN_H, { fit: 'fill' })
-  )
-    .threshold(128)
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-
+// Returns SCREEN_W * SCREEN_H / 8 bytes. Works on the shared raw plane
+// from rgbaToMono so threshold doesn't run twice.
+function packMonoBin(rawMono, info) {
   const bytes = Buffer.alloc((info.width * info.height) / 8);
-  for (let i = 0; i < data.length; i++) {
-    // threshold output: 0 = black, 255 = white
-    // e-paper convention: 0 bit = black, 1 bit = white
-    const bit = data[i] >= 128 ? 1 : 0;
-    const byteIdx = i >> 3;
-    const bitPos = 7 - (i & 7);
-    if (bit) bytes[byteIdx] |= (1 << bitPos);
+  // Process one byte (eight pixels) at a time. Threshold output is
+  // already 0 or 255, so a simple `>= 128` check is equivalent to a
+  // truthiness test on the high bit.
+  for (let i = 0, j = 0; i < rawMono.length; i += 8, j++) {
+    let b = 0;
+    if (rawMono[i]     >= 128) b |= 0x80;
+    if (rawMono[i + 1] >= 128) b |= 0x40;
+    if (rawMono[i + 2] >= 128) b |= 0x20;
+    if (rawMono[i + 3] >= 128) b |= 0x10;
+    if (rawMono[i + 4] >= 128) b |= 0x08;
+    if (rawMono[i + 5] >= 128) b |= 0x04;
+    if (rawMono[i + 6] >= 128) b |= 0x02;
+    if (rawMono[i + 7] >= 128) b |= 0x01;
+    bytes[j] = b;
   }
   return bytes;
 }
@@ -214,6 +237,7 @@ async function toMonoBin(rgbaPng) {
 // ---------- Image cache ----------
 
 const imageCache = new Map(); // key: "units|screen" -> { at, png, bin }
+const inflightImage = new Map(); // key -> Promise so concurrent hits share work
 const IMAGE_CACHE_MS = 60 * 1000; // re-render at most every 60s
 
 async function getCurrentImage({ units, screen }) {
@@ -223,12 +247,18 @@ async function getCurrentImage({ units, screen }) {
   if (cached && (now - cached.at) < IMAGE_CACHE_MS) {
     return cached;
   }
-  const rgba = await renderDashboardPng({ units, screen });
-  const png = await toMonoPng(rgba);
-  const bin = await toMonoBin(rgba);
-  const entry = { at: now, png, bin };
-  imageCache.set(key, entry);
-  return entry;
+  const pending = inflightImage.get(key);
+  if (pending) return pending;
+  const promise = (async () => {
+    const rgba = await renderDashboardPng({ units, screen });
+    const { rawMono, info, png } = await rgbaToMono(rgba);
+    const bin = packMonoBin(rawMono, info);
+    const entry = { at: Date.now(), png, bin };
+    imageCache.set(key, entry);
+    return entry;
+  })().finally(() => inflightImage.delete(key));
+  inflightImage.set(key, promise);
+  return promise;
 }
 
 // Force re-render on next request (called after config save)
@@ -245,21 +275,37 @@ function parseHHMM(s) {
   return h * 60 + mm;
 }
 
-function localMinutesNow(tz) {
+// Intl.DateTimeFormat construction is surprisingly costly (~ms per call).
+// Cache one formatter per tz string so the per-request hot path is just a
+// `formatToParts(new Date())`.
+const _hmFormatters = new Map();
+function hmFormatter(tz) {
+  let f = _hmFormatters.get(tz);
+  if (f) return f;
   try {
-    const parts = new Intl.DateTimeFormat('en-US', {
+    f = new Intl.DateTimeFormat('en-US', {
       timeZone: tz, hour12: false, hour: '2-digit', minute: '2-digit'
-    }).formatToParts(new Date());
-    let h = 0, m = 0;
-    for (const p of parts) {
-      if (p.type === 'hour') h = parseInt(p.value, 10) % 24;
-      if (p.type === 'minute') m = parseInt(p.value, 10);
-    }
-    return h * 60 + m;
+    });
   } catch {
+    f = null;
+  }
+  _hmFormatters.set(tz, f);
+  return f;
+}
+
+function localMinutesNow(tz) {
+  const f = hmFormatter(tz);
+  if (!f) {
     const d = new Date();
     return d.getHours() * 60 + d.getMinutes();
   }
+  const parts = f.formatToParts(new Date());
+  let h = 0, m = 0;
+  for (const p of parts) {
+    if (p.type === 'hour') h = parseInt(p.value, 10) % 24;
+    if (p.type === 'minute') m = parseInt(p.value, 10);
+  }
+  return h * 60 + m;
 }
 
 // ---------- Per-screen schedule resolution ----------
@@ -552,7 +598,7 @@ app.get('/dashboard', async (req, res) => {
     const layout = activeScreen ? activeScreen.layout : [];
     const data = await buildWidgetData(cfg, units, layout);
 
-    const html = await fsp.readFile(path.join(__dirname, 'public', 'dashboard.html'), 'utf8');
+    const html = await loadDashboardHtml();
     const chrome = (activeScreen && activeScreen.chrome) || DEFAULT_CHROME;
     const payload = {
       cfg, units, screen, layout, chrome,
@@ -601,7 +647,7 @@ app.get('/widgets-matrix', checkDeviceAuth, async (req, res) => {
       { widgetId: 'github' }, { widgetId: 'spacer' }
     ];
     const data = await buildWidgetData(cfg, units, fakeLayout);
-    const html = await fsp.readFile(path.join(__dirname, 'public', 'dashboard.html'), 'utf8');
+    const html = await loadDashboardHtml();
     const payload = {
       cfg, units, screen: 1, layout: [],
       chrome: { header: { enabled: false }, footer: { enabled: false } },
