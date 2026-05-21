@@ -277,15 +277,17 @@ void drawFailScreen(const char* reason) {
   display.hibernate();
 }
 
+// Direct-write path: send the full 48000-byte buffer to the panel
+// controller's RAM once, then trigger a single full refresh. Using
+// firstPage/nextPage instead would fire _Update_Full twice (the second
+// pass paints WHITE through the OLD-RAM LUT on this panel and wipes
+// the image we just drew). One write, one refresh, hibernate.
 void pushImage(const uint8_t* buf) {
   display.setRotation(0);
   display.setFullWindow();
-  display.firstPage();
-  do {
-    display.fillScreen(GxEPD_WHITE);
-    // GxEPD2 drawImage expects MSB-first, 0=black, 1=white — matches our server.
-    display.drawImage(buf, 0, 0, SW, SH, false, false, false);
-  } while (display.nextPage());
+  display.fillScreen(GxEPD_WHITE);
+  display.epd2.writeImage(buf, 0, 0, SW, SH, false, false, false);
+  display.refresh(false);
   display.hibernate();
 }
 
@@ -342,11 +344,6 @@ void setup() {
 
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
-
-  // Hold the painted image visible for a few seconds before deep sleep.
-  // Lets us verify with the naked eye that the refresh produced the
-  // right image (and not, say, a transient white frame from a glitch).
-  delay(3000);
 
   esp_sleep_enable_timer_wakeup((uint64_t)sleepMin * 60ULL * 1000000ULL);
   Serial.flush();
