@@ -46,9 +46,9 @@ static const int EPD_CS = 15, EPD_SCK = 13, EPD_MOSI = 14;
 
 // =================== INPUT PINS ===================
 //
-// Manual-refresh button on GPIO32. Press connects pin to 3.3V → HIGH →
-// wakes from deep sleep via ext1. GPIO32 is RTC-capable and has an
-// internal pull-down, so no external resistor needed.
+// Manual-refresh button on GPIO32 wired to GND. Internal pull-up holds
+// pin HIGH idle; press pulls LOW and wakes via ext1 ALL_LOW. GPIO32 is
+// RTC-capable, no external resistor needed.
 #define BTN_REFRESH  32
 
 #define WAKE_PIN_MASK (1ULL << BTN_REFRESH)
@@ -337,14 +337,16 @@ void setup() {
 
   // Wait for button release before arming ext1 — otherwise a still-held
   // press re-triggers wake the instant we enter deep sleep.
-  rtc_gpio_pulldown_en((gpio_num_t)BTN_REFRESH);
+  pinMode(BTN_REFRESH, INPUT_PULLUP);
   unsigned long t0 = millis();
-  while (digitalRead(BTN_REFRESH) == HIGH && millis() - t0 < 5000) {
+  while (digitalRead(BTN_REFRESH) == LOW && millis() - t0 < 5000) {
     delay(10);
   }
+  rtc_gpio_pulldown_dis((gpio_num_t)BTN_REFRESH);
+  rtc_gpio_pullup_en((gpio_num_t)BTN_REFRESH);
 
   esp_sleep_enable_timer_wakeup((uint64_t)sleepMin * 60ULL * 1000000ULL);
-  esp_sleep_enable_ext1_wakeup(WAKE_PIN_MASK, ESP_EXT1_WAKEUP_ANY_HIGH);
+  esp_sleep_enable_ext1_wakeup(WAKE_PIN_MASK, ESP_EXT1_WAKEUP_ALL_LOW);
   Serial.flush();
   esp_deep_sleep_start();
 }
