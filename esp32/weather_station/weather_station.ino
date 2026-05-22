@@ -18,6 +18,7 @@
 #include <ArduinoJson.h>
 #include <GxEPD2_BW.h>
 #include <SPI.h>
+#include <driver/rtc_io.h>
 
 // =================== CONFIG ===================
 // Per-device secrets live in secrets.h (gitignored). Copy
@@ -43,29 +44,14 @@
 static const int EPD_BUSY = 25, EPD_RST = 26, EPD_DC = 27;
 static const int EPD_CS = 15, EPD_SCK = 13, EPD_MOSI = 14;
 
-// =================== INPUT PINS (buttons + PIR) ===================
+// =================== INPUT PINS ===================
 //
-// Wake-on-button + wake-on-motion. All four pins are RTC-capable so
-// they can wake the ESP32 from deep sleep via ext1.
-//
-// External 10kΩ pull-down resistors required on the button lines
-// (GPIO 35/39 have no internal pull-down). When a button is pressed
-// it connects the pin to 3.3V → reads HIGH → wakes.
-// PIR (HC-SR501) output is active-HIGH, same wake convention.
-#define BTN_UNITS    32   // toggle °F ↔ °C
-#define BTN_REFRESH  33   // force a refresh
-#define BTN_SCREEN   35   // cycle through screens
-#define PIR_PIN      39   // motion sensor
+// Manual-refresh button on GPIO32. Press connects pin to 3.3V → HIGH →
+// wakes from deep sleep via ext1. GPIO32 is RTC-capable and has an
+// internal pull-down, so no external resistor needed.
+#define BTN_REFRESH  32
 
-#define WAKE_PIN_MASK ( (1ULL << BTN_UNITS)   \
-                      | (1ULL << BTN_REFRESH) \
-                      | (1ULL << BTN_SCREEN)  \
-                      | (1ULL << PIR_PIN) )
-
-// Persisted across deep sleeps via RTC memory.
-RTC_DATA_ATTR uint32_t bootCount   = 0;
-RTC_DATA_ATTR uint8_t  unitsToggle = 0;   // 0 = F, 1 = C
-RTC_DATA_ATTR uint8_t  screenIndex = 0;   // cycled by BTN_SCREEN
+#define WAKE_PIN_MASK (1ULL << BTN_REFRESH)
 
 SPIClass hspi(HSPI);
 GxEPD2_BW<GxEPD2_750_GDEY075T7, GxEPD2_750_GDEY075T7::HEIGHT>
@@ -304,7 +290,11 @@ void setup() {
   // one paints. Branch on the wake cause so we only clear when we have to.
   esp_sleep_wakeup_cause_t wakeCause = esp_sleep_get_wakeup_cause();
   bool coldBoot = (wakeCause == ESP_SLEEP_WAKEUP_UNDEFINED);
-  Serial.printf("Wake cause: %d (%s)\n", wakeCause, coldBoot ? "cold/POR" : "deep-sleep");
+  bool buttonWake = (wakeCause == ESP_SLEEP_WAKEUP_EXT1);
+  const char* wakeLabel = coldBoot ? "cold/POR"
+                        : buttonWake ? "BTN_REFRESH"
+                        : "timer";
+  Serial.printf("Wake cause: %d (%s)\n", wakeCause, wakeLabel);
 
   hspi.begin(EPD_SCK, -1, EPD_MOSI, EPD_CS);
   display.epd2.selectSPI(hspi, SPISettings(4000000, MSBFIRST, SPI_MODE0));
@@ -345,7 +335,16 @@ void setup() {
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
 
+  // Wait for button release before arming ext1 — otherwise a still-held
+  // press re-triggers wake the instant we enter deep sleep.
+  rtc_gpio_pulldown_en((gpio_num_t)BTN_REFRESH);
+  unsigned long t0 = millis();
+  while (digitalRead(BTN_REFRESH) == HIGH && millis() - t0 < 5000) {
+    delay(10);
+  }
+
   esp_sleep_enable_timer_wakeup((uint64_t)sleepMin * 60ULL * 1000000ULL);
+  esp_sleep_enable_ext1_wakeup(WAKE_PIN_MASK, ESP_EXT1_WAKEUP_ANY_HIGH);
   Serial.flush();
   esp_deep_sleep_start();
 }
