@@ -80,7 +80,7 @@ async function loadConfig() {
     return cfg;
   } catch {
     const raw = await fsp.readFile(DEFAULT_CONFIG_PATH, 'utf8');
-    await fsp.writeFile(CONFIG_PATH, raw);
+    await atomicWriteFile(CONFIG_PATH, raw);
     const cfg = migrateConfigToScreens(JSON.parse(raw));
     const st = await fsp.stat(CONFIG_PATH).catch(() => null);
     _configCache = { mtimeMs: st ? st.mtimeMs : 0, cfg };
@@ -88,8 +88,17 @@ async function loadConfig() {
   }
 }
 
+// Atomic write: temp file + rename. Prevents partial/truncated config
+// if the process dies mid-write, and avoids two concurrent first-run
+// cold reads from clobbering each other.
+async function atomicWriteFile(target, data) {
+  const tmp = `${target}.${process.pid}.${Date.now()}.tmp`;
+  await fsp.writeFile(tmp, data);
+  await fsp.rename(tmp, target);
+}
+
 async function saveConfig(cfg) {
-  await fsp.writeFile(CONFIG_PATH, JSON.stringify(cfg, null, 2));
+  await atomicWriteFile(CONFIG_PATH, JSON.stringify(cfg, null, 2));
   _configCache = null;
 }
 
@@ -194,6 +203,7 @@ async function renderDashboardPng({ units, screen }) {
     const qs = new URLSearchParams();
     if (units) qs.set('units', units);
     if (screen) qs.set('screen', String(screen));
+    if (DEVICE_TOKEN) qs.set('token', DEVICE_TOKEN);
     const url = `http://127.0.0.1:${PORT}/dashboard${qs.toString() ? '?' + qs : ''}`;
     // domcontentloaded fires fast; the dashboard's JS runs synchronously.
     // We then wait for web fonts to settle so the screenshot has the
@@ -221,6 +231,17 @@ async function renderDashboardPng({ units, screen }) {
   } finally {
     try { await page.close(); } catch (_) {}
   }
+}
+
+// Safe JSON literal for embedding inside a <script> tag. Plain
+// JSON.stringify lets a payload containing "</script>" close the tag
+// and inject markup; U+2028/U+2029 are valid JSON but illegal in a JS
+// string literal and break parse. Escape both.
+function jsonForScript(obj) {
+  return JSON.stringify(obj)
+    .replace(/</g, '\\u003c')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
 }
 
 // Contrast boost pushes near-128 anti-aliased font edges to either
@@ -642,7 +663,7 @@ function mergeEvents(list) {
 }
 
 // Dashboard HTML — built from the active screen's layout + live data
-app.get('/dashboard', async (req, res) => {
+app.get('/dashboard', checkDeviceAuth, async (req, res) => {
   try {
     const cfg = await loadConfig();
     const { units, screen, activeScreen } = resolveVariant(req, cfg);
@@ -659,7 +680,7 @@ app.get('/dashboard', async (req, res) => {
     };
     const injected = html.replace(
       '/*__DATA__*/',
-      `window.__DASHBOARD__ = ${JSON.stringify(payload)};`
+      `window.__DASHBOARD__ = ${jsonForScript(payload)};`
     );
     res.set('Content-Type', 'text/html; charset=utf-8');
     res.send(injected);
@@ -674,7 +695,8 @@ app.get('/dashboard', async (req, res) => {
 app.post('/api/config/reset', checkDeviceAuth, async (req, res) => {
   try {
     const raw = await fsp.readFile(DEFAULT_CONFIG_PATH, 'utf8');
-    await fsp.writeFile(CONFIG_PATH, raw);
+    await atomicWriteFile(CONFIG_PATH, raw);
+    _configCache = null;
     invalidateImage();
     const cfg = migrateConfigToScreens(JSON.parse(raw));
     res.json(cfg);
@@ -712,7 +734,7 @@ app.get('/widgets-matrix', checkDeviceAuth, async (req, res) => {
     };
     const injected = html.replace(
       '/*__DATA__*/',
-      `window.__DASHBOARD__ = ${JSON.stringify(payload)};`
+      `window.__DASHBOARD__ = ${jsonForScript(payload)};`
     );
     res.set('Content-Type', 'text/html; charset=utf-8');
     res.send(injected);
@@ -994,7 +1016,10 @@ app.get('/health/widgets', (req, res) => {
   };
   const escapeHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
     ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-  const widgetNames = ['weather','calendar','aqi','alerts','news','stocks','github','quote'];
+  const widgetNames = Object.keys(snap).sort();
+  if (!widgetNames.length) {
+    widgetNames.push('(no fetched widgets yet)');
+  }
   const rows = widgetNames.map(name => {
     const e = snap[name];
     if (!e) {
