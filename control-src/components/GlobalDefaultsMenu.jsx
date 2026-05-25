@@ -10,7 +10,7 @@ import GlobalDefaultsModal from './GlobalDefaultsModal.jsx';
 // WidgetForm coverage in Stage 2.1.
 function isInlineEditable(id) { return supportsPerInstance(id); }
 
-export default function GlobalDefaultsMenu({ cfg, onPatchNested, onJumpToSettings }) {
+export default function GlobalDefaultsMenu({ cfg, onPatch, onPatchNested, onJumpToSettings }) {
   const [open, setOpen] = useState(false);
   const [modalWidgetId, setModalWidgetId] = useState(null);
   const ref = useRef(null);
@@ -90,6 +90,7 @@ export default function GlobalDefaultsMenu({ cfg, onPatchNested, onJumpToSetting
       <GlobalDefaultsModal
         widgetId={modalWidgetId}
         cfg={cfg}
+        onPatch={onPatch}
         onPatchNested={onPatchNested}
         onClose={() => setModalWidgetId(null)}
       />

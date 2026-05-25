@@ -370,6 +370,7 @@ export default function App() {
           {cfg && (
             <GlobalDefaultsMenu
               cfg={cfg}
+              onPatch={patchCfg}
               onPatchNested={patchNested}
               onJumpToSettings={(id) => setFocusedWidgetId(id)}
             />

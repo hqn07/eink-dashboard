@@ -1383,6 +1383,59 @@ input[type="text"], input[type="url"], textarea {
 }
 .wsm-form { padding-top: 4px; }
 .wsm-placeholder { padding: 4px 0; }
+.wsm-field textarea {
+  background: #fff;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 60px;
+}
+.wsm-field select {
+  background: #fff;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 13px;
+  width: 100%;
+}
+.wsm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.wsm-list-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.wsm-list-row input[type="text"],
+.wsm-list-row input[type="url"],
+.wsm-list-row input[type="date"],
+.wsm-list-row input[type="time"],
+.wsm-list-row input[type="number"],
+.wsm-list-row select {
+  background: #fff;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  padding: 4px 6px;
+  font-family: inherit;
+  font-size: 12px;
+  min-width: 0;
+}
+.wsm-list-remove {
+  padding: 4px 8px !important;
+  font-size: 13px !important;
+  min-width: 0 !important;
+  flex-shrink: 0;
+}
+.wsm-list-add { font-size: 12px; padding: 4px 10px; }
 .wsm-link-btn-inline {
   background: none;
   border: 0;

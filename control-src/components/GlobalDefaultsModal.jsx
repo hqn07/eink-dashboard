@@ -3,17 +3,62 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { widgetById } from '../widgets.js';
 import WidgetForm, { snapshotGlobalForWidget } from './WidgetForm.jsx';
 
-// Cfg-key map per widget id. WidgetForm reads/writes a flat values
-// object; we round-trip that against the nested cfg.<key> slot.
-const CFG_KEY = {
-  news: 'news', stocks: 'stocks', github: 'github',
-  fx: 'fx', sports: 'sports', message: 'message', wod: 'wod'
+// Each widget id reports either a nested cfg.<key> (the simple case
+// where we write the whole settings blob under one key) or a custom
+// commit function that knows how to splay the per-instance shape
+// (e.g. `{ items: [...] }`) back across top-level cfg fields.
+const COMMIT_RULES = {
+  news:    { nested: 'news' },
+  stocks:  { nested: 'stocks' },
+  github:  { nested: 'github' },
+  fx:      { nested: 'fx' },
+  sports:  { nested: 'sports' },
+  message: { nested: 'message' },
+  wod:     { nested: 'wod' },
+  photo:   { nested: 'photo' },
+  quote:   { nested: 'quote' },
+  spacer:  { nested: 'spacer' },
+  link_qr: { nested: 'linkQr' },
+  wifi_qr: { nested: 'wifi' },
+  clock:   { custom: (s, patch, patchNested) => {
+    const { timezone, ...rest } = s || {};
+    patchNested('clock', rest);
+    if (timezone) patch({ timezone });
+  }},
+  calendar: { custom: (s, _patch, patchNested) => {
+    const urls = Array.isArray(s?.icalUrls) ? s.icalUrls.filter(Boolean) : [];
+    patchNested('calendar', { icalUrls: urls, icalUrl: urls[0] || '' });
+  }},
+  todos:     { custom: (s, patch) => patch({ todos:      s?.items || [] }) },
+  countdown: { custom: (s, patch) => patch({ countdowns: s?.items || [] }) },
+  counter:   { custom: (s, patch) => patch({ counters:   s?.items || [] }) },
+  habit:     { custom: (s, patch) => patch({ habits:     s?.items || [] }) },
+  chore:     { custom: (s, patch) => patch({ chores:     s?.items || [] }) },
+  weather_hero:     { custom: locCommit },
+  weather_forecast: { custom: locCommit },
+  aqi:              { custom: locCommit },
+  moonsun:          { custom: locCommit }
 };
+
+// Shared writer for location-derived widgets — overrides the top-level
+// cfg.lat/lon/city since weather/aqi all read from there.
+function locCommit(s, patch) {
+  const out = {};
+  if (Number.isFinite(s?.lat) && Number.isFinite(s?.lon)) {
+    out.lat = s.lat;
+    out.lon = s.lon;
+  } else if (s?.lat === null && s?.lon === null) {
+    out.lat = null;
+    out.lon = null;
+  }
+  if (typeof s?.city === 'string') out.city = s.city;
+  if (Object.keys(out).length) patch(out);
+}
 
 // Modal for editing one widget's global defaults. Reuses the .wsm-*
 // styles from WidgetSettingsModal so the look matches the per-instance
 // modal. Save/Cancel semantics mirror the per-tile modal (Q11/Q17).
-export default function GlobalDefaultsModal({ widgetId, cfg, onPatchNested, onClose }) {
+export default function GlobalDefaultsModal({ widgetId, cfg, onPatch, onPatchNested, onClose }) {
   const open = !!widgetId;
   const [draft, setDraft] = useState({});
   const initialRef = useRef({});
@@ -53,8 +98,11 @@ export default function GlobalDefaultsModal({ widgetId, cfg, onPatchNested, onCl
   }
 
   function commitSave() {
-    const cfgKey = CFG_KEY[widgetId];
-    if (cfgKey) onPatchNested(cfgKey, draft);
+    const rule = COMMIT_RULES[widgetId];
+    if (rule) {
+      if (rule.nested) onPatchNested(rule.nested, draft);
+      else if (rule.custom) rule.custom(draft, onPatch, onPatchNested);
+    }
     onClose();
   }
 

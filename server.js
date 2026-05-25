@@ -644,6 +644,15 @@ async function buildWidgetData(cfg, units, layout) {
   // tiles + the global fetch above, so duplicate per-instance configs
   // don't multiply API calls.
   const perItem = {};
+  const tz = cfg.timezone || 'UTC';
+  // Per-tile location resolver — used by weather/aqi/moonsun overrides.
+  const resolveLoc = (eff) => {
+    if (Number.isFinite(eff.lat) && Number.isFinite(eff.lon)) {
+      return { lat: eff.lat, lon: eff.lon };
+    }
+    if (eff.city && typeof eff.city === 'string') return eff.city;
+    return null;
+  };
   await Promise.all((layout || []).map(async (item) => {
     if (!item || !item.settings) return;
     const wid = item.widgetId || item.id;
@@ -651,6 +660,7 @@ async function buildWidgetData(cfg, units, layout) {
     const slot = {};
     try {
       switch (wid) {
+        // --- Data-fetched widgets ---
         case 'news':
           if (eff.feedUrl) slot.news = await fetchNews(eff.feedUrl, eff.maxItems || 5);
           break;
@@ -673,10 +683,88 @@ async function buildWidgetData(cfg, units, layout) {
         case 'wod':
           slot.wod = await fetchWordOfDay(eff.feedUrl);
           break;
+        case 'calendar': {
+          const urls = Array.isArray(eff.icalUrls) ? eff.icalUrls.filter(Boolean) : [];
+          if (urls.length) {
+            const lists = await Promise.all(urls.map(u => fetchEvents(u)));
+            slot.events = mergeEvents(lists.flat());
+          }
+          break;
+        }
+
+        // --- Location-derived widgets (Q7a) ---
+        case 'weather_hero':
+        case 'weather_forecast': {
+          const loc = resolveLoc(eff);
+          if (loc) {
+            slot.weather = await fetchWeather(loc, process.env.OPENWEATHER_API_KEY, units);
+            if (slot.weather && Number.isFinite(eff.lat) && Number.isFinite(eff.lon)) {
+              const alerts = await fetchAlerts({ lat: eff.lat, lon: eff.lon }).catch(() => []);
+              if (alerts && alerts.length) slot.weather.alerts = alerts;
+            }
+          }
+          break;
+        }
+        case 'aqi': {
+          if (Number.isFinite(eff.lat) && Number.isFinite(eff.lon)) {
+            slot.aqi = await fetchAqi({ lat: eff.lat, lon: eff.lon });
+          }
+          break;
+        }
+        case 'moonsun': {
+          const loc = resolveLoc(eff);
+          if (loc) {
+            const w = await fetchWeather(loc, process.env.OPENWEATHER_API_KEY, units);
+            slot.moonsun = buildMoonSun(w);
+          }
+          break;
+        }
+
+        // --- Pre-resolved synthesized slots ---
         case 'message':
-          // resolveMessage reads cfg.message; synthesize a cfg with the
-          // per-tile override in place.
           slot.resolvedMessage = resolveMessage({ ...cfg, message: eff });
+          break;
+        case 'quote':
+          slot.resolvedQuote = await resolveQuote({ ...cfg, quote: eff });
+          break;
+        case 'photo':
+          slot.resolvedPhoto = resolvePhoto({ ...cfg, photo: eff });
+          break;
+        case 'wifi_qr':
+          slot.wifiQrSvg = buildWifiQrSvg(eff);
+          // Also synth cfg.wifi for renderers that read cfg.wifi directly.
+          slot.cfg = { ...cfg, wifi: eff };
+          break;
+        case 'link_qr':
+          slot.linkQrSvg = buildLinkQrSvg(eff);
+          slot.cfg = { ...cfg, linkQr: eff };
+          break;
+        case 'clock': {
+          const overrideTz = eff.timezone || tz;
+          slot.clockNow = buildClockNow(overrideTz);
+          slot.cfg = { ...cfg, clock: eff, timezone: overrideTz };
+          break;
+        }
+        case 'spacer':
+          slot.cfg = { ...cfg, spacer: eff };
+          break;
+
+        // --- List-shape widgets ---
+        case 'todos':
+          slot.todos = prepTodos(eff.items || [], tz);
+          slot.cfg = { ...cfg, todos: eff.items || [] };
+          break;
+        case 'countdown':
+          slot.countdowns = buildCountdowns(eff.items || [], tz);
+          break;
+        case 'counter':
+          slot.counters = buildCounters(eff.items || [], tz);
+          break;
+        case 'habit':
+          slot.habits = buildHabits(eff.items || [], tz);
+          break;
+        case 'chore':
+          slot.chores = buildChores(eff.items || [], tz);
           break;
         default:
           break;
