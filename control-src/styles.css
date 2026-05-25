@@ -1453,6 +1453,93 @@ input[type="text"], input[type="url"], textarea {
   flex-shrink: 0;
 }
 .wsm-list-add { font-size: 12px; padding: 4px 10px; }
+.wsm-list-reorder {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.wsm-list-arrow {
+  background: #fff;
+  border: 1.5px solid var(--ink);
+  color: var(--ink);
+  width: 18px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+.wsm-list-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+.wsm-list-arrow:not(:disabled):hover { background: var(--ink); color: #fff; }
+
+.wsm-field-autocomplete { position: relative; }
+.wsm-autocomplete-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+  background: #fff;
+  border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  max-height: 180px;
+  overflow: auto;
+  z-index: 20;
+}
+.wsm-autocomplete-item {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink);
+}
+.wsm-autocomplete-item:hover { background: var(--ink); color: #fff; }
+.wsm-autocomplete-hint {
+  font-size: 10px;
+  letter-spacing: 1px;
+  font-weight: 700;
+  color: #888;
+}
+.wsm-autocomplete-item:hover .wsm-autocomplete-hint { color: #ccc; }
+
+.wsm-habit-today {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.wsm-habit-today input { cursor: pointer; }
+
+.wsm-copy-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+  padding: 8px 10px;
+  background: #f4f1e7;
+  border: 1.5px dashed var(--ink);
+}
+.wsm-copy-row select {
+  flex: 1;
+  background: #fff;
+  border: 2px solid var(--ink);
+  padding: 4px 6px;
+  font-family: inherit;
+  font-size: 12px;
+}
 .wsm-link-btn-inline {
   background: none;
   border: 0;

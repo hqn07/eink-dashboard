@@ -570,6 +570,7 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
       <WidgetSettingsModal
         open={!!modalForId}
         item={modalForId ? layout.find(it => it.id === modalForId) : null}
+        layout={layout}
         cfg={previewData && previewData.cfg}
         previewData={previewData}
         onCancel={() => setModalForId(null)}

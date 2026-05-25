@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { CaretUp, CaretDown } from '@phosphor-icons/react';
+import { geocode } from '../api.js';
 
 // Per-instance widget-data forms. Each form reads/writes a flat
 // `values` object that matches the same shape the global cfg.<widget>
@@ -59,10 +61,11 @@ export function snapshotGlobalForWidget(widgetId, cfg) {
     case 'habit':     return { items: [...(cfg.habits     || [])] };
     case 'chore':     return { items: [...(cfg.chores     || [])] };
     case 'weather_hero':
-    case 'weather_forecast':
     case 'aqi':
     case 'moonsun':
       return loc();
+    case 'weather_forecast':
+      return { ...loc(), forecastDays: cfg.weather?.forecastDays ?? null };
     default:
       return {};
   }
@@ -153,23 +156,45 @@ function CsvField({ label, value, onCommit, placeholder, help }) {
   );
 }
 
-// Reusable list editor. `renderRow(item, patch, remove)` lays out
-// the per-row controls; `blank` is the shape of a freshly-added item.
-function ListEditor({ label, items, onChange, blank, renderRow, addLabel, help }) {
+// Reusable list editor. `renderRow(item, patch)` lays out the per-row
+// controls. `blank` is the shape of a freshly-added item. Optional
+// `reorder` adds up/down buttons that move the row in the list.
+// Optional `replaceRow` lets callers swap the whole item (used when the
+// row holds a bare string, not an object).
+function ListEditor({ label, items, onChange, blank, renderRow, addLabel, help, reorder = true, replaceRow = false }) {
   const rows = items || [];
   const patch = (idx, p) => {
     const next = rows.slice();
-    next[idx] = { ...next[idx], ...p };
+    next[idx] = replaceRow ? p : { ...next[idx], ...p };
     onChange(next);
   };
   const remove = (idx) => onChange(rows.filter((_, i) => i !== idx));
-  const add = () => onChange([...rows, { ...blank }]);
+  const move = (idx, dir) => {
+    const j = idx + dir;
+    if (j < 0 || j >= rows.length) return;
+    const next = rows.slice();
+    [next[idx], next[j]] = [next[j], next[idx]];
+    onChange(next);
+  };
+  const add = () => onChange([...rows, typeof blank === 'object' && blank !== null ? { ...blank } : blank]);
   return (
     <div className="wsm-field">
       <span className="wsm-field-label">{label}</span>
       <div className="wsm-list">
         {rows.map((it, idx) => (
           <div key={idx} className="wsm-list-row">
+            {reorder && rows.length > 1 && (
+              <div className="wsm-list-reorder">
+                <button type="button" className="wsm-list-arrow" title="Move up"
+                  disabled={idx === 0} onClick={() => move(idx, -1)}>
+                  <CaretUp size={10} weight="bold" />
+                </button>
+                <button type="button" className="wsm-list-arrow" title="Move down"
+                  disabled={idx === rows.length - 1} onClick={() => move(idx, 1)}>
+                  <CaretDown size={10} weight="bold" />
+                </button>
+              </div>
+            )}
             {renderRow(it, (p) => patch(idx, p))}
             <button type="button" className="btn btn-danger wsm-list-remove"
               onClick={() => remove(idx)}>×</button>
@@ -185,20 +210,70 @@ function ListEditor({ label, items, onChange, blank, renderRow, addLabel, help }
   );
 }
 
-// Simple location picker (city OR lat/lon). Per-instance location for
-// weather/aqi-derived widgets. Lat/lon take precedence if both set.
+// City autocomplete backed by Open-Meteo geocoding (proxied through the
+// server's /api/geocode). Replaces the plain-text city field on weather
+// widgets so users don't have to guess country codes.
+function LocationAutocomplete({ value, onPick }) {
+  const [query, setQuery] = useState(value || '');
+  const [results, setResults] = useState([]);
+  const [open, setOpen] = useState(false);
+  const tRef = useRef(null);
+
+  useEffect(() => { setQuery(value || ''); }, [value]);
+
+  function search(q) {
+    clearTimeout(tRef.current);
+    tRef.current = setTimeout(async () => {
+      const r = await geocode(q);
+      setResults(r);
+      setOpen(true);
+    }, 250);
+  }
+
+  return (
+    <label className="wsm-field wsm-field-autocomplete">
+      <span className="wsm-field-label">City (search)</span>
+      <input
+        type="text"
+        value={query}
+        placeholder="Tokyo, JP"
+        onChange={e => { setQuery(e.target.value); search(e.target.value); }}
+        onFocus={() => { if (results.length) setOpen(true); }}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+      />
+      {open && results.length > 0 && (
+        <ul className="wsm-autocomplete-menu">
+          {results.map((r, i) => (
+            <li key={i}>
+              <button
+                type="button"
+                className="wsm-autocomplete-item"
+                onMouseDown={(e) => { e.preventDefault(); onPick(r); setQuery(`${r.name}${r.state ? ', ' + r.state : ''}${r.country ? ', ' + r.country : ''}`); setOpen(false); }}
+              >
+                <span>{r.name}{r.state ? `, ${r.state}` : ''}</span>
+                <span className="wsm-autocomplete-hint">{r.country || ''}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </label>
+  );
+}
+
+// Per-instance location picker for weather/aqi-derived widgets.
+// City autocomplete fills lat/lon when picked; manual lat/lon override
+// still possible. Lat/lon take precedence over city at fetch time.
 function LocationFields({ values, onChange }) {
   const v = values || {};
   return (
     <>
       <div className="wsm-field-help" style={{ marginBottom: 6 }}>
-        Lat/lon precise — overrides city. Leave both blank to fall back to global location.
+        Pick from search to set lat/lon. Manual lat/lon overrides city. Leave blank to inherit global.
       </div>
-      <TextField
-        label="City"
+      <LocationAutocomplete
         value={v.city}
-        onChange={(x) => onChange({ ...v, city: x })}
-        placeholder="Tokyo,JP"
+        onPick={(r) => onChange({ ...v, city: `${r.name}${r.state ? ', ' + r.state : ''}${r.country ? ', ' + r.country : ''}`, lat: r.lat, lon: r.lon })}
       />
       <div style={{ display: 'flex', gap: 8 }}>
         <div style={{ flex: 1 }}>
@@ -309,17 +384,40 @@ export default function WidgetForm({ widgetId, values, onChange }) {
       return (
         <>
           <TextField
-            label="Headline"
+            label="Default headline"
             value={v.text}
             onChange={(x) => patch({ text: x })}
             placeholder="Today's message…"
             help="Markdown supported: **bold**, *italic*."
           />
           <TextField
-            label="Subtitle"
+            label="Default subtitle"
             value={v.subtitle}
             onChange={(x) => patch({ subtitle: x })}
             placeholder="Optional second line"
+          />
+          <ListEditor
+            label="Scheduled messages (override default in their window)"
+            items={v.schedule}
+            onChange={(schedule) => patch({ schedule })}
+            blank={{ from: '06:00', to: '12:00', text: '', subtitle: '' }}
+            addLabel="Add scheduled message"
+            help="First match wins. Windows wrap midnight if `to` < `from`."
+            renderRow={(it, set) => (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input type="time" value={it.from || ''} onChange={e => set({ from: e.target.value })}
+                    style={{ width: 110 }} />
+                  <span style={{ fontSize: 11 }}>→</span>
+                  <input type="time" value={it.to || ''} onChange={e => set({ to: e.target.value })}
+                    style={{ width: 110 }} />
+                </div>
+                <input type="text" value={it.text || ''} placeholder="Headline (this slot)"
+                  onChange={e => set({ text: e.target.value })} />
+                <input type="text" value={it.subtitle || ''} placeholder="Subtitle (optional)"
+                  onChange={e => set({ subtitle: e.target.value })} />
+              </div>
+            )}
           />
         </>
       );
@@ -354,21 +452,33 @@ export default function WidgetForm({ widgetId, values, onChange }) {
 
     case 'calendar':
       return (
-        <ListEditor
-          label="iCal feed URLs"
-          items={v.icalUrls}
-          onChange={(items) => patch({ icalUrls: items })}
-          blank={''}
-          addLabel="Add feed"
-          help="Events merge + dedupe across feeds."
-          renderRow={(it, set) => (
-            <input type="url"
-              value={typeof it === 'string' ? it : ''}
-              placeholder="https://calendar.google.com/calendar/ical/..."
-              onChange={e => set(e.target.value)}
-              style={{ flex: 1 }} />
-          )}
-        />
+        <>
+          <ListEditor
+            label="iCal feed URLs"
+            items={v.icalUrls}
+            onChange={(items) => patch({ icalUrls: items })}
+            blank=""
+            replaceRow
+            addLabel="Add feed"
+            help={
+              <>
+                Events merge + dedupe.{' '}
+                <a href="https://support.google.com/calendar/answer/37648?hl=en#zippy=%2Cget-your-calendar-view-only"
+                  target="_blank" rel="noopener noreferrer"
+                  style={{ color: 'var(--mute)', textDecoration: 'underline' }}>
+                  Where do I get this? →
+                </a>
+              </>
+            }
+            renderRow={(it, set) => (
+              <input type="url"
+                value={typeof it === 'string' ? it : ''}
+                placeholder="https://calendar.google.com/calendar/ical/..."
+                onChange={e => set(e.target.value)}
+                style={{ flex: 1 }} />
+            )}
+          />
+        </>
       );
 
     case 'countdown':
@@ -412,7 +522,11 @@ export default function WidgetForm({ widgetId, values, onChange }) {
         />
       );
 
-    case 'habit':
+    case 'habit': {
+      const today = (() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      })();
       return (
         <ListEditor
           label="Habits"
@@ -420,13 +534,31 @@ export default function WidgetForm({ widgetId, values, onChange }) {
           onChange={(items) => patch({ items })}
           blank={{ label: '', doneDates: [] }}
           addLabel="Add habit"
-          help="Mark done in the global panel — per-instance toggle isn't wired."
-          renderRow={(it, set) => (
-            <input type="text" value={it.label || ''} placeholder="Habit"
-              onChange={e => set({ label: e.target.value })} style={{ flex: 1 }} />
-          )}
+          help="Toggle the box to mark today done (or undo it)."
+          renderRow={(it, set) => {
+            const done = (it.doneDates || []).includes(today);
+            return (
+              <>
+                <input type="text" value={it.label || ''} placeholder="Habit"
+                  onChange={e => set({ label: e.target.value })} style={{ flex: 1 }} />
+                <label className="wsm-habit-today" title={done ? 'Mark today undone' : 'Mark today done'}>
+                  <input
+                    type="checkbox"
+                    checked={done}
+                    onChange={() => {
+                      const cur = new Set(it.doneDates || []);
+                      if (cur.has(today)) cur.delete(today); else cur.add(today);
+                      set({ doneDates: Array.from(cur).sort() });
+                    }}
+                  />
+                  <span>TODAY</span>
+                </label>
+              </>
+            );
+          }}
         />
       );
+    }
 
     case 'chore':
       return (
@@ -643,6 +775,28 @@ export default function WidgetForm({ widgetId, values, onChange }) {
             <div className="wsm-list">
               {slides.map((s, idx) => (
                 <div key={idx} className="wsm-list-row">
+                  {slides.length > 1 && (
+                    <div className="wsm-list-reorder">
+                      <button type="button" className="wsm-list-arrow" title="Move up"
+                        disabled={idx === 0}
+                        onClick={() => {
+                          const next = slides.slice();
+                          [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                          setSlides(next);
+                        }}>
+                        <CaretUp size={10} weight="bold" />
+                      </button>
+                      <button type="button" className="wsm-list-arrow" title="Move down"
+                        disabled={idx === slides.length - 1}
+                        onClick={() => {
+                          const next = slides.slice();
+                          [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
+                          setSlides(next);
+                        }}>
+                        <CaretDown size={10} weight="bold" />
+                      </button>
+                    </div>
+                  )}
                   <img src={s.dataUrl} alt=""
                     style={{ width: 48, height: 36, objectFit: 'cover', border: '1px solid #000' }} />
                   <input type="text" placeholder="Caption"
@@ -679,7 +833,6 @@ export default function WidgetForm({ widgetId, values, onChange }) {
 
     // ----- Location-derived widgets -----
     case 'weather_hero':
-    case 'weather_forecast':
     case 'aqi':
     case 'moonsun':
       return (
@@ -687,6 +840,24 @@ export default function WidgetForm({ widgetId, values, onChange }) {
           values={v}
           onChange={(loc) => onChange(loc)}
         />
+      );
+    case 'weather_forecast':
+      return (
+        <>
+          <LocationFields
+            values={v}
+            onChange={(loc) => onChange({ ...v, ...loc })}
+          />
+          <TextField
+            label="Days to show (1–7 · blank = auto by tile height)"
+            type="number"
+            value={v.forecastDays ?? ''}
+            onChange={(x) => patch({
+              forecastDays: Number.isFinite(x) ? Math.max(1, Math.min(7, x)) : null
+            })}
+            help="Open-Meteo returns up to 7 days; larger tiles fit more."
+          />
+        </>
       );
 
     default:

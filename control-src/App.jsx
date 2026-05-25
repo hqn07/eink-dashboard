@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Star, GridFour, ArrowCounterClockwise } from '@phosphor-icons/react';
+import { Star, GridFour, ArrowCounterClockwise, Wrench } from '@phosphor-icons/react';
 import { fetchConfig, saveConfig, fetchPreviewData } from './api.js';
 import {
   WIDGET_REGISTRY,
@@ -25,7 +25,7 @@ import ScreenPanel from './components/ScreenPanel.jsx';
 import ChromePanel from './components/ChromePanel.jsx';
 import ScheduleTimeline from './components/ScheduleTimeline.jsx';
 import SetupWizard from './components/SetupWizard.jsx';
-import GlobalDefaultsMenu from './components/GlobalDefaultsMenu.jsx';
+import ToolsButton from './components/ToolsButton.jsx';
 
 const STATUS = {
   syncing: { label: 'SYNCING...', cls: 'saving' },
@@ -387,10 +387,8 @@ export default function App() {
         </div>
         <div className="actions">
           {cfg && (
-            <GlobalDefaultsMenu
+            <ToolsButton
               cfg={cfg}
-              onPatch={patchCfg}
-              onPatchNested={patchNested}
               onReplaceConfig={(next) => {
                 setCfg(migrateConfigToScreens(next));
                 setStatus('dirty');

@@ -19,7 +19,11 @@ const PREVIEW_MAX_H = 560;
 // flips override ON for the first time, we snapshot the current global
 // cfg.<widget> into draft.settings so they start from the same state
 // they were already seeing — matches Q6b (snapshot semantics).
-function PerInstanceDataBlock({ widgetId, cfg, settings, onSettingsChange }) {
+//
+// Also surfaces a "Copy from →" picker listing every other tile in the
+// layout that uses the same widget id, so users can clone a tile's
+// settings into this one without re-typing.
+function PerInstanceDataBlock({ widgetId, itemId, cfg, layout, settings, onSettingsChange }) {
   const supported = supportsPerInstance(widgetId);
   const override = !!settings;
 
@@ -28,11 +32,18 @@ function PerInstanceDataBlock({ widgetId, cfg, settings, onSettingsChange }) {
       <div className="wsm-placeholder">
         <p className="wsm-note">
           <strong>{widgetId}</strong> has no per-instance settings.
-          Edits in <em>Global defaults</em> apply to every tile.
         </p>
       </div>
     );
   }
+
+  // Other tiles of the same widget type that already have explicit
+  // settings — copy candidates.
+  const siblings = (layout || []).filter(it =>
+    it.id !== itemId
+    && (it.widgetId || it.id) === widgetId
+    && it.settings
+  );
 
   return (
     <>
@@ -53,17 +64,40 @@ function PerInstanceDataBlock({ widgetId, cfg, settings, onSettingsChange }) {
         <span>Override global for this tile</span>
       </label>
       {override ? (
-        <div className="wsm-form">
-          <WidgetForm
-            widgetId={widgetId}
-            values={settings}
-            onChange={onSettingsChange}
-          />
-        </div>
+        <>
+          {siblings.length > 0 && (
+            <div className="wsm-copy-row">
+              <span className="wsm-field-label">Copy from</span>
+              <select
+                defaultValue=""
+                onChange={(e) => {
+                  const src = siblings.find(s => s.id === e.target.value);
+                  if (src && src.settings) {
+                    onSettingsChange({ ...src.settings });
+                  }
+                  e.target.value = '';
+                }}
+              >
+                <option value="" disabled>Pick a tile…</option>
+                {siblings.map((s, i) => (
+                  <option key={s.id} value={s.id}>
+                    {`${widgetId} #${i + 1} (${s.x},${s.y})`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div className="wsm-form">
+            <WidgetForm
+              widgetId={widgetId}
+              values={settings}
+              onChange={onSettingsChange}
+            />
+          </div>
+        </>
       ) : (
         <p className="wsm-note">
-          Using shared global settings. Open <em>Global defaults</em> in
-          the header to edit shared values.
+          Using shared defaults from <code>config.json</code>. Toggle override above to give this tile its own settings.
         </p>
       )}
     </>
@@ -85,6 +119,7 @@ function shallowEq(a, b) {
 export default function WidgetSettingsModal({
   open,
   item,
+  layout,
   cfg,
   previewData,
   onCancel,
@@ -258,7 +293,9 @@ export default function WidgetSettingsModal({
                 <h3 className="wsm-section-title">Widget data</h3>
                 <PerInstanceDataBlock
                   widgetId={draft.widgetId}
+                  itemId={draft.id}
                   cfg={cfg}
+                  layout={layout}
                   settings={draft.settings}
                   onSettingsChange={(next) => setDraft(prev => ({ ...prev, settings: next }))}
                 />
