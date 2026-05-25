@@ -17,8 +17,23 @@ const parser = new XMLParser({
   trimValues: true
 });
 
+// Wiktionary's RSS now ships full page CSS inside <style> blocks at the
+// top of `description`. A naive tag-strip leaves the CSS rules behind
+// as plain text — drop <style>/<script> contents entirely first.
 function stripTags(s) {
-  return String(s || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  return String(s || '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 async function fetchWordOfDay(feedUrl) {
@@ -49,14 +64,17 @@ async function fetchWordOfDay(feedUrl) {
     }
     const title = typeof latest.title === 'object' ? latest.title['#text'] : latest.title;
     const description = stripTags(typeof latest.description === 'object' ? latest.description['#text'] : latest.description);
-    // Wiktionary wraps the word in a <p><b>WORD</b></p> followed by part of
-    // speech and definition. The headline word is the first all-caps-able
-    // token in the title (e.g. "Wiktionary:Word of the day/May 21" → use
-    // description instead).
-    const wordMatch = description.match(/^([A-Za-zÀ-ÿ'-]+)\s*(\([^)]*\))?\s*(.*)$/);
-    const word = wordMatch ? wordMatch[1] : (String(title || '').split('/').pop() || '').trim();
-    const partOfSpeech = (wordMatch && wordMatch[2]) ? wordMatch[2].replace(/[()]/g, '') : '';
-    const definition = (wordMatch ? wordMatch[3] : description).split('.')[0];
+    // Wiktionary RSS description = full rendered page. After stripping
+    // <style>/<script>/tags we still have:
+    //   "edit · refresh · view Word of the day for <Month> <Day> <WORD> <pos> (<qualifiers>) <definition>"
+    // Anchor on the heading so we skip the nav prefix.
+    const headingRe = /Word of the day for [A-Za-z]+ \d+\s+(.*)$/;
+    const tail = (description.match(headingRe) || [, ''])[1].trim();
+    const wordMatch = tail.match(/^([A-Za-zÀ-ÿ'-]+)\s+([a-z]+\.?)?\s*(\([^)]*\))?\s*(.*)$/);
+    const fallbackWord = (String(title || '').split('/').pop() || '').trim();
+    const word = (wordMatch && wordMatch[1]) ? wordMatch[1] : fallbackWord;
+    const partOfSpeech = (wordMatch && wordMatch[2]) ? wordMatch[2].replace(/\.$/, '') : '';
+    const definition = (wordMatch ? wordMatch[4] : tail).split(/[.;]/)[0];
     const data = {
       word: (word || '').toString(),
       partOfSpeech: (partOfSpeech || '').toString(),
