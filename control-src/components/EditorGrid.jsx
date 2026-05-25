@@ -386,7 +386,8 @@ export default function EditorGrid({ layout, showGrid, oneBit, previewData, onCh
           onResizeStop={onTileResizeStop}
         >
           {enabled.map(l => {
-            const inner = renderWidget(l.widgetId, { ...previewData, cellW: l.w, cellH: l.h, density: l.density }) || '';
+            const itemSlot = (previewData && previewData.perItem && previewData.perItem[l.id]) || {};
+            const inner = renderWidget(l.widgetId, { ...previewData, ...itemSlot, cellW: l.w, cellH: l.h, density: l.density }) || '';
             const dashW = l.w * (DASH_W / GRID_COLS);
             const dashH = l.h * (BODY_H / GRID_ROWS);
             const classes = ['cell', `cell-${l.widgetId}`];
@@ -566,11 +567,18 @@ export default function EditorGrid({ layout, showGrid, oneBit, previewData, onCh
       <WidgetSettingsModal
         open={!!modalForId}
         item={modalForId ? layout.find(it => it.id === modalForId) : null}
+        cfg={previewData && previewData.cfg}
         previewData={previewData}
         onCancel={() => setModalForId(null)}
         onSave={(updated) => {
           onChange(layout.map(it => it.id === updated.id
-            ? { ...it, flush: updated.flush, border: updated.border, density: updated.density }
+            ? {
+                ...it,
+                flush: updated.flush,
+                border: updated.border,
+                density: updated.density,
+                settings: updated.settings
+              }
             : it
           ));
           setModalForId(null);

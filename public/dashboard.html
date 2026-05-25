@@ -40,6 +40,8 @@
   const wod = D.wod || null;
   const sports = D.sports || null;
   const chores = D.chores || [];
+  // Per-instance widget data — slot overrides keyed by layout item id.
+  const perItem = D.perItem || {};
   const chrome = D.chrome || {
     header: { enabled: true, left: '{city}', leftSub: '{date}', right: '{time}', rightSub: 'EDITION No. {edition}' },
     footer: { enabled: true, text: 'UPDATED {time} · REFRESH {refresh}MIN · THE DAILY {city}' }
@@ -1473,7 +1475,13 @@
     const def = widgetById(item.widgetId || item.id);
     if (!def) continue;
     if (!withinVisibility(item.visibility, nowM)) continue;
-    const itemCtx = { ...ctx, cellW: item.w, cellH: item.h, density: item.density };
+    // Per-instance slot overrides: spread AFTER ctx so per-tile data
+    // wins over the global slot for the same widget type.
+    const itemCtx = {
+      ...ctx,
+      ...(perItem[item.id] || {}),
+      cellW: item.w, cellH: item.h, density: item.density
+    };
     const inner = def.render(itemCtx);
     if (!inner) continue;
     const classes = ['cell', `cell-${def.id}`];

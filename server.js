@@ -636,11 +636,63 @@ async function buildWidgetData(cfg, units, layout) {
   // a separate top-level lookup.
   if (weather && alerts && alerts.length) weather.alerts = alerts;
 
+  // Per-instance widget data. Items with `item.settings` get fetched
+  // separately and rendered with their own slot, overriding the global
+  // one. Items without `settings` continue to use the global slot.
+  // Widget-level caches (each fetcher keeps its own URL/symbol-keyed
+  // cache with a TTL) already dedup repeated identical inputs across
+  // tiles + the global fetch above, so duplicate per-instance configs
+  // don't multiply API calls.
+  const perItem = {};
+  await Promise.all((layout || []).map(async (item) => {
+    if (!item || !item.settings) return;
+    const wid = item.widgetId || item.id;
+    const eff = item.settings;
+    const slot = {};
+    try {
+      switch (wid) {
+        case 'news':
+          if (eff.feedUrl) slot.news = await fetchNews(eff.feedUrl, eff.maxItems || 5);
+          break;
+        case 'stocks':
+          if (Array.isArray(eff.symbols) && eff.symbols.length) {
+            slot.stocks = await fetchStocks(eff.symbols);
+          }
+          break;
+        case 'github':
+          if (eff.user) slot.github = await fetchGithub(eff.user);
+          break;
+        case 'fx':
+          if (Array.isArray(eff.pairs) && eff.pairs.length) {
+            slot.fx = await fetchFx(eff.pairs);
+          }
+          break;
+        case 'sports':
+          if (eff.teamId) slot.sports = await fetchSports(eff.teamId);
+          break;
+        case 'wod':
+          slot.wod = await fetchWordOfDay(eff.feedUrl);
+          break;
+        case 'message':
+          // resolveMessage reads cfg.message; synthesize a cfg with the
+          // per-tile override in place.
+          slot.resolvedMessage = resolveMessage({ ...cfg, message: eff });
+          break;
+        default:
+          break;
+      }
+    } catch (err) {
+      console.warn(`per-item fetch failed (${wid}/${item.id}):`, err.message);
+    }
+    if (Object.keys(slot).length) perItem[item.id] = slot;
+  }));
+
   return {
     weather, events, aqi, news, stocks, github,
     wifiQrSvg, clockNow, countdowns, moonsun, todos,
     resolvedQuote, resolvedMessage, resolvedPhoto,
-    counters, linkQrSvg, fx, iss, habits, wod, sports, chores
+    counters, linkQrSvg, fx, iss, habits, wod, sports, chores,
+    perItem
   };
 }
 

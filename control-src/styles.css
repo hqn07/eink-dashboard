@@ -1353,6 +1353,50 @@ input[type="text"], input[type="url"], textarea {
   justify-content: flex-end;
 }
 
+.wsm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.wsm-field-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+.wsm-field input[type="text"],
+.wsm-field input[type="number"] {
+  background: #fff;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.wsm-field-help {
+  font-size: 11px;
+  color: #666;
+  line-height: 1.4;
+}
+.wsm-form { padding-top: 4px; }
+.wsm-placeholder { padding: 4px 0; }
+.wsm-link-btn-inline {
+  background: none;
+  border: 0;
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
 @media (max-width: 720px) {
   .wsm-body {
     grid-template-columns: 1fr;

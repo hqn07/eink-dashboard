@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GRID_COLS, GRID_ROWS, widgetById } from '../widgets.js';
 import { renderWidget } from '../widget-render.js';
+import WidgetForm, { supportsPerInstance, snapshotGlobalForWidget } from './WidgetForm.jsx';
 
 const DASH_W = 800;
 const DASH_H = 480;
@@ -12,6 +13,73 @@ const BODY_H_BASE = DASH_H - HEADER_H_BASE - FOOTER_H_BASE;
 const PREVIEW_SCALE = 2;
 const PREVIEW_MAX_W = 720;
 const PREVIEW_MAX_H = 560;
+
+// Override toggle + form for per-instance widget data. When the user
+// flips override ON for the first time, we snapshot the current global
+// cfg.<widget> into draft.settings so they start from the same state
+// they were already seeing — matches Q6b (snapshot semantics).
+function PerInstanceDataBlock({ widgetId, cfg, settings, onSettingsChange, onJumpToGlobal }) {
+  const supported = supportsPerInstance(widgetId);
+  const override = !!settings;
+
+  if (!supported) {
+    return (
+      <div className="wsm-placeholder">
+        <p className="wsm-note">
+          Per-instance settings for <strong>{widgetId}</strong> aren't
+          wired yet. This tile uses the shared global settings.
+        </p>
+        {onJumpToGlobal && (
+          <button type="button" className="wsm-link-btn" onClick={onJumpToGlobal}>
+            Edit shared data settings →
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <label className="wsm-row wsm-row-check">
+        <input
+          type="checkbox"
+          checked={override}
+          onChange={(e) => {
+            if (e.target.checked) {
+              // First-time snapshot — copy global cfg into draft.settings.
+              onSettingsChange(snapshotGlobalForWidget(widgetId, cfg));
+            } else {
+              // Drop overrides — tile reverts to shared global.
+              onSettingsChange(undefined);
+            }
+          }}
+        />
+        <span>Override global for this tile</span>
+      </label>
+      {override ? (
+        <div className="wsm-form">
+          <WidgetForm
+            widgetId={widgetId}
+            values={settings}
+            onChange={onSettingsChange}
+          />
+        </div>
+      ) : (
+        <p className="wsm-note">
+          Using shared global settings.
+          {onJumpToGlobal && (
+            <>
+              {' '}
+              <button type="button" className="wsm-link-btn-inline" onClick={onJumpToGlobal}>
+                Edit shared →
+              </button>
+            </>
+          )}
+        </p>
+      )}
+    </>
+  );
+}
 
 function shallowEq(a, b) {
   if (a === b) return true;
@@ -28,6 +96,7 @@ function shallowEq(a, b) {
 export default function WidgetSettingsModal({
   open,
   item,
+  cfg,
   previewData,
   onCancel,
   onSave,
@@ -52,9 +121,15 @@ export default function WidgetSettingsModal({
   const dirty = useMemo(() => {
     if (!draft || !initialRef.current) return false;
     const a = initialRef.current, b = draft;
-    return (a.flush || false) !== (b.flush || false)
-      || (a.border || 'solid') !== (b.border || 'solid')
-      || (a.density || '') !== (b.density || '');
+    if ((a.flush || false) !== (b.flush || false)) return true;
+    if ((a.border || 'solid') !== (b.border || 'solid')) return true;
+    if ((a.density || '') !== (b.density || '')) return true;
+    // Settings comparison: stringify for deep equality. Cheap because
+    // settings objects are flat and small.
+    const aSet = a.settings ? JSON.stringify(a.settings) : '';
+    const bSet = b.settings ? JSON.stringify(b.settings) : '';
+    if (aSet !== bSet) return true;
+    return false;
   }, [draft]);
 
   // ESC dismisses. With unsaved edits → prompt; clean → close.
@@ -191,20 +266,16 @@ export default function WidgetSettingsModal({
 
               <section className="wsm-section">
                 <h3 className="wsm-section-title">Widget data</h3>
-                <p className="wsm-note">
-                  Currently shared with all instances of this widget.
-                  Per-instance overrides land in a later update.
-                </p>
-                {onJumpToWidgetData && (
-                  <button
-                    type="button"
-                    className="wsm-link-btn"
-                    onClick={() => {
-                      onJumpToWidgetData(draft.widgetId);
-                      onCancel();
-                    }}
-                  >Edit shared data settings →</button>
-                )}
+                <PerInstanceDataBlock
+                  widgetId={draft.widgetId}
+                  cfg={cfg}
+                  settings={draft.settings}
+                  onSettingsChange={(next) => setDraft(prev => ({ ...prev, settings: next }))}
+                  onJumpToGlobal={onJumpToWidgetData ? () => {
+                    onJumpToWidgetData(draft.widgetId);
+                    onCancel();
+                  } : null}
+                />
               </section>
             </div>
 
