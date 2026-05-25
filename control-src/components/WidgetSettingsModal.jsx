@@ -162,6 +162,8 @@ export default function WidgetSettingsModal({
 
   const classes = ['cell', `cell-${draft.widgetId}`];
   if (draft.flush) classes.push('cell-flush');
+  if (draft.border === 'dashed') classes.push('cell-border-dashed');
+  if (draft.border === 'none')   classes.push('cell-border-none');
   const previewHtml = renderWidget(draft.widgetId, {
     ...previewData,
     cellW: draft.w,

@@ -28,7 +28,7 @@ function smallestSizeKey(def) {
   }, def.defaultSize);
 }
 
-export default function EditorGrid({ layout, showGrid, previewData, onChange, onError }) {
+export default function EditorGrid({ layout, showGrid, previewData, onChange, onError, onCommitItemNow }) {
   const wrapRef = useRef(null);
   const [size, setSizeState] = useState({ w: 800, h: 480 });
   const [shake, setShake] = useState(false);
@@ -395,6 +395,8 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
             if (l.x + l.w >= GRID_COLS) classes.push('cell-edge-right');
             if (l.y + l.h >= GRID_ROWS) classes.push('cell-edge-bottom');
             if (l.flush) classes.push('cell-flush');
+            if (l.border === 'dashed') classes.push('cell-border-dashed');
+            if (l.border === 'none')   classes.push('cell-border-none');
             const cellHtml = `<div class="${classes.join(' ')}" style="width:${dashW}px;height:${dashH}px">${inner}</div>`;
             const isSelected = selectedId === l.id;
             return (
@@ -572,16 +574,22 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
         previewData={previewData}
         onCancel={() => setModalForId(null)}
         onSave={(updated) => {
-          onChange(layout.map(it => it.id === updated.id
-            ? {
-                ...it,
-                flush: updated.flush,
-                border: updated.border,
-                density: updated.density,
-                settings: updated.settings
-              }
-            : it
-          ));
+          const patch = {
+            flush: updated.flush,
+            border: updated.border,
+            density: updated.density,
+            settings: updated.settings
+          };
+          if (onCommitItemNow) {
+            // Persist immediately + refresh preview so the editor shows
+            // updated data without a second click on the main save bar.
+            onCommitItemNow({ id: updated.id, ...patch });
+          } else {
+            onChange(layout.map(it => it.id === updated.id
+              ? { ...it, ...patch }
+              : it
+            ));
+          }
           setModalForId(null);
         }}
       />

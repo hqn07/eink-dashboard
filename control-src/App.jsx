@@ -263,6 +263,33 @@ export default function App() {
     }
   };
 
+  // Save a single layout-item mutation right now, bypassing the 2s
+  // autosave debounce. Used by the per-tile settings modal so the
+  // Save button actually persists + refreshes preview before the
+  // modal closes — no second click on the main save bar.
+  const commitLayoutItemNow = async (screenId, updatedItem) => {
+    if (!cfg) return;
+    const nextCfg = {
+      ...cfg,
+      screens: cfg.screens.map(s => s.id === screenId
+        ? { ...s, layout: s.layout.map(it => it.id === updatedItem.id ? { ...it, ...updatedItem } : it) }
+        : s
+      )
+    };
+    setCfg(nextCfg);
+    setStatus('saving');
+    try {
+      const saved = await saveConfig({ ...nextCfg, screens: nextCfg.screens });
+      setCfg(migrateConfigToScreens(saved));
+      setStatus('saved');
+      setPreviewKey(Date.now());
+    } catch (err) {
+      setStatus('error');
+      setStatusMsg(err.message);
+      showToast(`Save failed: ${err.message}`);
+    }
+  };
+
   const refreshPreview = () => setPreviewKey(Date.now());
 
   // Auto-save: 2s after the last edit if config is valid.
@@ -432,6 +459,7 @@ export default function App() {
               previewData={livePreviewData}
               onChange={(next) => updateScreenLayout(editScreen.id, next)}
               onError={showToast}
+              onCommitItemNow={(item) => commitLayoutItemNow(editScreen.id, item)}
             />
             <div className="editor-help">
               DRAG TILE TO MOVE · CORNER TO RESIZE · × OR DRAG TO TRASH · DRAG POOL CARD ONTO CANVAS
