@@ -3,7 +3,7 @@ import React from 'react';
 // Merged Display + Refresh + Schedule for one screen. Sits at the top
 // of the settings panel (above shared widget config like message,
 // todos, calendar).
-export default function ScreenPanel({ screen, isOverlap, onUpdate, onSetDefault, onDelete, canDelete }) {
+export default function ScreenPanel({ screen, isOverlap, onUpdate, onDelete, canDelete }) {
   const sch = screen.schedule || { enabled: false, from: '07:00', to: '22:00' };
   const setSch = (patch) => onUpdate({ schedule: { ...sch, ...patch } });
 
@@ -12,14 +12,6 @@ export default function ScreenPanel({ screen, isOverlap, onUpdate, onSetDefault,
       <div className="section-title">
         <span>Screen Settings</span>
         <div className="btn-row" style={{ marginTop: 0, gap: 6 }}>
-          {!screen.isDefault && (
-            <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }} onClick={onSetDefault}>
-              SET DEFAULT
-            </button>
-          )}
-          {screen.isDefault && (
-            <span className="badge" title="Active when no schedule matches the current time">DEFAULT</span>
-          )}
           {canDelete && (
             <button className="btn btn-danger" style={{ padding: '4px 10px', fontSize: 11 }} onClick={onDelete}>
               DELETE

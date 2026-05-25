@@ -27,7 +27,7 @@ function smallestSizeKey(def) {
   }, def.defaultSize);
 }
 
-export default function EditorGrid({ layout, showGrid, oneBit, previewData, onChange, onError }) {
+export default function EditorGrid({ layout, showGrid, previewData, onChange, onError }) {
   const wrapRef = useRef(null);
   const [size, setSizeState] = useState({ w: 800, h: 480 });
   const [shake, setShake] = useState(false);
@@ -330,7 +330,7 @@ export default function EditorGrid({ layout, showGrid, oneBit, previewData, onCh
     <div>
       <motion.div
         ref={wrapRef}
-        className={`editor-wrap ${showGrid ? 'show-grid' : ''} ${dropHover ? 'drop-target' : ''} ${oneBit ? 'editor-1bit' : ''}`}
+        className={`editor-wrap ${showGrid ? 'show-grid' : ''} ${dropHover ? 'drop-target' : ''}`}
         animate={shake ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
         transition={{ duration: 0.45 }}
         onDragOver={onCanvasDragOver}

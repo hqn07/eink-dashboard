@@ -62,12 +62,6 @@ export default function App() {
     try { return localStorage.getItem('ctrl.editScreenId') || null; } catch { return null; }
   });
   const [showGrid, setShowGrid] = useState(true);
-  const [editorOneBit, setEditorOneBit] = useState(() => {
-    try { return localStorage.getItem('editor1bit') === '1'; } catch { return false; }
-  });
-  useEffect(() => {
-    try { localStorage.setItem('editor1bit', editorOneBit ? '1' : '0'); } catch (_) {}
-  }, [editorOneBit]);
   const [previewKey, setPreviewKey] = useState(Date.now());
   const [previewData, setPreviewData] = useState(null);
   const [toast, setToast] = useState(null);
@@ -362,7 +356,6 @@ export default function App() {
       <header className="app-header">
         <div>
           <h1>Dashboard Control</h1>
-          <div className="tagline">E-Ink · 800 × 480 · Editorial</div>
         </div>
         <div className="actions">
           {cfg && (
@@ -376,9 +369,6 @@ export default function App() {
               }}
             />
           )}
-          <span className="terminal-line" style={{ fontSize: 10 }}>
-            &gt; LIVE EDIT · AUTO-SAVE
-          </span>
         </div>
       </header>
 
@@ -411,16 +401,22 @@ export default function App() {
               <span>{editScreen?.name || 'Screen'}</span>
               <div className="btn-row" style={{ marginTop: 0, gap: 6 }}>
                 <span className="badge">{GRID_COLS}×{GRID_ROWS}</span>
+                {editScreen && editScreen.isDefault && (
+                  <span className="badge" title="Active when no schedule matches the current time">DEFAULT</span>
+                )}
+                {editScreen && !editScreen.isDefault && (
+                  <button
+                    className="btn btn-ghost"
+                    style={{ padding: '4px 10px', fontSize: 11 }}
+                    title="Show this screen when no schedule matches"
+                    onClick={() => setDefaultScreen(editScreen.id)}
+                  >
+                    ★ MAKE DEFAULT
+                  </button>
+                )}
                 <button className="btn" onClick={() => setShowGrid(g => !g)}
                   style={{ padding: '4px 10px', fontSize: 11 }}>
                   {showGrid ? '◧ HIDE GRID' : '◧ SHOW GRID'}
-                </button>
-                <button
-                  className={`btn ${editorOneBit ? 'btn-active' : ''}`}
-                  style={{ padding: '4px 10px', fontSize: 11 }}
-                  title="Preview as the real e-ink panel will render"
-                  onClick={() => setEditorOneBit(v => !v)}>
-                  {editorOneBit ? '● 1-BIT ON' : '○ 1-BIT'}
                 </button>
                 <button className="btn btn-ghost"
                   style={{ padding: '4px 10px', fontSize: 11 }}
@@ -432,7 +428,6 @@ export default function App() {
             <EditorGrid
               layout={layout}
               showGrid={showGrid}
-              oneBit={editorOneBit}
               previewData={livePreviewData}
               onChange={(next) => updateScreenLayout(editScreen.id, next)}
               onError={showToast}
@@ -453,7 +448,6 @@ export default function App() {
               screen={editScreen}
               isOverlap={overlapIds.has(editScreen.id)}
               onUpdate={(patch) => updateScreen(editScreen.id, patch)}
-              onSetDefault={() => setDefaultScreen(editScreen.id)}
               onDelete={() => deleteScreen(editScreen.id)}
               canDelete={screens.length > 1}
             />
