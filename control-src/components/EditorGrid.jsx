@@ -3,6 +3,7 @@ import GridLayout from 'react-grid-layout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById, makeInstance } from '../widgets.js';
 import { renderWidget, renderHeader, renderFooter, isHeaderOn, isFooterOn, headerVariant, footerVariant } from '../widget-render.js';
+import WidgetSettingsModal from './WidgetSettingsModal.jsx';
 
 // Editor cells must align 1:1 with dashboard cells so widget previews
 // scale cleanly. Any padding/margin would offset cells from the
@@ -31,6 +32,14 @@ export default function EditorGrid({ layout, showGrid, oneBit, previewData, onCh
   const [size, setSizeState] = useState({ w: 800, h: 480 });
   const [shake, setShake] = useState(false);
   const [dropHover, setDropHover] = useState(false);
+  // Tile selection (click on desktop, tap on touch). The selected tile
+  // keeps its action buttons visible; clicking elsewhere clears it.
+  const [selectedId, setSelectedId] = useState(null);
+  // Which tile (if any) currently has its settings modal open.
+  const [modalForId, setModalForId] = useState(null);
+  // 5px drag threshold so a single click (mousedown→up < 5px move) is
+  // treated as a select, while a real drag is left for react-grid-layout.
+  const downPosRef = useRef(null);
 
   // autofit runner — matches the helper in dashboard.html. Binary-search
   // the largest font size that fits inside each .autofit element's box.
@@ -327,6 +336,13 @@ export default function EditorGrid({ layout, showGrid, oneBit, previewData, onCh
         onDragOver={onCanvasDragOver}
         onDragLeave={onCanvasDragLeave}
         onDrop={onCanvasDrop}
+        onMouseDown={(e) => {
+          // Clicking the empty canvas (not on a tile) clears selection.
+          if (e.target === e.currentTarget) setSelectedId(null);
+        }}
+        onTouchStart={(e) => {
+          if (e.target === e.currentTarget) setSelectedId(null);
+        }}
       >
         {/* Header chrome — purely visual; matches dashboard.css `.hdr`. */}
         {headerOn && (
@@ -378,61 +394,36 @@ export default function EditorGrid({ layout, showGrid, oneBit, previewData, onCh
             if (l.y + l.h >= GRID_ROWS) classes.push('cell-edge-bottom');
             if (l.flush) classes.push('cell-flush');
             const cellHtml = `<div class="${classes.join(' ')}" style="width:${dashW}px;height:${dashH}px">${inner}</div>`;
+            const isSelected = selectedId === l.id;
             return (
               <div key={l.id}>
                 <motion.div
                   layout
-                  className="editor-tile live-tile"
+                  className={`editor-tile live-tile ${isSelected ? 'selected' : ''}`}
                   transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                   style={{ width: '100%', height: '100%' }}
+                  onMouseDown={(e) => {
+                    // Track pointer-down position so we can distinguish a
+                    // click-to-select from a real drag started by RGL.
+                    downPosRef.current = { x: e.clientX, y: e.clientY, id: l.id };
+                  }}
+                  onMouseUp={(e) => {
+                    const d = downPosRef.current;
+                    downPosRef.current = null;
+                    if (!d || d.id !== l.id) return;
+                    const moved = Math.hypot(e.clientX - d.x, e.clientY - d.y);
+                    if (moved < 5) setSelectedId(l.id);
+                  }}
+                  onTouchEnd={() => setSelectedId(l.id)}
                 >
                   <div className="tile-actions">
                     <button
-                      className={`tile-flush ${l.flush ? 'on' : ''}`}
-                      title={l.flush ? 'Flush edges ON — click for inset' : 'Inset (with border) — click for flush edges'}
+                      className="tile-settings"
+                      title="Settings"
                       onMouseDown={(e) => e.stopPropagation()}
                       onTouchStart={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onChange(layout.map(it => it.id === l.id ? { ...it, flush: !it.flush } : it));
-                      }}
-                    >⊞</button>
-                    {onJumpToSettings && (
-                      <button
-                        className="tile-settings"
-                        title="Jump to widget settings"
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onTouchStart={(e) => e.stopPropagation()}
-                        onClick={(e) => { e.stopPropagation(); onJumpToSettings(l.widgetId); }}
-                      >⚙</button>
-                    )}
-                    <button
-                      className="tile-border"
-                      title={`Border: ${l.border || 'solid'} — click to cycle`}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onTouchStart={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const order = ['solid', 'dashed', 'none'];
-                        const cur = l.border || 'solid';
-                        const next = order[(order.indexOf(cur) + 1) % order.length];
-                        onChange(layout.map(it => it.id === l.id ? { ...it, border: next } : it));
-                      }}
-                    >▢</button>
-                    <button
-                      className={`tile-density ${l.density ? 'on' : ''}`}
-                      title={`Density: ${l.density || 'balanced'} — click to cycle (balanced → rich → sparse)`}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onTouchStart={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const order = [undefined, 'rich', 'sparse'];
-                        const cur = l.density;
-                        const idx = order.indexOf(cur);
-                        const next = order[(idx + 1 + order.length) % order.length];
-                        onChange(layout.map(it => it.id === l.id ? { ...it, density: next } : it));
-                      }}
-                    >{l.density === 'rich' ? '▰' : l.density === 'sparse' ? '▱' : '▥'}</button>
+                      onClick={(e) => { e.stopPropagation(); setModalForId(l.id); }}
+                    >⚙</button>
                     <button
                       className="tile-remove"
                       title="Remove"
@@ -571,6 +562,21 @@ export default function EditorGrid({ layout, showGrid, oneBit, previewData, onCh
         </div>
         )}
       </div>
+
+      <WidgetSettingsModal
+        open={!!modalForId}
+        item={modalForId ? layout.find(it => it.id === modalForId) : null}
+        previewData={previewData}
+        onCancel={() => setModalForId(null)}
+        onSave={(updated) => {
+          onChange(layout.map(it => it.id === updated.id
+            ? { ...it, flush: updated.flush, border: updated.border, density: updated.density }
+            : it
+          ));
+          setModalForId(null);
+        }}
+        onJumpToWidgetData={onJumpToSettings}
+      />
     </div>
   );
 }
