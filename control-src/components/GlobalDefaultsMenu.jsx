@@ -3,14 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { WIDGET_REGISTRY } from '../widgets.js';
 import { supportsPerInstance } from './WidgetForm.jsx';
 import GlobalDefaultsModal from './GlobalDefaultsModal.jsx';
+import BackupPanel from './BackupPanel.jsx';
 
-// Widgets that have bespoke forms in WidgetForm.jsx. Anything else
-// surfaces as a "→ jump to global settings panel" entry so the user can
-// still edit it via the existing Settings.jsx section while we expand
-// WidgetForm coverage in Stage 2.1.
-function isInlineEditable(id) { return supportsPerInstance(id); }
-
-export default function GlobalDefaultsMenu({ cfg, onPatch, onPatchNested, onJumpToSettings }) {
+export default function GlobalDefaultsMenu({ cfg, onPatch, onPatchNested, onReplaceConfig }) {
   const [open, setOpen] = useState(false);
   const [modalWidgetId, setModalWidgetId] = useState(null);
   const ref = useRef(null);
@@ -31,12 +26,9 @@ export default function GlobalDefaultsMenu({ cfg, onPatch, onPatchNested, onJump
   }, [open]);
 
   function pick(widgetId) {
+    if (!supportsPerInstance(widgetId)) return; // disabled — no settings
     setOpen(false);
-    if (isInlineEditable(widgetId)) {
-      setModalWidgetId(widgetId);
-    } else if (onJumpToSettings) {
-      onJumpToSettings(widgetId);
-    }
+    setModalWidgetId(widgetId);
   }
 
   return (
@@ -63,22 +55,27 @@ export default function GlobalDefaultsMenu({ cfg, onPatch, onPatchNested, onJump
             >
               <div className="gdm-menu-header">Edit shared defaults</div>
               <ul className="gdm-list">
-                {WIDGET_REGISTRY.map(def => (
-                  <li key={def.id}>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className="gdm-item"
-                      onClick={() => pick(def.id)}
-                    >
-                      <span className="gdm-item-label">{def.label}</span>
-                      <span className="gdm-item-hint">
-                        {isInlineEditable(def.id) ? 'EDIT' : 'OPEN PANEL ↓'}
-                      </span>
-                    </button>
-                  </li>
-                ))}
+                {WIDGET_REGISTRY.map(def => {
+                  const enabled = supportsPerInstance(def.id);
+                  return (
+                    <li key={def.id}>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className={`gdm-item ${enabled ? '' : 'gdm-item-disabled'}`}
+                        disabled={!enabled}
+                        onClick={() => pick(def.id)}
+                      >
+                        <span className="gdm-item-label">{def.label}</span>
+                        <span className="gdm-item-hint">
+                          {enabled ? 'EDIT' : 'NO SETTINGS'}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
+              <BackupPanel cfg={cfg} onReplaceConfig={onReplaceConfig} />
               <div className="gdm-menu-footer">
                 Changes apply to every tile that hasn't overridden.
               </div>

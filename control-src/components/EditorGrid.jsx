@@ -27,7 +27,7 @@ function smallestSizeKey(def) {
   }, def.defaultSize);
 }
 
-export default function EditorGrid({ layout, showGrid, oneBit, previewData, onChange, onError, onJumpToSettings }) {
+export default function EditorGrid({ layout, showGrid, oneBit, previewData, onChange, onError }) {
   const wrapRef = useRef(null);
   const [size, setSizeState] = useState({ w: 800, h: 480 });
   const [shake, setShake] = useState(false);
@@ -583,7 +583,6 @@ export default function EditorGrid({ layout, showGrid, oneBit, previewData, onCh
           ));
           setModalForId(null);
         }}
-        onJumpToWidgetData={onJumpToSettings}
       />
     </div>
   );

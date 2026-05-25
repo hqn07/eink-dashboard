@@ -18,7 +18,7 @@ const PREVIEW_MAX_H = 560;
 // flips override ON for the first time, we snapshot the current global
 // cfg.<widget> into draft.settings so they start from the same state
 // they were already seeing — matches Q6b (snapshot semantics).
-function PerInstanceDataBlock({ widgetId, cfg, settings, onSettingsChange, onJumpToGlobal }) {
+function PerInstanceDataBlock({ widgetId, cfg, settings, onSettingsChange }) {
   const supported = supportsPerInstance(widgetId);
   const override = !!settings;
 
@@ -26,14 +26,9 @@ function PerInstanceDataBlock({ widgetId, cfg, settings, onSettingsChange, onJum
     return (
       <div className="wsm-placeholder">
         <p className="wsm-note">
-          Per-instance settings for <strong>{widgetId}</strong> aren't
-          wired yet. This tile uses the shared global settings.
+          <strong>{widgetId}</strong> has no per-instance settings.
+          Edits in <em>Global defaults</em> apply to every tile.
         </p>
-        {onJumpToGlobal && (
-          <button type="button" className="wsm-link-btn" onClick={onJumpToGlobal}>
-            Edit shared data settings →
-          </button>
-        )}
       </div>
     );
   }
@@ -66,15 +61,8 @@ function PerInstanceDataBlock({ widgetId, cfg, settings, onSettingsChange, onJum
         </div>
       ) : (
         <p className="wsm-note">
-          Using shared global settings.
-          {onJumpToGlobal && (
-            <>
-              {' '}
-              <button type="button" className="wsm-link-btn-inline" onClick={onJumpToGlobal}>
-                Edit shared →
-              </button>
-            </>
-          )}
+          Using shared global settings. Open <em>Global defaults</em> in
+          the header to edit shared values.
         </p>
       )}
     </>
@@ -99,8 +87,7 @@ export default function WidgetSettingsModal({
   cfg,
   previewData,
   onCancel,
-  onSave,
-  onJumpToWidgetData
+  onSave
 }) {
   // Snapshot of `item` taken when the modal opened. Cancel restores this.
   // Save commits the working draft to onSave().
@@ -271,10 +258,6 @@ export default function WidgetSettingsModal({
                   cfg={cfg}
                   settings={draft.settings}
                   onSettingsChange={(next) => setDraft(prev => ({ ...prev, settings: next }))}
-                  onJumpToGlobal={onJumpToWidgetData ? () => {
-                    onJumpToWidgetData(draft.widgetId);
-                    onCancel();
-                  } : null}
                 />
               </section>
             </div>

@@ -17,7 +17,6 @@ import {
   inflatePresetLayout
 } from './widgets.js';
 import EditorGrid from './components/EditorGrid.jsx';
-import Settings from './components/Settings.jsx';
 import SaveBar from './components/SaveBar.jsx';
 import ScreenTabs from './components/ScreenTabs.jsx';
 import ScreenPresetPicker from './components/ScreenPresetPicker.jsx';
@@ -73,7 +72,6 @@ export default function App() {
   const [previewData, setPreviewData] = useState(null);
   const [toast, setToast] = useState(null);
   const [undoCfg, setUndoCfg] = useState(null);
-  const [focusedWidgetId, setFocusedWidgetId] = useState(null);
 
   useEffect(() => {
     fetchConfig()
@@ -372,7 +370,10 @@ export default function App() {
               cfg={cfg}
               onPatch={patchCfg}
               onPatchNested={patchNested}
-              onJumpToSettings={(id) => setFocusedWidgetId(id)}
+              onReplaceConfig={(next) => {
+                setCfg(migrateConfigToScreens(next));
+                setStatus('dirty');
+              }}
             />
           )}
           <span className="terminal-line" style={{ fontSize: 10 }}>
@@ -435,9 +436,6 @@ export default function App() {
               previewData={livePreviewData}
               onChange={(next) => updateScreenLayout(editScreen.id, next)}
               onError={showToast}
-              onJumpToSettings={(widgetId) => {
-                setFocusedWidgetId(widgetId);
-              }}
             />
             <div className="editor-help">
               DRAG TILE TO MOVE · CORNER TO RESIZE · × OR DRAG TO TRASH · DRAG POOL CARD ONTO CANVAS
@@ -460,18 +458,6 @@ export default function App() {
               canDelete={screens.length > 1}
             />
           )}
-          <Settings
-            cfg={cfg}
-            layout={layout}
-            onPatch={patchCfg}
-            onPatchNested={patchNested}
-            focusedWidgetId={focusedWidgetId}
-            onFocusHandled={() => setFocusedWidgetId(null)}
-            onReplaceConfig={(next) => {
-              setCfg(migrateConfigToScreens(next));
-              setStatus('dirty');
-            }}
-          />
         </div>
       </main>
 

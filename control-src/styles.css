@@ -1524,8 +1524,28 @@ input[type="text"], input[type="url"], textarea {
   cursor: pointer;
   color: var(--ink);
 }
-.gdm-item:hover { background: var(--ink); color: #fff; }
-.gdm-item:hover .gdm-item-hint { color: #ccc; }
+.gdm-item:hover:not(:disabled) { background: var(--ink); color: #fff; }
+.gdm-item:hover:not(:disabled) .gdm-item-hint { color: #ccc; }
+.gdm-item-disabled { color: #aaa; cursor: not-allowed; }
+.gdm-item-disabled .gdm-item-hint { color: #aaa; }
+.gdm-backup {
+  border-top: 1.5px solid var(--ink);
+  padding: 10px 14px;
+  background: #f4f1e7;
+}
+.gdm-backup-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 6px;
+}
+.gdm-backup-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.gdm-backup-row .btn { padding: 4px 10px; font-size: 11px; }
 .gdm-item-label { font-weight: 500; }
 .gdm-item-hint {
   font-size: 10px;
