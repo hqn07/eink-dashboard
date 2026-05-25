@@ -653,8 +653,8 @@ input[type="text"], input[type="url"], textarea {
 }
 
 .tile-remove, .tile-settings {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   background: #fff;
   border: 2px solid var(--ink);
   color: var(--ink);
@@ -669,6 +669,23 @@ input[type="text"], input[type="url"], textarea {
   padding: 0;
 }
 .tile-remove:hover, .tile-settings:hover { background: var(--ink); color: #fff; }
+.tile-remove svg, .tile-settings svg { display: block; }
+
+/* Buttons that combine a Phosphor icon with text — keep them aligned */
+.btn-iconed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.btn-iconed svg { flex-shrink: 0; }
+.gdm-trigger.btn-iconed,
+.gdm-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.wsm-close svg { display: block; }
 
 /* Editor 1-bit preview — uses an SVG feComponentTransfer filter that
  * actually thresholds each channel at 0.5 (matches the server's sharp

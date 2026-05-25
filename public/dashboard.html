@@ -158,50 +158,68 @@
     }[c]));
   }
 
-  // Icon SVGs — pure black/white, scale to any size via CSS
+  // Icon SVGs — keep this map in sync with widget-render.js. Heavier
+  // strokes + solid silhouettes so the 1-bit threshold doesn't dither
+  // thin edges. Style follows the Erik Flowers / Bas Milius weather
+  // icon vocabulary (8-ray sun, cumulus silhouette, slanted droplets,
+  // jagged bolt, hex snowflakes, stacked fog lines).
   const ICONS = {
-    Clear: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="22" fill="#000"/>
+    Clear: `<svg viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="18" fill="none" stroke="#000" stroke-width="6"/>
       ${Array.from({length:8}, (_,i)=>{
-        const a = i*Math.PI/4;
-        const x1 = 50 + 30*Math.cos(a), y1 = 50 + 30*Math.sin(a);
+        const a = i*Math.PI/4 + Math.PI/16;
+        const x1 = 50 + 28*Math.cos(a), y1 = 50 + 28*Math.sin(a);
         const x2 = 50 + 42*Math.cos(a), y2 = 50 + 42*Math.sin(a);
-        return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#000" stroke-width="5" stroke-linecap="round"/>`;
-      }).join('')}</svg>`,
+        return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#000" stroke-width="6" stroke-linecap="round"/>`;
+      }).join('')}
+    </svg>`,
     Clouds: `<svg viewBox="0 0 100 100">
-      <path d="M 25 65 Q 15 65 15 55 Q 15 45 25 45 Q 25 30 40 30 Q 55 30 58 45 Q 75 45 75 60 Q 75 70 65 70 L 25 70 Z"
-        fill="#000"/></svg>`,
+      <path d="M 22 70 Q 8 70 8 56 Q 8 42 24 42 Q 28 26 46 26 Q 64 26 68 42 Q 88 42 88 60 Q 88 72 74 72 Z" fill="#000"/>
+    </svg>`,
+    PartlyCloudy: `<svg viewBox="0 0 100 100">
+      <circle cx="34" cy="36" r="14" fill="none" stroke="#000" stroke-width="5"/>
+      ${[0,1,2,3,4,5].map(i => {
+        const a = i*Math.PI/3 - Math.PI/2;
+        const x1 = 34 + 20*Math.cos(a), y1 = 36 + 20*Math.sin(a);
+        const x2 = 34 + 28*Math.cos(a), y2 = 36 + 28*Math.sin(a);
+        return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#000" stroke-width="5" stroke-linecap="round"/>`;
+      }).join('')}
+      <path d="M 35 80 Q 22 80 22 70 Q 22 58 36 58 Q 40 46 56 46 Q 72 46 75 58 Q 90 58 90 70 Q 90 80 78 80 Z" fill="#000"/>
+    </svg>`,
     Rain: `<svg viewBox="0 0 100 100">
-      <path d="M 25 50 Q 15 50 15 40 Q 15 30 25 30 Q 25 18 40 18 Q 55 18 58 30 Q 75 30 75 45 Q 75 55 65 55 L 25 55 Z"
-        fill="#000"/>
-      <line x1="30" y1="65" x2="26" y2="80" stroke="#000" stroke-width="4" stroke-linecap="round"/>
-      <line x1="50" y1="65" x2="46" y2="80" stroke="#000" stroke-width="4" stroke-linecap="round"/>
-      <line x1="70" y1="65" x2="66" y2="80" stroke="#000" stroke-width="4" stroke-linecap="round"/>
+      <path d="M 22 52 Q 8 52 8 40 Q 8 26 24 26 Q 28 12 46 12 Q 64 12 68 26 Q 88 26 88 42 Q 88 56 74 56 Z" fill="#000"/>
+      ${[30,50,70].map(x=>`
+        <path d="M ${x} 64 L ${x-5} 84" stroke="#000" stroke-width="5" stroke-linecap="round" fill="none"/>
+      `).join('')}
+    </svg>`,
+    Drizzle: `<svg viewBox="0 0 100 100">
+      <path d="M 22 52 Q 8 52 8 40 Q 8 26 24 26 Q 28 12 46 12 Q 64 12 68 26 Q 88 26 88 42 Q 88 56 74 56 Z" fill="#000"/>
+      ${[28,42,56,70,82].map(x=>`
+        <circle cx="${x}" cy="74" r="3" fill="#000"/>
+      `).join('')}
     </svg>`,
     Thunderstorm: `<svg viewBox="0 0 100 100">
-      <path d="M 25 45 Q 15 45 15 35 Q 15 25 25 25 Q 25 12 40 12 Q 55 12 58 25 Q 75 25 75 40 Q 75 50 65 50 L 25 50 Z"
-        fill="#000"/>
-      <polygon points="48,55 38,75 48,75 42,90 60,68 50,68 56,55" fill="#000"/>
+      <path d="M 22 48 Q 8 48 8 36 Q 8 22 24 22 Q 28 8 46 8 Q 64 8 68 22 Q 88 22 88 38 Q 88 52 74 52 Z" fill="#000"/>
+      <polygon points="52,56 38,82 50,82 42,96 64,68 52,68 60,56" fill="#000"/>
     </svg>`,
     Snow: `<svg viewBox="0 0 100 100">
-      <path d="M 25 45 Q 15 45 15 35 Q 15 25 25 25 Q 25 12 40 12 Q 55 12 58 25 Q 75 25 75 40 Q 75 50 65 50 L 25 50 Z"
-        fill="#000"/>
-      ${[30,50,70].map(x => `
+      <path d="M 22 48 Q 8 48 8 36 Q 8 22 24 22 Q 28 8 46 8 Q 64 8 68 22 Q 88 22 88 38 Q 88 52 74 52 Z" fill="#000"/>
+      ${[26,50,74].map(x=>`
         <g stroke="#000" stroke-width="3" stroke-linecap="round">
-          <line x1="${x-6}" y1="70" x2="${x+6}" y2="70"/>
-          <line x1="${x}" y1="64" x2="${x}" y2="76"/>
-          <line x1="${x-4}" y1="66" x2="${x+4}" y2="74"/>
-          <line x1="${x-4}" y1="74" x2="${x+4}" y2="66"/>
+          <line x1="${x-8}" y1="76" x2="${x+8}" y2="76"/>
+          <line x1="${x}" y1="68" x2="${x}" y2="84"/>
+          <line x1="${x-6}" y1="70" x2="${x+6}" y2="82"/>
+          <line x1="${x-6}" y1="82" x2="${x+6}" y2="70"/>
         </g>
       `).join('')}
     </svg>`,
     Mist: `<svg viewBox="0 0 100 100">
-      ${[30,45,60,75].map((y,i) => `
-        <line x1="${15 + (i%2)*5}" y1="${y}" x2="${85 - (i%2)*5}" y2="${y}"
-          stroke="#000" stroke-width="5" stroke-linecap="round"/>
+      ${[24,40,56,72,84].map((y,i)=>`
+        <line x1="${10 + (i%2)*8}" y1="${y}" x2="${90 - (i%2)*8}" y2="${y}"
+          stroke="#000" stroke-width="6" stroke-linecap="round"/>
       `).join('')}
     </svg>`
   };
-  ICONS.Drizzle = ICONS.Rain;
   ICONS.Fog = ICONS.Mist;
   ICONS.Haze = ICONS.Mist;
 

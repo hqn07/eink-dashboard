@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import GridLayout from 'react-grid-layout';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Gear, X } from '@phosphor-icons/react';
 import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById, makeInstance } from '../widgets.js';
 import { renderWidget, renderHeader, renderFooter, isHeaderOn, isFooterOn, headerVariant, footerVariant } from '../widget-render.js';
 import WidgetSettingsModal from './WidgetSettingsModal.jsx';
@@ -424,14 +425,14 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
                       onMouseDown={(e) => e.stopPropagation()}
                       onTouchStart={(e) => e.stopPropagation()}
                       onClick={(e) => { e.stopPropagation(); setModalForId(l.id); }}
-                    >⚙</button>
+                    ><Gear size={14} weight="bold" /></button>
                     <button
                       className="tile-remove"
                       title="Remove"
                       onMouseDown={(e) => e.stopPropagation()}
                       onTouchStart={(e) => e.stopPropagation()}
                       onClick={(e) => { e.stopPropagation(); removeFromCanvas(l.id); }}
-                    >×</button>
+                    ><X size={14} weight="bold" /></button>
                   </div>
                   <div className="live-tile-body">
                     <div

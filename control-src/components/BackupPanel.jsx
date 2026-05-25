@@ -1,4 +1,5 @@
 import React from 'react';
+import { DownloadSimple, UploadSimple, ArrowCounterClockwise } from '@phosphor-icons/react';
 import { resetConfig } from '../api.js';
 
 // Config export / import / reset. Lives inside the Global defaults
@@ -49,13 +50,17 @@ export default function BackupPanel({ cfg, onReplaceConfig }) {
     <div className="gdm-backup">
       <div className="gdm-backup-title">Backup &amp; reset</div>
       <div className="gdm-backup-row">
-        <button type="button" className="btn" onClick={exportJson}>↓ EXPORT</button>
-        <label className="btn" style={{ cursor: 'pointer' }}>
-          ↑ IMPORT
+        <button type="button" className="btn btn-iconed" onClick={exportJson}>
+          <DownloadSimple size={12} weight="bold" /> EXPORT
+        </button>
+        <label className="btn btn-iconed" style={{ cursor: 'pointer' }}>
+          <UploadSimple size={12} weight="bold" /> IMPORT
           <input type="file" accept="application/json" style={{ display: 'none' }}
             onChange={onImportFile} />
         </label>
-        <button type="button" className="btn btn-danger" onClick={doReset}>↺ RESET</button>
+        <button type="button" className="btn btn-danger btn-iconed" onClick={doReset}>
+          <ArrowCounterClockwise size={12} weight="bold" /> RESET
+        </button>
       </div>
     </div>
   );

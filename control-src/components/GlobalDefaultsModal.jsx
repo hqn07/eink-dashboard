@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { X } from '@phosphor-icons/react';
 import { widgetById } from '../widgets.js';
 import WidgetForm, { snapshotGlobalForWidget } from './WidgetForm.jsx';
 
@@ -133,7 +134,7 @@ export default function GlobalDefaultsModal({ widgetId, cfg, onPatch, onPatchNes
               <span className="gdm-modal-prefix">GLOBAL DEFAULT</span>
               {def.label}
             </div>
-            <button className="wsm-close" aria-label="Close" onClick={attemptClose}>×</button>
+            <button className="wsm-close" aria-label="Close" onClick={attemptClose}><X size={16} weight="bold" /></button>
           </div>
 
           <div className="wsm-body wsm-body-single">

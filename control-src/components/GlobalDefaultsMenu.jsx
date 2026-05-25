@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Gear, CaretDown, CaretUp } from '@phosphor-icons/react';
 import { WIDGET_REGISTRY } from '../widgets.js';
 import { supportsPerInstance } from './WidgetForm.jsx';
 import GlobalDefaultsModal from './GlobalDefaultsModal.jsx';
@@ -41,7 +42,7 @@ export default function GlobalDefaultsMenu({ cfg, onPatch, onPatchNested, onRepl
           aria-haspopup="menu"
           onClick={() => setOpen(o => !o)}
         >
-          ⚙ GLOBAL DEFAULTS {open ? '▴' : '▾'}
+          <Gear size={14} weight="bold" /> GLOBAL DEFAULTS {open ? <CaretUp size={12} weight="bold" /> : <CaretDown size={12} weight="bold" />}
         </button>
         <AnimatePresence>
           {open && (

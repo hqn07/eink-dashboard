@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
+import { Star, GridFour, ArrowCounterClockwise } from '@phosphor-icons/react';
 import { fetchConfig, saveConfig, fetchPreviewData } from './api.js';
 import {
   WIDGET_REGISTRY,
@@ -406,22 +407,22 @@ export default function App() {
                 )}
                 {editScreen && !editScreen.isDefault && (
                   <button
-                    className="btn btn-ghost"
+                    className="btn btn-ghost btn-iconed"
                     style={{ padding: '4px 10px', fontSize: 11 }}
                     title="Show this screen when no schedule matches"
                     onClick={() => setDefaultScreen(editScreen.id)}
                   >
-                    ★ MAKE DEFAULT
+                    <Star size={12} weight="bold" /> MAKE DEFAULT
                   </button>
                 )}
-                <button className="btn" onClick={() => setShowGrid(g => !g)}
+                <button className="btn btn-iconed" onClick={() => setShowGrid(g => !g)}
                   style={{ padding: '4px 10px', fontSize: 11 }}>
-                  {showGrid ? '◧ HIDE GRID' : '◧ SHOW GRID'}
+                  <GridFour size={12} weight="bold" /> {showGrid ? 'HIDE GRID' : 'SHOW GRID'}
                 </button>
-                <button className="btn btn-ghost"
+                <button className="btn btn-ghost btn-iconed"
                   style={{ padding: '4px 10px', fontSize: 11 }}
                   onClick={() => updateScreenLayout(editScreen.id, [])}>
-                  ↻ CLEAR
+                  <ArrowCounterClockwise size={12} weight="bold" /> CLEAR
                 </button>
               </div>
             </div>
