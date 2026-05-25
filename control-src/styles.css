@@ -1404,3 +1404,93 @@ input[type="text"], input[type="url"], textarea {
   }
   .wsm-col-settings { border-right: 0; border-bottom: 2px solid var(--ink); }
 }
+
+/* Single-column variant for global-defaults modal (no preview) */
+.wsm-body-single { grid-template-columns: 1fr; }
+.wsm-body-single .wsm-col-settings { border-right: 0; }
+
+/* ============ GLOBAL DEFAULTS DROPDOWN (top-right) ============ */
+.gdm-wrap { position: relative; display: inline-block; }
+.gdm-trigger {
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-size: 11px;
+  padding: 8px 14px;
+}
+.gdm-trigger-open { background: var(--ink); color: #fff; }
+.gdm-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 320px;
+  max-height: 70vh;
+  overflow: auto;
+  background: var(--paper, #faf8f3);
+  border: 2px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+}
+.gdm-menu-header,
+.gdm-menu-footer {
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  background: var(--ink);
+  color: #fff;
+}
+.gdm-menu-footer {
+  background: transparent;
+  color: #666;
+  letter-spacing: 0.5px;
+  font-weight: 400;
+  text-transform: none;
+  border-top: 1.5px solid var(--ink);
+}
+.gdm-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1 1 auto;
+}
+.gdm-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #ddd;
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink);
+}
+.gdm-item:hover { background: var(--ink); color: #fff; }
+.gdm-item:hover .gdm-item-hint { color: #ccc; }
+.gdm-item-label { font-weight: 500; }
+.gdm-item-hint {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #888;
+  text-transform: uppercase;
+}
+
+/* Global-defaults modal title prefix */
+.gdm-modal-prefix {
+  display: block;
+  font-family: 'Oswald', 'Arial Narrow', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 2px;
+}
+.gdm-modal-panel { max-width: 640px; }

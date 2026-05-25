@@ -25,6 +25,7 @@ import ScreenPanel from './components/ScreenPanel.jsx';
 import ChromePanel from './components/ChromePanel.jsx';
 import ScheduleTimeline from './components/ScheduleTimeline.jsx';
 import SetupWizard from './components/SetupWizard.jsx';
+import GlobalDefaultsMenu from './components/GlobalDefaultsMenu.jsx';
 
 const STATUS = {
   syncing: { label: 'SYNCING...', cls: 'saving' },
@@ -366,6 +367,13 @@ export default function App() {
           <div className="tagline">E-Ink · 800 × 480 · Editorial</div>
         </div>
         <div className="actions">
+          {cfg && (
+            <GlobalDefaultsMenu
+              cfg={cfg}
+              onPatchNested={patchNested}
+              onJumpToSettings={(id) => setFocusedWidgetId(id)}
+            />
+          )}
           <span className="terminal-line" style={{ fontSize: 10 }}>
             &gt; LIVE EDIT · AUTO-SAVE
           </span>
