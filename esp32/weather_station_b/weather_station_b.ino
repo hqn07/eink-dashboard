@@ -68,6 +68,14 @@ void beep(int ms) {
   digitalWrite(BUZZER_PIN, LOW);
 }
 
+// Pin-change ISR: mirror button state to buzzer. While awake, any press
+// produces an immediate buzz for the duration the button is held. During
+// deep sleep the CPU is off and this ISR doesn't run — the ~200 ms boot
+// + beep(50) on buttonWake covers that case instead.
+void IRAM_ATTR onButtonEdge() {
+  digitalWrite(BUZZER_PIN, digitalRead(BTN_REFRESH) == LOW ? HIGH : LOW);
+}
+
 void beepChime() {
   beep(30);
   delay(50);
@@ -389,6 +397,10 @@ void setup() {
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
 
+  // Arm button-mirror ISR so any click while CPU is awake beeps instantly.
+  pinMode(BTN_REFRESH, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(BTN_REFRESH), onButtonEdge, CHANGE);
+
   esp_sleep_wakeup_cause_t wakeCause = esp_sleep_get_wakeup_cause();
   bool coldBoot = (wakeCause == ESP_SLEEP_WAKEUP_UNDEFINED);
   bool buttonWake = (wakeCause == ESP_SLEEP_WAKEUP_EXT1);
@@ -442,11 +454,12 @@ void setup() {
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
 
-  pinMode(BTN_REFRESH, INPUT_PULLUP);
   unsigned long t0 = millis();
   while (digitalRead(BTN_REFRESH) == LOW && millis() - t0 < 5000) {
     delay(10);
   }
+  detachInterrupt(digitalPinToInterrupt(BTN_REFRESH));
+  digitalWrite(BUZZER_PIN, LOW);   // guarantee silent before deep sleep
   rtc_gpio_pulldown_dis((gpio_num_t)BTN_REFRESH);
   rtc_gpio_pullup_en((gpio_num_t)BTN_REFRESH);
 
