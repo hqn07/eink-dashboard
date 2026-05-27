@@ -44,7 +44,14 @@ static const int EPD_CS = 15, EPD_SCK = 13, EPD_MOSI = 14;
 
 SPIClass hspi(HSPI);
 // 3-color driver class. GDEY075Z08 = Waveshare 7.5" V2 B (800×480, B/W/R).
-GxEPD2_3C<GxEPD2_750c_GDEY075Z08, GxEPD2_750c_GDEY075Z08::HEIGHT>
+//
+// Second template arg is the page-buffer height (rows). Full HEIGHT (480)
+// would allocate 800×480/8 × 2 planes = 96 KB DRAM — overflows ESP32
+// dram0_0_seg by ~22 KB once WiFi + mbedtls + Update.h + GxEPD2 share
+// the segment. We bypass the buffer entirely via epd2.writeImage() for
+// the main render; only drawFailScreen uses paged drawing and 60 rows
+// (12 KB) is plenty for a few lines of text.
+GxEPD2_3C<GxEPD2_750c_GDEY075Z08, GxEPD2_750c_GDEY075Z08::HEIGHT / 8>
   display(GxEPD2_750c_GDEY075Z08(EPD_CS, EPD_DC, EPD_RST, EPD_BUSY));
 
 // =================== WIFI ===================
