@@ -61,9 +61,38 @@ static const int EPD_CS = 15, EPD_SCK = 13, EPD_MOSI = 14;
 
 #define WAKE_PIN_MASK (1ULL << BTN_REFRESH)
 
+// Active buzzer (drives itself when HIGH). Direct GPIO drive — ~30 mA
+// stays within the 40 mA pin limit. Passive buzzers won't work here:
+// they need a PWM/tone signal, not just a static HIGH.
+#define BUZZER_PIN   4
+#define LOW_BATT_PCT 10
+
 SPIClass hspi(HSPI);
 GxEPD2_BW<GxEPD2_750_GDEY075T7, GxEPD2_750_GDEY075T7::HEIGHT>
   display(GxEPD2_750_GDEY075T7(EPD_CS, EPD_DC, EPD_RST, EPD_BUSY));
+
+// =================== BUZZER ===================
+
+void beep(int ms) {
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(ms);
+  digitalWrite(BUZZER_PIN, LOW);
+}
+
+// Two short beeps with a small gap — "OK / done" chime.
+void beepChime() {
+  beep(30);
+  delay(50);
+  beep(30);
+}
+
+// Two longer beeps — louder/longer than chime so a low-battery alert
+// isn't mistaken for a successful-refresh chime.
+void beepLowBattery() {
+  beep(200);
+  delay(100);
+  beep(200);
+}
 
 // =================== WIFI ===================
 
@@ -372,6 +401,9 @@ void setup() {
   Serial.println("\n=== E-Ink Dashboard Client ===");
   Serial.printf("Firmware: %s board=%s\n", FW_VERSION, FW_BOARD);
 
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
+
   // initial=true in GxEPD2 runs the panel through its full init + clear
   // pass. That's needed exactly once on a cold boot; on a deep-sleep wake
   // it just wipes the previously-displayed image to white before the new
@@ -379,6 +411,10 @@ void setup() {
   esp_sleep_wakeup_cause_t wakeCause = esp_sleep_get_wakeup_cause();
   bool coldBoot = (wakeCause == ESP_SLEEP_WAKEUP_UNDEFINED);
   bool buttonWake = (wakeCause == ESP_SLEEP_WAKEUP_EXT1);
+
+  // Acknowledge the press immediately — WiFi connect takes seconds and
+  // the user is standing there waiting to hear something happened.
+  if (buttonWake) beep(50);
   const char* wakeLabel = coldBoot ? "cold/POR"
                         : buttonWake ? "BTN_REFRESH"
                         : "timer";
@@ -394,6 +430,10 @@ void setup() {
   float battV   = readBatteryVoltage();
   int   battPct = batteryPctFromVoltage(battV);
   Serial.printf("Battery: %.2fV (%d%%)\n", battV, battPct);
+
+  // Audible low-battery alert before WiFi — if battery is critical the
+  // wake may fail entirely and the user would never hear about it.
+  if (battPct < LOW_BATT_PCT) beepLowBattery();
 
   int sleepMin = DEFAULT_SLEEP_MIN;
 
@@ -413,6 +453,7 @@ void setup() {
     if (img) {
       pushImage(img);
       free(img);
+      beepChime();   // "refresh done"
       sleepMin = fetchSleepMinutes();
       Serial.printf("Sleep %d min\n", sleepMin);
     } else {
