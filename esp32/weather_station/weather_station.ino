@@ -64,8 +64,17 @@ static const int EPD_CS = 15, EPD_SCK = 13, EPD_MOSI = 14;
 // Active buzzer (drives itself when HIGH). Direct GPIO drive — ~30 mA
 // stays within the 40 mA pin limit. Passive buzzers won't work here:
 // they need a PWM/tone signal, not just a static HIGH.
-#define BUZZER_PIN   4
-#define LOW_BATT_PCT 10
+//
+// Volume is software-controlled via LEDC PWM. The 20 kHz carrier is
+// above human hearing so it doesn't add its own whine — it modulates
+// the effective voltage the buzzer sees, which scales its loudness.
+// Range 0-255. ~64 = soft; below ~10 the buzzer falls under its
+// minimum operating voltage and goes silent.
+#define BUZZER_PIN     4
+#define BUZZER_FREQ    20000
+#define BUZZER_RES     8
+#define BUZZER_VOLUME  64
+#define LOW_BATT_PCT   10
 
 SPIClass hspi(HSPI);
 GxEPD2_BW<GxEPD2_750_GDEY075T7, GxEPD2_750_GDEY075T7::HEIGHT>
@@ -73,10 +82,13 @@ GxEPD2_BW<GxEPD2_750_GDEY075T7, GxEPD2_750_GDEY075T7::HEIGHT>
 
 // =================== BUZZER ===================
 
+inline void buzzerOn()  { ledcWrite(BUZZER_PIN, BUZZER_VOLUME); }
+inline void buzzerOff() { ledcWrite(BUZZER_PIN, 0); }
+
 void beep(int ms) {
-  digitalWrite(BUZZER_PIN, HIGH);
+  buzzerOn();
   delay(ms);
-  digitalWrite(BUZZER_PIN, LOW);
+  buzzerOff();
 }
 
 // Pin-change ISR: mirror button state to buzzer. While awake, any press
@@ -84,7 +96,7 @@ void beep(int ms) {
 // deep sleep the CPU is off and this ISR doesn't run — the ~200 ms boot
 // + beep(50) on buttonWake covers that case instead.
 void IRAM_ATTR onButtonEdge() {
-  digitalWrite(BUZZER_PIN, digitalRead(BTN_REFRESH) == LOW ? HIGH : LOW);
+  ledcWrite(BUZZER_PIN, digitalRead(BTN_REFRESH) == LOW ? BUZZER_VOLUME : 0);
 }
 
 // Two short beeps with a small gap — "OK / done" chime.
@@ -409,8 +421,8 @@ void setup() {
   Serial.println("\n=== E-Ink Dashboard Client ===");
   Serial.printf("Firmware: %s board=%s\n", FW_VERSION, FW_BOARD);
 
-  pinMode(BUZZER_PIN, OUTPUT);
-  digitalWrite(BUZZER_PIN, LOW);
+  ledcAttach(BUZZER_PIN, BUZZER_FREQ, BUZZER_RES);
+  buzzerOff();
 
   // Arm button-mirror ISR so any click while CPU is awake beeps instantly.
   pinMode(BTN_REFRESH, INPUT_PULLUP);
@@ -484,7 +496,8 @@ void setup() {
     delay(10);
   }
   detachInterrupt(digitalPinToInterrupt(BTN_REFRESH));
-  digitalWrite(BUZZER_PIN, LOW);   // guarantee silent before deep sleep
+  buzzerOff();   // guarantee silent before deep sleep
+  ledcDetach(BUZZER_PIN);
   rtc_gpio_pulldown_dis((gpio_num_t)BTN_REFRESH);
   rtc_gpio_pullup_en((gpio_num_t)BTN_REFRESH);
 
