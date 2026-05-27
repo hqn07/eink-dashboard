@@ -44,8 +44,8 @@ static const int EPD_CS = 15, EPD_SCK = 13, EPD_MOSI = 14;
 
 SPIClass hspi(HSPI);
 // 3-color driver class. GDEY075Z08 = Waveshare 7.5" V2 B (800×480, B/W/R).
-GxEPD2_3C<GxEPD2_750_GDEY075Z08, GxEPD2_750_GDEY075Z08::HEIGHT>
-  display(GxEPD2_750_GDEY075Z08(EPD_CS, EPD_DC, EPD_RST, EPD_BUSY));
+GxEPD2_3C<GxEPD2_750c_GDEY075Z08, GxEPD2_750c_GDEY075Z08::HEIGHT>
+  display(GxEPD2_750c_GDEY075Z08(EPD_CS, EPD_DC, EPD_RST, EPD_BUSY));
 
 // =================== WIFI ===================
 
