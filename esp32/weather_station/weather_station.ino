@@ -14,7 +14,9 @@
 #define USE_HSPI_FOR_EPD
 
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
+#include <HTTPUpdate.h>
 #include <ArduinoJson.h>
 #include <GxEPD2_BW.h>
 #include <SPI.h>
@@ -24,6 +26,12 @@
 // Per-device secrets live in secrets.h (gitignored). Copy
 // secrets.h.example to secrets.h and fill in your values.
 #include "secrets.h"
+
+// OTA: bump on every release. Server returns 204 unless its newest
+// matching `bw-X.Y.Z.bin` is strictly greater than this.
+#define FW_VERSION "1.0.0"
+#define FW_BOARD   "bw"
+#define OTA_MIN_BATT_PCT 50
 
 #define DEFAULT_SLEEP_MIN 30
 
@@ -216,6 +224,85 @@ void postBattery(float v, int pct) {
   http.end();
 }
 
+// =================== OTA ===================
+//
+// Each timer wake: GET /api/firmware/manifest?board=...&from=FW_VERSION.
+// Server returns 204 when up-to-date, otherwise {version, url, size}.
+// If newer, run httpUpdate which flashes the inactive OTA partition and
+// reboots into the new build. Skipped on button wake (user wants instant
+// refresh, not a 30s flash) and on low battery (brick risk if LiPo dies
+// mid-flash). setInsecure() skips TLS cert validation — DEVICE_TOKEN in
+// the URL is the auth, cert pinning isn't worth the rotation pain.
+void checkForUpdate(int battPct, bool buttonWake) {
+  if (buttonWake) {
+    Serial.println("OTA: skip on button wake");
+    return;
+  }
+  if (battPct < OTA_MIN_BATT_PCT) {
+    Serial.printf("OTA: skip, battery %d%% < %d%%\n", battPct, OTA_MIN_BATT_PCT);
+    return;
+  }
+
+  String url = String(serverBase) + "/api/firmware/manifest?board=" + FW_BOARD + "&from=" + FW_VERSION;
+  url = addToken(url);
+
+  HTTPClient http;
+  http.setTimeout(10000);
+  http.begin(url);
+  int code = http.GET();
+  if (code == 204) {
+    Serial.println("OTA: up-to-date");
+    http.end();
+    return;
+  }
+  if (code != 200) {
+    Serial.printf("OTA: manifest HTTP %d\n", code);
+    http.end();
+    return;
+  }
+  String body = http.getString();
+  http.end();
+
+  StaticJsonDocument<512> doc;
+  if (deserializeJson(doc, body) != DeserializationError::Ok) {
+    Serial.println("OTA: bad manifest JSON");
+    return;
+  }
+  String newVer = String((const char*)(doc["version"] | ""));
+  String binUrl = String((const char*)(doc["url"] | ""));
+  if (binUrl.length() == 0) {
+    Serial.println("OTA: empty url");
+    return;
+  }
+  Serial.printf("OTA: %s -> %s\n", FW_VERSION, newVer.c_str());
+  Serial.printf("OTA: %s\n", binUrl.c_str());
+
+  WiFiClientSecure secureClient;
+  secureClient.setInsecure();
+  WiFiClient plainClient;
+  bool isHttps = binUrl.startsWith("https://");
+
+  httpUpdate.rebootOnUpdate(true);
+  t_httpUpdate_return result = isHttps
+    ? httpUpdate.update(secureClient, binUrl)
+    : httpUpdate.update(plainClient, binUrl);
+
+  switch (result) {
+    case HTTP_UPDATE_FAILED:
+      Serial.printf("OTA FAILED (%d): %s\n",
+                    httpUpdate.getLastError(),
+                    httpUpdate.getLastErrorString().c_str());
+      break;
+    case HTTP_UPDATE_NO_UPDATES:
+      Serial.println("OTA: no updates");
+      break;
+    case HTTP_UPDATE_OK:
+      // Unreachable — rebootOnUpdate(true) restarts before we return.
+      Serial.println("OTA: applied (rebooting)");
+      break;
+  }
+}
+
 int fetchSleepMinutes() {
   String url = addToken(String(serverBase) + "/sleep");
   HTTPClient http;
@@ -283,6 +370,7 @@ void setup() {
   Serial.begin(115200);
   delay(200);
   Serial.println("\n=== E-Ink Dashboard Client ===");
+  Serial.printf("Firmware: %s board=%s\n", FW_VERSION, FW_BOARD);
 
   // initial=true in GxEPD2 runs the panel through its full init + clear
   // pass. That's needed exactly once on a cold boot; on a deep-sleep wake
@@ -315,6 +403,7 @@ void setup() {
   } else {
     warmServer();   // wake Railway dyno before the big download
     postBattery(battV, battPct);
+    checkForUpdate(battPct, buttonWake);   // may not return (reboots on success)
     uint8_t* img = downloadImage();
     if (!img) {
       Serial.println("Retry download once after 2s");
