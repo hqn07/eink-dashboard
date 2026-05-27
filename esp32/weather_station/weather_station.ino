@@ -91,12 +91,20 @@ void beep(int ms) {
   buzzerOff();
 }
 
-// Pin-change ISR: mirror button state to buzzer. While awake, any press
-// produces an immediate buzz for the duration the button is held. During
-// deep sleep the CPU is off and this ISR doesn't run — the ~200 ms boot
-// + beep(50) on buttonWake covers that case instead.
+// Set by the button ISR when a press happens mid-cycle. The main refresh
+// loop re-runs while this flag is set, so a click during the active
+// window queues another fetch+render instead of being ignored.
+volatile bool refreshRequested = false;
+
+// Pin-change ISR: mirror button state to buzzer AND latch a refresh
+// request on press. While awake, any press buzzes for the duration the
+// button is held; on release the buzzer goes silent. During deep sleep
+// the CPU is off and this ISR doesn't run — the ~200 ms boot + beep(50)
+// on buttonWake covers that case instead.
 void IRAM_ATTR onButtonEdge() {
-  ledcWrite(BUZZER_PIN, digitalRead(BTN_REFRESH) == LOW ? BUZZER_VOLUME : 0);
+  bool pressed = digitalRead(BTN_REFRESH) == LOW;
+  ledcWrite(BUZZER_PIN, pressed ? BUZZER_VOLUME : 0);
+  if (pressed) refreshRequested = true;
 }
 
 // Two short beeps with a small gap — "OK / done" chime.
@@ -468,22 +476,30 @@ void setup() {
     warmServer();   // wake Railway dyno before the big download
     postBattery(battV, battPct);
     checkForUpdate(battPct, buttonWake);   // may not return (reboots on success)
-    uint8_t* img = downloadImage();
-    if (!img) {
-      Serial.println("Retry download once after 2s");
-      delay(2000);
-      img = downloadImage();
-    }
-    if (img) {
-      pushImage(img);
-      free(img);
-      beepChime();   // "refresh done"
-      sleepMin = fetchSleepMinutes();
-      Serial.printf("Sleep %d min\n", sleepMin);
-    } else {
-      drawFailScreen("Could not fetch image");
-      sleepMin = 5;
-    }
+
+    // Refresh loop: re-runs while a button press came in during the
+    // last iteration, so an awake-state click triggers another refresh
+    // instead of being dropped on the floor.
+    do {
+      refreshRequested = false;
+      uint8_t* img = downloadImage();
+      if (!img) {
+        Serial.println("Retry download once after 2s");
+        delay(2000);
+        img = downloadImage();
+      }
+      if (img) {
+        pushImage(img);
+        free(img);
+        beepChime();   // "refresh done"
+        sleepMin = fetchSleepMinutes();
+        Serial.printf("Sleep %d min\n", sleepMin);
+      } else {
+        drawFailScreen("Could not fetch image");
+        sleepMin = 5;
+      }
+      if (refreshRequested) Serial.println("Press during cycle — re-refreshing");
+    } while (refreshRequested);
   }
 
   WiFi.disconnect(true);
