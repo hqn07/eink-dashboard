@@ -141,8 +141,14 @@ async function fetchMacNowPlaying() {
       return null;
     }
     const artwork = await fetchArtwork();
-    const bundle = bundleR.trim();
-    const label = SOURCE_LABELS[bundle] || (bundle ? bundle.split('.').pop().toUpperCase() : '');
+    const bundleRaw = bundleR.trim();
+    // nowplaying-cli can print the literal string "null" when MediaRemote
+    // doesn't expose a bundle id for the current source — filter that out
+    // so the tile doesn't render "via NULL".
+    const bundle = (bundleRaw && bundleRaw.toLowerCase() !== 'null') ? bundleRaw : '';
+    const label = bundle
+      ? (SOURCE_LABELS[bundle] || bundle.split('.').pop().toUpperCase())
+      : '';
     const isPlaying = (parseFloat(rateR) || 0) > 0;
     // nowplaying-cli's `elapsedTime` is a snapshot — only updated when
     // the media player emits a state change (play/pause/seek). When the

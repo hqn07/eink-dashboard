@@ -563,12 +563,13 @@ html, body {
 .mac-np-stacked .mac-np-bookend-left  { text-align: right; }
 .mac-np-stacked .mac-np-bookend-right { text-align: left;  }
 .mac-np-stacked .mac-np-stacked-text {
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 4px;
   text-align: center;
+  width: 100%;
 }
-.mac-np-stacked .mac-np-title { text-align: center; }
-.mac-np-stacked .mac-np-meta  { text-align: center; }
-.mac-np-stacked .mac-np-source { text-align: center; }
+.mac-np-stacked .mac-np-title { text-align: center; width: 100%; }
+.mac-np-stacked .mac-np-meta  { text-align: center; width: 100%; }
+.mac-np-stacked .mac-np-source { text-align: center; width: 100%; }
 .mac-np-bar-only {
   margin-top: 6px;
 }

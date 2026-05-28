@@ -110,10 +110,11 @@ export const WIDGET_REGISTRY = [
     requires: 'mac_nowplaying',
     minSize: { w: 8, h: 4 },
     sizes: {
-      S:  { w: 8,  h: 4 },
-      M:  { w: 12, h: 5 },
-      L:  { w: 16, h: 6 },
-      XL: { w: 24, h: 8 }
+      S:   { w: 8,  h: 4 },
+      M:   { w: 12, h: 5 },
+      L:   { w: 16, h: 8 },
+      XL:  { w: 24, h: 10 },
+      XXL: { w: 24, h: 12 }
     },
     defaultSize: 'M',
     defaults: () => ({})
