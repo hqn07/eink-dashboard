@@ -29,7 +29,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.4.2"
+#define FW_VERSION "1.4.3"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -682,7 +682,10 @@ void setup() {
     // On cold boot the panel was wiped to white by display.init()'s
     // clear pass — the saved body ETag would mismatch reality, so we
     // force a full body fetch even if the server would have sent 304.
-    bool forceBodyOnNext = coldBoot;
+    // Button press is the user explicitly asking for a clean refresh —
+    // bypass the ETag short-circuit and force a full-window refresh so
+    // any ghosting from accumulated partial cycles gets scrubbed too.
+    bool forceBodyOnNext = coldBoot || buttonWake;
     do {
       refreshRequested = false;
       bool ok = refreshTwoZone(forceBodyOnNext);
