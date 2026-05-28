@@ -541,8 +541,18 @@ html, body {
 }
 
 /* ============ ICON UTIL ============ */
-.icon { display: inline-block; line-height: 0; }
+/* Icons are now <img src="/static/icons/sevesalm/*.svg"> (vendored
+ * sevesalm set). The legacy svg child rule is kept so any straggler
+ * inline <svg class="icon"> still sizes correctly. */
+.icon { display: inline-block; line-height: 0; vertical-align: middle; }
 .icon svg { width: 100%; height: 100%; display: block; }
+img.icon { object-fit: contain; }
+
+/* Footer battery glyph + percent label sit together on the right side
+ * of the footer. Keep the gap tight so the badge reads as one unit. */
+.ftr-battery { display: inline-flex; align-items: center; gap: 4px; }
+.ftr-battery .batt-icon { display: block; }
+.ftr-battery .batt-pct { line-height: 1; }
 
 /* ============ SCREEN 2 — MINIMAL ============ */
 .page-minimal {

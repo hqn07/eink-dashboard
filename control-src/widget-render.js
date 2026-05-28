@@ -20,8 +20,10 @@ function md(s) {
 }
 
 // Per-widget placeholder glyphs. Chunky strokes survive 1-bit threshold.
+// `weather` swapped to the vendored sevesalm cloud icon so the placeholder
+// uses the same visual vocabulary as the live widget.
 const PLACEHOLDER_ICONS = {
-  weather:  '<svg viewBox="0 0 64 64"><path d="M 18 40 Q 10 40 10 32 Q 10 24 18 24 Q 18 14 28 14 Q 38 14 40 24 Q 52 24 52 34 Q 52 42 44 42 L 18 42 Z" fill="none" stroke="#000" stroke-width="4"/></svg>',
+  weather:  '<img src="/static/icons/sevesalm/cloudy.svg" width="64" height="64" alt="" />',
   calendar: '<svg viewBox="0 0 64 64"><rect x="8" y="14" width="48" height="42" fill="none" stroke="#000" stroke-width="4"/><line x1="8" y1="24" x2="56" y2="24" stroke="#000" stroke-width="4"/><line x1="20" y1="8" x2="20" y2="20" stroke="#000" stroke-width="4" stroke-linecap="round"/><line x1="44" y1="8" x2="44" y2="20" stroke="#000" stroke-width="4" stroke-linecap="round"/></svg>',
   stocks:   '<svg viewBox="0 0 64 64"><polyline points="6,46 20,32 30,38 44,18 58,24" fill="none" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><line x1="6" y1="56" x2="58" y2="56" stroke="#000" stroke-width="4"/></svg>'
 };
@@ -40,75 +42,60 @@ function placeholder(title, hint, iconKey) {
   `;
 }
 
-// Monochrome weather icons. Heavier strokes + solid silhouettes — reads
-// cleanly on 1-bit e-ink at all sizes (thin lines would dither). Style
-// is borrowed from the Erik Flowers / Bas Milius open-source weather
-// icon sets — same vocabulary (sun with 8 rays, cumulus silhouette,
-// slanted droplets, jagged bolt, hex snowflakes, stacked fog lines).
-const ICONS = {
-  Clear: `<svg viewBox="0 0 100 100">
-    <circle cx="50" cy="50" r="18" fill="none" stroke="#000" stroke-width="6"/>
-    ${Array.from({length:8}, (_,i)=>{
-      const a = i*Math.PI/4 + Math.PI/16;
-      const x1 = 50 + 28*Math.cos(a), y1 = 50 + 28*Math.sin(a);
-      const x2 = 50 + 42*Math.cos(a), y2 = 50 + 42*Math.sin(a);
-      return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#000" stroke-width="6" stroke-linecap="round"/>`;
-    }).join('')}
-  </svg>`,
-  Clouds: `<svg viewBox="0 0 100 100">
-    <path d="M 22 70 Q 8 70 8 56 Q 8 42 24 42 Q 28 26 46 26 Q 64 26 68 42 Q 88 42 88 60 Q 88 72 74 72 Z"
-      fill="#000"/>
-  </svg>`,
-  PartlyCloudy: `<svg viewBox="0 0 100 100">
-    <circle cx="34" cy="36" r="14" fill="none" stroke="#000" stroke-width="5"/>
-    ${[0,1,2,3,4,5].map(i => {
-      const a = i*Math.PI/3 - Math.PI/2;
-      const x1 = 34 + 20*Math.cos(a), y1 = 36 + 20*Math.sin(a);
-      const x2 = 34 + 28*Math.cos(a), y2 = 36 + 28*Math.sin(a);
-      return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#000" stroke-width="5" stroke-linecap="round"/>`;
-    }).join('')}
-    <path d="M 35 80 Q 22 80 22 70 Q 22 58 36 58 Q 40 46 56 46 Q 72 46 75 58 Q 90 58 90 70 Q 90 80 78 80 Z" fill="#000"/>
-  </svg>`,
-  Rain: `<svg viewBox="0 0 100 100">
-    <path d="M 22 52 Q 8 52 8 40 Q 8 26 24 26 Q 28 12 46 12 Q 64 12 68 26 Q 88 26 88 42 Q 88 56 74 56 Z" fill="#000"/>
-    ${[30,50,70].map((x,i)=>`
-      <path d="M ${x} 64 L ${x-5} 84" stroke="#000" stroke-width="5" stroke-linecap="round" fill="none"/>
-    `).join('')}
-  </svg>`,
-  Drizzle: `<svg viewBox="0 0 100 100">
-    <path d="M 22 52 Q 8 52 8 40 Q 8 26 24 26 Q 28 12 46 12 Q 64 12 68 26 Q 88 26 88 42 Q 88 56 74 56 Z" fill="#000"/>
-    ${[28,42,56,70,82].map(x=>`
-      <circle cx="${x}" cy="74" r="3" fill="#000"/>
-    `).join('')}
-  </svg>`,
-  Thunderstorm: `<svg viewBox="0 0 100 100">
-    <path d="M 22 48 Q 8 48 8 36 Q 8 22 24 22 Q 28 8 46 8 Q 64 8 68 22 Q 88 22 88 38 Q 88 52 74 52 Z" fill="#000"/>
-    <polygon points="52,56 38,82 50,82 42,96 64,68 52,68 60,56" fill="#000"/>
-  </svg>`,
-  Snow: `<svg viewBox="0 0 100 100">
-    <path d="M 22 48 Q 8 48 8 36 Q 8 22 24 22 Q 28 8 46 8 Q 64 8 68 22 Q 88 22 88 38 Q 88 52 74 52 Z" fill="#000"/>
-    ${[26,50,74].map(x=>`
-      <g stroke="#000" stroke-width="3" stroke-linecap="round">
-        <line x1="${x-8}" y1="76" x2="${x+8}" y2="76"/>
-        <line x1="${x}" y1="68" x2="${x}" y2="84"/>
-        <line x1="${x-6}" y1="70" x2="${x+6}" y2="82"/>
-        <line x1="${x-6}" y1="82" x2="${x+6}" y2="70"/>
-      </g>
-    `).join('')}
-  </svg>`,
-  Mist: `<svg viewBox="0 0 100 100">
-    ${[24,40,56,72,84].map((y,i)=>`
-      <line x1="${10 + (i%2)*8}" y1="${y}" x2="${90 - (i%2)*8}" y2="${y}"
-        stroke="#000" stroke-width="6" stroke-linecap="round"/>
-    `).join('')}
-  </svg>`
+// Weather icons are vendored from sevesalm/eInk-weather-display
+// (BSD-3-Clause) under public/icons/sevesalm/. We pull them via
+// /static/icons/sevesalm/<name>.svg so the bundle stays tiny — the
+// browser caches the SVGs separately and Puppeteer loads them by URL.
+// The mapping below must stay in sync with widgets/icons.js (server
+// side) and the inline copy in public/dashboard.html.
+const WMO_ICON = {
+  0:'clear',1:'clear',2:'partially_cloudy',3:'cloudy',
+  45:'fog',48:'fog',
+  51:'drizzle_mild',53:'drizzle_mild',55:'drizzle_strong',
+  56:'drizzle_icing',57:'drizzle_icing',
+  61:'rain',63:'rain',65:'rain',66:'sleet',67:'sleet',
+  71:'snow',73:'snow',75:'snow',77:'snow',
+  80:'rain',81:'rain',82:'rain',85:'snow',86:'snow',
+  95:'thunder',96:'ice_pellets',99:'ice_pellets'
 };
-ICONS.Fog = ICONS.Mist;
-ICONS.Haze = ICONS.Mist;
+const NIGHTABLE = new Set(['clear', 'partially_cloudy']);
 
-function icon(main, size) {
-  const svg = ICONS[main] || ICONS.Clear;
-  return `<span class="icon" style="width:${size}px;height:${size}px">${svg}</span>`;
+function _isNight(w) {
+  if (!w) return false;
+  const sr = w.sunriseMin, ss = w.sunsetMin, nm = w.nowMin;
+  if (!Number.isFinite(sr) || !Number.isFinite(ss) || !Number.isFinite(nm)) return false;
+  return nm < sr || nm >= ss;
+}
+
+function _mainToIcon(main, night) {
+  const m = String(main || '').toLowerCase();
+  if (m === 'clear')        return night ? 'clear_night' : 'clear';
+  if (m === 'clouds')       return night ? 'partially_cloudy_night' : 'partially_cloudy';
+  if (m === 'rain')         return 'rain';
+  if (m === 'drizzle')      return 'drizzle_mild';
+  if (m === 'snow')         return 'snow';
+  if (m === 'thunderstorm') return 'thunder';
+  if (m === 'mist' || m === 'fog' || m === 'haze') return 'fog';
+  return 'cloudy';
+}
+
+function _pickIconName(arg) {
+  // arg may be a `main` string (forecast / hourly callers) or a full
+  // weather object (hero caller). Both shapes resolve to a filename.
+  if (typeof arg === 'string') return _mainToIcon(arg, false);
+  if (!arg || typeof arg !== 'object') return 'cloudy';
+  const night = _isNight(arg);
+  const code = Number.isFinite(arg.code) ? arg.code : null;
+  if (code != null) {
+    const base = WMO_ICON[code] || 'cloudy';
+    return night && NIGHTABLE.has(base) ? base + '_night' : base;
+  }
+  return _mainToIcon(arg.main, night);
+}
+
+function icon(arg, size) {
+  const name = _pickIconName(arg);
+  return `<img class="icon" src="/static/icons/sevesalm/${name}.svg" width="${size}" height="${size}" alt="" />`;
 }
 
 function fakeWeather(units) {
@@ -172,7 +159,7 @@ const RENDERERS = {
       <div class="weather-temp" style="font-size:${size}px">
         <span class="temp-num">${w.temp}</span><span class="temp-deg" style="font-size:${Math.round(size*0.6)}px">°${units}</span>
       </div>`;
-    const heroIcon = (px) => `<div class="weather-icon" style="height:${px}px">${icon(w.main, px)}</div>`;
+    const heroIcon = (px) => `<div class="weather-icon" style="height:${px}px">${icon(w, px)}</div>`;
     const descLine = () => `<div class="weather-desc">${w.desc}</div>`;
     const hiloLine = () => `<div class="weather-hilo">HIGH ${w.tempMax}° &nbsp;·&nbsp; LOW ${w.tempMin}°</div>`;
     const statsBlock = () => `
