@@ -28,7 +28,7 @@ function smallestSizeKey(def) {
   }, def.defaultSize);
 }
 
-export default function EditorGrid({ layout, showGrid, previewData, onChange, onError, onCommitItemNow }) {
+export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onChange, onError, onCommitItemNow }) {
   const wrapRef = useRef(null);
   const [size, setSizeState] = useState({ w: 800, h: 480 });
   const [shake, setShake] = useState(false);
@@ -289,7 +289,7 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
     for (const c of candidates) {
       const slot = findFreeSlot(c.w, c.h, enabled);
       if (slot) {
-        const inst = makeInstance(widgetId, { x: slot.x, y: slot.y, w: c.w, h: c.h, sizeKey: c.key });
+        const inst = makeInstance(widgetId, { x: slot.x, y: slot.y, w: c.w, h: c.h, sizeKey: c.key }, seedCtx);
         if (inst) onChange([...layout, inst]);
         return;
       }

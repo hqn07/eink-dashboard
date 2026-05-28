@@ -198,10 +198,17 @@ const RENDERERS = {
     if (!w || !w.forecast || !w.forecast.length) {
       return `<div class="col-title">FORECAST</div><div class="empty" style="border:0;padding:14px 0">NO DATA</div>`;
     }
-    // Day count is user-configurable via cfg.weather.forecastDays (1-7);
-    // auto by cellH otherwise.
+    // Day count is user-configurable per-tile: server attaches
+    // `forecastDays` straight onto the slot's weather payload (Commit
+    // B). Fall back to the legacy cfg.weather.forecastDays for tiles
+    // that haven't been re-saved since the contract switch.
     const ch = cellH || 0, cw = cellW || 0;
-    const userDays = parseInt((cfg && cfg.weather && cfg.weather.forecastDays), 10);
+    const userDays = parseInt(
+      Number.isFinite(w.forecastDays)
+        ? w.forecastDays
+        : (cfg && cfg.weather && cfg.weather.forecastDays),
+      10
+    );
     const autoDays = ch < 4 ? 1
                    : ch < 6 ? 2
                    : ch < 8 ? 3

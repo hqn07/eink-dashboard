@@ -29,10 +29,16 @@ export const WIDGET_REGISTRY = [
       XL: { w: 24, h: 12 }
     },
     defaultSize: 'M',
-    // Every widget is now on the self-contained-settings contract: tiles
-    // always carry their own `settings` object, seeded from `defaults()`
-    // at creation. There is no shared global cfg to fall back to.
-    defaults: () => ({ city: '', lat: null, lon: null })
+    // Every widget is on the self-contained-settings contract: tiles
+    // always carry their own `settings` object. The factory receives a
+    // one-time seed context (from the setup wizard's saved location) so
+    // a freshly-dropped weather tile renders the user's home location
+    // by default — the tile still owns its settings afterwards.
+    defaults: (ctx) => ({
+      city: (ctx && ctx.city) || '',
+      lat:  (ctx && Number.isFinite(ctx.lat)) ? ctx.lat : null,
+      lon:  (ctx && Number.isFinite(ctx.lon)) ? ctx.lon : null
+    })
   },
   {
     id: 'weather_forecast',
@@ -46,7 +52,12 @@ export const WIDGET_REGISTRY = [
       XL: { w: 24, h: 6 }
     },
     defaultSize: 'M',
-    defaults: () => ({ city: '', lat: null, lon: null, forecastDays: null })
+    defaults: (ctx) => ({
+      city: (ctx && ctx.city) || '',
+      lat:  (ctx && Number.isFinite(ctx.lat)) ? ctx.lat : null,
+      lon:  (ctx && Number.isFinite(ctx.lon)) ? ctx.lon : null,
+      forecastDays: null
+    })
   },
   {
     id: 'message',
@@ -429,7 +440,7 @@ export function pickActiveScreen(cfg, nowMinutes) {
 
 // Helper for the editor: build a fresh layout item for a new instance
 // of the given widget at given position/size.
-export function makeInstance(widgetId, { x = 0, y = 0, w, h, sizeKey } = {}) {
+export function makeInstance(widgetId, { x = 0, y = 0, w, h, sizeKey } = {}, seedCtx) {
   const def = widgetById(widgetId);
   if (!def) return null;
   const sz = sizeFor(def, sizeKey);
@@ -443,9 +454,11 @@ export function makeInstance(widgetId, { x = 0, y = 0, w, h, sizeKey } = {}) {
     flush: false
   };
   // Seed settings from the registry factory so the tile is self-contained
-  // from the moment it's dropped — no implicit pull from any shared cfg.
+  // from the moment it's dropped. `seedCtx` (e.g. the saved setup-wizard
+  // location) is a one-time hint; once on the tile, settings are owned
+  // exclusively by the tile.
   if (typeof def.defaults === 'function') {
-    inst.settings = def.defaults();
+    inst.settings = def.defaults(seedCtx);
   }
   return inst;
 }

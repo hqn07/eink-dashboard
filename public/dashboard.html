@@ -319,12 +319,17 @@
           }
           return placeholder('FORECAST', 'Data unavailable', 'weather');
         }
-        // Forecast is a vertical list. Day count is user-configurable
-        // via cfg.weather.forecastDays (1-7); falls back to a cellH-driven
-        // auto value when unset. Auto packs the cell tighter at large
-        // sizes than the old fixed cap.
+        // Day count is per-tile: server attaches `forecastDays` straight
+        // onto the slot's weather payload (Commit B). Fall back to the
+        // legacy cfg.weather.forecastDays for tiles that haven't been
+        // re-saved since the contract switch.
         const h = cellH || 0, w = cellW || 0;
-        const userDays = parseInt((cfg && cfg.weather && cfg.weather.forecastDays), 10);
+        const userDays = parseInt(
+          Number.isFinite(weather.forecastDays)
+            ? weather.forecastDays
+            : (cfg && cfg.weather && cfg.weather.forecastDays),
+          10
+        );
         const autoDays = h < 4 ? 1
                        : h < 6 ? 2
                        : h < 8 ? 3

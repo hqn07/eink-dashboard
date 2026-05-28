@@ -455,6 +455,11 @@ export default function App() {
               layout={layout}
               showGrid={showGrid}
               previewData={livePreviewData}
+              seedCtx={{
+                city: cfg.city || '',
+                lat: Number.isFinite(cfg.lat) ? cfg.lat : null,
+                lon: Number.isFinite(cfg.lon) ? cfg.lon : null
+              }}
               onChange={(next) => updateScreenLayout(editScreen.id, next)}
               onError={showToast}
               onCommitItemNow={(item) => commitLayoutItemNow(editScreen.id, item)}
