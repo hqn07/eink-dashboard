@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import GridLayout from 'react-grid-layout';
+import { GridStack } from 'gridstack';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gear, X } from '@phosphor-icons/react';
 import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById, makeInstance } from '../widgets.js';
@@ -19,6 +19,16 @@ const DASH_H = 480;
 const HEADER_H_BASE = 60;
 const FOOTER_H_BASE = 28;
 
+// Install Gridstack's renderCB once. v11+ no longer accepts raw `content`
+// HTML via addWidget for XSS safety — apps must opt in via renderCB.
+// We stash the per-instance HTML on the widget object via a private
+// `_einkHtml` field so this module-global callback can read it.
+GridStack.renderCB = function (el, w) {
+  if (w && typeof w._einkHtml === 'string') {
+    el.innerHTML = w._einkHtml;
+  }
+};
+
 // Pick a widget's smallest registered size by area — used for the pool
 // preview and for the initial drop size when a widget is added.
 function smallestSizeKey(def) {
@@ -30,6 +40,8 @@ function smallestSizeKey(def) {
 
 export default function EditorGrid({ layout, showGrid, previewData, onChange, onError, onCommitItemNow }) {
   const wrapRef = useRef(null);
+  const gridHostRef = useRef(null);
+  const gridRef = useRef(null);
   const [size, setSizeState] = useState({ w: 800, h: 480 });
   const [shake, setShake] = useState(false);
   const [dropHover, setDropHover] = useState(false);
@@ -39,8 +51,14 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
   // Which tile (if any) currently has its settings modal open.
   const [modalForId, setModalForId] = useState(null);
   // 5px drag threshold so a single click (mousedown→up < 5px move) is
-  // treated as a select, while a real drag is left for react-grid-layout.
+  // treated as a select while a real drag is left for Gridstack.
   const downPosRef = useRef(null);
+  // React state we want to read inside Gridstack event handlers without
+  // re-binding listeners every render. Keep a ref mirror of `layout`.
+  const layoutRef = useRef(layout);
+  useEffect(() => { layoutRef.current = layout; }, [layout]);
+  const onChangeRef = useRef(onChange);
+  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
 
   // autofit runner — matches the helper in dashboard.html. Binary-search
   // the largest font size that fits inside each .autofit element's box.
@@ -145,7 +163,7 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
     : WIDGET_REGISTRY;
 
   // Editor canvas is sized to the full dashboard aspect; the body
-  // section we hand to RGL is BODY_H/DASH_H of that height. Row
+  // section we hand to Gridstack is BODY_H/DASH_H of that height. Row
   // height inside the body matches the dashboard's body row height.
   // Chrome rows collapse when disabled, which gives the body more room.
   const headerOn = isHeaderOn(previewData);
@@ -158,40 +176,15 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
   const rowHeight = bodyHeight / GRID_ROWS;
   const innerW = size.w;
 
-  const rglLayout = enabled.map(l => {
-    const def = widgetById(l.widgetId);
-    const min = (def && def.minSize) || { w: 1, h: 1 };
-    return {
-      i: l.id,
-      x: l.x, y: l.y, w: l.w, h: l.h,
-      minW: min.w, minH: min.h,
-      maxW: GRID_COLS, maxH: GRID_ROWS
-    };
-  });
-
-  const handleLayoutChange = (next) => {
-    const changed = next.some(n => {
-      const cur = layout.find(l => l.id === n.i);
-      if (!cur) return true;
-      return cur.x !== n.x || cur.y !== n.y || cur.w !== n.w || cur.h !== n.h;
-    });
-    if (!changed) return;
-    const map = new Map(next.map(n => [n.i, n]));
-    const merged = layout.map(l => {
-      const n = map.get(l.id);
-      if (!n) return l;
-      const sizeChanged = (l.w !== n.w || l.h !== n.h);
-      return { ...l, x: n.x, y: n.y, w: n.w, h: n.h, size: sizeChanged ? null : l.size };
-    });
-    onChange(merged);
-  };
-
-  // Drag-to-delete via RGL's own drag system: when the user releases
-  // a tile over the .trash-zone DOM element, drop the widget instead
-  // of committing the new position.
+  // Drag-to-delete: when the user releases a tile over the .trash-zone
+  // DOM element, drop the widget instead of committing the new position.
   const trashRef = useRef(null);
   const [trashHover, setTrashHover] = useState(false);
   const [snapGuides, setSnapGuides] = useState({ xCols: [], yRows: [] });
+  // Mirror trashHover into a ref so dragstop handlers can read current
+  // value without re-binding.
+  const trashHoverRef = useRef(false);
+  useEffect(() => { trashHoverRef.current = trashHover; }, [trashHover]);
 
   // Compare the in-flight tile's four edges (in grid cells) against every
   // other tile's edges. Edges that match exactly become snap guides — a
@@ -204,7 +197,7 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
     const left = item.x, right = item.x + item.w;
     const top = item.y, bottom = item.y + item.h;
     for (const o of others) {
-      if (o.i === item.i) continue;
+      if (o.id === item.id) continue;
       const oL = o.x, oR = o.x + o.w, oT = o.y, oB = o.y + o.h;
       const overlapY = !(bottom <= oT || top >= oB);
       const overlapX = !(right <= oL || left >= oR);
@@ -228,25 +221,6 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
             ?? (event.changedTouches && event.changedTouches[0]?.clientY);
     if (x == null || y == null) return false;
     return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
-  };
-
-  const onTileDrag = (rglItems, _oldItem, newItem, _placeholder, event) => {
-    setTrashHover(pointerOverTrash(event));
-    setSnapGuides(computeSnapGuides(newItem, rglItems));
-  };
-
-  const onTileDragStop = (_, __, newItem, ___, event) => {
-    if (pointerOverTrash(event)) {
-      removeFromCanvas(newItem.i);
-    }
-    setTrashHover(false);
-    setSnapGuides({ xCols: [], yRows: [] });
-  };
-  const onTileResize = (rglItems, _oldItem, newItem) => {
-    setSnapGuides(computeSnapGuides(newItem, rglItems));
-  };
-  const onTileResizeStop = () => {
-    setSnapGuides({ xCols: [], yRows: [] });
   };
 
   const clampPos = (x, y, w, h) => ({
@@ -326,6 +300,237 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
     if (id) addToCanvas(id);
   };
 
+  // Build the inner HTML string for one tile — used both for initial
+  // widget creation and for live re-renders triggered by previewData
+  // updates or layout edits.
+  const buildTileHtml = (l) => {
+    const itemSlot = (previewData && previewData.perItem && previewData.perItem[l.id]) || {};
+    const inner = renderWidget(l.widgetId, {
+      ...previewData,
+      ...itemSlot,
+      cellW: l.w,
+      cellH: l.h,
+      density: l.density
+    }) || '';
+    const dashW = l.w * (DASH_W / GRID_COLS);
+    const dashH = l.h * (BODY_H / GRID_ROWS);
+    const classes = ['cell', `cell-${l.widgetId}`];
+    if (l.x + l.w >= GRID_COLS) classes.push('cell-edge-right');
+    if (l.y + l.h >= GRID_ROWS) classes.push('cell-edge-bottom');
+    if (l.flush) classes.push('cell-flush');
+    if (l.border === 'dashed') classes.push('cell-border-dashed');
+    if (l.border === 'none')   classes.push('cell-border-none');
+    const cellHtml = `<div class="${classes.join(' ')}" style="width:${dashW}px;height:${dashH}px">${inner}</div>`;
+    const isSelected = selectedId === l.id;
+    // The Gear/X buttons are emitted as plain HTML so they live inside
+    // Gridstack's content (a React tree under it would be torn down by
+    // Gridstack's DOM rewrites on add/remove). Click handling is wired
+    // via delegated listeners attached to the grid host.
+    return (
+      `<div class="editor-tile live-tile ${isSelected ? 'selected' : ''}" data-tile-id="${l.id}">` +
+        `<div class="tile-actions">` +
+          `<button class="tile-settings gs-no-drag" data-tile-action="settings" data-tile-id="${l.id}" title="Settings" aria-label="Settings">` +
+            `<svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor"><path d="M128 80a48 48 0 1 0 48 48 48 48 0 0 0-48-48Zm0 80a32 32 0 1 1 32-32 32 32 0 0 1-32 32Zm88-29.84q.06-2.16 0-4.32l14.92-18.64a8 8 0 0 0 1.48-7.06 107.21 107.21 0 0 0-10.88-26.25 8 8 0 0 0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186 40.54a8 8 0 0 0-3.94-6 107.71 107.71 0 0 0-26.25-10.86 8 8 0 0 0-7.06 1.48L130.16 40Q128 39.94 125.84 40L107.2 25.11a8 8 0 0 0-7.06-1.48A107.6 107.6 0 0 0 73.89 34.51a8 8 0 0 0-3.93 6L67.32 64.27q-1.56 1.49-3 3L40.54 70a8 8 0 0 0-6 3.94 107.71 107.71 0 0 0-10.87 26.25 8 8 0 0 0 1.49 7.06L40 125.84Q39.94 128 40 130.16L25.11 148.8a8 8 0 0 0-1.48 7.06 107.21 107.21 0 0 0 10.88 26.25 8 8 0 0 0 6 3.93l23.72 2.64q1.49 1.56 3 3L70 215.46a8 8 0 0 0 3.94 6 107.71 107.71 0 0 0 26.25 10.87 8 8 0 0 0 7.06-1.49L125.84 216q2.16.06 4.32 0l18.64 14.92a8 8 0 0 0 7.06 1.48 107.21 107.21 0 0 0 26.25-10.88 8 8 0 0 0 3.93-6l2.64-23.72q1.56-1.48 3-3L215.46 186a8 8 0 0 0 6-3.94 107.71 107.71 0 0 0 10.87-26.25 8 8 0 0 0-1.49-7.06Zm-16.1-6.5a73.93 73.93 0 0 1 0 8.68 8 8 0 0 0 1.74 5.48l14.19 17.73a91.57 91.57 0 0 1-6.23 15L187 173.11a8 8 0 0 0-5.1 2.64 74.11 74.11 0 0 1-6.14 6.14 8 8 0 0 0-2.64 5.1l-2.51 22.58a91.32 91.32 0 0 1-15 6.23l-17.74-14.19a8 8 0 0 0-5-1.75h-.48a73.93 73.93 0 0 1-8.68 0 8 8 0 0 0-5.48 1.74l-17.78 14.2a91.57 91.57 0 0 1-15-6.23L83 187a8 8 0 0 0-2.64-5.1 74.11 74.11 0 0 1-6.14-6.14 8 8 0 0 0-5.1-2.64l-22.58-2.52a91.32 91.32 0 0 1-6.23-15l14.19-17.74a8 8 0 0 0 1.74-5.48 73.93 73.93 0 0 1 0-8.68 8 8 0 0 0-1.74-5.48L40.31 100.45a91.57 91.57 0 0 1 6.23-15L69 82.89a8 8 0 0 0 5.1-2.64 74.11 74.11 0 0 1 6.14-6.14A8 8 0 0 0 82.89 69l2.51-22.57a91.32 91.32 0 0 1 15-6.23l17.74 14.19a8 8 0 0 0 5.48 1.74 73.93 73.93 0 0 1 8.68 0 8 8 0 0 0 5.48-1.74L155.55 40.31a91.57 91.57 0 0 1 15 6.23L173.11 69a8 8 0 0 0 2.64 5.1 74.11 74.11 0 0 1 6.14 6.14 8 8 0 0 0 5.1 2.64l22.58 2.51a91.32 91.32 0 0 1 6.23 15l-14.19 17.74a8 8 0 0 0-1.74 5.53Z"/></svg>` +
+          `</button>` +
+          `<button class="tile-remove gs-no-drag" data-tile-action="remove" data-tile-id="${l.id}" title="Remove" aria-label="Remove">` +
+            `<svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66 194.34a8 8 0 0 1-11.32 11.32L128 139.31l-66.34 66.35a8 8 0 0 1-11.32-11.32L116.69 128 50.34 61.66a8 8 0 0 1 11.32-11.32L128 116.69l66.34-66.35a8 8 0 0 1 11.32 11.32L139.31 128Z"/></svg>` +
+          `</button>` +
+        `</div>` +
+        `<div class="live-tile-body">` +
+          `<div class="live-tile-scale" style="transform:scale(${scale});transform-origin:top left;">` +
+            cellHtml +
+          `</div>` +
+        `</div>` +
+      `</div>`
+    );
+  };
+
+  // ============================================================
+  // Gridstack lifecycle. We treat React as source of truth: the
+  // [layout, scale, previewData, selectedId, headerOn, footerOn]
+  // dep array reconciles by clearing + re-adding all widgets. The
+  // tile count is small (<50) so this is acceptable.
+  // ============================================================
+  useEffect(() => {
+    if (!gridHostRef.current) return;
+    if (gridRef.current) return; // already initialized
+    const grid = GridStack.init({
+      column: GRID_COLS,
+      maxRow: GRID_ROWS,
+      cellHeight: rowHeight,
+      margin: MARGIN,
+      float: true,                // no compacting (matches compactType: null)
+      animate: false,
+      disableOneColumnMode: true,
+      columnOpts: { breakpoints: [{ w: 0, c: GRID_COLS }] },
+      resizable: { handles: 'se,sw,nw' },
+      draggable: { cancel: '.gs-no-drag, .tile-actions, button' }
+    }, gridHostRef.current);
+    gridRef.current = grid;
+
+    // Mirror position/size changes back to React. Gridstack's `change`
+    // event fires after drag/resize commits. We keep size & other
+    // metadata that lives only in React state.
+    grid.on('change', (_event, nodes) => {
+      const cur = layoutRef.current;
+      const map = new Map((nodes || []).map(n => [n.id, n]));
+      const merged = cur.map(l => {
+        const n = map.get(l.id);
+        if (!n) return l;
+        const sizeChanged = (l.w !== n.w || l.h !== n.h);
+        return {
+          ...l,
+          x: n.x, y: n.y, w: n.w, h: n.h,
+          size: sizeChanged ? null : l.size
+        };
+      });
+      // Bail if nothing actually changed (Gridstack can fire `change`
+      // for cosmetic reasons like initial layout settle).
+      const changed = merged.some((l, i) => {
+        const c = cur[i];
+        return !c || c.x !== l.x || c.y !== l.y || c.w !== l.w || c.h !== l.h;
+      });
+      if (changed) onChangeRef.current(merged);
+    });
+
+    // Snap guides + trash-zone detection during drag/resize.
+    const findNode = (el) => {
+      const id = el && el.getAttribute && el.getAttribute('gs-id');
+      if (!id) return null;
+      const all = grid.engine.nodes;
+      const n = all.find(x => x.id === id);
+      if (!n) return null;
+      return { id: n.id, x: n.x, y: n.y, w: n.w, h: n.h };
+    };
+
+    grid.on('drag', (event, el) => {
+      const me = findNode(el);
+      if (!me) return;
+      const others = grid.engine.nodes
+        .filter(n => n.id !== me.id)
+        .map(n => ({ id: n.id, x: n.x, y: n.y, w: n.w, h: n.h }));
+      setSnapGuides(computeSnapGuides(me, others));
+      // Underlying browser MouseEvent lives on event (Gridstack passes
+      // a DragEvent-like wrapper). Try both shapes.
+      const ev = event && (event.originalEvent || event);
+      setTrashHover(pointerOverTrash(ev));
+    });
+
+    grid.on('dragstop', (event, el) => {
+      setSnapGuides({ xCols: [], yRows: [] });
+      const ev = event && (event.originalEvent || event);
+      const overTrash = pointerOverTrash(ev) || trashHoverRef.current;
+      setTrashHover(false);
+      if (overTrash) {
+        const id = el && el.getAttribute && el.getAttribute('gs-id');
+        if (id) {
+          // Defer so Gridstack's own dragstop cleanup runs first.
+          setTimeout(() => removeFromCanvas(id), 0);
+        }
+      }
+    });
+
+    grid.on('resize', (event, el) => {
+      const me = findNode(el);
+      if (!me) return;
+      const others = grid.engine.nodes
+        .filter(n => n.id !== me.id)
+        .map(n => ({ id: n.id, x: n.x, y: n.y, w: n.w, h: n.h }));
+      setSnapGuides(computeSnapGuides(me, others));
+    });
+
+    grid.on('resizestop', () => {
+      setSnapGuides({ xCols: [], yRows: [] });
+    });
+
+    return () => {
+      try { grid.destroy(false); } catch (_) { /* ignore */ }
+      gridRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Update cellHeight + column when display size changes.
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    grid.cellHeight(rowHeight);
+  }, [rowHeight]);
+
+  // Reconcile widgets with React layout. We clear + re-add on every
+  // change — simple and correct for our scale (<50 tiles per screen).
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    grid.batchUpdate();
+    try {
+      grid.removeAll(false);
+      for (const l of layout) {
+        const def = widgetById(l.widgetId);
+        const min = (def && def.minSize) || { w: 1, h: 1 };
+        grid.addWidget({
+          id: l.id,
+          x: l.x, y: l.y, w: l.w, h: l.h,
+          minW: min.w, minH: min.h,
+          maxW: GRID_COLS, maxH: GRID_ROWS,
+          // Stashed for renderCB to read on creation.
+          _einkHtml: buildTileHtml(l)
+        });
+      }
+    } finally {
+      grid.batchUpdate(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layout, previewData, scale, selectedId, headerOn, footerOn]);
+
+  // Delegated click/pointer handlers for the inline gear/remove buttons
+  // and click-to-select on the tile body. Mounted once on the grid host.
+  useEffect(() => {
+    const host = gridHostRef.current;
+    if (!host) return;
+    const onMouseDown = (e) => {
+      const tileEl = e.target.closest('[data-tile-id]');
+      if (!tileEl) return;
+      downPosRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        id: tileEl.getAttribute('data-tile-id')
+      };
+    };
+    const onMouseUp = (e) => {
+      const d = downPosRef.current;
+      downPosRef.current = null;
+      const tileEl = e.target.closest('[data-tile-id]');
+      if (!d || !tileEl) return;
+      if (d.id !== tileEl.getAttribute('data-tile-id')) return;
+      const moved = Math.hypot(e.clientX - d.x, e.clientY - d.y);
+      if (moved < 5) setSelectedId(d.id);
+    };
+    const onTouchEnd = (e) => {
+      const tileEl = e.target.closest('[data-tile-id]');
+      if (tileEl) setSelectedId(tileEl.getAttribute('data-tile-id'));
+    };
+    const onClick = (e) => {
+      const btn = e.target.closest('[data-tile-action]');
+      if (!btn) return;
+      e.stopPropagation();
+      const action = btn.getAttribute('data-tile-action');
+      const id = btn.getAttribute('data-tile-id');
+      if (action === 'settings') setModalForId(id);
+      else if (action === 'remove') removeFromCanvas(id);
+    };
+    host.addEventListener('mousedown', onMouseDown);
+    host.addEventListener('mouseup', onMouseUp);
+    host.addEventListener('touchend', onTouchEnd);
+    host.addEventListener('click', onClick);
+    return () => {
+      host.removeEventListener('mousedown', onMouseDown);
+      host.removeEventListener('mouseup', onMouseUp);
+      host.removeEventListener('touchend', onTouchEnd);
+      host.removeEventListener('click', onClick);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layout]);
 
   return (
     <div>
@@ -367,90 +572,11 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
             bottom: `${(FOOTER_H / DASH_H) * 100}%`
           }}
         >
-        <GridLayout
-          className="layout"
-          cols={GRID_COLS}
-          rowHeight={rowHeight}
-          width={innerW}
-          maxRows={GRID_ROWS}
-          compactType={null}
-          preventCollision
-          isResizable
-          resizeHandles={['se', 'sw', 'nw']}
-          margin={[MARGIN, MARGIN]}
-          containerPadding={[PAD, PAD]}
-          layout={rglLayout}
-          onLayoutChange={handleLayoutChange}
-          onDrag={onTileDrag}
-          onDragStop={onTileDragStop}
-          onResize={onTileResize}
-          onResizeStop={onTileResizeStop}
-        >
-          {enabled.map(l => {
-            const itemSlot = (previewData && previewData.perItem && previewData.perItem[l.id]) || {};
-            const inner = renderWidget(l.widgetId, { ...previewData, ...itemSlot, cellW: l.w, cellH: l.h, density: l.density }) || '';
-            const dashW = l.w * (DASH_W / GRID_COLS);
-            const dashH = l.h * (BODY_H / GRID_ROWS);
-            const classes = ['cell', `cell-${l.widgetId}`];
-            if (l.x + l.w >= GRID_COLS) classes.push('cell-edge-right');
-            if (l.y + l.h >= GRID_ROWS) classes.push('cell-edge-bottom');
-            if (l.flush) classes.push('cell-flush');
-            if (l.border === 'dashed') classes.push('cell-border-dashed');
-            if (l.border === 'none')   classes.push('cell-border-none');
-            const cellHtml = `<div class="${classes.join(' ')}" style="width:${dashW}px;height:${dashH}px">${inner}</div>`;
-            const isSelected = selectedId === l.id;
-            return (
-              <div key={l.id}>
-                <motion.div
-                  layout
-                  className={`editor-tile live-tile ${isSelected ? 'selected' : ''}`}
-                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                  style={{ width: '100%', height: '100%' }}
-                  onMouseDown={(e) => {
-                    // Track pointer-down position so we can distinguish a
-                    // click-to-select from a real drag started by RGL.
-                    downPosRef.current = { x: e.clientX, y: e.clientY, id: l.id };
-                  }}
-                  onMouseUp={(e) => {
-                    const d = downPosRef.current;
-                    downPosRef.current = null;
-                    if (!d || d.id !== l.id) return;
-                    const moved = Math.hypot(e.clientX - d.x, e.clientY - d.y);
-                    if (moved < 5) setSelectedId(l.id);
-                  }}
-                  onTouchEnd={() => setSelectedId(l.id)}
-                >
-                  <div className="tile-actions">
-                    <button
-                      className="tile-settings"
-                      title="Settings"
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onTouchStart={(e) => e.stopPropagation()}
-                      onClick={(e) => { e.stopPropagation(); setModalForId(l.id); }}
-                    ><Gear size={14} weight="bold" /></button>
-                    <button
-                      className="tile-remove"
-                      title="Remove"
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onTouchStart={(e) => e.stopPropagation()}
-                      onClick={(e) => { e.stopPropagation(); removeFromCanvas(l.id); }}
-                    ><X size={14} weight="bold" /></button>
-                  </div>
-                  <div className="live-tile-body">
-                    <div
-                      className="live-tile-scale"
-                      style={{
-                        transform: `scale(${scale})`,
-                        transformOrigin: 'top left'
-                      }}
-                      dangerouslySetInnerHTML={{ __html: cellHtml }}
-                    />
-                  </div>
-                </motion.div>
-              </div>
-            );
-          })}
-        </GridLayout>
+        <div
+          ref={gridHostRef}
+          className="grid-stack layout"
+          style={{ width: innerW, height: '100%' }}
+        />
         {(snapGuides.xCols.length || snapGuides.yRows.length) ? (
           <div className="snap-guides">
             {snapGuides.xCols.map(col => (
