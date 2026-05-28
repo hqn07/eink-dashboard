@@ -10,6 +10,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const fsp = require('fs/promises');
+const crypto = require('crypto');
 const puppeteer = require('puppeteer');
 const sharp = require('sharp');
 
@@ -820,6 +821,65 @@ app.get('/display.bin', checkDeviceAuth, async (req, res) => {
     res.send(bin);
   } catch (err) {
     console.error('BIN error:', err);
+    res.status(500).send(safeError(err).error);
+  }
+});
+
+// Two-zone refresh helpers for BW panels.
+//
+// Splitting `display.bin` into a header strip (top 60 rows) and a body
+// region (next 420 rows) lets the firmware do a partial refresh of just
+// the always-changing clock band, while ETag-gating the larger body so
+// quiet 30-minute intervals skip the slow refresh + 42 KB transfer.
+//
+// Rows are stored top-to-bottom in row-major MSB-first order, so the
+// split is a clean byte slice: header is bytes 0..6000, body is
+// 6000..48000. No re-packing needed.
+const HEADER_H_ROWS = 60;
+const BODY_H_ROWS = SCREEN_H - HEADER_H_ROWS;   // 420
+const HEADER_BYTES = (SCREEN_W * HEADER_H_ROWS) / 8;  // 6000
+const BODY_BYTES   = (SCREEN_W * BODY_H_ROWS) / 8;    // 42000
+
+function strongEtag(buf) {
+  // Strong ETag — bytes-exact match. Quotes per RFC 7232.
+  return `"${crypto.createHash('sha1').update(buf).digest('hex')}"`;
+}
+
+function sendBinSlice(req, res, slice) {
+  const etag = strongEtag(slice);
+  res.set('ETag', etag);
+  res.set('Cache-Control', 'no-store');
+  res.set('X-Image-Width', String(SCREEN_W));
+  if (req.headers['if-none-match'] === etag) {
+    res.status(304).end();
+    return;
+  }
+  res.set('Content-Type', 'application/octet-stream');
+  res.send(slice);
+}
+
+app.get('/display-header.bin', checkDeviceAuth, async (req, res) => {
+  try {
+    const cfg = await loadConfig();
+    const variant = resolveVariant(req, cfg);
+    const { bin } = await getCurrentImage(variant);
+    res.set('X-Image-Height', String(HEADER_H_ROWS));
+    sendBinSlice(req, res, bin.slice(0, HEADER_BYTES));
+  } catch (err) {
+    console.error('BIN header error:', err);
+    res.status(500).send(safeError(err).error);
+  }
+});
+
+app.get('/display-body.bin', checkDeviceAuth, async (req, res) => {
+  try {
+    const cfg = await loadConfig();
+    const variant = resolveVariant(req, cfg);
+    const { bin } = await getCurrentImage(variant);
+    res.set('X-Image-Height', String(BODY_H_ROWS));
+    sendBinSlice(req, res, bin.slice(HEADER_BYTES, HEADER_BYTES + BODY_BYTES));
+  } catch (err) {
+    console.error('BIN body error:', err);
     res.status(500).send(safeError(err).error);
   }
 });
