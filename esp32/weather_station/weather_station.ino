@@ -29,7 +29,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.4.3"
+#define FW_VERSION "1.4.4"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -47,14 +47,6 @@
 #define SW 800
 #define SH 480
 #define IMG_BYTES (SW * SH / 8)   // 48000
-
-// Two-zone refresh layout. Server splits /display.bin into a 800x60
-// header strip (always-changing clock band) and a 800x420 body region
-// that's ETag-gated so quiet 30 min intervals skip the slow refresh.
-#define HEADER_ROWS  60
-#define BODY_ROWS    (SH - HEADER_ROWS)        // 420
-#define HEADER_BYTES (SW * HEADER_ROWS / 8)    // 6000
-#define BODY_BYTES   (SW * BODY_ROWS / 8)      // 42000
 
 // Pins (unchanged from your working setup)
 static const int EPD_BUSY = 25, EPD_RST = 26, EPD_DC = 27;
@@ -111,19 +103,6 @@ const char* g_wakeLabel = "?";
 float       g_battV     = NAN;
 int         g_battPct   = -1;
 
-// Last body-region ETag returned by the server, preserved across deep
-// sleep via RTC slow memory. On cold boot (POR) RTC memory is zeroed,
-// so the first request after a reset always misses the cache and pulls
-// a full body refresh. Sized for sha1 hex (40 chars) + quotes + slack.
-RTC_DATA_ATTR char g_lastBodyEtag[80] = {0};
-
-// Count of consecutive partial refreshes since the last full one. BW
-// e-ink particles don't fully settle under partial refresh, so after
-// ~10 cycles a faint ghost of the previous image bleeds through and
-// the panel looks dirty. Force a full refresh every this many wakes
-// to clear the carry-over.
-RTC_DATA_ATTR uint16_t g_partialRefreshCount = 0;
-#define FULL_REFRESH_EVERY 10
 
 // Pin-change ISR: mirror button state to buzzer AND latch a refresh
 // request on press. While awake, any press buzzes for the duration the
@@ -246,61 +225,45 @@ String addToken(String url) {
   return url;
 }
 
-// Download a fixed-size slice of the rendered display image from one of
-// the server's split endpoints. Returns:
-//   1 = HTTP 200, `buf` is filled with `expectedBytes`, etagOut populated
-//   2 = HTTP 304, body unchanged, `buf` left untouched
-//   0 = error (timeout, wrong size, bad status code, etc.)
-//
-// ETag round-trip lets the server skip the slow body refresh entirely
-// during quiet 30 min intervals when nothing in the dashboard changed.
-int downloadSlice(const char* path, uint8_t* buf, int expectedBytes,
-                  const char* ifNoneMatch, char* etagOut, size_t etagOutSize) {
-  String url = addToken(String(activeServerBase) + path);
+// Download the full 48000-byte image into a heap buffer.
+// Returns nullptr on failure (caller frees on success).
+uint8_t* downloadImage() {
+  String url = addToken(String(activeServerBase) + "/display.bin");
   Serial.printf("GET %s\n", url.c_str());
 
   HTTPClient http;
-  http.setTimeout(60000);
+  http.setTimeout(60000);   // Railway cold start can take 30-60s
   http.begin(url);
-  if (ifNoneMatch && *ifNoneMatch) {
-    http.addHeader("If-None-Match", ifNoneMatch);
-  }
-  static const char* collectHdrs[] = { "ETag" };
-  http.collectHeaders(collectHdrs, 1);
-
   int code = http.GET();
-  if (code == 304) {
-    Serial.println("304 — unchanged");
-    http.end();
-    return 2;
-  }
   if (code != 200) {
     Serial.printf("HTTP %d\n", code);
     http.end();
-    return 0;
-  }
-
-  if (etagOut && etagOutSize > 0) {
-    String etag = http.header("ETag");
-    strlcpy(etagOut, etag.c_str(), etagOutSize);
+    return nullptr;
   }
 
   int len = http.getSize();
-  if (len > 0 && len != expectedBytes) {
-    Serial.printf("Unexpected size %d (expected %d)\n", len, expectedBytes);
+  if (len > 0 && len != IMG_BYTES) {
+    Serial.printf("Unexpected size %d (expected %d)\n", len, IMG_BYTES);
     http.end();
-    return 0;
+    return nullptr;
+  }
+
+  uint8_t* buf = (uint8_t*)ps_malloc(IMG_BYTES);
+  if (!buf) buf = (uint8_t*)malloc(IMG_BYTES);
+  if (!buf) {
+    Serial.println("malloc FAILED");
+    http.end();
+    return nullptr;
   }
 
   WiFiClient* stream = http.getStreamPtr();
-  int readBytes = 0;
+  int read = 0;
   unsigned long lastData = millis();
-  while (readBytes < expectedBytes) {
+  while (read < IMG_BYTES) {
     size_t avail = stream->available();
     if (avail) {
-      int n = stream->readBytes(buf + readBytes,
-                                min((int)avail, expectedBytes - readBytes));
-      readBytes += n;
+      int n = stream->readBytes(buf + read, min((int)avail, IMG_BYTES - read));
+      read += n;
       lastData = millis();
     } else {
       if (millis() - lastData > 10000) {
@@ -312,12 +275,13 @@ int downloadSlice(const char* path, uint8_t* buf, int expectedBytes,
   }
   http.end();
 
-  if (readBytes != expectedBytes) {
-    Serial.printf("Short read: %d / %d\n", readBytes, expectedBytes);
-    return 0;
+  if (read != IMG_BYTES) {
+    Serial.printf("Short read: %d / %d\n", read, IMG_BYTES);
+    free(buf);
+    return nullptr;
   }
-  Serial.printf("Got %d bytes\n", readBytes);
-  return 1;
+  Serial.printf("Got %d bytes\n", read);
+  return buf;
 }
 
 // =================== BATTERY ===================
@@ -467,13 +431,6 @@ int fetchSleepMinutes() {
 void drawFailScreen(const char* reason) {
   display.setRotation(0);
   display.setFullWindow();
-  // Two full refreshes: first wipes any partial-refresh ghosting to
-  // white, second draws the message. Otherwise the prior dashboard
-  // image bleeds through behind the error text.
-  display.clearScreen();
-  // Counter resets — clearScreen() + the upcoming page render are full
-  // cycles, so we're starting clean.
-  g_partialRefreshCount = 0;
 
   display.firstPage();
   do {
@@ -526,93 +483,18 @@ void drawFailScreen(const char* reason) {
   display.hibernate();
 }
 
-// Push a region of the rendered image and trigger a partial refresh.
-// The BW T7 panel supports partial updates of arbitrary windows, so the
-// always-changing header strip can be repainted in ~1 s and the larger
-// body region can be skipped entirely when the server ETag matches.
-void pushRegion(const uint8_t* buf, int x, int y, int w, int h) {
-  display.setRotation(0);
-  display.setPartialWindow(x, y, w, h);
-  display.epd2.writeImage(buf, x, y, w, h, false, false, false);
-  display.refresh(true);
-}
-
-// Push the entire 48000-byte image with one FULL refresh. Used on cold
-// boot and periodically (every FULL_REFRESH_EVERY partial cycles) to
-// scrub accumulated ghosting that partial refresh leaves behind.
-void pushFullImage(const uint8_t* header, const uint8_t* body) {
+// Direct-write path: send the full 48000-byte buffer to the panel
+// controller's RAM once, then trigger a single full refresh. Using
+// firstPage/nextPage instead would fire _Update_Full twice (the second
+// pass paints WHITE through the OLD-RAM LUT on this panel and wipes
+// the image we just drew). One write, one refresh, hibernate.
+void pushImage(const uint8_t* buf) {
   display.setRotation(0);
   display.setFullWindow();
-  display.epd2.writeImage(header, 0, 0, SW, HEADER_ROWS, false, false, false);
-  display.epd2.writeImage(body,   0, HEADER_ROWS, SW, BODY_ROWS, false, false, false);
-  display.refresh(false);  // false = full-update mode
-}
-
-// Two-zone refresh:
-//   1. Always download the header strip (clock).
-//   2. ETag-gated body download. On 304 (server says unchanged) skip
-//      the body fetch entirely; on 200 grab the bytes + new ETag.
-//   3. If the counter says we're due for a full refresh (every
-//      FULL_REFRESH_EVERY wakes), force a body fetch even if the server
-//      would 304, then write both regions in one full-window refresh
-//      to reset ghosting. Otherwise paint the header partial and the
-//      body partial (when bytes arrived).
-//
-// Returns true if at least the header was refreshed.
-bool refreshTwoZone(bool forceFullBody) {
-  uint8_t* header = (uint8_t*)malloc(HEADER_BYTES);
-  uint8_t* body   = (uint8_t*)malloc(BODY_BYTES);
-  if (!header || !body) {
-    Serial.println("malloc failed for header/body buffers");
-    free(header); free(body);
-    return false;
-  }
-
-  int hres = downloadSlice("/display-header.bin", header, HEADER_BYTES,
-                           nullptr, nullptr, 0);
-  if (hres != 1) {
-    free(header); free(body);
-    return false;
-  }
-
-  // Are we due for a ghost-clearing full refresh?
-  const bool dueForFull = (g_partialRefreshCount >= FULL_REFRESH_EVERY);
-  const bool needsFullBody = forceFullBody || dueForFull;
-  if (needsFullBody) {
-    Serial.printf("Full refresh (count=%u, force=%d)\n",
-                  g_partialRefreshCount, forceFullBody);
-  }
-
-  char newEtag[80] = {0};
-  // Force a body download (no If-None-Match) when we plan to do a full
-  // refresh — we need the actual bytes for that path, not a 304.
-  const char* ifNone = needsFullBody ? nullptr : g_lastBodyEtag;
-  int bres = downloadSlice("/display-body.bin", body, BODY_BYTES,
-                           ifNone, newEtag, sizeof(newEtag));
-
-  if (needsFullBody && bres == 1) {
-    pushFullImage(header, body);
-    strlcpy(g_lastBodyEtag, newEtag, sizeof(g_lastBodyEtag));
-    g_partialRefreshCount = 0;
-    Serial.println("Full refresh applied — ghost cleared");
-  } else {
-    // Normal partial-refresh path.
-    pushRegion(header, 0, 0, SW, HEADER_ROWS);
-    if (bres == 1) {
-      pushRegion(body, 0, HEADER_ROWS, SW, BODY_ROWS);
-      strlcpy(g_lastBodyEtag, newEtag, sizeof(g_lastBodyEtag));
-      Serial.println("Body refreshed + ETag saved");
-    } else if (bres == 2) {
-      Serial.println("Body unchanged (304) — refresh skipped");
-    } else {
-      Serial.println("Body download failed — header alone refreshed");
-    }
-    g_partialRefreshCount++;
-  }
-
-  free(header); free(body);
+  display.fillScreen(GxEPD_WHITE);
+  display.epd2.writeImage(buf, 0, 0, SW, SH, false, false, false);
+  display.refresh(false);  // false = full refresh — no ghosting
   display.hibernate();
-  return true;
 }
 
 // =================== MAIN ===================
@@ -681,20 +563,17 @@ void setup() {
     //
     // On cold boot the panel was wiped to white by display.init()'s
     // clear pass — the saved body ETag would mismatch reality, so we
-    // force a full body fetch even if the server would have sent 304.
-    // Button press is the user explicitly asking for a clean refresh —
-    // bypass the ETag short-circuit and force a full-window refresh so
-    // any ghosting from accumulated partial cycles gets scrubbed too.
-    bool forceBodyOnNext = coldBoot || buttonWake;
     do {
       refreshRequested = false;
-      bool ok = refreshTwoZone(forceBodyOnNext);
-      if (!ok) {
-        Serial.println("Two-zone refresh failed — retry once after 2s");
+      uint8_t* img = downloadImage();
+      if (!img) {
+        Serial.println("Retry download once after 2s");
         delay(2000);
-        ok = refreshTwoZone(forceBodyOnNext);
+        img = downloadImage();
       }
-      if (ok) {
+      if (img) {
+        pushImage(img);
+        free(img);
         beepChime();   // "refresh done"
         sleepMin = fetchSleepMinutes();
         Serial.printf("Sleep %d min\n", sleepMin);
@@ -702,7 +581,6 @@ void setup() {
         drawFailScreen("Could not fetch image");
         sleepMin = 5;
       }
-      forceBodyOnNext = false;   // only the first pass needs the force
       if (refreshRequested) Serial.println("Press during cycle — re-refreshing");
     } while (refreshRequested);
   }
