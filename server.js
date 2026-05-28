@@ -24,6 +24,7 @@ const { fetchMacNowPlaying } = require('./widgets/macnowplaying');
 const { fetchMacBattery } = require('./widgets/macbattery');
 const { fetchMacFocus } = require('./widgets/macfocus');
 const { buildClock } = require('./widgets/clock');
+const { computeNextAlarm, normalizeAlarmList } = require('./widgets/alarms');
 
 const PORT = process.env.PORT || 3000;
 const DEVICE_TOKEN = process.env.DEVICE_TOKEN || '';
@@ -1106,6 +1107,43 @@ app.post('/api/battery', checkDeviceAuth, async (req, res) => {
 app.get('/api/battery', checkDeviceAuth, async (req, res) => {
   const b = await loadBatteryState();
   res.json(b || { v: null, pct: null, at: null });
+});
+
+// ---------- Alarms ----------
+//
+// Stored at cfg.alarms — see widgets/alarms.js for the shape. Time
+// math runs in the server's local timezone; set the TZ env var on
+// Railway to match your real timezone or alarms will misfire by the
+// offset.
+
+app.get('/api/alarms', checkDeviceAuth, async (req, res) => {
+  const cfg = await loadConfig();
+  res.json({ alarms: Array.isArray(cfg.alarms) ? cfg.alarms : [] });
+});
+
+app.post('/api/alarms', checkDeviceAuth, async (req, res) => {
+  try {
+    const cfg = await loadConfig();
+    cfg.alarms = normalizeAlarmList(req.body && req.body.alarms);
+    await saveConfig(cfg);
+    invalidateImage();
+    res.json({ ok: true, alarms: cfg.alarms });
+  } catch (err) {
+    console.error('alarms POST error:', err);
+    res.status(500).json({ ok: false, ...safeError(err) });
+  }
+});
+
+// Device fetches this each wake to decide how long to sleep. Returns
+// the soonest-firing alarm as Unix ms + label + duration-sec hint, or
+// `{ next: null }` if none enabled.
+app.get('/api/alarm/next', checkDeviceAuth, async (req, res) => {
+  const cfg = await loadConfig();
+  const next = computeNextAlarm(cfg.alarms || []);
+  res.json({
+    now: Date.now(),
+    next: next || null
+  });
 });
 
 // ---------- Firmware OTA ----------

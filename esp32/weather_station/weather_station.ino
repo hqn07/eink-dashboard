@@ -21,6 +21,7 @@
 #include <GxEPD2_BW.h>
 #include <SPI.h>
 #include <driver/rtc_io.h>
+#include <time.h>
 
 // =================== CONFIG ===================
 // Per-device secrets live in secrets.h (gitignored). Copy
@@ -29,7 +30,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.4.4"
+#define FW_VERSION "1.5.0"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -75,6 +76,12 @@ static const int EPD_CS = 15, EPD_SCK = 13, EPD_MOSI = 14;
 #define BUZZER_RES     8
 #define BUZZER_VOLUME  64
 #define LOW_BATT_PCT   10
+
+// Alarm window: if NTP time lands within this many seconds of the
+// scheduled fire, treat the wake as the alarm and start ringing.
+#define ALARM_WINDOW_SEC 30
+// Auto-stop after this long if the user doesn't press the button.
+#define ALARM_TIMEOUT_SEC 60
 
 SPIClass hspi(HSPI);
 GxEPD2_BW<GxEPD2_750_GDEY075T7, GxEPD2_750_GDEY075T7::HEIGHT>
@@ -425,6 +432,120 @@ int fetchSleepMinutes() {
   return mins;
 }
 
+// =================== ALARMS ===================
+
+// Sync the ESP32's internal RTC against NTP so we can compare local
+// wall-clock time to the server's alarm timestamps. Without this the
+// "is it alarm time?" check has no anchor.
+void syncTime() {
+  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+  struct tm now;
+  // Up to 6 s wait for the first NTP response — usually settles in <1 s.
+  for (int i = 0; i < 30 && !getLocalTime(&now, 200); i++) {}
+  if (getLocalTime(&now, 50)) {
+    Serial.printf("NTP synced: %04d-%02d-%02d %02d:%02d:%02d UTC\n",
+                  now.tm_year + 1900, now.tm_mon + 1, now.tm_mday,
+                  now.tm_hour, now.tm_min, now.tm_sec);
+  } else {
+    Serial.println("NTP sync FAILED");
+  }
+}
+
+// Holder for the next-alarm payload. tsMs == 0 means none scheduled.
+struct NextAlarm {
+  uint64_t tsMs;           // Unix epoch ms (server clock)
+  uint64_t serverNowMs;    // Server's "now" — for measuring clock skew
+  int      durationSec;
+  char     label[48];
+};
+
+bool fetchNextAlarm(NextAlarm* out) {
+  if (!out) return false;
+  out->tsMs = 0;
+  out->serverNowMs = 0;
+  out->durationSec = 60;
+  out->label[0] = 0;
+
+  String url = addToken(String(activeServerBase) + "/api/alarm/next");
+  HTTPClient http;
+  http.setTimeout(5000);
+  http.begin(url);
+  int code = http.GET();
+  if (code != 200) {
+    http.end();
+    return false;
+  }
+  String body = http.getString();
+  http.end();
+
+  StaticJsonDocument<384> doc;
+  if (deserializeJson(doc, body) != DeserializationError::Ok) return false;
+  out->serverNowMs = doc["now"] | 0ULL;
+  JsonObject next = doc["next"].as<JsonObject>();
+  if (next.isNull()) return true;   // no alarm scheduled — still success
+  out->tsMs = next["ts"] | 0ULL;
+  out->durationSec = next["durationSec"] | 60;
+  const char* label = next["label"] | "";
+  strlcpy(out->label, label, sizeof(out->label));
+  return true;
+}
+
+// Big "ALARM" + label + scheduled time text on a full white screen.
+void drawAlarmScreen(const char* label) {
+  display.setRotation(0);
+  display.setFullWindow();
+  display.firstPage();
+  do {
+    display.fillScreen(GxEPD_WHITE);
+    display.fillRect(0, 0, SW, 80, GxEPD_BLACK);
+    display.setTextColor(GxEPD_WHITE);
+    display.setCursor(40, 56);
+    display.setTextSize(5);
+    display.print("ALARM");
+
+    display.setTextColor(GxEPD_BLACK);
+    display.setTextSize(4);
+    display.setCursor(40, 200);
+    display.print(label && *label ? label : "(no label)");
+
+    display.setTextSize(2);
+    display.setCursor(40, 280);
+    display.print("Press button to dismiss");
+  } while (display.nextPage());
+  display.hibernate();
+}
+
+// Run the alarm loop: paint the alarm screen, then ring the buzzer in
+// a pattern until either the user presses the button or the timeout
+// elapses. Returns once the alarm is silenced.
+void runAlarm(const char* label) {
+  Serial.printf("ALARM firing — label=\"%s\"\n", label);
+  drawAlarmScreen(label);
+  beepChime();   // start of alarm cue
+  unsigned long start = millis();
+  // Pulse: 200 ms on, 600 ms off.
+  while (millis() - start < (unsigned long)ALARM_TIMEOUT_SEC * 1000UL) {
+    if (digitalRead(BTN_REFRESH) == LOW) {
+      Serial.println("Alarm dismissed by button press");
+      break;
+    }
+    buzzerOn();
+    unsigned long t = millis();
+    while (millis() - t < 200) {
+      if (digitalRead(BTN_REFRESH) == LOW) break;
+      delay(10);
+    }
+    buzzerOff();
+    t = millis();
+    while (millis() - t < 600) {
+      if (digitalRead(BTN_REFRESH) == LOW) break;
+      delay(10);
+    }
+  }
+  buzzerOff();
+  Serial.println("Alarm ended");
+}
+
 // =================== DISPLAY ===================
 
 // Draw a fallback "couldn't connect" screen so you know what's up
@@ -557,6 +678,24 @@ void setup() {
     postBattery(battV, battPct);
     checkForUpdate(battPct, buttonWake);   // may not return (reboots on success)
 
+    // Sync NTP so we can compare to the server's alarm timestamps.
+    syncTime();
+
+    // Did we wake because an alarm is firing? Server tells us when the
+    // next one's scheduled; if it's within the alarm window of "now"
+    // (using the server's clock to dodge ESP32 RTC drift), run the
+    // alarm before doing the regular refresh.
+    NextAlarm na;
+    if (fetchNextAlarm(&na) && na.tsMs > 0 && na.serverNowMs > 0) {
+      int64_t deltaSec = ((int64_t)na.tsMs - (int64_t)na.serverNowMs) / 1000;
+      Serial.printf("Next alarm: \"%s\" in %lld s\n", na.label, deltaSec);
+      if (deltaSec >= -ALARM_WINDOW_SEC && deltaSec <= ALARM_WINDOW_SEC) {
+        runAlarm(na.label);
+        // After the alarm, force a fresh refresh of the dashboard so
+        // the panel doesn't sit on the alarm screen.
+      }
+    }
+
     // Refresh loop: re-runs while a button press came in during the
     // last iteration, so an awake-state click triggers another refresh
     // instead of being dropped on the floor.
@@ -583,6 +722,26 @@ void setup() {
       }
       if (refreshRequested) Serial.println("Press during cycle — re-refreshing");
     } while (refreshRequested);
+
+    // Re-poll the alarm clock now that any alarm beep has finished. If
+    // the next alarm fires sooner than sleepMin, shorten the deep
+    // sleep so the device wakes in time to ring.
+    NextAlarm post;
+    if (fetchNextAlarm(&post) && post.tsMs > 0 && post.serverNowMs > 0) {
+      int64_t deltaSec = ((int64_t)post.tsMs - (int64_t)post.serverNowMs) / 1000;
+      // 15 s before fire so the wake + WiFi + alarm-check completes
+      // inside the ALARM_WINDOW_SEC tolerance.
+      int64_t targetSec = deltaSec - 15;
+      if (targetSec > 0) {
+        int alarmMin = (int)((targetSec + 59) / 60);  // round up to min
+        if (alarmMin < 1) alarmMin = 1;
+        if (alarmMin < sleepMin) {
+          Serial.printf("Alarm in %lld s — shortening sleep to %d min\n",
+                        deltaSec, alarmMin);
+          sleepMin = alarmMin;
+        }
+      }
+    }
   }
 
   WiFi.disconnect(true);

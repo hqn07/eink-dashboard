@@ -1,6 +1,7 @@
 {
   "gridVersion": 3,
   "timezone": "America/New_York",
+  "alarms": [],
   "screens": [
     {
       "id": "day",
