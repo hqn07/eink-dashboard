@@ -5,6 +5,14 @@ import { GRID_COLS, GRID_ROWS, widgetById } from '../widgets.js';
 import { renderWidget } from '../widget-render.js';
 import WidgetForm, { supportsPerInstance, snapshotGlobalForWidget } from './WidgetForm.jsx';
 
+// Widgets migrated to the new self-contained-settings contract. Listed
+// here (mirrors `newContract: true` in widgets.js) so the modal can drop
+// the legacy "Override global" toggle for these tiles.
+function isNewContract(widgetId) {
+  const def = widgetById(widgetId);
+  return !!(def && def.newContract);
+}
+
 const DASH_W = 800;
 const DASH_H = 480;
 const HEADER_H_BASE = 60;
@@ -25,7 +33,7 @@ const PREVIEW_MAX_H = 560;
 // settings into this one without re-typing.
 function PerInstanceDataBlock({ widgetId, itemId, cfg, layout, settings, onSettingsChange }) {
   const supported = supportsPerInstance(widgetId);
-  const override = !!settings;
+  const newContract = isNewContract(widgetId);
 
   if (!supported) {
     return (
@@ -45,6 +53,48 @@ function PerInstanceDataBlock({ widgetId, itemId, cfg, layout, settings, onSetti
     && it.settings
   );
 
+  // New-contract widgets always carry their own settings — no override
+  // toggle, just show the form. If for some reason settings is missing
+  // (legacy item created before the contract switch), surface an empty
+  // object so WidgetForm has a stable shape to edit.
+  if (newContract) {
+    const effective = settings || {};
+    return (
+      <>
+        {siblings.length > 0 && (
+          <div className="wsm-copy-row">
+            <span className="wsm-field-label">Copy from</span>
+            <select
+              defaultValue=""
+              onChange={(e) => {
+                const src = siblings.find(s => s.id === e.target.value);
+                if (src && src.settings) onSettingsChange({ ...src.settings });
+                e.target.value = '';
+              }}
+            >
+              <option value="" disabled>Pick a tile…</option>
+              {siblings.map((s, i) => (
+                <option key={s.id} value={s.id}>
+                  {`${widgetId} #${i + 1} (${s.x},${s.y})`}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div className="wsm-form">
+          <WidgetForm
+            widgetId={widgetId}
+            values={effective}
+            onChange={onSettingsChange}
+          />
+        </div>
+      </>
+    );
+  }
+
+  // Legacy override-toggle path. Widgets still on the old global-cfg
+  // contract keep this UI until they're migrated in subsequent commits.
+  const override = !!settings;
   return (
     <>
       <label className="wsm-row wsm-row-check">
@@ -53,10 +103,8 @@ function PerInstanceDataBlock({ widgetId, itemId, cfg, layout, settings, onSetti
           checked={override}
           onChange={(e) => {
             if (e.target.checked) {
-              // First-time snapshot — copy global cfg into draft.settings.
               onSettingsChange(snapshotGlobalForWidget(widgetId, cfg));
             } else {
-              // Drop overrides — tile reverts to shared global.
               onSettingsChange(undefined);
             }
           }}

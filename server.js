@@ -653,10 +653,19 @@ async function buildWidgetData(cfg, units, layout) {
     if (eff.city && typeof eff.city === 'string') return eff.city;
     return null;
   };
+  // Widgets migrated to the new self-contained-settings contract. For
+  // these we always populate the per-item slot (even if config is empty)
+  // so the renderer can't silently fall through to global cfg defaults.
+  // Mirrors `newContract: true` in control-src/widgets.js — keep in sync.
+  const NEW_CONTRACT = new Set(['weather_hero']);
   await Promise.all((layout || []).map(async (item) => {
-    if (!item || !item.settings) return;
+    if (!item) return;
     const wid = item.widgetId || item.id;
-    const eff = item.settings;
+    const isNew = NEW_CONTRACT.has(wid);
+    // Legacy widgets only fetch per-item data when an explicit override
+    // is set; new-contract widgets always fetch using their own settings.
+    if (!isNew && !item.settings) return;
+    const eff = item.settings || {};
     const slot = {};
     try {
       switch (wid) {
@@ -692,8 +701,19 @@ async function buildWidgetData(cfg, units, layout) {
           break;
         }
 
-        // --- Location-derived widgets (Q7a) ---
-        case 'weather_hero':
+        // --- Location-derived widgets ---
+        case 'weather_hero': {
+          // New contract: always populate slot.weather. Empty location
+          // resolves to a "NO DATA" stub so the renderer can't fall back
+          // to global cfg.weather for this tile.
+          const loc = resolveLoc(eff);
+          slot.weather = await fetchWeather(loc, process.env.OPENWEATHER_API_KEY, units);
+          if (slot.weather && loc && Number.isFinite(eff.lat) && Number.isFinite(eff.lon)) {
+            const alerts = await fetchAlerts({ lat: eff.lat, lon: eff.lon }).catch(() => []);
+            if (alerts && alerts.length) slot.weather.alerts = alerts;
+          }
+          break;
+        }
         case 'weather_forecast': {
           const loc = resolveLoc(eff);
           if (loc) {

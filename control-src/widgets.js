@@ -28,7 +28,13 @@ export const WIDGET_REGISTRY = [
       L:  { w: 12, h: 12 },
       XL: { w: 24, h: 12 }
     },
-    defaultSize: 'M'
+    defaultSize: 'M',
+    // New contract (Commit A): every tile carries its own settings. No
+    // global cfg.weather fallback — server always populates slot.weather
+    // for this widget, so an unconfigured tile renders "NO DATA" instead
+    // of silently inheriting the global location.
+    newContract: true,
+    defaults: () => ({ city: '', lat: null, lon: null })
   },
   {
     id: 'weather_forecast',
@@ -755,7 +761,7 @@ export function makeInstance(widgetId, { x = 0, y = 0, w, h, sizeKey } = {}) {
   const def = widgetById(widgetId);
   if (!def) return null;
   const sz = sizeFor(def, sizeKey);
-  return {
+  const inst = {
     id: newInstanceId(widgetId),
     widgetId,
     x, y,
@@ -764,4 +770,10 @@ export function makeInstance(widgetId, { x = 0, y = 0, w, h, sizeKey } = {}) {
     size: sz.size,
     flush: false
   };
+  // New-contract widgets seed their own settings at creation so the tile
+  // is self-contained from the start — no implicit pull from global cfg.
+  if (def.newContract && typeof def.defaults === 'function') {
+    inst.settings = def.defaults();
+  }
+  return inst;
 }
