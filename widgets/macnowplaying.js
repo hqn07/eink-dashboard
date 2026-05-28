@@ -55,11 +55,12 @@ async function readField(key, opts) {
   }
 }
 
-// Convert nowplaying-cli's raw artwork bytes (jpeg/png) into a 160x160
+// Convert nowplaying-cli's raw artwork bytes (jpeg/png) into a
 // 1-bit Floyd-Steinberg dithered PNG, base64-encoded for embedding in
-// the dashboard HTML.
+// the dashboard HTML. Matches the largest art slot rendered by the
+// widget so big tiles don't show an upscaled blur.
 async function ditherArtwork(rawBuf) {
-  const SIZE = 160;
+  const SIZE = 320;
   // Greyscale + resize first.
   const { data, info } = await sharp(rawBuf)
     .resize(SIZE, SIZE, { fit: 'cover' })

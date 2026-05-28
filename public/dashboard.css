@@ -562,6 +562,14 @@ html, body {
 }
 .mac-np-stacked .mac-np-bookend-left  { text-align: right; }
 .mac-np-stacked .mac-np-bookend-right { text-align: left;  }
+.mac-np-state-big {
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 1;
+  margin: 8px 0 4px;
+}
 .mac-np-stacked .mac-np-stacked-text {
   display: flex; flex-direction: column; align-items: stretch; gap: 4px;
   text-align: center;

@@ -38,8 +38,8 @@ function renderNowPlaying(np, cellW, cellH, density) {
     tiny:     { art: 0,   maxFont: 20, showProgress: false, showSource: false, stacked: false },
     compact:  { art: 56,  maxFont: 26, showProgress: false, showSource: false, stacked: false },
     standard: { art: 80,  maxFont: 34, showProgress: true,  showSource: true,  stacked: false },
-    extended: { art: 180, maxFont: 48, showProgress: true,  showSource: true,  stacked: true  },
-    full:     { art: 260, maxFont: 64, showProgress: true,  showSource: true,  stacked: true  }
+    extended: { art: 240, maxFont: 48, showProgress: true,  showSource: true,  stacked: true  },
+    full:     { art: 320, maxFont: 64, showProgress: true,  showSource: true,  stacked: true  }
   };
   const cfg = TIER_CFG[tier] || TIER_CFG.standard;
   const artistAlbum = [np.artist, np.album].filter(Boolean).map(escapeHtml).join(' · ');
@@ -63,7 +63,6 @@ function renderNowPlaying(np, cellW, cellH, density) {
     return `
       <div class="mac-np-card mac-np-stacked mac-np-tier-${tier}">
         <div class="mac-np-head">
-          <span class="mac-np-state">${stateIcon}</span>
           <span class="col-title">NOW PLAYING</span>
         </div>
         <div class="mac-np-stacked-row">
@@ -71,6 +70,7 @@ function renderNowPlaying(np, cellW, cellH, density) {
           ${artInner}
           <div class="mac-np-bookend mac-np-bookend-right">${remainStr}</div>
         </div>
+        <div class="mac-np-state-big">${stateIcon}</div>
         <div class="mac-np-stacked-text">
           <div class="mac-np-title autofit" data-min-font="14" data-max-font="${cfg.maxFont}">${escapeHtml(np.title)}</div>
           <div class="mac-np-meta">${artistAlbum || '—'}</div>
