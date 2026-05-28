@@ -19,16 +19,12 @@ const DASH_H = 480;
 const HEADER_H_BASE = 60;
 const FOOTER_H_BASE = 28;
 
-// Install Gridstack's renderCB once. v11+ no longer accepts raw `content`
-// HTML via addWidget for XSS safety — apps must opt in via renderCB.
-// The widget options' `content` field flows through to here as `w.content`
-// (custom fields like `_einkHtml` get dropped when Gridstack constructs
-// the GridStackNode, so we have to use the standard name).
-GridStack.renderCB = function (el, w) {
-  if (w && typeof w.content === 'string') {
-    el.innerHTML = w.content;
-  }
-};
+// Gridstack v11+ no longer auto-renders `content` HTML for XSS safety.
+// We could install a `GridStack.renderCB` to opt in, but the callback
+// has been flaky across point releases (skipped firing under certain
+// reconcile paths). The reliable workaround is to write innerHTML on
+// the returned `.grid-stack-item-content` ourselves right after
+// addWidget — see the reconcile effect below.
 
 // Pick a widget's smallest registered size by area — used for the pool
 // preview and for the initial drop size when a widget is added.
@@ -460,6 +456,10 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
 
   // Reconcile widgets with React layout. We clear + re-add on every
   // change — simple and correct for our scale (<50 tiles per screen).
+  // After each addWidget we directly write the tile HTML into the
+  // returned `.grid-stack-item-content` element. This bypasses Gridstack
+  // v11+'s opt-in `renderCB` (which has been unreliable across point
+  // releases) and guarantees the content paints.
   useEffect(() => {
     const grid = gridRef.current;
     if (!grid) return;
@@ -469,14 +469,19 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
       for (const l of layout) {
         const def = widgetById(l.widgetId);
         const min = (def && def.minSize) || { w: 1, h: 1 };
-        grid.addWidget({
+        const widgetEl = grid.addWidget({
           id: l.id,
           x: l.x, y: l.y, w: l.w, h: l.h,
           minW: min.w, minH: min.h,
-          maxW: GRID_COLS, maxH: GRID_ROWS,
-          // Stashed for renderCB to read on creation.
-          content: buildTileHtml(l)
+          maxW: GRID_COLS, maxH: GRID_ROWS
         });
+        // Some Gridstack overloads return the inserted item, others return
+        // the GridStack instance itself — fall back to a DOM lookup if so.
+        const itemEl = (widgetEl && widgetEl.tagName)
+          ? widgetEl
+          : gridHostRef.current.querySelector(`.grid-stack-item[gs-id="${l.id}"]`);
+        const contentEl = itemEl && itemEl.querySelector('.grid-stack-item-content');
+        if (contentEl) contentEl.innerHTML = buildTileHtml(l);
       }
     } finally {
       grid.batchUpdate(false);
