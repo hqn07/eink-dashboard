@@ -456,32 +456,38 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
 
   // Reconcile widgets with React layout. We clear + re-add on every
   // change — simple and correct for our scale (<50 tiles per screen).
-  // After each addWidget we directly write the tile HTML into the
-  // returned `.grid-stack-item-content` element. This bypasses Gridstack
-  // v11+'s opt-in `renderCB` (which has been unreliable across point
-  // releases) and guarantees the content paints.
+  // Pre-built DOM pattern: we construct the .grid-stack-item +
+  // .grid-stack-item-content nodes ourselves, write the tile HTML, then
+  // hand the element to Gridstack via makeWidget(). This sidesteps every
+  // flaky path in v11/12 (renderCB silently skipped, addWidget overload
+  // returning the grid instead of the item, content child created lazily).
   useEffect(() => {
     const grid = gridRef.current;
-    if (!grid) return;
+    const host = gridHostRef.current;
+    if (!grid || !host) return;
     grid.batchUpdate();
     try {
       grid.removeAll(false);
       for (const l of layout) {
         const def = widgetById(l.widgetId);
         const min = (def && def.minSize) || { w: 1, h: 1 };
-        const widgetEl = grid.addWidget({
-          id: l.id,
-          x: l.x, y: l.y, w: l.w, h: l.h,
-          minW: min.w, minH: min.h,
-          maxW: GRID_COLS, maxH: GRID_ROWS
-        });
-        // Some Gridstack overloads return the inserted item, others return
-        // the GridStack instance itself — fall back to a DOM lookup if so.
-        const itemEl = (widgetEl && widgetEl.tagName)
-          ? widgetEl
-          : gridHostRef.current.querySelector(`.grid-stack-item[gs-id="${l.id}"]`);
-        const contentEl = itemEl && itemEl.querySelector('.grid-stack-item-content');
-        if (contentEl) contentEl.innerHTML = buildTileHtml(l);
+        const itemDiv = document.createElement('div');
+        itemDiv.classList.add('grid-stack-item');
+        itemDiv.setAttribute('gs-id', l.id);
+        itemDiv.setAttribute('gs-x', String(l.x));
+        itemDiv.setAttribute('gs-y', String(l.y));
+        itemDiv.setAttribute('gs-w', String(l.w));
+        itemDiv.setAttribute('gs-h', String(l.h));
+        itemDiv.setAttribute('gs-min-w', String(min.w));
+        itemDiv.setAttribute('gs-min-h', String(min.h));
+        itemDiv.setAttribute('gs-max-w', String(GRID_COLS));
+        itemDiv.setAttribute('gs-max-h', String(GRID_ROWS));
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'grid-stack-item-content';
+        contentDiv.innerHTML = buildTileHtml(l);
+        itemDiv.appendChild(contentDiv);
+        host.appendChild(itemDiv);
+        grid.makeWidget(itemDiv);
       }
     } finally {
       grid.batchUpdate(false);
