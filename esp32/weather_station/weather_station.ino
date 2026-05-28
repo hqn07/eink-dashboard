@@ -30,7 +30,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.5.3"
+#define FW_VERSION "1.5.4"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -738,7 +738,10 @@ void setup() {
       if (img) {
         pushImage(img);
         free(img);
-        beepChime();   // "refresh done"
+        // "Refresh done" chime only on user-triggered wakes (button press).
+        // Timer-driven auto-refresh stays silent so it doesn't beep while
+        // sleeping nearby.
+        if (buttonWake) beepChime();
         sleepMin = fetchSleepMinutes();
         Serial.printf("Sleep %d min\n", sleepMin);
       } else {
