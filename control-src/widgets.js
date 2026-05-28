@@ -142,6 +142,20 @@ export const WIDGET_REGISTRY = [
     },
     defaultSize: 'S',
     defaults: () => ({})
+  },
+  {
+    id: 'clock',
+    label: 'Clock',
+    requires: 'clock',
+    minSize: { w: 4, h: 2 },
+    sizes: {
+      S:  { w: 6, h: 3 },
+      M:  { w: 8, h: 4 },
+      L:  { w: 12, h: 6 },
+      XL: { w: 24, h: 6 }
+    },
+    defaultSize: 'M',
+    defaults: () => ({ format: '12h', showDate: true, style: 'big' })
   }
 ];
 

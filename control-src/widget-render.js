@@ -408,6 +408,20 @@ const RENDERERS = {
     `;
   },
 
+  clock: ({ clockNow }) => {
+    if (!clockNow) return `<div class="empty" style="border:0;padding:14px 0">NO TIME</div>`;
+    const c = clockNow;
+    const cls = c.style === 'thin' ? 'clock-thin' : 'clock-big';
+    const ampm = c.ampm ? `<span class="clock-ampm">${c.ampm}</span>` : '';
+    const date = c.dateLine ? `<div class="clock-date">${escapeHtml(c.dateLine)}</div>` : '';
+    return `
+      <div class="clock ${cls}">
+        <div class="clock-time autofit" data-min-font="22">${c.timeStr}${ampm}</div>
+        ${date}
+      </div>
+    `;
+  },
+
   mac_focus: ({ macFocus }) => {
     if (!macFocus) {
       return `<div class="col-title">FOCUS</div><div class="empty" style="border:0;padding:14px 0">MAC OFFLINE</div>`;

@@ -23,6 +23,7 @@ const { resolveMessage, renderInlineMarkdown } = require('./widgets/message');
 const { fetchMacNowPlaying } = require('./widgets/macnowplaying');
 const { fetchMacBattery } = require('./widgets/macbattery');
 const { fetchMacFocus } = require('./widgets/macfocus');
+const { buildClock } = require('./widgets/clock');
 
 const PORT = process.env.PORT || 3000;
 const DEVICE_TOKEN = process.env.DEVICE_TOKEN || '';
@@ -705,6 +706,9 @@ async function buildWidgetData(cfg, units, layout) {
           break;
         case 'mac_focus':
           slot.macFocus = await fetchMacFocus();
+          break;
+        case 'clock':
+          slot.clockNow = buildClock(eff, cfg.timezone);
           break;
 
         default:

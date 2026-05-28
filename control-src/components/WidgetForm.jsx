@@ -32,6 +32,34 @@ function TextField({ label, value, onChange, placeholder, type = 'text', help })
   );
 }
 
+function SelectField({ label, value, options, onChange, help }) {
+  return (
+    <label className="wsm-field">
+      <span className="wsm-field-label">{label}</span>
+      <select value={value ?? ''} onChange={e => onChange(e.target.value)}>
+        {options.map(o => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+      {help && <span className="wsm-field-help">{help}</span>}
+    </label>
+  );
+}
+
+function ToggleField({ label, value, onChange, help }) {
+  return (
+    <label className="wsm-row wsm-row-check">
+      <input
+        type="checkbox"
+        checked={!!value}
+        onChange={e => onChange(e.target.checked)}
+      />
+      <span>{label}</span>
+      {help && <span className="wsm-field-help" style={{ marginLeft: 6 }}>{help}</span>}
+    </label>
+  );
+}
+
 function CsvField({ label, value, onCommit, placeholder, help }) {
   const joined = (value || []).join(', ');
   const [raw, setRaw] = useState(joined);
@@ -221,6 +249,39 @@ export default function WidgetForm({ widgetId, values, onChange }) {
           </p>
         </div>
       );
+
+    case 'clock': {
+      const fmt = v.format === '24h' ? '24h' : '12h';
+      const style = v.style === 'thin' ? 'thin' : 'big';
+      const showDate = v.showDate !== false;
+      return (
+        <>
+          <SelectField
+            label="Format"
+            value={fmt}
+            options={[
+              { value: '12h', label: '12-hour (3:34 PM)' },
+              { value: '24h', label: '24-hour (15:34)' }
+            ]}
+            onChange={(x) => patch({ format: x })}
+          />
+          <SelectField
+            label="Style"
+            value={style}
+            options={[
+              { value: 'big',  label: 'Big chunky' },
+              { value: 'thin', label: 'Thin' }
+            ]}
+            onChange={(x) => patch({ style: x })}
+          />
+          <ToggleField
+            label="Show date below time"
+            value={showDate}
+            onChange={(x) => patch({ showDate: x })}
+          />
+        </>
+      );
+    }
 
     case 'stocks':
       return (

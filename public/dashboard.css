@@ -467,6 +467,29 @@ html, body {
   font-size: 11px;
   letter-spacing: 2px;
 }
+/* ---------- Clock widget ---------- */
+.clock {
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  height: 100%; width: 100%;
+  text-align: center; gap: 4px;
+}
+.clock-time {
+  line-height: 0.95;
+  font-feature-settings: 'tnum' 1;
+}
+.clock-big .clock-time  { font-family: 'DM Serif Display', serif; font-weight: 700; }
+.clock-thin .clock-time { font-family: 'JetBrains Mono', monospace; font-weight: 300; letter-spacing: 1px; }
+.clock-ampm {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700; font-size: 0.35em; margin-left: 0.3em;
+  vertical-align: super; letter-spacing: 2px;
+}
+.clock-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700; letter-spacing: 4px; font-size: 13px;
+}
+
 /* sevesalm battery glyph is black-on-transparent; the default footer is
  * black so the icon would render as outline-against-black. Invert by
  * default so it reads as a clean white silhouette against the dark
