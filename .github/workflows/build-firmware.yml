@@ -1,0 +1,145 @@
+name: Build ESP32 firmware
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'esp32/**'
+      - '.github/workflows/build-firmware.yml'
+  workflow_dispatch: {}
+
+# Cancel in-progress runs when a newer push lands on the same branch.
+concurrency:
+  group: build-firmware-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed for git push back to main with the .bin
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: bw
+            sketch: esp32/weather_station
+          - name: b
+            sketch: esp32/weather_station_b
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # We push a commit back; default token has push perms with the
+          # `contents: write` job permission above, but we need an actor
+          # whose pushes don't re-trigger this workflow forever — handled
+          # by the `[skip ci]` tag in the commit message.
+          fetch-depth: 0
+
+      - name: Install arduino-cli
+        uses: arduino/setup-arduino-cli@v1
+
+      - name: Install ESP32 board package (3.2.0 — known good)
+        run: |
+          arduino-cli config init --overwrite
+          arduino-cli config add board_manager.additional_urls \
+            https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32@3.2.0
+
+      - name: Install libraries
+        run: |
+          arduino-cli lib install "GxEPD2"
+          arduino-cli lib install "ArduinoJson"
+          arduino-cli lib install "Adafruit GFX Library"
+          arduino-cli lib install "Adafruit BusIO"
+
+      - name: Generate stub secrets.h for CI compile
+        run: |
+          cat > ${{ matrix.sketch }}/secrets.h <<'EOF'
+          #pragma once
+          const char* ssid            = "ci";
+          const char* password        = "ci";
+          const char* serverBaseLan   = "";
+          const char* serverBaseCloud = "https://example.com";
+          const char* deviceToken     = "";
+          EOF
+
+      - name: Read FW_VERSION
+        id: fw
+        run: |
+          INO=$(ls ${{ matrix.sketch }}/*.ino | head -n1)
+          VERSION=$(grep -E '^#define FW_VERSION' "$INO" | awk '{print $3}' | tr -d '"')
+          if [ -z "$VERSION" ]; then
+            echo "Could not parse FW_VERSION from $INO" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Detected FW_VERSION=$VERSION for board=${{ matrix.name }}"
+
+      - name: Skip if binary already published
+        id: check
+        run: |
+          BIN="public/firmware/${{ matrix.name }}-${{ steps.fw.outputs.version }}.bin"
+          if [ -f "$BIN" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "$BIN already exists, nothing to do."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Compile sketch
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          mkdir -p build/${{ matrix.name }}
+          arduino-cli compile \
+            --fqbn 'esp32:esp32:esp32:PartitionScheme=min_spiffs' \
+            --output-dir build/${{ matrix.name }} \
+            ${{ matrix.sketch }}
+
+      - name: Stage compiled binary
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          mkdir -p public/firmware
+          # arduino-cli names the binary <sketch-folder-name>.ino.bin
+          SKETCH_NAME=$(basename ${{ matrix.sketch }})
+          SRC="build/${{ matrix.name }}/${SKETCH_NAME}.ino.bin"
+          DEST="public/firmware/${{ matrix.name }}-${{ steps.fw.outputs.version }}.bin"
+          if [ ! -f "$SRC" ]; then
+            echo "Expected $SRC but no such file" >&2
+            ls -R build/${{ matrix.name }} >&2 || true
+            exit 1
+          fi
+          cp "$SRC" "$DEST"
+          ls -lh "$DEST"
+
+      - name: Commit + push the .bin
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          BIN="public/firmware/${{ matrix.name }}-${{ steps.fw.outputs.version }}.bin"
+          git add "$BIN"
+
+          if git diff --cached --quiet; then
+            echo "Nothing new to commit."
+            exit 0
+          fi
+
+          git commit -m "firmware(${{ matrix.name }}): ship ${{ steps.fw.outputs.version }} [skip ci]"
+
+          # Pull --rebase to avoid races with the sibling matrix job's push.
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin main || true
+            if git push origin HEAD:main; then
+              echo "Pushed on attempt $attempt"
+              exit 0
+            fi
+            echo "Push failed on attempt $attempt, retrying..."
+            sleep $((RANDOM % 5 + 2))
+          done
+          echo "Push failed after 5 attempts" >&2
+          exit 1
