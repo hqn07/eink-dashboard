@@ -375,6 +375,58 @@ const RENDERERS = {
       </div>
     `;
   },
+
+  mac_nowplaying: ({ macNowPlaying }) => {
+    if (!macNowPlaying) {
+      return `<div class="col-title">NOW PLAYING</div><div class="empty" style="border:0;padding:14px 0">MAC OFFLINE</div>`;
+    }
+    const np = macNowPlaying;
+    const stateIcon = np.isPlaying ? '▶' : '❚❚';
+    return `
+      <div class="mac-np">
+        <div class="mac-np-state">${stateIcon}</div>
+        <div class="mac-np-text">
+          <div class="mac-np-title autofit" data-min-font="14">${escapeHtml(np.title)}</div>
+          <div class="mac-np-artist">${escapeHtml(np.artist || '—')}</div>
+        </div>
+      </div>
+    `;
+  },
+
+  mac_battery: ({ macBattery }) => {
+    if (!macBattery) {
+      return `<div class="col-title">MAC</div><div class="empty" style="border:0;padding:14px 0">OFFLINE</div>`;
+    }
+    const charging = /charg/i.test(macBattery.state);
+    const arrow = charging ? '⚡' : '';
+    return `
+      <div class="mac-batt">
+        <div class="col-title">MAC BATTERY</div>
+        <div class="mac-batt-pct autofit" data-min-font="22">${macBattery.percent}%${arrow}</div>
+        <div class="mac-batt-state">${escapeHtml(macBattery.state.toUpperCase())}</div>
+      </div>
+    `;
+  },
+
+  mac_focus: ({ macFocus }) => {
+    if (!macFocus) {
+      return `<div class="col-title">FOCUS</div><div class="empty" style="border:0;padding:14px 0">MAC OFFLINE</div>`;
+    }
+    if (!macFocus.active) {
+      return `
+        <div class="mac-focus">
+          <div class="col-title">FOCUS</div>
+          <div class="mac-focus-state autofit" data-min-font="20">OFF</div>
+        </div>
+      `;
+    }
+    return `
+      <div class="mac-focus">
+        <div class="col-title">FOCUS</div>
+        <div class="mac-focus-state autofit" data-min-font="20">${escapeHtml(macFocus.modeId).toUpperCase()}</div>
+      </div>
+    `;
+  },
 };
 
 export function renderWidget(id, data) {

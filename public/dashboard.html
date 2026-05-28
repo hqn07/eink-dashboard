@@ -516,6 +516,60 @@
           </div>
         `;
       }
+    },
+    {
+      id: 'mac_nowplaying',
+      requires: 'mac_nowplaying',
+      sizes: { S:{w:8,h:3}, M:{w:12,h:3}, L:{w:24,h:3}, XL:{w:24,h:6} },
+      defaultSize: 'M',
+      render: ({ macNowPlaying }) => {
+        if (!macNowPlaying) return placeholder('NOW PLAYING', 'MAC OFFLINE', 'msg');
+        const np = macNowPlaying;
+        const stateIcon = np.isPlaying ? '▶' : '❚❚';
+        return `
+          <div class="mac-np">
+            <div class="mac-np-state">${stateIcon}</div>
+            <div class="mac-np-text">
+              <div class="mac-np-title autofit" data-min-font="14">${escapeHtml(np.title)}</div>
+              <div class="mac-np-artist">${escapeHtml(np.artist || '—')}</div>
+            </div>
+          </div>
+        `;
+      }
+    },
+    {
+      id: 'mac_battery',
+      requires: 'mac_battery',
+      sizes: { S:{w:4,h:2}, M:{w:6,h:3}, L:{w:8,h:3} },
+      defaultSize: 'S',
+      render: ({ macBattery }) => {
+        if (!macBattery) return placeholder('MAC', 'OFFLINE', 'msg');
+        const charging = /charg/i.test(macBattery.state);
+        const arrow = charging ? '⚡' : '';
+        return `
+          <div class="mac-batt">
+            <div class="col-title">MAC BATTERY</div>
+            <div class="mac-batt-pct autofit" data-min-font="22">${macBattery.percent}%${arrow}</div>
+            <div class="mac-batt-state">${escapeHtml(macBattery.state.toUpperCase())}</div>
+          </div>
+        `;
+      }
+    },
+    {
+      id: 'mac_focus',
+      requires: 'mac_focus',
+      sizes: { S:{w:4,h:2}, M:{w:6,h:3} },
+      defaultSize: 'S',
+      render: ({ macFocus }) => {
+        if (!macFocus) return placeholder('FOCUS', 'MAC OFFLINE', 'msg');
+        const label = macFocus.active ? escapeHtml(macFocus.modeId).toUpperCase() : 'OFF';
+        return `
+          <div class="mac-focus">
+            <div class="col-title">FOCUS</div>
+            <div class="mac-focus-state autofit" data-min-font="20">${label}</div>
+          </div>
+        `;
+      }
     }
   ];
 

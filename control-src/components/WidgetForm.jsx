@@ -209,6 +209,19 @@ export default function WidgetForm({ widgetId, values, onChange }) {
   const patch = (p) => onChange({ ...v, ...p });
 
   switch (widgetId) {
+    case 'mac_nowplaying':
+    case 'mac_battery':
+    case 'mac_focus':
+      return (
+        <div className="wsm-placeholder">
+          <p className="wsm-note">
+            Reads from the host Mac when the dashboard server is
+            running on macOS. On Railway / cloud it shows "MAC OFFLINE".
+            No per-tile settings.
+          </p>
+        </div>
+      );
+
     case 'stocks':
       return (
         <CsvField

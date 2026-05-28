@@ -101,6 +101,47 @@ export const WIDGET_REGISTRY = [
     },
     defaultSize: 'M',
     defaults: () => ({ symbols: [] })
+  },
+  // Mac-only widgets — only render data when the server is running on
+  // the user's Mac (LAN path). On Railway/Linux they show MAC OFFLINE.
+  {
+    id: 'mac_nowplaying',
+    label: 'Mac · Now Playing',
+    requires: 'mac_nowplaying',
+    minSize: { w: 6, h: 2 },
+    sizes: {
+      S:  { w: 8, h: 3 },
+      M:  { w: 12, h: 3 },
+      L:  { w: 24, h: 3 },
+      XL: { w: 24, h: 6 }
+    },
+    defaultSize: 'M',
+    defaults: () => ({})
+  },
+  {
+    id: 'mac_battery',
+    label: 'Mac · Battery',
+    requires: 'mac_battery',
+    minSize: { w: 3, h: 2 },
+    sizes: {
+      S:  { w: 4, h: 2 },
+      M:  { w: 6, h: 3 },
+      L:  { w: 8, h: 3 }
+    },
+    defaultSize: 'S',
+    defaults: () => ({})
+  },
+  {
+    id: 'mac_focus',
+    label: 'Mac · Focus',
+    requires: 'mac_focus',
+    minSize: { w: 3, h: 2 },
+    sizes: {
+      S:  { w: 4, h: 2 },
+      M:  { w: 6, h: 3 }
+    },
+    defaultSize: 'S',
+    defaults: () => ({})
   }
 ];
 

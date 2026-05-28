@@ -20,6 +20,9 @@ const { fetchStocks } = require('./widgets/stocks');
 const { fetchAlerts } = require('./widgets/alerts');
 const widgetStatus = require('./widgets/_status');
 const { resolveMessage, renderInlineMarkdown } = require('./widgets/message');
+const { fetchMacNowPlaying } = require('./widgets/macnowplaying');
+const { fetchMacBattery } = require('./widgets/macbattery');
+const { fetchMacFocus } = require('./widgets/macfocus');
 
 const PORT = process.env.PORT || 3000;
 const DEVICE_TOKEN = process.env.DEVICE_TOKEN || '';
@@ -689,6 +692,21 @@ async function buildWidgetData(cfg, units, layout) {
             timezone: cfg.timezone, message: eff
           });
           break;
+
+        // --- Mac-only widgets — return null off-mac, renderer shows
+        // "MAC OFFLINE" placeholder. Reading happens on whichever
+        // server the device hit, so these tiles light up only when
+        // the Mac LAN path is active. ---
+        case 'mac_nowplaying':
+          slot.macNowPlaying = await fetchMacNowPlaying();
+          break;
+        case 'mac_battery':
+          slot.macBattery = await fetchMacBattery();
+          break;
+        case 'mac_focus':
+          slot.macFocus = await fetchMacFocus();
+          break;
+
         default:
           break;
       }
