@@ -15,28 +15,10 @@ const sharp = require('sharp');
 
 const { fetchWeather, geocodeCity } = require('./widgets/weather');
 const { fetchEvents } = require('./widgets/calendar');
-const { buildClockNow } = require('./widgets/clock');
-const { buildCountdowns } = require('./widgets/countdown');
-const { buildMoonSun } = require('./widgets/moonsun');
-const { buildWifiQrSvg } = require('./widgets/wifi');
-const { fetchAqi } = require('./widgets/aqi');
-const { fetchNews } = require('./widgets/news');
 const { fetchStocks } = require('./widgets/stocks');
-const { fetchGithub } = require('./widgets/github');
 const { fetchAlerts } = require('./widgets/alerts');
-const { prepTodos } = require('./widgets/todos');
 const widgetStatus = require('./widgets/_status');
-const { resolveQuote } = require('./widgets/quote');
 const { resolveMessage, renderInlineMarkdown } = require('./widgets/message');
-const { resolvePhoto } = require('./widgets/photo');
-const { buildCounters } = require('./widgets/counter');
-const { buildLinkQrSvg } = require('./widgets/linkqr');
-const { fetchFx } = require('./widgets/fx');
-const { fetchIss } = require('./widgets/iss');
-const { buildHabits } = require('./widgets/habit');
-const { fetchWordOfDay } = require('./widgets/wod');
-const { fetchSports } = require('./widgets/sports');
-const { buildChores } = require('./widgets/chore');
 
 const PORT = process.env.PORT || 3000;
 const DEVICE_TOKEN = process.env.DEVICE_TOKEN || '';
@@ -424,7 +406,7 @@ const EDITORIAL_LAYOUT = [
   { widgetId: 'weather_hero',     x: 0,  y: 0, w: 8,  h: 12 },
   { widgetId: 'weather_forecast', x: 8,  y: 0, w: 6,  h: 12 },
   { widgetId: 'message',          x: 14, y: 0, w: 10, h: 4 },
-  { widgetId: 'todos',            x: 14, y: 4, w: 10, h: 8 }
+  { widgetId: 'calendar',         x: 14, y: 4, w: 10, h: 8 }
 ];
 function seedLayoutFromEditorial() {
   return EDITORIAL_LAYOUT.map((it, i) => ({
@@ -582,7 +564,7 @@ app.use('/control-app', express.static(CONTROL_APP_DIR));
 // if the widget is non-fetched / always-on).
 async function buildWidgetData(cfg, units, layout) {
   const ids = new Set((layout || []).map(it => it.widgetId || it.id));
-  const wantWeather = ids.has('weather_hero') || ids.has('weather_forecast') || ids.has('moonsun');
+  const wantWeather = ids.has('weather_hero') || ids.has('weather_forecast');
   const loc = (Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon))
     ? { lat: cfg.lat, lon: cfg.lon }
     : cfg.city;
@@ -594,43 +576,19 @@ async function buildWidgetData(cfg, units, layout) {
     : (cfg.calendar && cfg.calendar.icalUrl ? [cfg.calendar.icalUrl] : []);
 
   const [
-    weather, events, aqi, news, stocks, github, wifiQrSvg, alerts,
-    fx, iss, wod, sports, linkQrSvg
+    weather, events, stocks, alerts
   ] = await Promise.all([
     wantWeather ? fetchWeather(loc, process.env.OPENWEATHER_API_KEY, units) : null,
     (ids.has('calendar') && icalUrls.length)
       ? Promise.all(icalUrls.map(u => fetchEvents(u))).then(lists => mergeEvents(lists.flat()))
       : [],
-    (ids.has('aqi') && Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon))
-      ? fetchAqi({ lat: cfg.lat, lon: cfg.lon }) : null,
-    (ids.has('news') && cfg.news && cfg.news.feedUrl)
-      ? fetchNews(cfg.news.feedUrl, cfg.news.maxItems || 5) : [],
     (ids.has('stocks') && cfg.stocks && Array.isArray(cfg.stocks.symbols) && cfg.stocks.symbols.length)
       ? fetchStocks(cfg.stocks.symbols) : [],
-    (ids.has('github') && cfg.github && cfg.github.user)
-      ? fetchGithub(cfg.github.user) : null,
-    ids.has('wifi_qr') ? buildWifiQrSvg(cfg.wifi || {}) : null,
     (wantWeather && cfg.alerts !== false && Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon))
-      ? fetchAlerts({ lat: cfg.lat, lon: cfg.lon }) : [],
-    (ids.has('fx') && cfg.fx && Array.isArray(cfg.fx.pairs) && cfg.fx.pairs.length)
-      ? fetchFx(cfg.fx.pairs) : [],
-    ids.has('iss') ? fetchIss() : null,
-    ids.has('wod') ? fetchWordOfDay(cfg.wod && cfg.wod.feedUrl) : null,
-    (ids.has('sports') && cfg.sports && cfg.sports.teamId)
-      ? fetchSports(cfg.sports.teamId) : null,
-    ids.has('link_qr') ? buildLinkQrSvg(cfg.linkQr || {}) : null
+      ? fetchAlerts({ lat: cfg.lat, lon: cfg.lon }) : []
   ]);
 
-  const clockNow    = ids.has('clock')     ? buildClockNow(cfg.timezone || 'UTC') : null;
-  const countdowns  = ids.has('countdown') ? buildCountdowns(cfg.countdowns || [], cfg.timezone || 'UTC') : [];
-  const counters    = ids.has('counter')   ? buildCounters(cfg.counters || [], cfg.timezone || 'UTC') : [];
-  const habits      = ids.has('habit')     ? buildHabits(cfg.habits || [], cfg.timezone || 'UTC') : [];
-  const chores      = ids.has('chore')     ? buildChores(cfg.chores || [], cfg.timezone || 'UTC') : [];
-  const moonsun     = ids.has('moonsun')   ? buildMoonSun(weather) : null;
-  const todos       = ids.has('todos') ? prepTodos(cfg.todos || [], cfg.timezone || 'UTC') : [];
-  const resolvedQuote   = ids.has('quote')   ? await resolveQuote(cfg) : null;
   const resolvedMessage = ids.has('message') ? resolveMessage(cfg) : null;
-  const resolvedPhoto   = ids.has('photo')   ? resolvePhoto(cfg) : null;
 
   // Attach alerts onto weather so the renderer can show a banner without
   // a separate top-level lookup.
@@ -644,8 +602,7 @@ async function buildWidgetData(cfg, units, layout) {
   // tiles + the global fetch above, so duplicate per-instance configs
   // don't multiply API calls.
   const perItem = {};
-  const tz = cfg.timezone || 'UTC';
-  // Per-tile location resolver — used by weather/aqi/moonsun overrides.
+  // Per-tile location resolver — used by weather overrides.
   const resolveLoc = (eff) => {
     if (Number.isFinite(eff.lat) && Number.isFinite(eff.lon)) {
       return { lat: eff.lat, lon: eff.lon };
@@ -672,9 +629,6 @@ async function buildWidgetData(cfg, units, layout) {
     try {
       switch (wid) {
         // --- Data-fetched widgets ---
-        case 'news':
-          if (eff.feedUrl) slot.news = await fetchNews(eff.feedUrl, eff.maxItems || 5);
-          break;
         case 'stocks':
           // New contract: always set slot.stocks so an empty-symbols
           // tile shows the renderer's "NO DATA" path instead of falling
@@ -682,20 +636,6 @@ async function buildWidgetData(cfg, units, layout) {
           slot.stocks = (Array.isArray(eff.symbols) && eff.symbols.length)
             ? await fetchStocks(eff.symbols)
             : [];
-          break;
-        case 'github':
-          if (eff.user) slot.github = await fetchGithub(eff.user);
-          break;
-        case 'fx':
-          if (Array.isArray(eff.pairs) && eff.pairs.length) {
-            slot.fx = await fetchFx(eff.pairs);
-          }
-          break;
-        case 'sports':
-          if (eff.teamId) slot.sports = await fetchSports(eff.teamId);
-          break;
-        case 'wod':
-          slot.wod = await fetchWordOfDay(eff.feedUrl);
           break;
         case 'calendar': {
           // New contract: always set slot.events. Empty URL list resolves
@@ -739,20 +679,6 @@ async function buildWidgetData(cfg, units, layout) {
           }
           break;
         }
-        case 'aqi': {
-          if (Number.isFinite(eff.lat) && Number.isFinite(eff.lon)) {
-            slot.aqi = await fetchAqi({ lat: eff.lat, lon: eff.lon });
-          }
-          break;
-        }
-        case 'moonsun': {
-          const loc = resolveLoc(eff);
-          if (loc) {
-            const w = await fetchWeather(loc, process.env.OPENWEATHER_API_KEY, units);
-            slot.moonsun = buildMoonSun(w);
-          }
-          break;
-        }
 
         // --- Pre-resolved synthesized slots ---
         case 'message':
@@ -762,48 +688,6 @@ async function buildWidgetData(cfg, units, layout) {
           slot.resolvedMessage = resolveMessage({
             timezone: cfg.timezone, message: eff
           });
-          break;
-        case 'quote':
-          slot.resolvedQuote = await resolveQuote({ ...cfg, quote: eff });
-          break;
-        case 'photo':
-          slot.resolvedPhoto = resolvePhoto({ ...cfg, photo: eff });
-          break;
-        case 'wifi_qr':
-          slot.wifiQrSvg = buildWifiQrSvg(eff);
-          // Also synth cfg.wifi for renderers that read cfg.wifi directly.
-          slot.cfg = { ...cfg, wifi: eff };
-          break;
-        case 'link_qr':
-          slot.linkQrSvg = buildLinkQrSvg(eff);
-          slot.cfg = { ...cfg, linkQr: eff };
-          break;
-        case 'clock': {
-          const overrideTz = eff.timezone || tz;
-          slot.clockNow = buildClockNow(overrideTz);
-          slot.cfg = { ...cfg, clock: eff, timezone: overrideTz };
-          break;
-        }
-        case 'spacer':
-          slot.cfg = { ...cfg, spacer: eff };
-          break;
-
-        // --- List-shape widgets ---
-        case 'todos':
-          slot.todos = prepTodos(eff.items || [], tz);
-          slot.cfg = { ...cfg, todos: eff.items || [] };
-          break;
-        case 'countdown':
-          slot.countdowns = buildCountdowns(eff.items || [], tz);
-          break;
-        case 'counter':
-          slot.counters = buildCounters(eff.items || [], tz);
-          break;
-        case 'habit':
-          slot.habits = buildHabits(eff.items || [], tz);
-          break;
-        case 'chore':
-          slot.chores = buildChores(eff.items || [], tz);
           break;
         default:
           break;
@@ -815,10 +699,8 @@ async function buildWidgetData(cfg, units, layout) {
   }));
 
   return {
-    weather, events, aqi, news, stocks, github,
-    wifiQrSvg, clockNow, countdowns, moonsun, todos,
-    resolvedQuote, resolvedMessage, resolvedPhoto,
-    counters, linkQrSvg, fx, iss, habits, wod, sports, chores,
+    weather, events, stocks,
+    resolvedMessage,
     perItem
   };
 }
@@ -893,14 +775,8 @@ app.get('/widgets-matrix', checkDeviceAuth, async (req, res) => {
     // Force-fetch every data widget so the matrix has real content.
     const fakeLayout = [
       { widgetId: 'weather_hero' }, { widgetId: 'weather_forecast' },
-      { widgetId: 'calendar' }, { widgetId: 'todos' }, { widgetId: 'message' },
-      { widgetId: 'quote' }, { widgetId: 'clock' }, { widgetId: 'wifi_qr' },
-      { widgetId: 'countdown' }, { widgetId: 'aqi' }, { widgetId: 'moonsun' },
-      { widgetId: 'news' }, { widgetId: 'stocks' }, { widgetId: 'photo' },
-      { widgetId: 'github' }, { widgetId: 'spacer' },
-      { widgetId: 'counter' }, { widgetId: 'link_qr' }, { widgetId: 'fx' },
-      { widgetId: 'iss' }, { widgetId: 'habit' }, { widgetId: 'wod' },
-      { widgetId: 'sports' }, { widgetId: 'chore' }
+      { widgetId: 'calendar' }, { widgetId: 'message' },
+      { widgetId: 'stocks' }
     ];
     const data = await buildWidgetData(cfg, units, fakeLayout);
     const html = await loadDashboardHtml();
@@ -1111,21 +987,8 @@ app.post('/api/config', checkDeviceAuth, async (req, res) => {
       widgets:  { ...(current.widgets  || {}), ...(req.body.widgets  || {}) },
       message:  { ...(current.message  || {}), ...(req.body.message  || {}) },
       calendar: { ...(current.calendar || {}), ...(req.body.calendar || {}) },
-      spacer:   { ...(current.spacer   || {}), ...(req.body.spacer   || {}) },
-      quote:    { ...(current.quote    || {}), ...(req.body.quote    || {}) },
-      clock:    { ...(current.clock    || {}), ...(req.body.clock    || {}) },
-      wifi:     { ...(current.wifi     || {}), ...(req.body.wifi     || {}) },
-      news:     { ...(current.news     || {}), ...(req.body.news     || {}) },
       stocks:   { ...(current.stocks   || {}), ...(req.body.stocks   || {}) },
-      github:   { ...(current.github   || {}), ...(req.body.github   || {}) },
-      photo:    { ...(current.photo    || {}), ...(req.body.photo    || {}) },
-      aqi:      { ...(current.aqi      || {}), ...(req.body.aqi      || {}) },
       weather:  { ...(current.weather  || {}), ...(req.body.weather  || {}) },
-      linkQr:   { ...(current.linkQr   || {}), ...(req.body.linkQr   || {}) },
-      fx:       { ...(current.fx       || {}), ...(req.body.fx       || {}) },
-      iss:      { ...(current.iss      || {}), ...(req.body.iss      || {}) },
-      wod:      { ...(current.wod      || {}), ...(req.body.wod      || {}) },
-      sports:   { ...(current.sports   || {}), ...(req.body.sports   || {}) },
     };
     if (Array.isArray(req.body.screens)) {
       merged.screens = req.body.screens;
@@ -1239,15 +1102,6 @@ app.get('/firmware/:file', checkDeviceAuth, (req, res) => {
   res.sendFile(full, (err) => {
     if (err && !res.headersSent) res.status(404).send('not found');
   });
-});
-
-// Todos quick endpoints
-app.post('/api/todos', checkDeviceAuth, async (req, res) => {
-  const cfg = await loadConfig();
-  cfg.todos = req.body.todos || [];
-  await saveConfig(cfg);
-  invalidateImage();
-  res.json({ ok: true });
 });
 
 // Health

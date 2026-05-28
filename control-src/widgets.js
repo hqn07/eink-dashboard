@@ -68,19 +68,6 @@ export const WIDGET_REGISTRY = [
     defaults: () => ({ text: '', subtitle: '', schedule: [] })
   },
   {
-    id: 'todos',
-    label: 'To-Do List',
-    requires: 'todos',
-    minSize: { w: 6, h: 4 },
-    sizes: {
-      S:  { w: 8, h: 6 },
-      M:  { w: 10, h: 6 },
-      L:  { w: 12, h: 12 },
-      XL: { w: 24, h: 12 }
-    },
-    defaultSize: 'M'
-  },
-  {
     id: 'calendar',
     label: 'Calendar',
     requires: 'calendar',
@@ -96,107 +83,6 @@ export const WIDGET_REGISTRY = [
     defaults: () => ({ icalUrls: [] })
   },
   {
-    id: 'spacer',
-    label: 'Black Bar',
-    requires: 'spacer',
-    minSize: { w: 4, h: 1 },
-    sizes: {
-      XS: { w: 24, h: 1 },
-      S:  { w: 24, h: 2 },
-      M:  { w: 12, h: 2 },
-      L:  { w: 8,  h: 12 },
-      XL: { w: 24, h: 4 }
-    },
-    defaultSize: 'S'
-  },
-  {
-    id: 'quote',
-    label: 'Text / Quote',
-    requires: 'quote',
-    minSize: { w: 6, h: 3 },
-    sizes: {
-      S:  { w: 8, h: 4 },
-      M:  { w: 12, h: 6 },
-      L:  { w: 24, h: 6 },
-      XL: { w: 24, h: 12 }
-    },
-    defaultSize: 'M'
-  },
-  {
-    id: 'clock',
-    label: 'Clock',
-    requires: 'clock',
-    minSize: { w: 6, h: 3 },
-    sizes: {
-      XS: { w: 8, h: 3 },
-      S:  { w: 8, h: 4 },
-      M:  { w: 12, h: 4 },
-      L:  { w: 24, h: 4 },
-      XL: { w: 24, h: 6 }
-    },
-    defaultSize: 'M'
-  },
-  {
-    id: 'wifi_qr',
-    label: 'WiFi QR Code',
-    requires: 'wifi',
-    minSize: { w: 4, h: 4 },
-    sizes: {
-      S: { w: 6, h: 6 },
-      M: { w: 8, h: 8 },
-      L: { w: 12, h: 12 }
-    },
-    defaultSize: 'M'
-  },
-  {
-    id: 'countdown',
-    label: 'Countdown',
-    requires: 'countdowns',
-    minSize: { w: 6, h: 3 },
-    sizes: {
-      S: { w: 8, h: 4 },
-      M: { w: 12, h: 4 },
-      L: { w: 24, h: 4 }
-    },
-    defaultSize: 'M'
-  },
-  {
-    id: 'aqi',
-    label: 'Air Quality',
-    requires: 'aqi',
-    minSize: { w: 6, h: 3 },
-    sizes: {
-      S: { w: 8, h: 4 },
-      M: { w: 8, h: 6 },
-      L: { w: 12, h: 6 }
-    },
-    defaultSize: 'M'
-  },
-  {
-    id: 'moonsun',
-    label: 'Moon & Sun',
-    requires: 'moonsun',
-    minSize: { w: 6, h: 3 },
-    sizes: {
-      S: { w: 8, h: 4 },
-      M: { w: 8, h: 6 },
-      L: { w: 12, h: 6 }
-    },
-    defaultSize: 'M'
-  },
-  {
-    id: 'news',
-    label: 'News Headlines',
-    requires: 'news',
-    minSize: { w: 8, h: 4 },
-    sizes: {
-      S: { w: 12, h: 6 },
-      M: { w: 12, h: 12 },
-      L: { w: 24, h: 12 }
-    },
-    defaultSize: 'M'
-  },
-  {
     id: 'stocks',
     label: 'Stocks / Crypto',
     requires: 'stocks',
@@ -210,104 +96,6 @@ export const WIDGET_REGISTRY = [
     defaultSize: 'M',
     newContract: true,
     defaults: () => ({ symbols: [] })
-  },
-  {
-    id: 'photo',
-    label: 'Photo / Image',
-    requires: 'photo',
-    minSize: { w: 4, h: 4 },
-    sizes: {
-      S: { w: 8, h: 6 },
-      M: { w: 12, h: 12 },
-      L: { w: 24, h: 12 }
-    },
-    defaultSize: 'M'
-  },
-  {
-    id: 'github',
-    label: 'GitHub Activity',
-    requires: 'github',
-    minSize: { w: 10, h: 3 },
-    sizes: {
-      S: { w: 12, h: 4 },
-      M: { w: 24, h: 4 },
-      L: { w: 24, h: 6 }
-    },
-    defaultSize: 'M'
-  },
-  {
-    id: 'counter',
-    label: 'Days Counter',
-    requires: 'counters',
-    minSize: { w: 6, h: 3 },
-    sizes: { S: { w: 8, h: 4 }, M: { w: 12, h: 4 }, L: { w: 24, h: 4 } },
-    defaultSize: 'M'
-  },
-  {
-    id: 'link_qr',
-    label: 'Link QR Code',
-    requires: 'linkQr',
-    minSize: { w: 4, h: 4 },
-    sizes: { S: { w: 6, h: 6 }, M: { w: 8, h: 8 }, L: { w: 12, h: 12 } },
-    defaultSize: 'M'
-  },
-  {
-    id: 'fx',
-    label: 'Currency / FX',
-    requires: 'fx',
-    minSize: { w: 6, h: 3 },
-    sizes: {
-      S:  { w: 8,  h: 4 },
-      M:  { w: 12, h: 6 },
-      L:  { w: 24, h: 6 },
-      XL: { w: 24, h: 12 }
-    },
-    defaultSize: 'M'
-  },
-  {
-    id: 'iss',
-    label: 'ISS Tracker',
-    requires: 'iss',
-    minSize: { w: 6, h: 3 },
-    sizes: { S: { w: 8, h: 4 }, M: { w: 12, h: 6 }, L: { w: 24, h: 6 } },
-    defaultSize: 'M'
-  },
-  {
-    id: 'habit',
-    label: 'Habit Tracker',
-    requires: 'habits',
-    minSize: { w: 8, h: 4 },
-    sizes: { S: { w: 12, h: 6 }, M: { w: 12, h: 12 }, L: { w: 24, h: 12 } },
-    defaultSize: 'M'
-  },
-  {
-    id: 'wod',
-    label: 'Word of the Day',
-    requires: 'wod',
-    minSize: { w: 6, h: 3 },
-    sizes: {
-      XS: { w: 8,  h: 3 },
-      S:  { w: 12, h: 4 },
-      M:  { w: 12, h: 6 },
-      L:  { w: 24, h: 6 }
-    },
-    defaultSize: 'M'
-  },
-  {
-    id: 'sports',
-    label: 'Sports Score',
-    requires: 'sports',
-    minSize: { w: 6, h: 4 },
-    sizes: { S: { w: 8, h: 6 }, M: { w: 12, h: 6 }, L: { w: 24, h: 6 } },
-    defaultSize: 'M'
-  },
-  {
-    id: 'chore',
-    label: 'Chore Reminder',
-    requires: 'chores',
-    minSize: { w: 6, h: 3 },
-    sizes: { S: { w: 8, h: 4 }, M: { w: 12, h: 4 }, L: { w: 24, h: 4 } },
-    defaultSize: 'M'
   }
 ];
 
@@ -340,26 +128,20 @@ export function widgetById(id) {
   return WIDGET_REGISTRY.find(w => w.id === id);
 }
 
-// Default positions for screen 1 (full editorial). Screen 2 = minimal hero only.
+// Default positions for screen 1 (editorial). Screen 2 = minimal hero only.
 // x/y-coords in 24x12 grid units.
 const DEFAULT_LAYOUTS = {
   1: [
     { id: 'weather_hero',     x: 0,  y: 0, size: 'M', enabled: true },
     { id: 'weather_forecast', x: 8,  y: 0, size: 'M', enabled: true },
     { id: 'message',          x: 14, y: 0, size: 'M', enabled: true },
-    { id: 'todos',            x: 14, y: 4, size: 'M', enabled: true },
-    { id: 'calendar',         x: 14, y: 8, size: 'M', enabled: false },
-    { id: 'spacer',           x: 0,  y: 0, size: 'S', enabled: false },
-    { id: 'quote',            x: 0,  y: 0, size: 'M', enabled: false }
+    { id: 'calendar',         x: 14, y: 4, size: 'M', enabled: true }
   ],
   2: [
     { id: 'weather_hero',     x: 0, y: 0, size: 'XL', enabled: true },
     { id: 'weather_forecast', x: 0, y: 0, size: 'M',  enabled: false },
     { id: 'message',          x: 0, y: 0, size: 'M',  enabled: false },
-    { id: 'todos',            x: 0, y: 0, size: 'M',  enabled: false },
-    { id: 'calendar',         x: 0, y: 0, size: 'M',  enabled: false },
-    { id: 'spacer',           x: 0, y: 0, size: 'S',  enabled: false },
-    { id: 'quote',            x: 0, y: 0, size: 'M',  enabled: false }
+    { id: 'calendar',         x: 0, y: 0, size: 'M',  enabled: false }
   ]
 };
 
@@ -466,132 +248,20 @@ export const SCREEN_PRESETS = [
   {
     id: 'editorial',
     name: 'Editorial',
-    description: 'Newspaper feel: weather + forecast + message + todos.',
+    description: 'Newspaper feel: weather + forecast + message + calendar.',
     layout: [
       { widgetId: 'weather_hero',     x: 0,  y: 0, w: 8,  h: 12 },
       { widgetId: 'weather_forecast', x: 8,  y: 0, w: 6,  h: 12 },
       { widgetId: 'message',          x: 14, y: 0, w: 10, h: 4 },
-      { widgetId: 'todos',            x: 14, y: 4, w: 10, h: 8 }
+      { widgetId: 'calendar',         x: 14, y: 4, w: 10, h: 8 }
     ]
   },
   {
     id: 'minimal_hero',
-    name: 'Minimal Hero',
+    name: 'Just Weather',
     description: 'Just the weather, full-bleed.',
     layout: [
       { widgetId: 'weather_hero', x: 0, y: 0, w: 24, h: 12 }
-    ]
-  },
-  {
-    id: 'wake_up',
-    name: 'Wake Up',
-    description: 'Big clock + countdown + today’s todos.',
-    layout: [
-      { widgetId: 'clock',     x: 0,  y: 0, w: 24, h: 6 },
-      { widgetId: 'countdown', x: 0,  y: 6, w: 12, h: 6 },
-      { widgetId: 'todos',     x: 12, y: 6, w: 12, h: 6 }
-    ]
-  },
-  {
-    id: 'bedside',
-    name: 'Bedside',
-    description: 'Clock, moon phase, gentle message.',
-    layout: [
-      { widgetId: 'clock',   x: 0,  y: 0, w: 24, h: 8 },
-      { widgetId: 'moonsun', x: 0,  y: 8, w: 12, h: 4 },
-      { widgetId: 'message', x: 12, y: 8, w: 12, h: 4 }
-    ]
-  },
-  {
-    id: 'photo_wall',
-    name: 'Photo Wall',
-    description: 'A single uploaded image, full-bleed.',
-    layout: [
-      { widgetId: 'photo', x: 0, y: 0, w: 24, h: 12 }
-    ]
-  },
-  {
-    id: 'office',
-    name: 'Office',
-    description: 'Clock, calendar, news, markets.',
-    layout: [
-      { widgetId: 'clock',    x: 0,  y: 0, w: 12, h: 4 },
-      { widgetId: 'calendar', x: 12, y: 0, w: 12, h: 4 },
-      { widgetId: 'news',     x: 0,  y: 4, w: 12, h: 8 },
-      { widgetId: 'stocks',   x: 12, y: 4, w: 12, h: 8 }
-    ]
-  },
-  {
-    id: 'quote_card',
-    name: 'Quote Card',
-    description: 'A daily quote, big and quiet.',
-    layout: [
-      { widgetId: 'quote', x: 0, y: 0, w: 24, h: 12 }
-    ]
-  },
-  {
-    id: 'status_board',
-    name: 'Status Board',
-    description: 'GitHub heat-map, markets, countdowns, sky.',
-    layout: [
-      { widgetId: 'github',    x: 0,  y: 0, w: 24, h: 4 },
-      { widgetId: 'countdown', x: 0,  y: 4, w: 12, h: 4 },
-      { widgetId: 'stocks',    x: 12, y: 4, w: 12, h: 4 },
-      { widgetId: 'aqi',       x: 0,  y: 8, w: 8,  h: 4 },
-      { widgetId: 'moonsun',   x: 8,  y: 8, w: 8,  h: 4 },
-      { widgetId: 'clock',     x: 16, y: 8, w: 8,  h: 4 }
-    ]
-  },
-  {
-    id: 'home_setup',
-    name: 'Home Setup',
-    description: 'Guest wall — WiFi QR + a link QR side by side.',
-    layout: [
-      { widgetId: 'wifi_qr', x: 0,  y: 0, w: 12, h: 12 },
-      { widgetId: 'link_qr', x: 12, y: 0, w: 12, h: 12 }
-    ]
-  },
-  {
-    id: 'newsstand',
-    name: 'Newsstand',
-    description: 'News column + word of the day + a clock.',
-    layout: [
-      { widgetId: 'news',  x: 0,  y: 0, w: 12, h: 12 },
-      { widgetId: 'wod',   x: 12, y: 0, w: 12, h: 6 },
-      { widgetId: 'clock', x: 12, y: 6, w: 12, h: 4 }
-    ]
-  },
-  {
-    id: 'markets',
-    name: 'Markets',
-    description: 'Stocks lead, FX strip, news below.',
-    layout: [
-      { widgetId: 'stocks', x: 0,  y: 0, w: 24, h: 6 },
-      { widgetId: 'fx',     x: 0,  y: 6, w: 12, h: 6 },
-      { widgetId: 'news',   x: 12, y: 6, w: 12, h: 6 }
-    ]
-  },
-  {
-    id: 'date_anniversary',
-    name: 'Date / Anniversary',
-    description: 'Countdown + days-since counter + a quote.',
-    layout: [
-      { widgetId: 'countdown', x: 0,  y: 0,  w: 12, h: 4 },
-      { widgetId: 'counter',   x: 12, y: 0,  w: 12, h: 4 },
-      { widgetId: 'quote',     x: 0,  y: 4,  w: 24, h: 6 },
-      { widgetId: 'spacer',    x: 0,  y: 10, w: 24, h: 2 }
-    ]
-  },
-  {
-    id: 'kitchen',
-    name: 'Kitchen',
-    description: 'Chores band, weather, calendar, message, WiFi QR.',
-    layout: [
-      { widgetId: 'chore',         x: 0,  y: 0, w: 24, h: 4 },
-      { widgetId: 'weather_hero',  x: 0,  y: 4, w: 8,  h: 6 },
-      { widgetId: 'calendar',      x: 8,  y: 4, w: 10, h: 4 },
-      { widgetId: 'message',       x: 8,  y: 8, w: 10, h: 4 },
-      { widgetId: 'wifi_qr',       x: 18, y: 4, w: 6,  h: 6 }
     ]
   }
 ];

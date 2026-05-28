@@ -17,29 +17,11 @@
   const cfg = D.cfg || {};
   const w = D.weather;
   const events = D.events || [];
-  const todos = (cfg.todos || []).slice(0, 6);
   const widgets = cfg.widgets || {};
   const units = D.units || cfg.units || 'F';
   const screen = D.screen || cfg.screen || 1;
-  const aqi = D.aqi || null;
-  const news = D.news || [];
   const stocks = D.stocks || [];
-  const github = D.github || null;
-  const wifiQrSvg = D.wifiQrSvg || null;
-  const clockNow = D.clockNow || null;
-  const countdowns = D.countdowns || [];
-  const moonsun = D.moonsun || null;
-  const resolvedQuote = D.resolvedQuote || null;
   const resolvedMessage = D.resolvedMessage || null;
-  const resolvedPhoto = D.resolvedPhoto || null;
-  const counters = D.counters || [];
-  const linkQrSvg = D.linkQrSvg || null;
-  const fx = D.fx || [];
-  const iss = D.iss || null;
-  const habits = D.habits || [];
-  const wod = D.wod || null;
-  const sports = D.sports || null;
-  const chores = D.chores || [];
   // Per-instance widget data — slot overrides keyed by layout item id.
   const perItem = D.perItem || {};
   const chrome = D.chrome || {
@@ -107,19 +89,10 @@
   // Per-widget placeholder glyphs. Keep these chunky (stroke-width 4+)
   // so they survive the 1-bit threshold and don't dither on real panel.
   const PLACEHOLDER_ICONS = {
-    clock:    '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="24" fill="none" stroke="#000" stroke-width="4"/><line x1="32" y1="32" x2="32" y2="18" stroke="#000" stroke-width="4" stroke-linecap="round"/><line x1="32" y1="32" x2="42" y2="38" stroke="#000" stroke-width="4" stroke-linecap="round"/></svg>',
     weather:  '<svg viewBox="0 0 64 64"><path d="M 18 40 Q 10 40 10 32 Q 10 24 18 24 Q 18 14 28 14 Q 38 14 40 24 Q 52 24 52 34 Q 52 42 44 42 L 18 42 Z" fill="none" stroke="#000" stroke-width="4"/></svg>',
     calendar: '<svg viewBox="0 0 64 64"><rect x="8" y="14" width="48" height="42" fill="none" stroke="#000" stroke-width="4"/><line x1="8" y1="24" x2="56" y2="24" stroke="#000" stroke-width="4"/><line x1="20" y1="8" x2="20" y2="20" stroke="#000" stroke-width="4" stroke-linecap="round"/><line x1="44" y1="8" x2="44" y2="20" stroke="#000" stroke-width="4" stroke-linecap="round"/></svg>',
-    todos:    '<svg viewBox="0 0 64 64"><rect x="12" y="14" width="14" height="14" fill="none" stroke="#000" stroke-width="4"/><line x1="32" y1="21" x2="56" y2="21" stroke="#000" stroke-width="4" stroke-linecap="round"/><rect x="12" y="38" width="14" height="14" fill="#000"/><polyline points="16,44 20,48 24,40" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><line x1="32" y1="45" x2="56" y2="45" stroke="#000" stroke-width="4" stroke-linecap="round"/></svg>',
     stocks:   '<svg viewBox="0 0 64 64"><polyline points="6,46 20,32 30,38 44,18 58,24" fill="none" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><line x1="6" y1="56" x2="58" y2="56" stroke="#000" stroke-width="4"/></svg>',
-    photo:    '<svg viewBox="0 0 64 64"><rect x="6" y="10" width="52" height="44" fill="none" stroke="#000" stroke-width="4"/><circle cx="22" cy="24" r="4" fill="#000"/><polyline points="10,46 22,34 32,42 46,28 56,38" fill="none" stroke="#000" stroke-width="4" stroke-linejoin="round"/></svg>',
-    news:     '<svg viewBox="0 0 64 64"><rect x="8" y="10" width="48" height="44" fill="none" stroke="#000" stroke-width="4"/><line x1="14" y1="22" x2="50" y2="22" stroke="#000" stroke-width="4"/><line x1="14" y1="32" x2="40" y2="32" stroke="#000" stroke-width="4"/><line x1="14" y1="40" x2="50" y2="40" stroke="#000" stroke-width="4"/><line x1="14" y1="48" x2="34" y2="48" stroke="#000" stroke-width="4"/></svg>',
-    aqi:      '<svg viewBox="0 0 64 64"><path d="M 32 8 Q 14 22 14 38 Q 14 52 32 52 Q 50 52 50 38 Q 50 22 32 8 Z" fill="none" stroke="#000" stroke-width="4"/><path d="M 32 28 Q 28 36 32 44" fill="none" stroke="#000" stroke-width="4" stroke-linecap="round"/></svg>',
-    moonsun:  '<svg viewBox="0 0 64 64"><circle cx="22" cy="32" r="14" fill="#000"/><circle cx="28" cy="28" r="10" fill="#fff"/><path d="M 44 22 L 58 22 M 51 14 L 51 30" stroke="#000" stroke-width="4" stroke-linecap="round"/></svg>',
-    wifi:     '<svg viewBox="0 0 64 64"><rect x="14" y="14" width="36" height="36" fill="none" stroke="#000" stroke-width="4"/><rect x="22" y="22" width="6" height="6" fill="#000"/><rect x="36" y="22" width="6" height="6" fill="#000"/><rect x="22" y="36" width="6" height="6" fill="#000"/><rect x="36" y="36" width="6" height="6" fill="#000"/></svg>',
-    quote:    '<svg viewBox="0 0 64 64"><path d="M 12 24 Q 12 14 22 14 L 22 24 L 18 24 Q 18 32 22 32 L 22 38 Q 12 38 12 28 Z" fill="#000"/><path d="M 36 24 Q 36 14 46 14 L 46 24 L 42 24 Q 42 32 46 32 L 46 38 Q 36 38 36 28 Z" fill="#000"/></svg>',
-    countdown:'<svg viewBox="0 0 64 64"><path d="M 18 8 L 46 8 L 46 18 Q 46 24 38 28 Q 38 32 38 36 Q 46 40 46 46 L 46 56 L 18 56 L 18 46 Q 18 40 26 36 Q 26 32 26 28 Q 18 24 18 18 Z" fill="none" stroke="#000" stroke-width="4"/><path d="M 24 18 L 40 18 L 32 28 Z" fill="#000"/></svg>',
-    github:   '<svg viewBox="0 0 64 64"><rect x="6" y="20" width="10" height="10" fill="#000"/><rect x="20" y="20" width="10" height="10" fill="#fff" stroke="#000" stroke-width="4"/><rect x="34" y="20" width="10" height="10" fill="#000"/><rect x="48" y="20" width="10" height="10" fill="#fff" stroke="#000" stroke-width="4"/><rect x="6" y="34" width="10" height="10" fill="#fff" stroke="#000" stroke-width="4"/><rect x="20" y="34" width="10" height="10" fill="#000"/><rect x="34" y="34" width="10" height="10" fill="#000"/><rect x="48" y="34" width="10" height="10" fill="#fff" stroke="#000" stroke-width="4"/></svg>'
+    msg:      '<svg viewBox="0 0 64 64"><rect x="8" y="14" width="48" height="36" fill="none" stroke="#000" stroke-width="4"/><line x1="16" y1="26" x2="48" y2="26" stroke="#000" stroke-width="4"/><line x1="16" y1="34" x2="48" y2="34" stroke="#000" stroke-width="4"/><line x1="16" y1="42" x2="36" y2="42" stroke="#000" stroke-width="4"/></svg>'
   };
 
   function placeholder(title, hint, iconKey) {
@@ -409,7 +382,7 @@
       defaultSize: 'M',
       render: ({ cfg, resolvedMessage, cellW, cellH, density }) => {
         const m = resolvedMessage || cfg.message;
-        if (!m || !m.text) return placeholder('MESSAGE', 'Set a headline in settings', 'quote');
+        if (!m || !m.text) return placeholder('MESSAGE', 'Set a headline in settings', 'msg');
         const tier = pickTier(cellW, cellH, density);
         const matrix = {
           tiny:     { txtSize: 14, subSize: 10, showSub: false },
@@ -423,57 +396,6 @@
           <div class="widget widget-msg">
             <div class="msg-text" style="font-size:${t.txtSize}px">${md(escapeHtml(m.text))}</div>
             ${t.showSub && m.subtitle ? `<div class="msg-sub" style="font-size:${t.subSize}px">${md(escapeHtml(m.subtitle))}</div>` : ''}
-          </div>
-        `;
-      }
-    },
-    {
-      id: 'todos',
-      label: 'To-Do List',
-      requires: 'todos',
-      sizes: { S:{w:8,h:6}, M:{w:10,h:6}, L:{w:12,h:12}, XL:{w:24,h:12} },
-      defaultSize: 'M',
-      render: ({ todos, cellW, cellH, density }) => {
-        if (!todos || !todos.length) return placeholder('TODO', 'Add items in settings', 'todos');
-        const today = (() => {
-          const d = new Date();
-          return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        })();
-        const tier = pickTier(cellW, cellH, density);
-        const matrix = {
-          tiny:     { items: 2,  showDue: false, showRecur: false, showFooter: false },
-          compact:  { items: 4,  showDue: false, showRecur: true,  showFooter: false },
-          standard: { items: 8,  showDue: true,  showRecur: true,  showFooter: true  },
-          extended: { items: 14, showDue: true,  showRecur: true,  showFooter: true  },
-          full:     { items: 30, showDue: true,  showRecur: true,  showFooter: true  }
-        };
-        const cfg2 = matrix[tier];
-        const list = todos.slice(0, cfg2.items);
-        const totalOpen = todos.filter(t => !t.done).length;
-        const totalDone = todos.length - totalOpen;
-        return `
-          <div class="widget widget-todos">
-            <div class="widget-title">TODO${cfg2.showFooter ? ` · ${totalOpen} LEFT` : ''}</div>
-            <ul class="todo-list">
-              ${list.map(t => {
-                const overdue = t.dueDate && !t.done && t.dueDate < today;
-                const due = cfg2.showDue && t.dueDate && !t.done
-                  ? `<span class="todo-due ${overdue ? 'overdue' : ''}">${t.dueDate === today ? 'TODAY' : (overdue ? 'LATE' : t.dueDate.slice(5))}</span>`
-                  : '';
-                const recur = cfg2.showRecur && t.recurring === 'daily' ? '<span class="todo-recur">↻</span>' : '';
-                return `
-                  <li class="${t.done ? 'done' : ''}">
-                    <span class="checkbox">${t.done ? '✓' : ''}</span>
-                    <span class="todo-text">${escapeHtml(t.text)}</span>
-                    ${recur}
-                    ${due}
-                  </li>
-                `;
-              }).join('')}
-            </ul>
-            ${cfg2.showFooter && todos.length > cfg2.items
-              ? `<div class="todo-footer">+ ${todos.length - cfg2.items} more · ${totalDone}/${todos.length} done</div>`
-              : ''}
           </div>
         `;
       }
@@ -530,278 +452,6 @@
               <div class="cal-section-title">${s}</div>
               ${groups[s].map(row).join('')}
             `).join('')}
-          </div>
-        `;
-      }
-    },
-    {
-      id: 'spacer',
-      label: 'Black Bar',
-      requires: 'spacer',
-      sizes: { XS:{w:24,h:1}, S:{w:24,h:2}, M:{w:12,h:2}, L:{w:8,h:12}, XL:{w:24,h:4} },
-      defaultSize: 'S',
-      render: ({ cfg }) => {
-        const s = cfg.spacer || {};
-        const text = (s.text || '').trim();
-        const invertCls = s.invert ? ' invert' : '';
-        return `<div class="widget widget-spacer${invertCls}">${text ? escapeHtml(text) : ''}</div>`;
-      }
-    },
-    {
-      id: 'quote',
-      label: 'Text / Quote',
-      requires: 'quote',
-      sizes: { S:{w:8,h:4}, M:{w:12,h:6}, L:{w:24,h:6}, XL:{w:24,h:12} },
-      defaultSize: 'M',
-      render: ({ cfg, resolvedQuote, cellW, cellH, density }) => {
-        const q = resolvedQuote || cfg.quote || {};
-        const body = (q.text || '').trim();
-        if (!body) return placeholder('QUOTE', 'Add text or switch source in settings', 'quote');
-        const attr = (q.attribution || '').trim();
-        const align = (q.align === 'left' || q.align === 'right') ? q.align : 'center';
-        const tier = pickTier(cellW, cellH, density);
-        const padding = tier === 'tiny' ? 4 : tier === 'compact' ? 8 : tier === 'standard' ? 12 : tier === 'extended' ? 16 : 24;
-        const showAttr = attr && tier !== 'tiny' && tier !== 'compact';
-        return `
-          <div class="widget widget-quote" style="text-align:${align};padding:${padding}px">
-            <div class="quote-body autofit multiline" data-min-font="12">${md(escapeHtml(body))}</div>
-            ${showAttr ? `<div class="quote-attr">— ${escapeHtml(attr)}</div>` : ''}
-          </div>
-        `;
-      }
-    },
-    {
-      id: 'clock',
-      label: 'Clock',
-      requires: 'clock',
-      sizes: { XS:{w:8,h:3}, S:{w:8,h:4}, M:{w:12,h:4}, L:{w:24,h:4}, XL:{w:24,h:6} },
-      defaultSize: 'M',
-      render: ({ cfg, clockNow, cellW, cellH, density }) => {
-        const c = cfg.clock || {};
-        const tnow = clockNow || { hour: 0, minute: 0, dateLabel: '' };
-        let h = tnow.hour;
-        const fmt = c.format === 24 ? 24 : 12;
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        if (fmt === 12) { h = h % 12; if (h === 0) h = 12; }
-        const hh = fmt === 24 ? String(h).padStart(2, '0') : String(h);
-        const mm = String(tnow.minute).padStart(2, '0');
-        const suffix = fmt === 12 ? ` ${ampm}` : '';
-        const tier = pickTier(cellW, cellH, density);
-        const showAmpm = tier !== 'tiny';
-        const showDate = c.showDate !== false && tier !== 'tiny' && tier !== 'compact';
-        const ampmHtml = showAmpm && fmt === 12 ? `<span class="clock-ampm">${suffix}</span>` : '';
-        return `
-          <div class="widget widget-clock">
-            <div class="clock-time autofit" data-min-font="28">${hh}:${mm}${ampmHtml}</div>
-            ${showDate ? `<div class="clock-date">${tnow.dateLabel}</div>` : ''}
-          </div>
-        `;
-      }
-    },
-    {
-      id: 'wifi_qr',
-      label: 'WiFi QR Code',
-      requires: 'wifi',
-      sizes: { S:{w:6,h:6}, M:{w:8,h:8}, L:{w:12,h:12} },
-      defaultSize: 'M',
-      render: ({ cfg, wifiQrSvg, cellW, cellH, density }) => {
-        const w = cfg.wifi || {};
-        if (!w.ssid) return placeholder('WIFI QR', 'Enter WiFi SSID + password in settings', 'wifi');
-        if (!wifiQrSvg) return placeholder('WIFI QR', 'QR generator not available', 'wifi');
-        const tier = pickTier(cellW, cellH, density);
-        const matrix = {
-          tiny:     { showSSID: false, showHint: false, ssidSize: 14 },
-          compact:  { showSSID: true,  showHint: false, ssidSize: 16 },
-          standard: { showSSID: true,  showHint: true,  ssidSize: 18 },
-          extended: { showSSID: true,  showHint: true,  ssidSize: 22 },
-          full:     { showSSID: true,  showHint: true,  ssidSize: 26 }
-        };
-        const t = matrix[tier];
-        const showMeta = t.showSSID || t.showHint;
-        return `
-          <div class="widget widget-wifi" style="${showMeta ? '' : 'justify-content:center'}">
-            <div class="wifi-qr">${wifiQrSvg}</div>
-            ${showMeta ? `
-              <div class="wifi-meta">
-                ${t.showSSID ? `<div class="wifi-ssid" style="font-size:${t.ssidSize}px">${escapeHtml(w.ssid)}</div>` : ''}
-                ${t.showHint ? `<div class="wifi-hint">SCAN TO CONNECT</div>` : ''}
-              </div>
-            ` : ''}
-          </div>
-        `;
-      }
-    },
-    {
-      id: 'countdown',
-      label: 'Countdown',
-      requires: 'countdowns',
-      sizes: { S:{w:8,h:4}, M:{w:12,h:4}, L:{w:24,h:4} },
-      defaultSize: 'M',
-      render: ({ countdowns, cellW, cellH, density }) => {
-        if (!countdowns || !countdowns.length) return placeholder('COUNTDOWN', 'Add a label + date in settings', 'countdown');
-        const tier = pickTier(cellW, cellH, density);
-        const matrix = {
-          tiny:     { rows: 1, numSize: 28, showLabel: false },
-          compact:  { rows: 2, numSize: 36, showLabel: true  },
-          standard: { rows: 3, numSize: 44, showLabel: true  },
-          extended: { rows: 4, numSize: 52, showLabel: true  },
-          full:     { rows: 5, numSize: 64, showLabel: true  }
-        };
-        const t = matrix[tier];
-        return `
-          <div class="widget widget-countdown">
-            ${countdowns.slice(0, t.rows).map(c => `
-              <div class="cd-row">
-                <div class="cd-num" style="font-size:${t.numSize}px">${c.days}</div>
-                <div class="cd-meta">
-                  <div class="cd-unit">${c.unit}</div>
-                  ${t.showLabel ? `<div class="cd-label">${escapeHtml(c.label)}</div>` : ''}
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        `;
-      }
-    },
-    {
-      id: 'aqi',
-      label: 'Air Quality',
-      requires: 'aqi',
-      sizes: { S:{w:8,h:4}, M:{w:8,h:6}, L:{w:12,h:6} },
-      defaultSize: 'M',
-      render: ({ aqi, cfg, cellW, cellH, density }) => {
-        if (!aqi) {
-          if (!Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
-            return placeholder('AIR QUALITY', 'Set your location in settings', 'aqi');
-          }
-          return placeholder('AIR QUALITY', 'Data unavailable for this location', 'aqi');
-        }
-        const tier = pickTier(cellW, cellH, density);
-        const advice = {
-          'GOOD': 'Breathe easy.',
-          'MODERATE': 'OK for most. Sensitive groups: caution.',
-          'UNHEALTHY FOR SENSITIVE': 'Sensitive groups limit outdoor.',
-          'UNHEALTHY': 'Limit outdoor activity.',
-          'VERY UNHEALTHY': 'Avoid outdoor activity.',
-          'HAZARDOUS': 'Stay indoors.'
-        };
-        const matrix = {
-          tiny:     { showCat: false, showStats: false, showAdvice: false },
-          compact:  { showCat: true,  showStats: false, showAdvice: false },
-          standard: { showCat: true,  showStats: false, showAdvice: true  },
-          extended: { showCat: true,  showStats: true,  showAdvice: true  },
-          full:     { showCat: true,  showStats: true,  showAdvice: true  }
-        };
-        const t = matrix[tier];
-        return `
-          <div class="widget widget-aqi">
-            <div class="widget-title">AIR QUALITY</div>
-            <div class="aqi-num autofit" data-min-font="28">${aqi.aqi}</div>
-            ${t.showCat ? `<div class="aqi-cat">${aqi.category}</div>` : ''}
-            ${t.showAdvice ? `<div class="aqi-advice">${advice[aqi.category] || ''}</div>` : ''}
-            ${t.showStats ? `
-              <div class="aqi-stats">
-                <div class="stat"><span class="stat-k">PM2.5</span><span class="stat-v">${aqi.pm25 ?? '--'}</span></div>
-                <div class="stat"><span class="stat-k">PM10</span><span class="stat-v">${aqi.pm10 ?? '--'}</span></div>
-                <div class="stat"><span class="stat-k">O₃</span><span class="stat-v">${aqi.o3 ?? '--'}</span></div>
-              </div>
-            ` : ''}
-          </div>
-        `;
-      }
-    },
-    {
-      id: 'moonsun',
-      label: 'Moon & Sun',
-      requires: 'moonsun',
-      sizes: { S:{w:8,h:4}, M:{w:8,h:6}, L:{w:12,h:6} },
-      defaultSize: 'M',
-      render: ({ moonsun, cfg, cellW, cellH, density }) => {
-        if (!moonsun) {
-          if (!Number.isFinite(cfg.lat) || !Number.isFinite(cfg.lon)) {
-            return placeholder('MOON & SUN', 'Set your location in settings', 'moonsun');
-          }
-          return placeholder('MOON & SUN', 'Data unavailable', 'moonsun');
-        }
-        // Compute daylight hours from sunrise/sunset times (HH:MM AM/PM).
-        function parseClock(s) {
-          if (!s || s === '--:--') return null;
-          const m = String(s).match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
-          if (!m) return null;
-          let h = parseInt(m[1], 10);
-          const min = parseInt(m[2], 10);
-          const ap = (m[3] || '').toUpperCase();
-          if (ap === 'PM' && h !== 12) h += 12;
-          if (ap === 'AM' && h === 12) h = 0;
-          return h * 60 + min;
-        }
-        const srM = parseClock(moonsun.sunrise);
-        const ssM = parseClock(moonsun.sunset);
-        let daylight = '';
-        if (srM != null && ssM != null) {
-          let mins = ssM - srM;
-          if (mins < 0) mins += 24 * 60;
-          daylight = `${Math.floor(mins / 60)}h ${mins % 60}m daylight`;
-        }
-        const tier = pickTier(cellW, cellH, density);
-        const matrix = {
-          tiny:     { showDisc: false, showSunRow: false, showDaylight: false },
-          compact:  { showDisc: true,  showSunRow: false, showDaylight: false },
-          standard: { showDisc: true,  showSunRow: true,  showDaylight: false },
-          extended: { showDisc: true,  showSunRow: true,  showDaylight: true  },
-          full:     { showDisc: true,  showSunRow: true,  showDaylight: true  }
-        };
-        const t = matrix[tier];
-        return `
-          <div class="widget widget-moonsun">
-            <div class="widget-title">SKY</div>
-            <div class="moon-row">
-              ${t.showDisc ? `<div class="moon-disc">${moonsun.moonSvg}</div>` : ''}
-              <div class="moon-meta">
-                <div class="moon-phase">${moonsun.phase}</div>
-                <div class="moon-illum">${moonsun.illuminationPct}% lit</div>
-              </div>
-            </div>
-            ${t.showSunRow ? `<div class="sun-row">
-              <span>↑ ${moonsun.sunrise}</span>
-              <span>↓ ${moonsun.sunset}</span>
-            </div>` : ''}
-            ${t.showDaylight && daylight ? `<div class="moon-daylight">${daylight}</div>` : ''}
-          </div>
-        `;
-      }
-    },
-    {
-      id: 'news',
-      label: 'News Headlines',
-      requires: 'news',
-      sizes: { S:{w:12,h:6}, M:{w:12,h:12}, L:{w:24,h:12} },
-      defaultSize: 'M',
-      render: ({ news, cfg, cellW, cellH, density }) => {
-        if (!cfg.news || !cfg.news.feedUrl) {
-          return placeholder('NEWS HEADLINES', 'Paste an RSS or Atom feed URL in settings', 'news');
-        }
-        if (!news || !news.length) return placeholder('NEWS HEADLINES', 'Feed returned no items', 'news');
-        const tier = pickTier(cellW, cellH, density);
-        const matrix = {
-          tiny:     { items: 1, showSource: false, titleClamp: 2 },
-          compact:  { items: 2, showSource: false, titleClamp: 2 },
-          standard: { items: 3, showSource: true,  titleClamp: 3 },
-          extended: { items: 4, showSource: true,  titleClamp: 3 },
-          full:     { items: 6, showSource: true,  titleClamp: 4 }
-        };
-        const t = matrix[tier];
-        return `
-          <div class="widget widget-news">
-            <div class="widget-title">HEADLINES</div>
-            <ul class="news-list">
-              ${news.slice(0, t.items).map(n => `
-                <li>
-                  <div class="news-title" style="-webkit-line-clamp:${t.titleClamp}">${escapeHtml(n.title)}</div>
-                  ${t.showSource && n.source ? `<div class="news-source">${escapeHtml(n.source)}</div>` : ''}
-                </li>
-              `).join('')}
-            </ul>
           </div>
         `;
       }
@@ -879,353 +529,6 @@
           </div>
         `;
       }
-    },
-    {
-      id: 'photo',
-      label: 'Photo / Image',
-      requires: 'photo',
-      sizes: { S:{w:8,h:6}, M:{w:12,h:12}, L:{w:24,h:12} },
-      defaultSize: 'M',
-      render: ({ cfg, resolvedPhoto, cellW, cellH, density }) => {
-        const r = resolvedPhoto || (cfg.photo && cfg.photo.dataUrl
-          ? { dataUrl: cfg.photo.dataUrl, fit: cfg.photo.fit, caption: '', index: 0, total: 1 }
-          : null);
-        if (!r || !r.dataUrl) return placeholder('PHOTO', 'Upload an image in settings', 'photo');
-        const fit = r.fit === 'cover' ? 'cover' : 'contain';
-        const tier = pickTier(cellW, cellH, density);
-        const showCaption = r.caption && tier !== 'tiny';
-        const showCounter = r.total > 1 && (tier === 'extended' || tier === 'full');
-        return `
-          <div class="widget widget-photo">
-            <img src="${escapeHtml(r.dataUrl)}" style="object-fit:${fit}" alt="" />
-            ${showCaption ? `<div class="photo-caption">${escapeHtml(r.caption)}</div>` : ''}
-            ${showCounter ? `<div class="photo-counter">${r.index + 1}/${r.total}</div>` : ''}
-          </div>
-        `;
-      }
-    },
-    {
-      id: 'github',
-      label: 'GitHub Activity',
-      requires: 'github',
-      sizes: { S:{w:12,h:4}, M:{w:24,h:4}, L:{w:24,h:6} },
-      defaultSize: 'M',
-      render: ({ github, cfg, cellW, cellH, density }) => {
-        if (!cfg.github || !cfg.github.user) {
-          return placeholder('GITHUB', 'Enter a GitHub username in settings', 'github');
-        }
-        if (!github || !github.weeks || !github.weeks.length) {
-          return placeholder('GITHUB', 'Data unavailable for ' + escapeHtml(cfg.github.user), 'github');
-        }
-        // Compute current + longest streak from the flat day sequence.
-        const flat = [];
-        for (const wk of github.weeks) for (const lvl of wk) flat.push(lvl);
-        let curStreak = 0, longest = 0, run = 0;
-        for (let i = flat.length - 1; i >= 0; i--) {
-          if (flat[i] > 0) { curStreak += 1; } else { break; }
-        }
-        for (const lvl of flat) {
-          if (lvl > 0) { run += 1; longest = Math.max(longest, run); }
-          else { run = 0; }
-        }
-        const tier = pickTier(cellW, cellH, density);
-        const matrix = {
-          tiny:     { showTitle: false, weeksTail: 12, footer: '' },
-          compact:  { showTitle: true,  weeksTail: 26, footer: '' },
-          standard: { showTitle: true,  weeksTail: 53, footer: `STREAK ${curStreak}D` },
-          extended: { showTitle: true,  weeksTail: 53, footer: `STREAK ${curStreak}D · LONGEST ${longest}D` },
-          full:     { showTitle: true,  weeksTail: 53, footer: `STREAK ${curStreak}D · LONGEST ${longest}D · ${github.total} TOTAL` }
-        };
-        const t = matrix[tier];
-        const weeks = github.weeks.slice(-t.weeksTail);
-        const titleText = tier === 'compact'
-          ? `${escapeHtml(github.user)} · ${github.total}`
-          : `GITHUB · ${escapeHtml(github.user)} · ${github.total} CONTRIBUTIONS`;
-        return `
-          <div class="widget widget-github">
-            ${t.showTitle ? `<div class="widget-title">${titleText}</div>` : ''}
-            <div class="gh-grid">
-              ${weeks.map(week => `
-                <div class="gh-col">
-                  ${week.map(d => `<div class="gh-cell" data-l="${d}"></div>`).join('')}
-                </div>
-              `).join('')}
-            </div>
-            ${t.footer ? `<div class="gh-footer">${t.footer}</div>` : ''}
-          </div>
-        `;
-      }
-    },
-    {
-      id: 'counter',
-      label: 'Days Counter',
-      requires: 'counters',
-      sizes: { S:{w:8,h:4}, M:{w:12,h:4}, L:{w:24,h:4} },
-      defaultSize: 'M',
-      render: ({ counters, cellW, cellH, density }) => {
-        if (!counters || !counters.length) return placeholder('COUNTER', 'Add a label + start date in settings', 'countdown');
-        const tier = pickTier(cellW, cellH, density);
-        const matrix = {
-          tiny:     { rows: 1, numSize: 28, showLabel: false },
-          compact:  { rows: 2, numSize: 36, showLabel: true  },
-          standard: { rows: 3, numSize: 44, showLabel: true  },
-          extended: { rows: 4, numSize: 52, showLabel: true  },
-          full:     { rows: 5, numSize: 64, showLabel: true  }
-        };
-        const t = matrix[tier];
-        return `
-          <div class="widget widget-countdown">
-            ${counters.slice(0, t.rows).map(c => `
-              <div class="cd-row">
-                <div class="cd-num" style="font-size:${t.numSize}px">${c.count}</div>
-                <div class="cd-meta">
-                  <div class="cd-unit">${c.unit}</div>
-                  ${t.showLabel ? `<div class="cd-label">${escapeHtml(c.label)}</div>` : ''}
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        `;
-      }
-    },
-    {
-      id: 'link_qr',
-      label: 'Link QR Code',
-      requires: 'linkQr',
-      sizes: { S:{w:6,h:6}, M:{w:8,h:8}, L:{w:12,h:12} },
-      defaultSize: 'M',
-      render: ({ cfg, linkQrSvg, cellW, cellH, density }) => {
-        const lq = cfg.linkQr || {};
-        if (!lq.url) return placeholder('LINK QR', 'Set a URL in settings', 'wifi');
-        if (!linkQrSvg) return placeholder('LINK QR', 'QR generator not available', 'wifi');
-        const tier = pickTier(cellW, cellH, density);
-        const matrix = {
-          tiny:     { showLabel: false, showHint: false, labelSize: 14 },
-          compact:  { showLabel: true,  showHint: false, labelSize: 16 },
-          standard: { showLabel: true,  showHint: true,  labelSize: 18 },
-          extended: { showLabel: true,  showHint: true,  labelSize: 22 },
-          full:     { showLabel: true,  showHint: true,  labelSize: 26 }
-        };
-        const t = matrix[tier];
-        const showMeta = t.showLabel || t.showHint;
-        const label = (lq.label || '').trim() || 'SCAN';
-        return `
-          <div class="widget widget-wifi" style="${showMeta ? '' : 'justify-content:center'}">
-            <div class="wifi-qr">${linkQrSvg}</div>
-            ${showMeta ? `
-              <div class="wifi-meta">
-                ${t.showLabel ? `<div class="wifi-ssid" style="font-size:${t.labelSize}px">${escapeHtml(label)}</div>` : ''}
-                ${t.showHint ? `<div class="wifi-hint">SCAN TO OPEN</div>` : ''}
-              </div>
-            ` : ''}
-          </div>
-        `;
-      }
-    },
-    {
-      id: 'fx',
-      label: 'Currency / FX',
-      requires: 'fx',
-      sizes: { S:{w:8,h:4}, M:{w:12,h:6}, L:{w:24,h:6}, XL:{w:24,h:12} },
-      defaultSize: 'M',
-      render: ({ fx, cfg, cellW, cellH, density }) => {
-        const pairs = (cfg.fx && cfg.fx.pairs) || [];
-        if (!pairs.length) return placeholder('FX', 'Add pairs like USD/EUR in settings', 'stocks');
-        if (!fx || !fx.length) return placeholder('FX', 'Data unavailable — check pairs', 'stocks');
-        const tier = pickTier(cellW, cellH, density);
-        const matrix = {
-          tiny:     { rows: 2, showDate: false },
-          compact:  { rows: 3, showDate: false },
-          standard: { rows: 5, showDate: true  },
-          extended: { rows: 8, showDate: true  },
-          full:     { rows: 12, showDate: true }
-        };
-        const t = matrix[tier];
-        const list = fx.slice(0, t.rows);
-        const date = list.find(r => r.date) ? list.find(r => r.date).date : '';
-        return `
-          <div class="widget widget-stocks">
-            <div class="widget-title">FX${t.showDate && date ? ` · ${date}` : ''}</div>
-            ${list.map(r => `
-              <div class="stock-watch-row">
-                <span class="watch-sym">${escapeHtml(r.pair)}</span>
-                <span></span>
-                <span class="watch-price">${r.rateLabel}</span>
-                <span></span>
-              </div>
-            `).join('')}
-          </div>
-        `;
-      }
-    },
-    {
-      id: 'iss',
-      label: 'ISS Tracker',
-      requires: 'iss',
-      sizes: { S:{w:8,h:4}, M:{w:12,h:6}, L:{w:24,h:6} },
-      defaultSize: 'M',
-      render: ({ iss, cellW, cellH, density }) => {
-        if (!iss) return placeholder('ISS', 'Data unavailable', 'moonsun');
-        const tier = pickTier(cellW, cellH, density);
-        const matrix = {
-          tiny:     { showStats: false, placeSize: 22 },
-          compact:  { showStats: false, placeSize: 26 },
-          standard: { showStats: true,  placeSize: 30 },
-          extended: { showStats: true,  placeSize: 36 },
-          full:     { showStats: true,  placeSize: 44 }
-        };
-        const t = matrix[tier];
-        const latLabel = (iss.lat != null && iss.lon != null)
-          ? `${iss.lat.toFixed(1)}°, ${iss.lon.toFixed(1)}°`
-          : '—';
-        return `
-          <div class="widget widget-iss">
-            <div class="widget-title">ISS · OVERHEAD</div>
-            <div class="iss-place autofit" data-min-font="18" style="font-size:${t.placeSize}px">${escapeHtml(iss.place || '—')}</div>
-            <div class="iss-coord">${latLabel}</div>
-            ${t.showStats ? `
-              <div class="weather-stats">
-                <div class="stat"><span class="stat-k">ALT</span><span class="stat-v">${iss.altKm != null ? iss.altKm + ' km' : '—'}</span></div>
-                <div class="stat"><span class="stat-k">VEL</span><span class="stat-v">${iss.velKmh != null ? iss.velKmh + ' km/h' : '—'}</span></div>
-              </div>
-            ` : ''}
-          </div>
-        `;
-      }
-    },
-    {
-      id: 'habit',
-      label: 'Habit Tracker',
-      requires: 'habits',
-      sizes: { S:{w:12,h:6}, M:{w:12,h:12}, L:{w:24,h:12} },
-      defaultSize: 'M',
-      render: ({ habits, cellW, cellH, density }) => {
-        if (!habits || !habits.length) return placeholder('HABITS', 'Add habits in settings', 'todos');
-        const tier = pickTier(cellW, cellH, density);
-        const matrix = {
-          tiny:     { rows: 2, daysShown: 7,  showStreak: false },
-          compact:  { rows: 3, daysShown: 7,  showStreak: false },
-          standard: { rows: 4, daysShown: 14, showStreak: true  },
-          extended: { rows: 6, daysShown: 14, showStreak: true  },
-          full:     { rows: 8, daysShown: 14, showStreak: true  }
-        };
-        const t = matrix[tier];
-        const list = habits.slice(0, t.rows);
-        return `
-          <div class="widget widget-habit">
-            <div class="widget-title">HABITS</div>
-            ${list.map(h => {
-              const days = (h.days || []).slice(-t.daysShown);
-              return `
-                <div class="habit-row">
-                  <div class="habit-label">${escapeHtml(h.label || '—')}</div>
-                  <div class="habit-cells">
-                    ${days.map(d => `<span class="habit-cell ${d.done ? 'done' : ''}"></span>`).join('')}
-                  </div>
-                  ${t.showStreak ? `<div class="habit-streak">${h.currentStreak}D</div>` : ''}
-                </div>
-              `;
-            }).join('')}
-          </div>
-        `;
-      }
-    },
-    {
-      id: 'wod',
-      label: 'Word of the Day',
-      requires: 'wod',
-      sizes: { XS:{w:8,h:3}, S:{w:12,h:4}, M:{w:12,h:6}, L:{w:24,h:6} },
-      defaultSize: 'M',
-      render: ({ wod, cellW, cellH, density }) => {
-        if (!wod || !wod.word) return placeholder('WORD', 'Data unavailable', 'quote');
-        const tier = pickTier(cellW, cellH, density);
-        const matrix = {
-          tiny:     { wordSize: 28, showPos: false, showDef: false },
-          compact:  { wordSize: 36, showPos: true,  showDef: false },
-          standard: { wordSize: 48, showPos: true,  showDef: true  },
-          extended: { wordSize: 60, showPos: true,  showDef: true  },
-          full:     { wordSize: 80, showPos: true,  showDef: true  }
-        };
-        const t = matrix[tier];
-        return `
-          <div class="widget widget-wod">
-            <div class="widget-title">WORD OF THE DAY</div>
-            <div class="wod-word" style="font-size:${t.wordSize}px">${escapeHtml(wod.word)}</div>
-            ${t.showPos && wod.partOfSpeech ? `<div class="wod-pos">${escapeHtml(wod.partOfSpeech)}</div>` : ''}
-            ${t.showDef && wod.definition ? `<div class="wod-def">${escapeHtml(wod.definition)}</div>` : ''}
-          </div>
-        `;
-      }
-    },
-    {
-      id: 'sports',
-      label: 'Sports Score',
-      requires: 'sports',
-      sizes: { S:{w:8,h:6}, M:{w:12,h:6}, L:{w:24,h:6} },
-      defaultSize: 'M',
-      render: ({ sports, cfg, cellW, cellH, density }) => {
-        if (!cfg.sports || !cfg.sports.teamId) return placeholder('SPORTS', 'Enter a TheSportsDB team ID', 'stocks');
-        if (!sports || (!sports.last && !sports.next)) return placeholder('SPORTS', 'Data unavailable', 'stocks');
-        const tier = pickTier(cellW, cellH, density);
-        const matrix = {
-          tiny:     { showLast: true,  showNext: false, showLeague: false },
-          compact:  { showLast: true,  showNext: true,  showLeague: false },
-          standard: { showLast: true,  showNext: true,  showLeague: true  },
-          extended: { showLast: true,  showNext: true,  showLeague: true  },
-          full:     { showLast: true,  showNext: true,  showLeague: true  }
-        };
-        const t = matrix[tier];
-        const lastBlock = (g) => g ? `
-          <div class="sports-block">
-            <div class="sports-tag">LAST</div>
-            <div class="sports-teams">${escapeHtml(g.home)} <span class="sports-vs">vs</span> ${escapeHtml(g.away)}</div>
-            <div class="sports-score">${g.homeScore ?? '—'} – ${g.awayScore ?? '—'}</div>
-          </div>` : '';
-        const nextBlock = (g) => g ? `
-          <div class="sports-block">
-            <div class="sports-tag">NEXT</div>
-            <div class="sports-teams">${escapeHtml(g.home)} <span class="sports-vs">vs</span> ${escapeHtml(g.away)}</div>
-            <div class="sports-when">${escapeHtml(g.dateLocal || '')} ${escapeHtml(g.timeLocal || '')}</div>
-          </div>` : '';
-        return `
-          <div class="widget widget-sports">
-            <div class="widget-title">${escapeHtml(sports.teamName || 'SPORTS')}${t.showLeague && sports.league ? ` · ${escapeHtml(sports.league)}` : ''}</div>
-            ${t.showLast ? lastBlock(sports.last) : ''}
-            ${t.showNext ? nextBlock(sports.next) : ''}
-          </div>
-        `;
-      }
-    },
-    {
-      id: 'chore',
-      label: 'Chore Reminder',
-      requires: 'chores',
-      sizes: { S:{w:8,h:4}, M:{w:12,h:4}, L:{w:24,h:4} },
-      defaultSize: 'M',
-      render: ({ chores, cellW, cellH, density }) => {
-        if (!chores || !chores.length) return placeholder('CHORES', 'Add a chore + weekday in settings', 'todos');
-        const tier = pickTier(cellW, cellH, density);
-        const matrix = {
-          tiny:     { rows: 1, showTime: false },
-          compact:  { rows: 2, showTime: false },
-          standard: { rows: 3, showTime: true  },
-          extended: { rows: 4, showTime: true  },
-          full:     { rows: 6, showTime: true  }
-        };
-        const t = matrix[tier];
-        return `
-          <div class="widget widget-chore">
-            <div class="widget-title">CHORES</div>
-            ${chores.slice(0, t.rows).map(c => `
-              <div class="chore-row">
-                <span class="chore-when">${escapeHtml(c.dueLabel)}</span>
-                <span class="chore-label">${escapeHtml(c.label)}</span>
-                ${t.showTime && c.time ? `<span class="chore-time">${escapeHtml(c.time)}</span>` : ''}
-              </div>
-            `).join('')}
-          </div>
-        `;
-      }
     }
   ];
 
@@ -1239,19 +542,13 @@
       { id:'weather_hero',     x:0,  y:0, size:'M', enabled:true },
       { id:'weather_forecast', x:8,  y:0, size:'M', enabled:true },
       { id:'message',          x:14, y:0, size:'M', enabled:true },
-      { id:'todos',            x:14, y:4, size:'M', enabled:true },
-      { id:'calendar',         x:14, y:8, size:'M', enabled:false },
-      { id:'spacer',           x:0, y:0, size:'S', enabled:false },
-      { id:'quote',            x:0, y:0, size:'M', enabled:false }
+      { id:'calendar',         x:14, y:4, size:'M', enabled:true }
     ],
     2: [
       { id:'weather_hero',     x:0, y:0, size:'XL', enabled:true },
       { id:'weather_forecast', x:0, y:0, size:'M',  enabled:false },
       { id:'message',          x:0, y:0, size:'M',  enabled:false },
-      { id:'todos',            x:0, y:0, size:'M',  enabled:false },
-      { id:'calendar',         x:0, y:0, size:'M',  enabled:false },
-      { id:'spacer',           x:0, y:0, size:'S',  enabled:false },
-      { id:'quote',            x:0, y:0, size:'M',  enabled:false }
+      { id:'calendar',         x:0, y:0, size:'M',  enabled:false }
     ]
   };
 
@@ -1321,10 +618,8 @@
     document.documentElement.style.height = 'auto';
     page.style.cssText = 'width:100%;height:auto;display:flex;flex-direction:column;gap:32px;padding:32px;background:#fff';
     const ctxMatrix = {
-      cfg, weather: w, events, todos, units,
-      aqi, news, stocks, github, wifiQrSvg, clockNow, countdowns, moonsun,
-      resolvedQuote, resolvedMessage, resolvedPhoto,
-      counters, linkQrSvg, fx, iss, habits, wod, sports, chores
+      cfg, weather: w, events, units,
+      stocks, resolvedMessage
     };
     // ~33px per grid cell (800/24 horiz, 480/12 vert with chrome off).
     const PX_W = 800 / 24, PX_H = 480 / 12;
@@ -1451,10 +746,8 @@
   page.appendChild(body);
 
   const ctx = {
-    cfg, weather: w, events, todos, units,
-    aqi, news, stocks, github, wifiQrSvg, clockNow, countdowns, moonsun,
-    resolvedQuote, resolvedMessage, resolvedPhoto,
-    counters, linkQrSvg, fx, iss, habits, wod, sports, chores,
+    cfg, weather: w, events, units,
+    stocks, resolvedMessage,
     chrome, headerOn, footerOn
   };
   const layout = resolveLayout();

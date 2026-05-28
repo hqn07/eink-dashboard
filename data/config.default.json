@@ -1,104 +1,28 @@
 {
-  "widgets": {
-    "weather": true,
-    "clock": true,
-    "calendar": false,
-    "message": true,
-    "todos": true
-  },
-  "message": {
-    "text": "Welcome home.",
-    "subtitle": "Your dashboard is live.",
-    "schedule": []
-  },
-  "todos": [
-    { "text": "Hook up Google Calendar", "done": false, "dueDate": null, "recurring": null, "completedAt": null },
-    { "text": "Pick a font you actually love", "done": false, "dueDate": null, "recurring": null, "completedAt": null }
-  ],
-  "calendar": {
-    "icalUrl": "",
-    "icalUrls": []
-  },
-  "spacer": {
-    "text": ""
-  },
-  "quote": {
-    "text": "Make each day your masterpiece.",
-    "attribution": "John Wooden",
-    "source": "static",
-    "list": []
-  },
-  "clock": {
-    "format": 12,
-    "showSeconds": false,
-    "showDate": true
-  },
-  "wifi": {
-    "ssid": "",
-    "password": "",
-    "security": "WPA",
-    "hidden": false
-  },
-  "countdowns": [
-    { "label": "NEW YEAR", "date": "2027-01-01" }
-  ],
-  "counters": [
-    { "label": "DAYS LIVING HERE", "since": "2024-01-01", "unit": "DAYS" }
-  ],
-  "linkQr": {
-    "url": "https://example.com",
-    "label": "SCAN"
-  },
-  "fx": {
-    "pairs": ["USD/EUR", "USD/JPY"]
-  },
-  "iss": {
-    "enabled": true
-  },
-  "habits": [
-    { "label": "MEDITATE", "doneDates": [] },
-    { "label": "READ",     "doneDates": [] }
-  ],
-  "wod": {
-    "feedUrl": ""
-  },
-  "sports": {
-    "teamId": ""
-  },
-  "chores": [
-    { "label": "TRASH OUT", "weekday": 0, "time": "20:00" }
-  ],
-  "aqi": {
-    "showPollutants": true
-  },
-  "news": {
-    "feedUrl": "",
-    "maxItems": 5
-  },
-  "stocks": {
-    "symbols": ["AAPL", "BTC-USD"]
-  },
-  "github": {
-    "user": ""
-  },
-  "photo": {
-    "dataUrl": "",
-    "fit": "contain"
-  },
-  "accent": "#c8302a",
-  "iconSet": "default",
-  "city": "Gainesville,FL,US",
-  "cityLabel": "GAINESVILLE",
-  "refreshMinutes": 30,
-  "theme": "editorial",
-  "units": "F",
-  "screen": 1,
+  "gridVersion": 3,
   "timezone": "America/New_York",
-  "schedule": {
-    "enabled": false,
-    "activeFrom": "07:00",
-    "activeTo": "22:00",
-    "active": { "refreshMinutes": 30, "screen": 1 },
-    "quiet":  { "refreshMinutes": 120, "screen": 2 }
-  }
+  "screens": [
+    {
+      "id": "day",
+      "name": "Default",
+      "isDefault": true,
+      "schedule": { "enabled": false, "from": "07:00", "to": "22:00" },
+      "units": "F",
+      "refreshMinutes": 30,
+      "chrome": {
+        "header": {
+          "enabled": true,
+          "left": "{city}",
+          "leftSub": "{date}",
+          "right": "{time}",
+          "rightSub": "EDITION No. {edition}"
+        },
+        "footer": {
+          "enabled": true,
+          "text": "UPDATED {time} · REFRESH {refresh}MIN · THE DAILY {city}"
+        }
+      },
+      "layout": []
+    }
+  ]
 }
