@@ -30,7 +30,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.5.2"
+#define FW_VERSION "1.5.3"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -82,6 +82,18 @@ static const int EPD_CS = 15, EPD_SCK = 13, EPD_MOSI = 14;
 #define ALARM_WINDOW_SEC 30
 // Auto-stop after this long if the user doesn't press the button.
 #define ALARM_TIMEOUT_SEC 60
+
+// Holder for the next-alarm payload. Declared above any function that
+// touches it because the Arduino IDE's auto-prototype generator scans
+// for function signatures and inserts forward declarations at the very
+// top of the translation unit — before the rest of the .ino's struct
+// definitions would be reached.
+struct NextAlarm {
+  uint64_t tsMs;           // Unix epoch ms (server clock)
+  uint64_t serverNowMs;    // Server's "now" — for measuring clock skew
+  int      durationSec;
+  char     label[48];
+};
 
 SPIClass hspi(HSPI);
 GxEPD2_BW<GxEPD2_750_GDEY075T7, GxEPD2_750_GDEY075T7::HEIGHT>
@@ -458,13 +470,6 @@ void syncTime() {
 }
 
 // Holder for the next-alarm payload. tsMs == 0 means none scheduled.
-struct NextAlarm {
-  uint64_t tsMs;           // Unix epoch ms (server clock)
-  uint64_t serverNowMs;    // Server's "now" — for measuring clock skew
-  int      durationSec;
-  char     label[48];
-};
-
 bool fetchNextAlarm(NextAlarm* out) {
   if (!out) return false;
   out->tsMs = 0;
