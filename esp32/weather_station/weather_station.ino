@@ -30,7 +30,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.5.0"
+#define FW_VERSION "1.5.1"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -652,7 +652,11 @@ void setup() {
 
   hspi.begin(EPD_SCK, -1, EPD_MOSI, EPD_CS);
   display.epd2.selectSPI(hspi, SPISettings(4000000, MSBFIRST, SPI_MODE0));
-  display.init(115200, coldBoot, 2, false);
+  // Force initial=true on every wake — costs ~1 s vs. the lighter
+  // wake-init path, but it runs the full panel reset + clear pass
+  // that GxEPD2 reserves for cold boots. Without it, T7 leaves
+  // particles from the prior image and ghosts bleed through.
+  display.init(115200, true, 2, false);
 
   // Read battery early — voltage is most accurate before WiFi pulls
   // current. We POST it after the radio is up.
