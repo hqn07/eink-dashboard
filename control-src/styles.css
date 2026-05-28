@@ -1,6 +1,7 @@
 /* Retro newspaper / terminal styling for the control panel. */
 
-@import 'gridstack/dist/gridstack.min.css';
+@import 'react-grid-layout/css/styles.css';
+@import 'react-resizable/css/styles.css';
 
 :root {
   --bg: #faf8f3;
@@ -487,7 +488,7 @@ input[type="text"], input[type="url"], textarea {
 }
 .sched-group.disabled { opacity: 0.4; pointer-events: none; }
 
-/* ============ EDITOR (gridstack.js) ============ */
+/* ============ EDITOR (react-grid-layout) ============ */
 .editor-wrap {
   position: relative;
   border: 2px solid var(--line);
@@ -498,21 +499,10 @@ input[type="text"], input[type="url"], textarea {
   aspect-ratio: 800 / 480;
   overflow: hidden;
 }
-.editor-wrap .grid-stack {
+.editor-wrap .react-grid-layout {
   /* Sits inside .editor-grid-inset which provides the chrome-aware
-   * absolute positioning. Gridstack handles its own height from
-   * cellHeight × rows. */
-  width: 100%;
-  height: 100%;
-  background: transparent;
-}
-/* Gridstack item-content already absolutely positions itself; reset
- * any padding so our 1:1 cell layout math holds. */
-.editor-wrap .grid-stack-item-content {
-  inset: 0;
-  padding: 0;
-  overflow: hidden;
-  background: transparent;
+   * absolute positioning. RGL handles its own height from rowHeight. */
+  width: 100% !important;
 }
 .editor-chrome.hdr, .editor-chrome.ftr { z-index: 2; }
 .editor-chrome.hdr { background: #000; color: #fff; }
@@ -527,7 +517,7 @@ input[type="text"], input[type="url"], textarea {
   width: 100%;
   padding-top: 60%; /* 800x480 = 60% */
 }
-.editor-aspect > .grid-stack {
+.editor-aspect > .react-grid-layout {
   position: absolute;
   inset: 0;
 }
@@ -1013,57 +1003,56 @@ input[type="text"], input[type="url"], textarea {
   text-transform: uppercase;
 }
 
-/* gridstack overrides for our retro look */
-.grid-stack-placeholder > .placeholder-content {
+/* react-grid-layout overrides for our retro look */
+.react-grid-item.react-grid-placeholder {
   background: #ddd !important;
   border: 2px dashed var(--ink) !important;
   opacity: 1 !important;
   border-radius: 0 !important;
-  inset: 0 !important;
 }
-/* Reset Gridstack's stock resize handle markers (rotated arrow-style)
- * so we can paint matching per-corner L-shapes. Larger hit area than
- * the 8px visual marker, especially for touch. */
-.grid-stack-item > .ui-resizable-handle {
+.react-grid-item > .react-resizable-handle {
+  /* Reset the default RGL handle ::after triangle so every corner can
+   * paint its own marker. */
   background-image: none !important;
+  /* Larger hit area than the 8px visual marker, especially for touch. */
   width: 24px !important;
   height: 24px !important;
+  /* react-resizable rotates the SW/NW/NE handles to reuse the default
+   * SE marker geometry. We paint our own per-corner markers below, so
+   * cancel that rotation. */
   transform: none !important;
-  opacity: 1 !important;
 }
-.grid-stack-item > .ui-resizable-handle::before,
-.grid-stack-item > .ui-resizable-handle::after {
+.react-grid-item > .react-resizable-handle::after {
   content: '';
   position: absolute;
+  /* Reset whatever react-resizable's default ::after applied so each
+   * directional handle below can paint only its own L-shape. */
   top: auto; left: auto; right: auto; bottom: auto;
   width: 8px;
   height: 8px;
   border: 0 solid var(--ink);
-  background: transparent;
 }
-.grid-stack-item > .ui-resizable-handle::before { display: none; }
-.grid-stack-item > .ui-resizable-se { right: 0; bottom: 0; cursor: nwse-resize; }
-.grid-stack-item > .ui-resizable-se::after {
+.react-grid-item > .react-resizable-handle-se { right: 0; bottom: 0; }
+.react-grid-item > .react-resizable-handle-se::after {
   right: 3px; bottom: 3px;
   border-right-width: 2px; border-bottom-width: 2px;
 }
-.grid-stack-item > .ui-resizable-sw { left: 0; bottom: 0; cursor: nesw-resize; }
-.grid-stack-item > .ui-resizable-sw::after {
+.react-grid-item > .react-resizable-handle-sw { left: 0; bottom: 0; cursor: nesw-resize; }
+.react-grid-item > .react-resizable-handle-sw::after {
   left: 3px; bottom: 3px;
   border-left-width: 2px; border-bottom-width: 2px;
 }
-.grid-stack-item > .ui-resizable-ne { right: 0; top: 0; cursor: nesw-resize; }
-.grid-stack-item > .ui-resizable-ne::after {
+.react-grid-item > .react-resizable-handle-ne { right: 0; top: 0; cursor: nesw-resize; }
+.react-grid-item > .react-resizable-handle-ne::after {
   right: 3px; top: 3px;
   border-right-width: 2px; border-top-width: 2px;
 }
-.grid-stack-item > .ui-resizable-nw { left: 0; top: 0; cursor: nwse-resize; }
-.grid-stack-item > .ui-resizable-nw::after {
+.react-grid-item > .react-resizable-handle-nw { left: 0; top: 0; cursor: nwse-resize; }
+.react-grid-item > .react-resizable-handle-nw::after {
   left: 3px; top: 3px;
   border-left-width: 2px; border-top-width: 2px;
 }
-.grid-stack-item.ui-draggable-dragging,
-.grid-stack-item.ui-resizable-resizing {
+.react-grid-item.react-draggable-dragging {
   z-index: 30;
 }
 
