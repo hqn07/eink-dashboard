@@ -29,11 +29,9 @@ export const WIDGET_REGISTRY = [
       XL: { w: 24, h: 12 }
     },
     defaultSize: 'M',
-    // New contract (Commit A): every tile carries its own settings. No
-    // global cfg.weather fallback — server always populates slot.weather
-    // for this widget, so an unconfigured tile renders "NO DATA" instead
-    // of silently inheriting the global location.
-    newContract: true,
+    // Every widget is now on the self-contained-settings contract: tiles
+    // always carry their own `settings` object, seeded from `defaults()`
+    // at creation. There is no shared global cfg to fall back to.
     defaults: () => ({ city: '', lat: null, lon: null })
   },
   {
@@ -48,7 +46,6 @@ export const WIDGET_REGISTRY = [
       XL: { w: 24, h: 6 }
     },
     defaultSize: 'M',
-    newContract: true,
     defaults: () => ({ city: '', lat: null, lon: null, forecastDays: null })
   },
   {
@@ -64,7 +61,6 @@ export const WIDGET_REGISTRY = [
       XL: { w: 24, h: 6 }
     },
     defaultSize: 'M',
-    newContract: true,
     defaults: () => ({ text: '', subtitle: '', schedule: [] })
   },
   {
@@ -79,7 +75,6 @@ export const WIDGET_REGISTRY = [
       XL: { w: 24, h: 8 }
     },
     defaultSize: 'M',
-    newContract: true,
     defaults: () => ({ icalUrls: [] })
   },
   {
@@ -94,7 +89,6 @@ export const WIDGET_REGISTRY = [
       XL: { w: 24, h: 12 }
     },
     defaultSize: 'M',
-    newContract: true,
     defaults: () => ({ symbols: [] })
   }
 ];
@@ -448,9 +442,9 @@ export function makeInstance(widgetId, { x = 0, y = 0, w, h, sizeKey } = {}) {
     size: sz.size,
     flush: false
   };
-  // New-contract widgets seed their own settings at creation so the tile
-  // is self-contained from the start — no implicit pull from global cfg.
-  if (def.newContract && typeof def.defaults === 'function') {
+  // Seed settings from the registry factory so the tile is self-contained
+  // from the moment it's dropped — no implicit pull from any shared cfg.
+  if (typeof def.defaults === 'function') {
     inst.settings = def.defaults();
   }
   return inst;

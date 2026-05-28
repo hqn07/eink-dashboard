@@ -2,54 +2,16 @@ import React, { useEffect, useRef, useState } from 'react';
 import { CaretUp, CaretDown } from '@phosphor-icons/react';
 import { geocode } from '../api.js';
 
-// Per-instance widget-data forms. Each form reads/writes a flat
-// `values` object that matches the same shape the global cfg.<widget>
-// section already uses, so snapshots from global drop in unchanged.
+// Per-tile widget-data forms. Each form reads/writes a flat `values`
+// object that lives at `layoutItem.settings` — the canonical (and
+// only) source of truth for that tile's config.
 //
 // Contract: { widgetId, values, onChange }.
-//  - `values` is the per-instance settings object.
+//  - `values` is the per-tile settings object (always present; seeded
+//    by the registry `defaults()` at tile creation).
 //  - `onChange(next)` replaces values with `next`. List-shape settings
 //    nest items under `values.items` so the settings type stays an
 //    object (snapshot/save/diff stays uniform).
-
-// Widgets that currently have a bespoke form in this file.
-const PER_INSTANCE_SUPPORTED = new Set([
-  'stocks', 'message', 'calendar',
-  'weather_hero', 'weather_forecast'
-]);
-
-export function supportsPerInstance(widgetId) {
-  return PER_INSTANCE_SUPPORTED.has(widgetId);
-}
-
-// Snapshot the relevant subset of global cfg for this widget id.
-// Flat-shape widgets get a copy of cfg.<key>. List-shape widgets wrap
-// the array under `items` so the modal can edit a single object.
-// Weather-derived widgets snapshot the global location.
-export function snapshotGlobalForWidget(widgetId, cfg) {
-  if (!cfg) return {};
-  const loc = () => ({
-    lat: Number.isFinite(cfg.lat) ? cfg.lat : null,
-    lon: Number.isFinite(cfg.lon) ? cfg.lon : null,
-    city: cfg.city || ''
-  });
-  switch (widgetId) {
-    case 'stocks':  return { ...(cfg.stocks  || {}) };
-    case 'message': return { ...(cfg.message || {}) };
-    case 'calendar': {
-      const urls = Array.isArray(cfg.calendar?.icalUrls) && cfg.calendar.icalUrls.length
-        ? cfg.calendar.icalUrls.slice()
-        : (cfg.calendar?.icalUrl ? [cfg.calendar.icalUrl] : []);
-      return { icalUrls: urls };
-    }
-    case 'weather_hero':
-      return loc();
-    case 'weather_forecast':
-      return { ...loc(), forecastDays: cfg.weather?.forecastDays ?? null };
-    default:
-      return {};
-  }
-}
 
 // =================== FIELD COMPONENTS ===================
 

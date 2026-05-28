@@ -610,20 +610,12 @@ async function buildWidgetData(cfg, units, layout) {
     if (eff.city && typeof eff.city === 'string') return eff.city;
     return null;
   };
-  // Widgets migrated to the new self-contained-settings contract. For
-  // these we always populate the per-item slot (even if config is empty)
-  // so the renderer can't silently fall through to global cfg defaults.
-  // Mirrors `newContract: true` in control-src/widgets.js — keep in sync.
-  const NEW_CONTRACT = new Set([
-    'weather_hero', 'weather_forecast', 'stocks', 'message', 'calendar'
-  ]);
   await Promise.all((layout || []).map(async (item) => {
     if (!item) return;
     const wid = item.widgetId || item.id;
-    const isNew = NEW_CONTRACT.has(wid);
-    // Legacy widgets only fetch per-item data when an explicit override
-    // is set; new-contract widgets always fetch using their own settings.
-    if (!isNew && !item.settings) return;
+    // Every kept widget is on the self-contained-settings contract:
+    // always populate the per-item slot from `item.settings`, falling
+    // back to {} so the renderer never silently inherits global cfg.
     const eff = item.settings || {};
     const slot = {};
     try {

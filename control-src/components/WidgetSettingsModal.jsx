@@ -3,15 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from '@phosphor-icons/react';
 import { GRID_COLS, GRID_ROWS, widgetById } from '../widgets.js';
 import { renderWidget } from '../widget-render.js';
-import WidgetForm, { supportsPerInstance, snapshotGlobalForWidget } from './WidgetForm.jsx';
-
-// Widgets migrated to the new self-contained-settings contract. Listed
-// here (mirrors `newContract: true` in widgets.js) so the modal can drop
-// the legacy "Override global" toggle for these tiles.
-function isNewContract(widgetId) {
-  const def = widgetById(widgetId);
-  return !!(def && def.newContract);
-}
+import WidgetForm from './WidgetForm.jsx';
 
 const DASH_W = 800;
 const DASH_H = 480;
@@ -31,123 +23,48 @@ const PREVIEW_MAX_H = 560;
 // Also surfaces a "Copy from →" picker listing every other tile in the
 // layout that uses the same widget id, so users can clone a tile's
 // settings into this one without re-typing.
-function PerInstanceDataBlock({ widgetId, itemId, cfg, layout, settings, onSettingsChange }) {
-  const supported = supportsPerInstance(widgetId);
-  const newContract = isNewContract(widgetId);
-
-  if (!supported) {
-    return (
-      <div className="wsm-placeholder">
-        <p className="wsm-note">
-          <strong>{widgetId}</strong> has no per-instance settings.
-        </p>
-      </div>
-    );
-  }
-
-  // Other tiles of the same widget type that already have explicit
-  // settings — copy candidates.
+function PerInstanceDataBlock({ widgetId, itemId, layout, settings, onSettingsChange }) {
+  // Other tiles of the same widget type whose settings we can clone in
+  // one click — saves re-typing a stock list / iCal URL / location.
   const siblings = (layout || []).filter(it =>
     it.id !== itemId
     && (it.widgetId || it.id) === widgetId
     && it.settings
   );
 
-  // New-contract widgets always carry their own settings — no override
-  // toggle, just show the form. If for some reason settings is missing
-  // (legacy item created before the contract switch), surface an empty
-  // object so WidgetForm has a stable shape to edit.
-  if (newContract) {
-    const effective = settings || {};
-    return (
-      <>
-        {siblings.length > 0 && (
-          <div className="wsm-copy-row">
-            <span className="wsm-field-label">Copy from</span>
-            <select
-              defaultValue=""
-              onChange={(e) => {
-                const src = siblings.find(s => s.id === e.target.value);
-                if (src && src.settings) onSettingsChange({ ...src.settings });
-                e.target.value = '';
-              }}
-            >
-              <option value="" disabled>Pick a tile…</option>
-              {siblings.map((s, i) => (
-                <option key={s.id} value={s.id}>
-                  {`${widgetId} #${i + 1} (${s.x},${s.y})`}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-        <div className="wsm-form">
-          <WidgetForm
-            widgetId={widgetId}
-            values={effective}
-            onChange={onSettingsChange}
-          />
-        </div>
-      </>
-    );
-  }
-
-  // Legacy override-toggle path. Widgets still on the old global-cfg
-  // contract keep this UI until they're migrated in subsequent commits.
-  const override = !!settings;
+  // Every tile carries its own settings (seeded from registry defaults
+  // at creation). Fall back to {} just in case a tile created before
+  // the new contract is still in the layout.
+  const effective = settings || {};
   return (
     <>
-      <label className="wsm-row wsm-row-check">
-        <input
-          type="checkbox"
-          checked={override}
-          onChange={(e) => {
-            if (e.target.checked) {
-              onSettingsChange(snapshotGlobalForWidget(widgetId, cfg));
-            } else {
-              onSettingsChange(undefined);
-            }
-          }}
-        />
-        <span>Override global for this tile</span>
-      </label>
-      {override ? (
-        <>
-          {siblings.length > 0 && (
-            <div className="wsm-copy-row">
-              <span className="wsm-field-label">Copy from</span>
-              <select
-                defaultValue=""
-                onChange={(e) => {
-                  const src = siblings.find(s => s.id === e.target.value);
-                  if (src && src.settings) {
-                    onSettingsChange({ ...src.settings });
-                  }
-                  e.target.value = '';
-                }}
-              >
-                <option value="" disabled>Pick a tile…</option>
-                {siblings.map((s, i) => (
-                  <option key={s.id} value={s.id}>
-                    {`${widgetId} #${i + 1} (${s.x},${s.y})`}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          <div className="wsm-form">
-            <WidgetForm
-              widgetId={widgetId}
-              values={settings}
-              onChange={onSettingsChange}
-            />
-          </div>
-        </>
-      ) : (
-        <p className="wsm-note">
-          Using shared defaults from <code>config.json</code>. Toggle override above to give this tile its own settings.
-        </p>
+      {siblings.length > 0 && (
+        <div className="wsm-copy-row">
+          <span className="wsm-field-label">Copy from</span>
+          <select
+            defaultValue=""
+            onChange={(e) => {
+              const src = siblings.find(s => s.id === e.target.value);
+              if (src && src.settings) onSettingsChange({ ...src.settings });
+              e.target.value = '';
+            }}
+          >
+            <option value="" disabled>Pick a tile…</option>
+            {siblings.map((s, i) => (
+              <option key={s.id} value={s.id}>
+                {`${widgetId} #${i + 1} (${s.x},${s.y})`}
+              </option>
+            ))}
+          </select>
+        </div>
       )}
+      <div className="wsm-form">
+        <WidgetForm
+          widgetId={widgetId}
+          values={effective}
+          onChange={onSettingsChange}
+        />
+      </div>
     </>
   );
 }
@@ -342,7 +259,6 @@ export default function WidgetSettingsModal({
                 <PerInstanceDataBlock
                   widgetId={draft.widgetId}
                   itemId={draft.id}
-                  cfg={cfg}
                   layout={layout}
                   settings={draft.settings}
                   onSettingsChange={(next) => setDraft(prev => ({ ...prev, settings: next }))}
