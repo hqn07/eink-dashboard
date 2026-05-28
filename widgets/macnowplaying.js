@@ -90,38 +90,21 @@ async function ditherArtwork(rawBuf) {
 }
 
 async function fetchArtwork() {
-  // nowplaying-cli prints the raw bytes when format=raw. Without it,
-  // older versions of the CLI return base64.
+  // nowplaying-cli `get artworkData` returns the image as base64 ASCII
+  // (verified against the macOS MediaRemote bridge — output starts with
+  // `/9j/` for JPEG or `iVBO` for PNG). Some forks have a `get-raw`
+  // subcommand that emits binary, but it's not standard, so don't
+  // bother trying it; just decode base64 unconditionally.
   try {
     const { stdout } = await execFileP('nowplaying-cli',
-      ['get-raw', 'artworkData'], {
+      ['get', 'artworkData'], {
       timeout: 3000,
-      maxBuffer: 12 * 1024 * 1024,
-      encoding: 'buffer'
-    }).catch(() => execFileP('nowplaying-cli', ['get', 'artworkData'], {
-      timeout: 3000,
-      maxBuffer: 12 * 1024 * 1024,
-      encoding: 'buffer'
-    }));
-    if (!stdout || stdout.length < 200) return null;
-    // get-raw outputs the binary directly; `get` might base64-encode
-    // (decimal ASCII range). Detect heuristically: if the first bytes
-    // look like a JPEG/PNG magic, use as-is.
-    const head = stdout.slice(0, 4);
-    const looksJpeg = head[0] === 0xFF && head[1] === 0xD8;
-    const looksPng  = head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4E && head[3] === 0x47;
-    let bytes;
-    if (looksJpeg || looksPng) {
-      bytes = stdout;
-    } else {
-      // Treat as base64 ASCII.
-      try {
-        bytes = Buffer.from(stdout.toString('ascii').trim(), 'base64');
-      } catch {
-        return null;
-      }
-    }
-    if (!bytes || bytes.length < 200) return null;
+      maxBuffer: 12 * 1024 * 1024
+    });
+    const trimmed = (stdout || '').trim();
+    if (trimmed.length < 200) return null;
+    const bytes = Buffer.from(trimmed, 'base64');
+    if (bytes.length < 200) return null;
     return await ditherArtwork(bytes);
   } catch {
     return null;
