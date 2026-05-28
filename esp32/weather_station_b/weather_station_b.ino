@@ -108,6 +108,37 @@ void beepLowBattery() {
   beep(200);
 }
 
+// =================== SERVER SELECTION (LAN → cloud fallback) ===================
+
+// See weather_station.ino (BW build) for the rationale — same flow.
+const char* activeServerBase = "";
+
+bool probeBase(const char* base) {
+  if (!base || !*base) return false;
+  HTTPClient http;
+  http.setTimeout(3000);
+  String url = String(base) + "/health";
+  if (!http.begin(url)) return false;
+  int code = http.GET();
+  http.end();
+  return code == 200;
+}
+
+void selectServerBase() {
+  if (probeBase(serverBaseLan)) {
+    activeServerBase = serverBaseLan;
+    Serial.printf("Server: LAN (%s)\n", activeServerBase);
+    return;
+  }
+  if (serverBaseCloud && *serverBaseCloud) {
+    activeServerBase = serverBaseCloud;
+    Serial.printf("Server: CLOUD fallback (%s)\n", activeServerBase);
+    return;
+  }
+  activeServerBase = serverBaseLan;
+  Serial.printf("Server: no cloud configured, sticking with LAN (%s)\n", activeServerBase);
+}
+
 // =================== WIFI ===================
 
 bool connectWiFiOnce(unsigned long timeoutMs = 15000) {
@@ -144,7 +175,7 @@ bool connectWiFi() {
 // =================== HTTP HELPERS ===================
 
 void warmServer() {
-  String url = String(serverBase) + "/health";
+  String url = String(activeServerBase) + "/health";
   HTTPClient http;
   http.setTimeout(45000);
   http.begin(url);
@@ -164,7 +195,7 @@ String addToken(String url) {
 }
 
 uint8_t* downloadImage() {
-  String url = addToken(String(serverBase) + "/display.bin");
+  String url = addToken(String(activeServerBase) + "/display.bin");
   Serial.printf("GET %s\n", url.c_str());
 
   HTTPClient http;
@@ -245,7 +276,7 @@ int batteryPctFromVoltage(float v) {
 }
 
 void postBattery(float v, int pct) {
-  String url = addToken(String(serverBase) + "/api/battery");
+  String url = addToken(String(activeServerBase) + "/api/battery");
   HTTPClient http;
   http.setTimeout(5000);
   http.begin(url);
@@ -271,7 +302,7 @@ void checkForUpdate(int battPct, bool buttonWake) {
     return;
   }
 
-  String url = String(serverBase) + "/api/firmware/manifest?board=" + FW_BOARD + "&from=" + FW_VERSION;
+  String url = String(activeServerBase) + "/api/firmware/manifest?board=" + FW_BOARD + "&from=" + FW_VERSION;
   url = addToken(url);
 
   HTTPClient http;
@@ -331,7 +362,7 @@ void checkForUpdate(int battPct, bool buttonWake) {
 }
 
 int fetchSleepMinutes() {
-  String url = addToken(String(serverBase) + "/sleep");
+  String url = addToken(String(activeServerBase) + "/sleep");
   HTTPClient http;
   http.setTimeout(5000);
   http.begin(url);
@@ -370,7 +401,7 @@ void drawFailScreen(const char* reason) {
     display.print(reason);
     display.setCursor(20, 160);
     display.print("Server: ");
-    display.print(serverBase);
+    display.print(activeServerBase);
     display.setCursor(20, 200);
     display.print("Retrying in 5 min");
   } while (display.nextPage());
@@ -450,6 +481,7 @@ void setup() {
     drawFailScreen("WiFi connection failed");
     sleepMin = 5;
   } else {
+    selectServerBase();  // probe LAN first, fall back to cloud
     warmServer();
     postBattery(battV, battPct);
     checkForUpdate(battPct, buttonWake);   // may not return (reboots on success)
