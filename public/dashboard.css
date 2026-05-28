@@ -467,8 +467,16 @@ html, body {
   font-size: 11px;
   letter-spacing: 2px;
 }
+/* sevesalm battery glyph is black-on-transparent; the default footer is
+ * black so the icon would render as outline-against-black. Invert by
+ * default so it reads as a clean white silhouette against the dark
+ * footer. The light-footer variants (dotted / compact) undo the invert
+ * so the icon stays black on white. */
+.ftr-battery .batt-icon { filter: invert(1); }
 .ftr.ftr-dotted .ftr-battery,
 .ftr.ftr-compact .ftr-battery { color: #000; }
+.ftr.ftr-dotted .ftr-battery .batt-icon,
+.ftr.ftr-compact .ftr-battery .batt-icon { filter: none; }
 
 /* Footer variants — pick one per screen via cfg.screens[i].chrome.footer.variant.
  * Default is .ftr-editorial (matches base .ftr above). */
