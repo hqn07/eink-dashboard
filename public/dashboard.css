@@ -566,9 +566,9 @@ html, body {
   text-align: center;
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
-  font-size: 28px;
+  font-size: 42px;
   line-height: 1;
-  margin: 8px 0 4px;
+  margin: 10px 0;
 }
 .mac-np-stacked .mac-np-stacked-text {
   display: flex; flex-direction: column; align-items: stretch; gap: 4px;
