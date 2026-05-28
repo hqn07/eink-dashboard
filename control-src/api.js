@@ -88,6 +88,24 @@ export async function resetConfig() {
   return r.json();
 }
 
+export async function fetchAlarms() {
+  const r = await authFetch('/api/alarms');
+  if (!r.ok) throw new Error(`alarms ${r.status}`);
+  const j = await r.json();
+  return Array.isArray(j.alarms) ? j.alarms : [];
+}
+
+export async function saveAlarms(alarms) {
+  const r = await authFetch('/api/alarms', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ alarms })
+  });
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'save alarms failed');
+  return Array.isArray(j.alarms) ? j.alarms : [];
+}
+
 export function previewUrl(cacheBust = true) {
   const t = getToken();
   const parts = [];

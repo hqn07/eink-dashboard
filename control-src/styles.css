@@ -1589,6 +1589,35 @@ input[type="text"], input[type="url"], textarea {
   display: flex;
   flex-direction: column;
 }
+.gdm-divider {
+  border: none;
+  border-top: 1px solid var(--ink);
+  margin: 0;
+}
+
+/* ---------- Alarms panel ---------- */
+.alarms-panel { padding: 10px 14px; display: flex; flex-direction: column; gap: 10px; }
+.alarms-header { display: flex; align-items: center; justify-content: space-between; }
+.alarms-header h3 { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; margin: 0; }
+.alarm-row {
+  border: 1.5px solid var(--ink);
+  padding: 8px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.alarm-row.is-disabled { opacity: 0.5; }
+.alarm-row-top { display: flex; align-items: center; gap: 6px; }
+.alarm-row-top input.alarm-time { width: 90px; font-family: 'JetBrains Mono', monospace; }
+.alarm-row-top input.alarm-label { flex: 1; min-width: 0; }
+.alarm-days { display: flex; gap: 4px; }
+.alarm-day {
+  width: 24px; height: 24px;
+  border: 1.5px solid var(--ink); background: #fff;
+  font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 11px;
+  cursor: pointer;
+}
+.alarm-day.on { background: var(--ink); color: #fff; }
+.alarms-footer { display: flex; align-items: center; gap: 8px; }
+.alarm-err { color: var(--accent, #c00); font-size: 11px; }
 .gdm-menu-header,
 .gdm-menu-footer {
   padding: 10px 14px;

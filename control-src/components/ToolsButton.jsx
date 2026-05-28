@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wrench } from '@phosphor-icons/react';
 import BackupPanel from './BackupPanel.jsx';
+import AlarmsPanel from './AlarmsPanel.jsx';
 
 // Small header button — replaces the heavier Global Defaults dropdown.
 // Currently just hosts BackupPanel (export / import / reset). Cheap
@@ -44,8 +45,10 @@ export default function ToolsButton({ cfg, onReplaceConfig }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.12 }}
-            style={{ width: 260 }}
+            style={{ width: 340 }}
           >
+            <AlarmsPanel />
+            <hr className="gdm-divider" />
             <BackupPanel cfg={cfg} onReplaceConfig={onReplaceConfig} />
           </motion.div>
         )}
