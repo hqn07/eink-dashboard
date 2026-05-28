@@ -307,11 +307,12 @@ const RENDERERS = {
       </div>
     `;
   },
-  stocks: ({ stocks, cfg, cellW, cellH, density }) => {
-    const syms = (cfg && cfg.stocks && cfg.stocks.symbols) || [];
-    if (!syms.length) return placeholder('MARKETS', 'Add symbols (AAPL, BTC-USD) in settings', 'stocks');
+  stocks: ({ stocks, cellW, cellH, density }) => {
+    // Per-tile contract: symbols live in `item.settings.symbols` and the
+    // server fetches into `slot.stocks` for each tile. An empty list means
+    // either the tile is unconfigured or every symbol failed to resolve.
     const list = stocks || [];
-    if (!list.length) return placeholder('MARKETS', 'Data unavailable — check symbols', 'stocks');
+    if (!list.length) return placeholder('MARKETS', 'Add symbols (AAPL, BTC-USD) in settings', 'stocks');
     const tier = pickTier(cellW, cellH, density);
     const matrix = {
       tiny:     { watch: 0, heroSpark: false, heroMeta: false, heroChg: false, watchSpark: false, watchChg: false },

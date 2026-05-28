@@ -448,10 +448,11 @@
       requires: 'stocks',
       sizes: { S:{w:8,h:4}, M:{w:12,h:6}, L:{w:24,h:6}, XL:{w:24,h:12} },
       defaultSize: 'M',
-      render: ({ stocks, cfg, cellW, cellH, density }) => {
-        const syms = (cfg && cfg.stocks && cfg.stocks.symbols) || [];
-        if (!syms.length) return placeholder('MARKETS', 'Add symbols (AAPL, BTC-USD) in settings', 'stocks');
-        if (!stocks || !stocks.length) return placeholder('MARKETS', 'Data unavailable — check symbols', 'stocks');
+      render: ({ stocks, cellW, cellH, density }) => {
+        // Per-tile contract: symbols live in `item.settings.symbols` and
+        // the server fetches into `slot.stocks` per tile. An empty list
+        // means the tile is unconfigured or symbols failed to resolve.
+        if (!stocks || !stocks.length) return placeholder('MARKETS', 'Add symbols (AAPL, BTC-USD) in settings', 'stocks');
         const tier = pickTier(cellW, cellH, density);
         // Hero + watchlist (newspaper market lead).
         const matrix = {
