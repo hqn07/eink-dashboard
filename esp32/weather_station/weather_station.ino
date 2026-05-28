@@ -30,7 +30,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.5.1"
+#define FW_VERSION "1.5.2"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -109,6 +109,12 @@ volatile bool refreshRequested = false;
 const char* g_wakeLabel = "?";
 float       g_battV     = NAN;
 int         g_battPct   = -1;
+
+// Survives deep sleep. Set when drawFailScreen paints the connection
+// error (lots of solid black in the header banner), checked on the
+// next successful refresh so we can pre-wipe the panel and stop the
+// fail-screen ghost from bleeding through.
+RTC_DATA_ATTR bool g_lastRenderWasFail = false;
 
 
 // Pin-change ISR: mirror button state to buzzer AND latch a refresh
@@ -550,6 +556,7 @@ void runAlarm(const char* label) {
 
 // Draw a fallback "couldn't connect" screen so you know what's up
 void drawFailScreen(const char* reason) {
+  g_lastRenderWasFail = true;
   display.setRotation(0);
   display.setFullWindow();
 
@@ -612,6 +619,15 @@ void drawFailScreen(const char* reason) {
 void pushImage(const uint8_t* buf) {
   display.setRotation(0);
   display.setFullWindow();
+  // If the previous render was the fail screen, its big black banner
+  // leaves stubborn particles that a single full refresh of the new
+  // image can't fully scrub. Pay one extra clearScreen() (white wipe
+  // with the full-update LUT) to reset the panel before painting.
+  if (g_lastRenderWasFail) {
+    Serial.println("Pre-wipe (previous render was fail screen)");
+    display.clearScreen();
+    g_lastRenderWasFail = false;
+  }
   display.fillScreen(GxEPD_WHITE);
   display.epd2.writeImage(buf, 0, 0, SW, SH, false, false, false);
   display.refresh(false);  // false = full refresh — no ghosting
