@@ -44,7 +44,9 @@ function renderNowPlaying(np, cellW, cellH, density) {
   const cfg = TIER_CFG[tier] || TIER_CFG.standard;
   const artistAlbum = [np.artist, np.album].filter(Boolean).map(escapeHtml).join(' · ');
   const source = cfg.showSource && np.sourceLabel ? `via ${escapeHtml(np.sourceLabel)}` : '';
-  const hasProgress = cfg.showProgress && Number.isFinite(np.durationSec) && np.durationSec > 0;
+  const hasProgress = cfg.showProgress
+    && Number.isFinite(np.durationSec) && np.durationSec > 0
+    && Number.isFinite(np.elapsedSec);
   const pct = hasProgress
     ? Math.max(0, Math.min(100, (np.elapsedSec || 0) / np.durationSec * 100))
     : 0;

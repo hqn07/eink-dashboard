@@ -157,7 +157,14 @@ async function fetchMacNowPlaying() {
     // since the last update to get the actual playback position.
     let elapsed = parseFloatSafe(elapR);
     const infoUpdateSec = parseFloatSafe(updateR);
-    if (isPlaying && Number.isFinite(elapsed) && Number.isFinite(infoUpdateSec)) {
+    // Some sources (notably YouTube Music in Chrome) don't expose
+    // position state at all: elapsedTime comes back as `0` and
+    // infoUpdateTime as `null`. Distinguish that "unknown" case from
+    // "song genuinely at second 0" so the renderer can hide the
+    // progress bar instead of pinning it permanently at zero.
+    if (!Number.isFinite(infoUpdateSec) && elapsed === 0) {
+      elapsed = null;
+    } else if (isPlaying && Number.isFinite(elapsed) && Number.isFinite(infoUpdateSec)) {
       const driftSec = (Date.now() / 1000) - infoUpdateSec;
       if (driftSec > 0 && driftSec < 24 * 60 * 60) {
         elapsed += driftSec;
