@@ -19,30 +19,67 @@ function fmtSec(s) {
   return `${m}:${ss}`;
 }
 
-// Newspaper-style now-playing layout. Tier-aware: small tiles drop
-// progress + source label, art shrinks; bigger tiles fit the full card.
+// Now-playing renderer. Two layouts:
+//
+//   horizontal (tiny / compact / standard tiers): art-left, text-right,
+//   progress strip at the bottom.
+//
+//   stacked (extended / full tiers): art centered, elapsed / remaining
+//   time as big bookends on either side, title + artist · album +
+//   source label below the art, then a full-width progress bar.
+//
+// Future customizability — let users pick what fills the side-space
+// (time bookends today; vertical text / play state / metadata later).
+// See memory `project_eink_widget_customizability_roadmap.md`.
 function renderNowPlaying(np, cellW, cellH, density) {
   const tier = pickTier(cellW || 0, cellH || 0, density);
   const stateIcon = np.isPlaying ? '▶' : '❚❚';
   const TIER_CFG = {
-    tiny:     { art: 0,   maxFont: 20, showProgress: false, showSource: false },
-    compact:  { art: 56,  maxFont: 26, showProgress: false, showSource: false },
-    standard: { art: 80,  maxFont: 34, showProgress: true,  showSource: true  },
-    extended: { art: 100, maxFont: 42, showProgress: true,  showSource: true  },
-    full:     { art: 140, maxFont: 56, showProgress: true,  showSource: true  }
+    tiny:     { art: 0,   maxFont: 20, showProgress: false, showSource: false, stacked: false },
+    compact:  { art: 56,  maxFont: 26, showProgress: false, showSource: false, stacked: false },
+    standard: { art: 80,  maxFont: 34, showProgress: true,  showSource: true,  stacked: false },
+    extended: { art: 180, maxFont: 48, showProgress: true,  showSource: true,  stacked: true  },
+    full:     { art: 260, maxFont: 64, showProgress: true,  showSource: true,  stacked: true  }
   };
   const cfg = TIER_CFG[tier] || TIER_CFG.standard;
-  const art = cfg.art === 0
-    ? ''
-    : (np.artworkBase64
-        ? `<img class="mac-np-art" style="width:${cfg.art}px;height:${cfg.art}px" src="data:image/png;base64,${np.artworkBase64}" alt="" />`
-        : `<div class="mac-np-art mac-np-art-empty" style="width:${cfg.art}px;height:${cfg.art}px">${stateIcon}</div>`);
   const artistAlbum = [np.artist, np.album].filter(Boolean).map(escapeHtml).join(' · ');
   const source = cfg.showSource && np.sourceLabel ? `via ${escapeHtml(np.sourceLabel)}` : '';
   const hasProgress = cfg.showProgress && Number.isFinite(np.durationSec) && np.durationSec > 0;
   const pct = hasProgress
     ? Math.max(0, Math.min(100, (np.elapsedSec || 0) / np.durationSec * 100))
     : 0;
+  const artInner = np.artworkBase64
+    ? `<img class="mac-np-art" style="width:${cfg.art}px;height:${cfg.art}px" src="data:image/png;base64,${np.artworkBase64}" alt="" />`
+    : `<div class="mac-np-art mac-np-art-empty" style="width:${cfg.art}px;height:${cfg.art}px">${stateIcon}</div>`;
+
+  if (cfg.stacked) {
+    const elapsedStr = hasProgress ? fmtSec(np.elapsedSec) : '';
+    const remainStr  = hasProgress ? '−' + fmtSec(Math.max(0, np.durationSec - (np.elapsedSec || 0))) : '';
+    const progressBar = hasProgress
+      ? `<div class="mac-np-bar mac-np-bar-only"><div class="mac-np-bar-fill" style="width:${pct.toFixed(1)}%"></div></div>`
+      : '';
+    return `
+      <div class="mac-np-card mac-np-stacked mac-np-tier-${tier}">
+        <div class="mac-np-head">
+          <span class="mac-np-state">${stateIcon}</span>
+          <span class="col-title">NOW PLAYING</span>
+        </div>
+        <div class="mac-np-stacked-row">
+          <div class="mac-np-bookend mac-np-bookend-left">${elapsedStr}</div>
+          ${artInner}
+          <div class="mac-np-bookend mac-np-bookend-right">${remainStr}</div>
+        </div>
+        <div class="mac-np-stacked-text">
+          <div class="mac-np-title autofit" data-min-font="14" data-max-font="${cfg.maxFont}">${escapeHtml(np.title)}</div>
+          <div class="mac-np-meta">${artistAlbum || '—'}</div>
+          ${source ? `<div class="mac-np-source">${source}</div>` : ''}
+        </div>
+        ${progressBar}
+      </div>
+    `;
+  }
+
+  const art = cfg.art === 0 ? '' : artInner;
   const progress = hasProgress
     ? `<div class="mac-np-progress">
          <div class="mac-np-bar"><div class="mac-np-bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
