@@ -395,8 +395,6 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
             if (l.x + l.w >= GRID_COLS) classes.push('cell-edge-right');
             if (l.y + l.h >= GRID_ROWS) classes.push('cell-edge-bottom');
             if (l.flush) classes.push('cell-flush');
-            if (l.border === 'dashed') classes.push('cell-border-dashed');
-            if (l.border === 'none')   classes.push('cell-border-none');
             const cellHtml = `<div class="${classes.join(' ')}" style="width:${dashW}px;height:${dashH}px">${inner}</div>`;
             const isSelected = selectedId === l.id;
             return (
@@ -577,7 +575,6 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
         onSave={(updated) => {
           const patch = {
             flush: updated.flush,
-            border: updated.border,
             density: updated.density,
             settings: updated.settings
           };

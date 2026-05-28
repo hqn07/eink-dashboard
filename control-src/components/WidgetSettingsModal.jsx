@@ -110,7 +110,6 @@ export default function WidgetSettingsModal({
     if (!draft || !initialRef.current) return false;
     const a = initialRef.current, b = draft;
     if ((a.flush || false) !== (b.flush || false)) return true;
-    if ((a.border || 'solid') !== (b.border || 'solid')) return true;
     if ((a.density || '') !== (b.density || '')) return true;
     // Settings comparison: stringify for deep equality. Cheap because
     // settings objects are flat and small.
@@ -162,8 +161,6 @@ export default function WidgetSettingsModal({
 
   const classes = ['cell', `cell-${draft.widgetId}`];
   if (draft.flush) classes.push('cell-flush');
-  if (draft.border === 'dashed') classes.push('cell-border-dashed');
-  if (draft.border === 'none')   classes.push('cell-border-none');
   const previewHtml = renderWidget(draft.widgetId, {
     ...previewData,
     cellW: draft.w,
@@ -173,7 +170,6 @@ export default function WidgetSettingsModal({
   const cellHtml =
     `<div class="${classes.join(' ')}" style="width:${dashW}px;height:${dashH}px">${previewHtml}</div>`;
 
-  const border = draft.border || 'solid';
   const density = draft.density || '';
 
   return (
@@ -216,22 +212,6 @@ export default function WidgetSettingsModal({
                   />
                   <span>Flush edges (no inner padding)</span>
                 </label>
-
-                <div className="wsm-row">
-                  <div className="wsm-label">Border</div>
-                  <div className="wsm-seg" role="radiogroup" aria-label="Border style">
-                    {['solid', 'dashed', 'none'].map(opt => (
-                      <button
-                        key={opt}
-                        type="button"
-                        role="radio"
-                        aria-checked={border === opt}
-                        className={`wsm-seg-btn ${border === opt ? 'on' : ''}`}
-                        onClick={() => setField({ border: opt })}
-                      >{opt[0].toUpperCase() + opt.slice(1)}</button>
-                    ))}
-                  </div>
-                </div>
 
                 <div className="wsm-row">
                   <div className="wsm-label">Density</div>

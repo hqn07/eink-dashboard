@@ -786,8 +786,6 @@
     if (item.x + item.w >= GRID_COLS) classes.push('cell-edge-right');
     if (item.y + item.h >= GRID_ROWS) classes.push('cell-edge-bottom');
     if (item.flush) classes.push('cell-flush');
-    if (item.border === 'dashed') classes.push('cell-border-dashed');
-    if (item.border === 'none')   classes.push('cell-border-none');
     const cell = el('div', classes.join(' '), inner);
     cell.style.gridColumn = `${item.x + 1} / span ${item.w}`;
     cell.style.gridRow    = `${item.y + 1} / span ${item.h}`;

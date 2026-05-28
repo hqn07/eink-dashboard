@@ -737,8 +737,6 @@ img.icon { object-fit: contain; }
 .hr-cell .icon { display: inline-block; }
 
 /* ============ BORDER STYLES ============ */
-.cell.cell-border-dashed { border-right-style: dashed; border-bottom-style: dashed; }
-.cell.cell-border-none   { border: 0; }
 
 /* ============ AUTOFIT TEXT ============
  * Elements with this class are sized by JS (autofitText) to the largest
