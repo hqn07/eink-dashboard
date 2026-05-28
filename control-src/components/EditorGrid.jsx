@@ -21,11 +21,12 @@ const FOOTER_H_BASE = 28;
 
 // Install Gridstack's renderCB once. v11+ no longer accepts raw `content`
 // HTML via addWidget for XSS safety — apps must opt in via renderCB.
-// We stash the per-instance HTML on the widget object via a private
-// `_einkHtml` field so this module-global callback can read it.
+// The widget options' `content` field flows through to here as `w.content`
+// (custom fields like `_einkHtml` get dropped when Gridstack constructs
+// the GridStackNode, so we have to use the standard name).
 GridStack.renderCB = function (el, w) {
-  if (w && typeof w._einkHtml === 'string') {
-    el.innerHTML = w._einkHtml;
+  if (w && typeof w.content === 'string') {
+    el.innerHTML = w.content;
   }
 };
 
@@ -474,7 +475,7 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
           minW: min.w, minH: min.h,
           maxW: GRID_COLS, maxH: GRID_ROWS,
           // Stashed for renderCB to read on creation.
-          _einkHtml: buildTileHtml(l)
+          content: buildTileHtml(l)
         });
       }
     } finally {
