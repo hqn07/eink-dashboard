@@ -124,13 +124,14 @@ async function fetchMacNowPlaying() {
   }
   const t0 = Date.now();
   try {
-    const [titleR, artistR, albumR, rateR, durR, elapR, bundleR] = await Promise.all([
+    const [titleR, artistR, albumR, rateR, durR, elapR, updateR, bundleR] = await Promise.all([
       readField('title'),
       readField('artist'),
       readField('album'),
       readField('playbackRate'),
       readField('duration'),
       readField('elapsedTime'),
+      readField('infoUpdateTime'),
       readField('bundleIdentifier')
     ]);
     const title = titleR.trim();
@@ -142,13 +143,27 @@ async function fetchMacNowPlaying() {
     const artwork = await fetchArtwork();
     const bundle = bundleR.trim();
     const label = SOURCE_LABELS[bundle] || (bundle ? bundle.split('.').pop().toUpperCase() : '');
+    const isPlaying = (parseFloat(rateR) || 0) > 0;
+    // nowplaying-cli's `elapsedTime` is a snapshot — only updated when
+    // the media player emits a state change (play/pause/seek). When the
+    // song is just steadily playing the field stays frozen, which made
+    // the dashboard's progress bar look broken. Add the wall-clock delta
+    // since the last update to get the actual playback position.
+    let elapsed = parseFloatSafe(elapR);
+    const infoUpdateSec = parseFloatSafe(updateR);
+    if (isPlaying && Number.isFinite(elapsed) && Number.isFinite(infoUpdateSec)) {
+      const driftSec = (Date.now() / 1000) - infoUpdateSec;
+      if (driftSec > 0 && driftSec < 24 * 60 * 60) {
+        elapsed += driftSec;
+      }
+    }
     const data = {
       title,
       artist: artistR.trim(),
       album:  albumR.trim(),
-      isPlaying: (parseFloat(rateR) || 0) > 0,
+      isPlaying,
       durationSec: parseFloatSafe(durR),
-      elapsedSec:  parseFloatSafe(elapR),
+      elapsedSec: elapsed,
       sourceLabel: label,
       artworkBase64: artwork
     };
