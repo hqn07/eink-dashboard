@@ -47,7 +47,9 @@ export const WIDGET_REGISTRY = [
       L:  { w: 12, h: 12 },
       XL: { w: 24, h: 6 }
     },
-    defaultSize: 'M'
+    defaultSize: 'M',
+    newContract: true,
+    defaults: () => ({ city: '', lat: null, lon: null, forecastDays: null })
   },
   {
     id: 'message',
@@ -61,7 +63,9 @@ export const WIDGET_REGISTRY = [
       L:  { w: 24, h: 4 },
       XL: { w: 24, h: 6 }
     },
-    defaultSize: 'M'
+    defaultSize: 'M',
+    newContract: true,
+    defaults: () => ({ text: '', subtitle: '', schedule: [] })
   },
   {
     id: 'todos',
@@ -87,7 +91,9 @@ export const WIDGET_REGISTRY = [
       L: { w: 24, h: 4 },
       XL: { w: 24, h: 8 }
     },
-    defaultSize: 'M'
+    defaultSize: 'M',
+    newContract: true,
+    defaults: () => ({ icalUrls: [] })
   },
   {
     id: 'spacer',
@@ -201,7 +207,9 @@ export const WIDGET_REGISTRY = [
       L: { w: 24, h: 6 },
       XL: { w: 24, h: 12 }
     },
-    defaultSize: 'M'
+    defaultSize: 'M',
+    newContract: true,
+    defaults: () => ({ symbols: [] })
   },
   {
     id: 'photo',

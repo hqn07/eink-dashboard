@@ -657,7 +657,9 @@ async function buildWidgetData(cfg, units, layout) {
   // these we always populate the per-item slot (even if config is empty)
   // so the renderer can't silently fall through to global cfg defaults.
   // Mirrors `newContract: true` in control-src/widgets.js — keep in sync.
-  const NEW_CONTRACT = new Set(['weather_hero']);
+  const NEW_CONTRACT = new Set([
+    'weather_hero', 'weather_forecast', 'stocks', 'message', 'calendar'
+  ]);
   await Promise.all((layout || []).map(async (item) => {
     if (!item) return;
     const wid = item.widgetId || item.id;
@@ -674,9 +676,12 @@ async function buildWidgetData(cfg, units, layout) {
           if (eff.feedUrl) slot.news = await fetchNews(eff.feedUrl, eff.maxItems || 5);
           break;
         case 'stocks':
-          if (Array.isArray(eff.symbols) && eff.symbols.length) {
-            slot.stocks = await fetchStocks(eff.symbols);
-          }
+          // New contract: always set slot.stocks so an empty-symbols
+          // tile shows the renderer's "NO DATA" path instead of falling
+          // back to global cfg.stocks.
+          slot.stocks = (Array.isArray(eff.symbols) && eff.symbols.length)
+            ? await fetchStocks(eff.symbols)
+            : [];
           break;
         case 'github':
           if (eff.user) slot.github = await fetchGithub(eff.user);
@@ -693,10 +698,14 @@ async function buildWidgetData(cfg, units, layout) {
           slot.wod = await fetchWordOfDay(eff.feedUrl);
           break;
         case 'calendar': {
+          // New contract: always set slot.events. Empty URL list resolves
+          // to [] so the renderer never reaches the global cfg.calendar.
           const urls = Array.isArray(eff.icalUrls) ? eff.icalUrls.filter(Boolean) : [];
           if (urls.length) {
             const lists = await Promise.all(urls.map(u => fetchEvents(u)));
             slot.events = mergeEvents(lists.flat());
+          } else {
+            slot.events = [];
           }
           break;
         }
@@ -715,13 +724,18 @@ async function buildWidgetData(cfg, units, layout) {
           break;
         }
         case 'weather_forecast': {
+          // New contract: same as weather_hero — always populate slot
+          // even if the tile has no configured location.
           const loc = resolveLoc(eff);
-          if (loc) {
-            slot.weather = await fetchWeather(loc, process.env.OPENWEATHER_API_KEY, units);
-            if (slot.weather && Number.isFinite(eff.lat) && Number.isFinite(eff.lon)) {
-              const alerts = await fetchAlerts({ lat: eff.lat, lon: eff.lon }).catch(() => []);
-              if (alerts && alerts.length) slot.weather.alerts = alerts;
-            }
+          slot.weather = await fetchWeather(loc, process.env.OPENWEATHER_API_KEY, units);
+          if (slot.weather && loc && Number.isFinite(eff.lat) && Number.isFinite(eff.lon)) {
+            const alerts = await fetchAlerts({ lat: eff.lat, lon: eff.lon }).catch(() => []);
+            if (alerts && alerts.length) slot.weather.alerts = alerts;
+          }
+          // Per-item forecast-day override travels with the slot so the
+          // renderer doesn't read cfg.weather.forecastDays for this tile.
+          if (Number.isFinite(eff.forecastDays) && slot.weather) {
+            slot.weather.forecastDays = eff.forecastDays;
           }
           break;
         }
@@ -742,7 +756,12 @@ async function buildWidgetData(cfg, units, layout) {
 
         // --- Pre-resolved synthesized slots ---
         case 'message':
-          slot.resolvedMessage = resolveMessage({ ...cfg, message: eff });
+          // New contract: pass only the per-item message + cfg.timezone
+          // (needed for schedule-window resolution). No other global cfg
+          // bleeds through.
+          slot.resolvedMessage = resolveMessage({
+            timezone: cfg.timezone, message: eff
+          });
           break;
         case 'quote':
           slot.resolvedQuote = await resolveQuote({ ...cfg, quote: eff });
