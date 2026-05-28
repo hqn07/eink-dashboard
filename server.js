@@ -24,7 +24,10 @@ const { resolveMessage, renderInlineMarkdown } = require('./widgets/message');
 const PORT = process.env.PORT || 3000;
 const DEVICE_TOKEN = process.env.DEVICE_TOKEN || '';
 const CONFIG_PATH = path.join(__dirname, 'data', 'config.json');
-const DEFAULT_CONFIG_PATH = path.join(__dirname, 'data', 'config.default.json');
+// Seed config lives outside the `data/` directory so a persistent
+// volume mount (Railway / Fly / etc.) can take over `data/` without
+// hiding the baked-in defaults that shipped with the image.
+const DEFAULT_CONFIG_PATH = path.join(__dirname, 'data-defaults', 'config.default.json');
 const BATTERY_PATH = path.join(__dirname, 'data', 'battery.json');
 
 // Loud warning when no DEVICE_TOKEN is set in production: the control
@@ -538,6 +541,10 @@ function safeError(err) {
 // ---------- App ----------
 
 const app = express();
+// Railway / Render / Fly all front the app with a proxy that injects
+// X-Forwarded-For. Without this, express-rate-limit refuses to use the
+// header and crashes the process when it sees it.
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '10mb' })); // photo widget can carry a base64 image
 app.use('/static', express.static(path.join(__dirname, 'public')));
 
