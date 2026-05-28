@@ -467,27 +467,34 @@ export default function EditorGrid({ layout, showGrid, previewData, onChange, on
     if (!grid || !host) return;
     grid.batchUpdate();
     try {
-      grid.removeAll(false);
+      // removeAll() drops Gridstack's internal tracking but leaves any
+      // pre-built DOM children we appended ourselves orphaned in the host.
+      // Sweep them manually so we don't accumulate duplicate gs-id nodes.
+      grid.removeAll(true);
+      host.querySelectorAll(':scope > .grid-stack-item').forEach(el => el.remove());
+
       for (const l of layout) {
         const def = widgetById(l.widgetId);
         const min = (def && def.minSize) || { w: 1, h: 1 };
+        // Pass widget options to makeWidget() rather than gs-* attrs on
+        // the pre-built DOM. Gridstack only consumes the attrs at init
+        // time; for runtime makeWidget() calls it expects the options
+        // object instead, otherwise it falls back to defaults (1×1) and
+        // tiles render at zero size because --gs-column-width is being
+        // multiplied by gs-w=1 against a 24-col grid.
         const itemDiv = document.createElement('div');
         itemDiv.classList.add('grid-stack-item');
-        itemDiv.setAttribute('gs-id', l.id);
-        itemDiv.setAttribute('gs-x', String(l.x));
-        itemDiv.setAttribute('gs-y', String(l.y));
-        itemDiv.setAttribute('gs-w', String(l.w));
-        itemDiv.setAttribute('gs-h', String(l.h));
-        itemDiv.setAttribute('gs-min-w', String(min.w));
-        itemDiv.setAttribute('gs-min-h', String(min.h));
-        itemDiv.setAttribute('gs-max-w', String(GRID_COLS));
-        itemDiv.setAttribute('gs-max-h', String(GRID_ROWS));
         const contentDiv = document.createElement('div');
         contentDiv.className = 'grid-stack-item-content';
         contentDiv.innerHTML = buildTileHtml(l);
         itemDiv.appendChild(contentDiv);
         host.appendChild(itemDiv);
-        grid.makeWidget(itemDiv);
+        grid.makeWidget(itemDiv, {
+          id: l.id,
+          x: l.x, y: l.y, w: l.w, h: l.h,
+          minW: min.w, minH: min.h,
+          maxW: GRID_COLS, maxH: GRID_ROWS
+        });
       }
     } finally {
       grid.batchUpdate(false);
