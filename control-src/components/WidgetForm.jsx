@@ -239,7 +239,6 @@ export default function WidgetForm({ widgetId, values, onChange }) {
   switch (widgetId) {
     case 'mac_nowplaying':
     case 'mac_battery':
-    case 'mac_focus':
       return (
         <div className="wsm-placeholder">
           <p className="wsm-note">

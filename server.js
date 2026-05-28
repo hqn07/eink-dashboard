@@ -22,7 +22,6 @@ const widgetStatus = require('./widgets/_status');
 const { resolveMessage, renderInlineMarkdown } = require('./widgets/message');
 const { fetchMacNowPlaying } = require('./widgets/macnowplaying');
 const { fetchMacBattery } = require('./widgets/macbattery');
-const { fetchMacFocus } = require('./widgets/macfocus');
 const { buildClock } = require('./widgets/clock');
 const { computeNextAlarm, normalizeAlarmList } = require('./widgets/alarms');
 
@@ -704,9 +703,6 @@ async function buildWidgetData(cfg, units, layout) {
           break;
         case 'mac_battery':
           slot.macBattery = await fetchMacBattery();
-          break;
-        case 'mac_focus':
-          slot.macFocus = await fetchMacFocus();
           break;
         case 'clock':
           slot.clockNow = buildClock(eff, cfg.timezone);

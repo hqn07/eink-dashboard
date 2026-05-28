@@ -132,18 +132,6 @@ export const WIDGET_REGISTRY = [
     defaults: () => ({})
   },
   {
-    id: 'mac_focus',
-    label: 'Mac · Focus',
-    requires: 'mac_focus',
-    minSize: { w: 3, h: 2 },
-    sizes: {
-      S:  { w: 4, h: 2 },
-      M:  { w: 6, h: 3 }
-    },
-    defaultSize: 'S',
-    defaults: () => ({})
-  },
-  {
     id: 'clock',
     label: 'Clock',
     requires: 'clock',

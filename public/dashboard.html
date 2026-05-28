@@ -556,22 +556,6 @@
       }
     },
     {
-      id: 'mac_focus',
-      requires: 'mac_focus',
-      sizes: { S:{w:4,h:2}, M:{w:6,h:3} },
-      defaultSize: 'S',
-      render: ({ macFocus }) => {
-        if (!macFocus) return placeholder('FOCUS', 'MAC OFFLINE', 'msg');
-        const label = macFocus.active ? escapeHtml(macFocus.modeId).toUpperCase() : 'OFF';
-        return `
-          <div class="mac-focus">
-            <div class="col-title">FOCUS</div>
-            <div class="mac-focus-state autofit" data-min-font="20">${label}</div>
-          </div>
-        `;
-      }
-    },
-    {
       id: 'clock',
       requires: 'clock',
       sizes: { S:{w:6,h:3}, M:{w:8,h:4}, L:{w:12,h:6}, XL:{w:24,h:6} },

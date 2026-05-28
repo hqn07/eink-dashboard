@@ -422,25 +422,6 @@ const RENDERERS = {
     `;
   },
 
-  mac_focus: ({ macFocus }) => {
-    if (!macFocus) {
-      return `<div class="col-title">FOCUS</div><div class="empty" style="border:0;padding:14px 0">MAC OFFLINE</div>`;
-    }
-    if (!macFocus.active) {
-      return `
-        <div class="mac-focus">
-          <div class="col-title">FOCUS</div>
-          <div class="mac-focus-state autofit" data-min-font="20">OFF</div>
-        </div>
-      `;
-    }
-    return `
-      <div class="mac-focus">
-        <div class="col-title">FOCUS</div>
-        <div class="mac-focus-state autofit" data-min-font="20">${escapeHtml(macFocus.modeId).toUpperCase()}</div>
-      </div>
-    `;
-  },
 };
 
 export function renderWidget(id, data) {
