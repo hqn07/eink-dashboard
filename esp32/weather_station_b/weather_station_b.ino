@@ -21,7 +21,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `b-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.0.0"
+#define FW_VERSION "1.1.0"
 #define FW_BOARD   "b"
 #define OTA_MIN_BATT_PCT 50
 
