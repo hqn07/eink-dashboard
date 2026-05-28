@@ -22,6 +22,13 @@ const execFileP = promisify(execFile);
 const CACHE_MS = 5 * 1000;
 let cached = null;
 
+// Local HTTP API exposed by the pear-devs (formerly th-ch) YouTube Music
+// desktop app's "API Server" plugin. nowplaying-cli can't see YouTube Music
+// playing in Chrome (MediaRemote returns elapsedTime=0/infoUpdateTime=null),
+// but this app exposes accurate position over localhost.
+const YTM_URL = 'http://localhost:26538/api/v1/song-info';
+let ytmArtCache = { src: null, b64: null };
+
 const SOURCE_LABELS = {
   'com.spotify.client':            'SPOTIFY',
   'com.apple.Music':               'MUSIC',
@@ -116,6 +123,43 @@ function parseFloatSafe(s) {
   return Number.isFinite(n) ? n : null;
 }
 
+async function fetchYtmArtwork(src) {
+  if (!src) return null;
+  if (ytmArtCache.src === src && ytmArtCache.b64) return ytmArtCache.b64;
+  try {
+    const res = await fetch(src, { signal: AbortSignal.timeout(3000) });
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    const b64 = await ditherArtwork(buf);
+    ytmArtCache = { src, b64 };
+    return b64;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchYtMusic() {
+  try {
+    const res = await fetch(YTM_URL, { signal: AbortSignal.timeout(800) });
+    if (!res.ok) return null;
+    const j = await res.json();
+    if (!j || !j.title) return null;
+    const artwork = await fetchYtmArtwork(j.imageSrc);
+    return {
+      title: String(j.title || ''),
+      artist: String(j.artist || ''),
+      album: String(j.album || ''),
+      isPlaying: !j.isPaused,
+      durationSec: Number.isFinite(j.songDuration) ? j.songDuration : null,
+      elapsedSec: Number.isFinite(j.elapsedSeconds) ? j.elapsedSeconds : null,
+      sourceLabel: 'YT MUSIC',
+      artworkBase64: artwork
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function fetchMacNowPlaying() {
   if (process.platform !== 'darwin') return null;
   if (cached && (Date.now() - cached.at) < CACHE_MS) {
@@ -123,6 +167,14 @@ async function fetchMacNowPlaying() {
     return cached.data;
   }
   const t0 = Date.now();
+  // YouTube Music desktop app (if running) exposes accurate position over
+  // localhost — prefer it over nowplaying-cli which returns 0 for YT Music.
+  const ytm = await fetchYtMusic();
+  if (ytm) {
+    cached = { at: Date.now(), data: ytm };
+    status.record('mac_nowplaying', { ok: true, ms: Date.now() - t0 });
+    return ytm;
+  }
   try {
     const [titleR, artistR, albumR, rateR, durR, elapR, updateR, bundleR] = await Promise.all([
       readField('title'),
