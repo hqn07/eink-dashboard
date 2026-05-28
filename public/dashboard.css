@@ -482,7 +482,6 @@ html, body {
   display: flex; gap: 12px; flex: 1; min-height: 0;
 }
 .mac-np-art {
-  width: 96px; height: 96px;
   flex-shrink: 0;
   border: 1.5px solid #000;
   image-rendering: pixelated;
@@ -497,10 +496,21 @@ html, body {
   display: flex; flex-direction: column; justify-content: center; gap: 4px;
 }
 .mac-np-title {
-  font-family: 'DM Serif Display', serif;
+  /* Layered fallback: DM Serif Display first; if the user's network
+   * lost the Google Font this round, Iowan Old Style + Times pick up
+   * Vietnamese diacritics and other glyphs DM Serif Display doesn't
+   * ship. Without the fallback, browsers swap to a sans-serif system
+   * font and the layout shifts mid-render. */
+  font-family: 'DM Serif Display', 'Iowan Old Style', 'Times New Roman', serif;
   font-weight: 700;
   line-height: 1.05;
   overflow: hidden;
+  /* Wrap long titles to multiple lines instead of clipping at the
+   * widget edge. Cell height (via autofit's data-max-font) limits
+   * total vertical space; the actual line count adapts. */
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  display: block;
 }
 .mac-np-meta {
   font-size: 13px;

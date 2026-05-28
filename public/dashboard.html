@@ -53,7 +53,8 @@
     // than this dithers into unreadable noise on real e-ink. If the
     // content can't fit at the floor, accept clipping over illegibility.
     const minFont = Math.max(8, parseInt(el.getAttribute('data-min-font') || '11', 10));
-    let lo = minFont, hi = 260;
+    const maxFont = Math.max(minFont, parseInt(el.getAttribute('data-max-font') || '260', 10));
+    let lo = minFont, hi = maxFont;
     while (lo < hi) {
       const mid = Math.ceil((lo + hi) / 2);
       el.style.fontSize = mid + 'px';
@@ -522,9 +523,18 @@
       requires: 'mac_nowplaying',
       sizes: { S:{w:8,h:4}, M:{w:12,h:5}, L:{w:24,h:5}, XL:{w:24,h:8} },
       defaultSize: 'M',
-      render: ({ macNowPlaying }) => {
+      render: ({ macNowPlaying, cellW, cellH, density }) => {
         if (!macNowPlaying) return placeholder('NOW PLAYING', 'MAC OFFLINE', 'msg');
         const np = macNowPlaying;
+        const tier = pickTier(cellW || 0, cellH || 0, density);
+        const TIER_CFG = {
+          tiny:     { art: 0,   maxFont: 20, showProgress: false, showSource: false },
+          compact:  { art: 56,  maxFont: 26, showProgress: false, showSource: false },
+          standard: { art: 80,  maxFont: 34, showProgress: true,  showSource: true  },
+          extended: { art: 100, maxFont: 42, showProgress: true,  showSource: true  },
+          full:     { art: 140, maxFont: 56, showProgress: true,  showSource: true  }
+        };
+        const cfg = TIER_CFG[tier] || TIER_CFG.standard;
         const stateIcon = np.isPlaying ? '▶' : '❚❚';
         const fmtSec = s => {
           if (!Number.isFinite(s) || s < 0) return '--:--';
@@ -532,12 +542,14 @@
           const ss = String(Math.floor(s % 60)).padStart(2, '0');
           return `${m}:${ss}`;
         };
-        const art = np.artworkBase64
-          ? `<img class="mac-np-art" src="data:image/png;base64,${np.artworkBase64}" alt="" />`
-          : `<div class="mac-np-art mac-np-art-empty">${stateIcon}</div>`;
+        const art = cfg.art === 0
+          ? ''
+          : (np.artworkBase64
+              ? `<img class="mac-np-art" style="width:${cfg.art}px;height:${cfg.art}px" src="data:image/png;base64,${np.artworkBase64}" alt="" />`
+              : `<div class="mac-np-art mac-np-art-empty" style="width:${cfg.art}px;height:${cfg.art}px">${stateIcon}</div>`);
         const artistAlbum = [np.artist, np.album].filter(Boolean).map(escapeHtml).join(' · ');
-        const source = np.sourceLabel ? `via ${escapeHtml(np.sourceLabel)}` : '';
-        const hasProgress = Number.isFinite(np.durationSec) && np.durationSec > 0;
+        const source = cfg.showSource && np.sourceLabel ? `via ${escapeHtml(np.sourceLabel)}` : '';
+        const hasProgress = cfg.showProgress && Number.isFinite(np.durationSec) && np.durationSec > 0;
         const pct = hasProgress
           ? Math.max(0, Math.min(100, (np.elapsedSec || 0) / np.durationSec * 100))
           : 0;
@@ -548,7 +560,7 @@
              </div>`
           : '';
         return `
-          <div class="mac-np-card">
+          <div class="mac-np-card mac-np-tier-${tier}">
             <div class="mac-np-head">
               <span class="mac-np-state">${stateIcon}</span>
               <span class="col-title">NOW PLAYING</span>
@@ -556,7 +568,7 @@
             <div class="mac-np-body">
               ${art}
               <div class="mac-np-text">
-                <div class="mac-np-title autofit" data-min-font="14">${escapeHtml(np.title)}</div>
+                <div class="mac-np-title autofit" data-min-font="14" data-max-font="${cfg.maxFont}">${escapeHtml(np.title)}</div>
                 <div class="mac-np-meta">${artistAlbum || '—'}</div>
                 ${source ? `<div class="mac-np-source">${source}</div>` : ''}
               </div>

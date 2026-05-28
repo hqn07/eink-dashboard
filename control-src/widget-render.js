@@ -19,30 +19,38 @@ function fmtSec(s) {
   return `${m}:${ss}`;
 }
 
-// Newspaper-style now-playing layout used by both mac_nowplaying
-// (e-ink + control preview). Album art on the left, big title +
-// artist · album + source label on the right, progress bar + time
-// across the bottom when duration is known.
-function renderNowPlaying(np) {
+// Newspaper-style now-playing layout. Tier-aware: small tiles drop
+// progress + source label, art shrinks; bigger tiles fit the full card.
+function renderNowPlaying(np, cellW, cellH, density) {
+  const tier = pickTier(cellW || 0, cellH || 0, density);
   const stateIcon = np.isPlaying ? '▶' : '❚❚';
-  const art = np.artworkBase64
-    ? `<img class="mac-np-art" src="data:image/png;base64,${np.artworkBase64}" alt="" />`
-    : `<div class="mac-np-art mac-np-art-empty">${stateIcon}</div>`;
+  const TIER_CFG = {
+    tiny:     { art: 0,   maxFont: 20, showProgress: false, showSource: false },
+    compact:  { art: 56,  maxFont: 26, showProgress: false, showSource: false },
+    standard: { art: 80,  maxFont: 34, showProgress: true,  showSource: true  },
+    extended: { art: 100, maxFont: 42, showProgress: true,  showSource: true  },
+    full:     { art: 140, maxFont: 56, showProgress: true,  showSource: true  }
+  };
+  const cfg = TIER_CFG[tier] || TIER_CFG.standard;
+  const art = cfg.art === 0
+    ? ''
+    : (np.artworkBase64
+        ? `<img class="mac-np-art" style="width:${cfg.art}px;height:${cfg.art}px" src="data:image/png;base64,${np.artworkBase64}" alt="" />`
+        : `<div class="mac-np-art mac-np-art-empty" style="width:${cfg.art}px;height:${cfg.art}px">${stateIcon}</div>`);
   const artistAlbum = [np.artist, np.album].filter(Boolean).map(escapeHtml).join(' · ');
-  const source = np.sourceLabel ? `via ${escapeHtml(np.sourceLabel)}` : '';
-  const hasProgress = Number.isFinite(np.durationSec) && np.durationSec > 0;
+  const source = cfg.showSource && np.sourceLabel ? `via ${escapeHtml(np.sourceLabel)}` : '';
+  const hasProgress = cfg.showProgress && Number.isFinite(np.durationSec) && np.durationSec > 0;
   const pct = hasProgress
     ? Math.max(0, Math.min(100, (np.elapsedSec || 0) / np.durationSec * 100))
     : 0;
   const progress = hasProgress
-    ? `
-      <div class="mac-np-progress">
-        <div class="mac-np-bar"><div class="mac-np-bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
-        <div class="mac-np-time">${fmtSec(np.elapsedSec)} / ${fmtSec(np.durationSec)}</div>
-      </div>`
+    ? `<div class="mac-np-progress">
+         <div class="mac-np-bar"><div class="mac-np-bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
+         <div class="mac-np-time">${fmtSec(np.elapsedSec)} / ${fmtSec(np.durationSec)}</div>
+       </div>`
     : '';
   return `
-    <div class="mac-np-card">
+    <div class="mac-np-card mac-np-tier-${tier}">
       <div class="mac-np-head">
         <span class="mac-np-state">${stateIcon}</span>
         <span class="col-title">NOW PLAYING</span>
@@ -50,7 +58,7 @@ function renderNowPlaying(np) {
       <div class="mac-np-body">
         ${art}
         <div class="mac-np-text">
-          <div class="mac-np-title autofit" data-min-font="14">${escapeHtml(np.title)}</div>
+          <div class="mac-np-title autofit" data-min-font="14" data-max-font="${cfg.maxFont}">${escapeHtml(np.title)}</div>
           <div class="mac-np-meta">${artistAlbum || '—'}</div>
           ${source ? `<div class="mac-np-source">${source}</div>` : ''}
         </div>
@@ -425,11 +433,11 @@ const RENDERERS = {
     `;
   },
 
-  mac_nowplaying: ({ macNowPlaying }) => {
+  mac_nowplaying: ({ macNowPlaying, cellW, cellH, density }) => {
     if (!macNowPlaying) {
       return `<div class="col-title">NOW PLAYING</div><div class="empty" style="border:0;padding:14px 0">MAC OFFLINE</div>`;
     }
-    return renderNowPlaying(macNowPlaying);
+    return renderNowPlaying(macNowPlaying, cellW, cellH, density);
   },
 
   mac_battery: ({ macBattery }) => {

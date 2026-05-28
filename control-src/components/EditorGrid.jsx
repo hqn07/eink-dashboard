@@ -50,7 +50,8 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
     const maxH = el.clientHeight;
     if (maxW <= 0 || maxH <= 0) return;
     const minFont = Math.max(8, parseInt(el.getAttribute('data-min-font') || '11', 10));
-    let lo = minFont, hi = 260;
+    const maxFont = Math.max(minFont, parseInt(el.getAttribute('data-max-font') || '260', 10));
+    let lo = minFont, hi = maxFont;
     while (lo < hi) {
       const mid = Math.ceil((lo + hi) / 2);
       el.style.fontSize = mid + 'px';
