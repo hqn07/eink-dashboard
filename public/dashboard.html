@@ -520,19 +520,48 @@
     {
       id: 'mac_nowplaying',
       requires: 'mac_nowplaying',
-      sizes: { S:{w:8,h:3}, M:{w:12,h:3}, L:{w:24,h:3}, XL:{w:24,h:6} },
+      sizes: { S:{w:8,h:4}, M:{w:12,h:5}, L:{w:24,h:5}, XL:{w:24,h:8} },
       defaultSize: 'M',
       render: ({ macNowPlaying }) => {
         if (!macNowPlaying) return placeholder('NOW PLAYING', 'MAC OFFLINE', 'msg');
         const np = macNowPlaying;
         const stateIcon = np.isPlaying ? '▶' : '❚❚';
+        const fmtSec = s => {
+          if (!Number.isFinite(s) || s < 0) return '--:--';
+          const m = Math.floor(s / 60);
+          const ss = String(Math.floor(s % 60)).padStart(2, '0');
+          return `${m}:${ss}`;
+        };
+        const art = np.artworkBase64
+          ? `<img class="mac-np-art" src="data:image/png;base64,${np.artworkBase64}" alt="" />`
+          : `<div class="mac-np-art mac-np-art-empty">${stateIcon}</div>`;
+        const artistAlbum = [np.artist, np.album].filter(Boolean).map(escapeHtml).join(' · ');
+        const source = np.sourceLabel ? `via ${escapeHtml(np.sourceLabel)}` : '';
+        const hasProgress = Number.isFinite(np.durationSec) && np.durationSec > 0;
+        const pct = hasProgress
+          ? Math.max(0, Math.min(100, (np.elapsedSec || 0) / np.durationSec * 100))
+          : 0;
+        const progress = hasProgress
+          ? `<div class="mac-np-progress">
+               <div class="mac-np-bar"><div class="mac-np-bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
+               <div class="mac-np-time">${fmtSec(np.elapsedSec)} / ${fmtSec(np.durationSec)}</div>
+             </div>`
+          : '';
         return `
-          <div class="mac-np">
-            <div class="mac-np-state">${stateIcon}</div>
-            <div class="mac-np-text">
-              <div class="mac-np-title autofit" data-min-font="14">${escapeHtml(np.title)}</div>
-              <div class="mac-np-artist">${escapeHtml(np.artist || '—')}</div>
+          <div class="mac-np-card">
+            <div class="mac-np-head">
+              <span class="mac-np-state">${stateIcon}</span>
+              <span class="col-title">NOW PLAYING</span>
             </div>
+            <div class="mac-np-body">
+              ${art}
+              <div class="mac-np-text">
+                <div class="mac-np-title autofit" data-min-font="14">${escapeHtml(np.title)}</div>
+                <div class="mac-np-meta">${artistAlbum || '—'}</div>
+                ${source ? `<div class="mac-np-source">${source}</div>` : ''}
+              </div>
+            </div>
+            ${progress}
           </div>
         `;
       }

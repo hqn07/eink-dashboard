@@ -467,6 +467,74 @@ html, body {
   font-size: 11px;
   letter-spacing: 2px;
 }
+/* ---------- Mac · Now Playing ---------- */
+.mac-np-card {
+  display: flex; flex-direction: column; gap: 6px;
+  width: 100%; height: 100%;
+  font-family: 'JetBrains Mono', monospace;
+}
+.mac-np-head { display: flex; align-items: center; gap: 8px; }
+.mac-np-state {
+  font-size: 18px; font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+.mac-np-body {
+  display: flex; gap: 12px; flex: 1; min-height: 0;
+}
+.mac-np-art {
+  width: 96px; height: 96px;
+  flex-shrink: 0;
+  border: 1.5px solid #000;
+  image-rendering: pixelated;
+  background: #fff;
+}
+.mac-np-art-empty {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px;
+}
+.mac-np-text {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; justify-content: center; gap: 4px;
+}
+.mac-np-title {
+  font-family: 'DM Serif Display', serif;
+  font-weight: 700;
+  line-height: 1.05;
+  overflow: hidden;
+}
+.mac-np-meta {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mac-np-source {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: #555;
+}
+.mac-np-progress {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.mac-np-bar {
+  height: 4px;
+  border: 1px solid #000;
+  background: #fff;
+  position: relative;
+}
+.mac-np-bar-fill {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  background: #000;
+}
+.mac-np-time {
+  font-size: 10px;
+  letter-spacing: 2px;
+  font-weight: 700;
+}
+
 /* ---------- Clock widget ---------- */
 .clock {
   display: flex; flex-direction: column;
