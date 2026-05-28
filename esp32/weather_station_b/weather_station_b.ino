@@ -21,7 +21,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `b-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.2.0"
+#define FW_VERSION "1.3.0"
 #define FW_BOARD   "b"
 #define OTA_MIN_BATT_PCT 50
 
@@ -84,6 +84,13 @@ void beep(int ms) {
 // loop re-runs while this flag is set, so a click during the active
 // window queues another fetch+render instead of being ignored.
 volatile bool refreshRequested = false;
+
+// Diagnostic state populated early in setup() so drawFailScreen() can
+// surface it on the e-ink panel without needing extra parameters. Lets
+// the screen double as a troubleshooting log when there's no Serial.
+const char* g_wakeLabel = "?";
+float       g_battV     = NAN;
+int         g_battPct   = -1;
 
 // Pin-change ISR: mirror button state to buzzer AND latch a refresh
 // request on press. While awake, any press buzzes for the duration the
@@ -395,14 +402,44 @@ void drawFailScreen(const char* reason) {
     display.setCursor(20, 38);
     display.setTextSize(3);
     display.print("CONNECTION ERROR");
+
     display.setTextColor(GxEPD_BLACK);
     display.setTextSize(2);
-    display.setCursor(20, 120);
+    int y = 100;
+    display.setCursor(20, y); y += 30;
     display.print(reason);
-    display.setCursor(20, 160);
-    display.print("Server: ");
-    display.print(activeServerBase);
-    display.setCursor(20, 200);
+
+    display.setCursor(20, y); y += 30;
+    display.print("SSID:    ");
+    display.print(ssid);
+
+    display.setCursor(20, y); y += 30;
+    display.print("SERVER:  ");
+    display.print((activeServerBase && *activeServerBase) ? activeServerBase : "(none yet)");
+
+    display.setCursor(20, y); y += 30;
+    display.print("FIRMWARE: ");
+    display.print(FW_VERSION);
+    display.print(" (board=");
+    display.print(FW_BOARD);
+    display.print(")");
+
+    display.setCursor(20, y); y += 30;
+    display.print("WAKE:    ");
+    display.print(g_wakeLabel);
+
+    display.setCursor(20, y); y += 30;
+    if (g_battPct >= 0 && !isnan(g_battV)) {
+      display.print("BATTERY: ");
+      display.print(g_battV, 2);
+      display.print("V (");
+      display.print(g_battPct);
+      display.print("%)");
+    } else {
+      display.print("BATTERY: --");
+    }
+
+    display.setCursor(20, y); y += 30;
     display.print("Retrying in 5 min");
   } while (display.nextPage());
   display.hibernate();
@@ -462,6 +499,7 @@ void setup() {
   const char* wakeLabel = coldBoot ? "cold/POR"
                         : buttonWake ? "BTN_REFRESH"
                         : "timer";
+  g_wakeLabel = wakeLabel;
   Serial.printf("Wake cause: %d (%s)\n", wakeCause, wakeLabel);
 
   hspi.begin(EPD_SCK, -1, EPD_MOSI, EPD_CS);
@@ -471,6 +509,8 @@ void setup() {
   setupBattery();
   float battV   = readBatteryVoltage();
   int   battPct = batteryPctFromVoltage(battV);
+  g_battV   = battV;
+  g_battPct = battPct;
   Serial.printf("Battery: %.2fV (%d%%)\n", battV, battPct);
 
   if (battPct < LOW_BATT_PCT) beepLowBattery();
