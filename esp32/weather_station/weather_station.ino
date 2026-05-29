@@ -30,11 +30,21 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.5.4"
+#define FW_VERSION "1.6.0"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
 #define DEFAULT_SLEEP_MIN 30
+
+// USB-power detection: TP4056 holds VBAT at ~4.2V while charging. On
+// battery alone the cell drops to ~3.7V soon after disconnect. A
+// threshold of 4.10V cleanly separates "USB plugged in" from "running
+// off the LiPo" without flapping when the battery is near full.
+// When USB-powered we skip light sleep entirely and just delay() —
+// CPU stays awake, no sleep-mode complexity, infinite power budget.
+// On battery we light-sleep so the radio's association survives the
+// idle period and we don't burn ~5 s on a re-join each cycle.
+#define VBAT_USB_THRESHOLD 4.10f
 
 // Battery sense — 1MΩ + 1MΩ divider from V_batt to GND, mid-point on GPIO34.
 // V_batt = V_GPIO34 × 2.0. Equal resistors keep V_GPIO34 ≤ 2.1V at full
@@ -195,7 +205,11 @@ void selectServerBase() {
 
 bool connectWiFiOnce(unsigned long timeoutMs = 15000) {
   WiFi.mode(WIFI_STA);
-  WiFi.disconnect(true, true);
+  // Don't pass `true, true` to disconnect — that erases stored creds
+  // and forces a full re-association, which on this landlord AP often
+  // gets the device locked out for a few seconds. A plain disconnect()
+  // lets the radio reuse the cached BSSID and skip the full auth dance.
+  WiFi.disconnect();
   delay(100);
   WiFi.begin(ssid, password);
   Serial.print("WiFi");
@@ -641,6 +655,98 @@ void pushImage(const uint8_t* buf) {
 
 // =================== MAIN ===================
 
+// Run one full refresh cycle: read battery → ensure WiFi → check
+// alarms/OTA → download + paint image → reschedule. Returns the
+// requested sleep length in minutes for the next iteration.
+//
+// `wakeCause` is the reason we entered this cycle (cold boot, button,
+// or timer); used to gate the press-acknowledgement beep and the
+// "refresh done" chime.
+int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
+  bool coldBoot   = (wakeCause == ESP_SLEEP_WAKEUP_UNDEFINED);
+  bool buttonWake = (wakeCause == ESP_SLEEP_WAKEUP_EXT1);
+
+  if (buttonWake) beep(50);
+  const char* wakeLabel = coldBoot ? "cold/POR"
+                        : buttonWake ? "BTN_REFRESH"
+                        : "timer";
+  g_wakeLabel = wakeLabel;
+  Serial.printf("Wake cause: %d (%s)\n", wakeCause, wakeLabel);
+
+  float battV   = readBatteryVoltage();
+  int   battPct = batteryPctFromVoltage(battV);
+  g_battV   = battV;
+  g_battPct = battPct;
+  Serial.printf("Battery: %.2fV (%d%%)\n", battV, battPct);
+  if (battPct < LOW_BATT_PCT) beepLowBattery();
+
+  int sleepMin = DEFAULT_SLEEP_MIN;
+
+  // Re-use the existing association if light sleep kept it alive;
+  // only re-join when truly disconnected.
+  bool wifiOk = (WiFi.status() == WL_CONNECTED);
+  if (!wifiOk) {
+    wifiOk = connectWiFi();
+    if (wifiOk) selectServerBase();
+  }
+
+  if (!wifiOk) {
+    drawFailScreen("WiFi connection failed");
+    return 5;
+  }
+
+  warmServer();
+  postBattery(battV, battPct);
+  checkForUpdate(battPct, buttonWake);   // may not return (reboots on success)
+  syncTime();
+
+  NextAlarm na;
+  if (fetchNextAlarm(&na) && na.tsMs > 0 && na.serverNowMs > 0) {
+    int64_t deltaSec = ((int64_t)na.tsMs - (int64_t)na.serverNowMs) / 1000;
+    Serial.printf("Next alarm: \"%s\" in %lld s\n", na.label, deltaSec);
+    if (deltaSec >= -ALARM_WINDOW_SEC && deltaSec <= ALARM_WINDOW_SEC) {
+      runAlarm(na.label);
+    }
+  }
+
+  do {
+    refreshRequested = false;
+    uint8_t* img = downloadImage();
+    if (!img) {
+      Serial.println("Retry download once after 2s");
+      delay(2000);
+      img = downloadImage();
+    }
+    if (img) {
+      pushImage(img);
+      free(img);
+      if (buttonWake) beepChime();
+      sleepMin = fetchSleepMinutes();
+      Serial.printf("Sleep %d min\n", sleepMin);
+    } else {
+      drawFailScreen("Could not fetch image");
+      sleepMin = 5;
+    }
+    if (refreshRequested) Serial.println("Press during cycle — re-refreshing");
+  } while (refreshRequested);
+
+  NextAlarm post;
+  if (fetchNextAlarm(&post) && post.tsMs > 0 && post.serverNowMs > 0) {
+    int64_t deltaSec = ((int64_t)post.tsMs - (int64_t)post.serverNowMs) / 1000;
+    int64_t targetSec = deltaSec - 15;
+    if (targetSec > 0) {
+      int alarmMin = (int)((targetSec + 59) / 60);
+      if (alarmMin < 1) alarmMin = 1;
+      if (alarmMin < sleepMin) {
+        Serial.printf("Alarm in %lld s — shortening sleep to %d min\n",
+                      deltaSec, alarmMin);
+        sleepMin = alarmMin;
+      }
+    }
+  }
+  return sleepMin;
+}
+
 void setup() {
   Serial.begin(115200);
   delay(200);
@@ -650,147 +756,60 @@ void setup() {
   ledcAttach(BUZZER_PIN, BUZZER_FREQ, BUZZER_RES);
   buzzerOff();
 
-  // Arm button-mirror ISR so any click while CPU is awake beeps instantly.
   pinMode(BTN_REFRESH, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(BTN_REFRESH), onButtonEdge, CHANGE);
 
-  // initial=true in GxEPD2 runs the panel through its full init + clear
-  // pass. That's needed exactly once on a cold boot; on a deep-sleep wake
-  // it just wipes the previously-displayed image to white before the new
-  // one paints. Branch on the wake cause so we only clear when we have to.
-  esp_sleep_wakeup_cause_t wakeCause = esp_sleep_get_wakeup_cause();
-  bool coldBoot = (wakeCause == ESP_SLEEP_WAKEUP_UNDEFINED);
-  bool buttonWake = (wakeCause == ESP_SLEEP_WAKEUP_EXT1);
-
-  // Acknowledge the press immediately — WiFi connect takes seconds and
-  // the user is standing there waiting to hear something happened.
-  if (buttonWake) beep(50);
-  const char* wakeLabel = coldBoot ? "cold/POR"
-                        : buttonWake ? "BTN_REFRESH"
-                        : "timer";
-  g_wakeLabel = wakeLabel;
-  Serial.printf("Wake cause: %d (%s)\n", wakeCause, wakeLabel);
-
   hspi.begin(EPD_SCK, -1, EPD_MOSI, EPD_CS);
   display.epd2.selectSPI(hspi, SPISettings(4000000, MSBFIRST, SPI_MODE0));
-  // Force initial=true on every wake — costs ~1 s vs. the lighter
-  // wake-init path, but it runs the full panel reset + clear pass
-  // that GxEPD2 reserves for cold boots. Without it, T7 leaves
-  // particles from the prior image and ghosts bleed through.
+  // Force initial=true on cold boot to run the panel through its full
+  // reset + clear pass. Subsequent cycles re-init lighter in pushImage.
   display.init(115200, true, 2, false);
 
-  // Read battery early — voltage is most accurate before WiFi pulls
-  // current. We POST it after the radio is up.
   setupBattery();
-  float battV   = readBatteryVoltage();
-  int   battPct = batteryPctFromVoltage(battV);
-  g_battV   = battV;
-  g_battPct = battPct;
-  Serial.printf("Battery: %.2fV (%d%%)\n", battV, battPct);
 
-  // Audible low-battery alert before WiFi — if battery is critical the
-  // wake may fail entirely and the user would never hear about it.
-  if (battPct < LOW_BATT_PCT) beepLowBattery();
+  // Tell the WiFi driver to enter modem-sleep between DTIM beacons.
+  // That's what lets the association survive esp_light_sleep_start()
+  // without burning the radio's full ~80 mA. WiFi keeps the link;
+  // the CPU sleeps; we don't pay re-join cost every cycle.
+  WiFi.setSleep(true);
+}
 
-  int sleepMin = DEFAULT_SLEEP_MIN;
+void loop() {
+  esp_sleep_wakeup_cause_t wakeCause = esp_sleep_get_wakeup_cause();
+  int sleepMin = runCycle(wakeCause);
+  uint64_t sleepUs = (uint64_t)sleepMin * 60ULL * 1000000ULL;
 
-  if (!connectWiFi()) {
-    drawFailScreen("WiFi connection failed");
-    sleepMin = 5;
-  } else {
-    selectServerBase();  // probe LAN first, fall back to cloud
-    warmServer();   // wake Railway dyno before the big download
-    postBattery(battV, battPct);
-    checkForUpdate(battPct, buttonWake);   // may not return (reboots on success)
-
-    // Sync NTP so we can compare to the server's alarm timestamps.
-    syncTime();
-
-    // Did we wake because an alarm is firing? Server tells us when the
-    // next one's scheduled; if it's within the alarm window of "now"
-    // (using the server's clock to dodge ESP32 RTC drift), run the
-    // alarm before doing the regular refresh.
-    NextAlarm na;
-    if (fetchNextAlarm(&na) && na.tsMs > 0 && na.serverNowMs > 0) {
-      int64_t deltaSec = ((int64_t)na.tsMs - (int64_t)na.serverNowMs) / 1000;
-      Serial.printf("Next alarm: \"%s\" in %lld s\n", na.label, deltaSec);
-      if (deltaSec >= -ALARM_WINDOW_SEC && deltaSec <= ALARM_WINDOW_SEC) {
-        runAlarm(na.label);
-        // After the alarm, force a fresh refresh of the dashboard so
-        // the panel doesn't sit on the alarm screen.
-      }
-    }
-
-    // Refresh loop: re-runs while a button press came in during the
-    // last iteration, so an awake-state click triggers another refresh
-    // instead of being dropped on the floor.
-    //
-    // On cold boot the panel was wiped to white by display.init()'s
-    // clear pass — the saved body ETag would mismatch reality, so we
-    do {
-      refreshRequested = false;
-      uint8_t* img = downloadImage();
-      if (!img) {
-        Serial.println("Retry download once after 2s");
-        delay(2000);
-        img = downloadImage();
-      }
-      if (img) {
-        pushImage(img);
-        free(img);
-        // "Refresh done" chime only on user-triggered wakes (button press).
-        // Timer-driven auto-refresh stays silent so it doesn't beep while
-        // sleeping nearby.
-        if (buttonWake) beepChime();
-        sleepMin = fetchSleepMinutes();
-        Serial.printf("Sleep %d min\n", sleepMin);
-      } else {
-        drawFailScreen("Could not fetch image");
-        sleepMin = 5;
-      }
-      if (refreshRequested) Serial.println("Press during cycle — re-refreshing");
-    } while (refreshRequested);
-
-    // Re-poll the alarm clock now that any alarm beep has finished. If
-    // the next alarm fires sooner than sleepMin, shorten the deep
-    // sleep so the device wakes in time to ring.
-    NextAlarm post;
-    if (fetchNextAlarm(&post) && post.tsMs > 0 && post.serverNowMs > 0) {
-      int64_t deltaSec = ((int64_t)post.tsMs - (int64_t)post.serverNowMs) / 1000;
-      // 15 s before fire so the wake + WiFi + alarm-check completes
-      // inside the ALARM_WINDOW_SEC tolerance.
-      int64_t targetSec = deltaSec - 15;
-      if (targetSec > 0) {
-        int alarmMin = (int)((targetSec + 59) / 60);  // round up to min
-        if (alarmMin < 1) alarmMin = 1;
-        if (alarmMin < sleepMin) {
-          Serial.printf("Alarm in %lld s — shortening sleep to %d min\n",
-                        deltaSec, alarmMin);
-          sleepMin = alarmMin;
-        }
-      }
-    }
-  }
-
-  WiFi.disconnect(true);
-  WiFi.mode(WIFI_OFF);
-
-  // Wait for button release before arming ext1 — otherwise a still-held
-  // press re-triggers wake the instant we enter deep sleep.
+  // Wait for button release so we don't immediately re-wake on
+  // ALL_LOW ext1 with a still-held button.
   unsigned long t0 = millis();
   while (digitalRead(BTN_REFRESH) == LOW && millis() - t0 < 5000) {
     delay(10);
   }
-  detachInterrupt(digitalPinToInterrupt(BTN_REFRESH));
-  buzzerOff();   // guarantee silent before deep sleep
-  ledcDetach(BUZZER_PIN);
-  rtc_gpio_pulldown_dis((gpio_num_t)BTN_REFRESH);
-  rtc_gpio_pullup_en((gpio_num_t)BTN_REFRESH);
+  buzzerOff();
 
-  esp_sleep_enable_timer_wakeup((uint64_t)sleepMin * 60ULL * 1000000ULL);
-  esp_sleep_enable_ext1_wakeup(WAKE_PIN_MASK, ESP_EXT1_WAKEUP_ALL_LOW);
-  Serial.flush();
-  esp_deep_sleep_start();
+  // Mode select: USB → stay active (no sleep), battery → light sleep.
+  // Both keep WiFi associated, so the next cycle doesn't pay the
+  // re-join cost on a flaky AP.
+  float vbat = readBatteryVoltage();
+  bool onUsb = vbat > VBAT_USB_THRESHOLD;
+
+  if (onUsb) {
+    Serial.printf("USB (%.2fV) — active wait %d min\n", vbat, sleepMin);
+    unsigned long until = millis() + (unsigned long)(sleepUs / 1000ULL);
+    while ((long)(until - millis()) > 0) {
+      if (refreshRequested) {
+        Serial.println("Button pressed — early refresh");
+        break;
+      }
+      delay(200);
+    }
+  } else {
+    Serial.printf("Battery (%.2fV) — light sleep %d min\n", vbat, sleepMin);
+    rtc_gpio_pulldown_dis((gpio_num_t)BTN_REFRESH);
+    rtc_gpio_pullup_en((gpio_num_t)BTN_REFRESH);
+    esp_sleep_enable_timer_wakeup(sleepUs);
+    esp_sleep_enable_ext1_wakeup(WAKE_PIN_MASK, ESP_EXT1_WAKEUP_ALL_LOW);
+    Serial.flush();
+    esp_light_sleep_start();
+  }
 }
-
-void loop() {}
