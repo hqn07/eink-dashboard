@@ -21,6 +21,7 @@
 #include <GxEPD2_BW.h>
 #include <SPI.h>
 #include <driver/rtc_io.h>
+#include <esp_wifi.h>   // esp_wifi_get_config — saved SSID even while disconnected
 #include <time.h>
 // Captive-portal WiFi provisioning. On cold boot with no saved creds,
 // brings up an AP named `eink-setup`; the user joins from their phone
@@ -39,7 +40,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.9.1"
+#define FW_VERSION "1.9.2"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -735,10 +736,19 @@ void drawFailScreen(const char* reason) {
 
     display.setCursor(20, y); y += 30;
     display.print("SSID:    ");
-    // WiFi.SSID() returns the NVS-cached SSID set by WiFiManager.
-    // Falls back to "(unset)" before provisioning has run.
+    // WiFi.SSID() only returns the SSID of the *current* association,
+    // so on the fail screen (= we're not connected) it's empty.
+    // esp_wifi_get_config reads the NVS-saved STA config that the
+    // last WiFi.begin / WiFiManager.autoConnect persisted, which is
+    // what the user actually wants to see when debugging.
     {
       String s = WiFi.SSID();
+      if (!s.length()) {
+        wifi_config_t conf{};
+        if (esp_wifi_get_config(WIFI_IF_STA, &conf) == ESP_OK) {
+          s = String((const char*)conf.sta.ssid);
+        }
+      }
       display.print(s.length() ? s.c_str() : "(unset)");
     }
 
