@@ -936,6 +936,24 @@ app.get('/display.bin', checkDeviceAuth, async (req, res) => {
     const cfg = await loadConfig();
     const variant = resolveVariant(req, cfg);
     const { bin } = await getCurrentImage(variant);
+
+    // Adaptive-refresh header — tells the device how many minutes to
+    // sleep before the next wake. Replaces the older /sleep round-trip;
+    // /sleep stays alive for legacy firmware.
+    const minutes = resolveRefreshMinutes(cfg);
+    res.set('X-Refresh-Rate', String(minutes));
+
+    // Battery telemetry over headers (firmware sends Battery-Voltage +
+    // Battery-Pct on every /display.bin request). POST /api/battery
+    // remains supported for backward compatibility.
+    const hBattV = parseFloat(req.headers['battery-voltage']);
+    const hBattPct = parseInt(req.headers['battery-pct'], 10);
+    if (Number.isFinite(hBattV) && hBattV >= 0 && hBattV <= 6 &&
+        Number.isFinite(hBattPct) && hBattPct >= 0 && hBattPct <= 100) {
+      saveBatteryState({ v: hBattV, pct: hBattPct, at: Date.now() })
+        .catch(e => console.warn('battery-header save:', e.message));
+    }
+
     res.set('Content-Type', 'application/octet-stream');
     res.set('Cache-Control', 'no-store');
     res.set('X-Image-Width', String(SCREEN_W));

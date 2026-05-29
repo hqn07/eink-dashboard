@@ -61,11 +61,22 @@ server bases at boot.
 
 Full 800×480 1-bit dashboard image, packed as 48000 bytes.
 
+- Optional request headers (device telemetry; server logs / acts on
+  these, ignores any it doesn't recognise):
+  - `Battery-Voltage` — float, volts.
+  - `Battery-Pct` — int 0–100. If both are present and in-range the
+    server persists them as if the device had POSTed `/api/battery`.
+  - `RSSI` — int dBm (negative).
+  - `FW-Version` — semver, e.g. `1.7.0`.
+  - `FW-Board` — board slug, e.g. `bw`.
 - Response headers:
   - `Content-Type: application/octet-stream`
   - `Cache-Control: no-store`
   - `X-Image-Width: 800`
   - `X-Image-Height: 480`
+  - `X-Refresh-Rate` — minutes the device should sleep before next
+    wake. Server picks this per-request based on the active screen's
+    `refreshMinutes`. Replaces the separate `/sleep` round-trip.
 - Body: 48000 bytes, MSB-first, 1=white / 0=black.
 
 ### `GET /display-header.bin`

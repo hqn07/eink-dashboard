@@ -30,7 +30,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.6.0"
+#define FW_VERSION "1.7.0"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -131,6 +131,10 @@ volatile bool refreshRequested = false;
 const char* g_wakeLabel = "?";
 float       g_battV     = NAN;
 int         g_battPct   = -1;
+// Server's last-reported next-refresh interval, captured from the
+// X-Refresh-Rate response header on /display.bin. -1 = none yet
+// (firmware falls back to /sleep until the server has answered once).
+int         g_serverRefreshMin = -1;
 
 // Survives deep sleep. Set when drawFailScreen paints the connection
 // error (lots of solid black in the header banner), checked on the
@@ -273,11 +277,32 @@ uint8_t* downloadImage() {
   HTTPClient http;
   http.setTimeout(60000);   // Railway cold start can take 30-60s
   http.begin(url);
+  // Telemetry headers — server uses these for adaptive refresh and
+  // logs them per request. Server v1 ignores any it doesn't recognise.
+  if (!isnan(g_battV))     http.addHeader("Battery-Voltage", String(g_battV, 2));
+  if (g_battPct >= 0)      http.addHeader("Battery-Pct",     String(g_battPct));
+  http.addHeader("RSSI",       String(WiFi.RSSI()));
+  http.addHeader("FW-Version", FW_VERSION);
+  http.addHeader("FW-Board",   FW_BOARD);
+  // Ask HTTPClient to retain the one response header we care about.
+  // X-Refresh-Rate is set by the server on every /display.bin reply.
+  const char* keepHeaders[] = { "X-Refresh-Rate" };
+  http.collectHeaders(keepHeaders, 1);
+
   int code = http.GET();
   if (code != 200) {
     Serial.printf("HTTP %d\n", code);
     http.end();
     return nullptr;
+  }
+
+  // Capture the adaptive refresh interval before the body read so a
+  // mid-stream timeout doesn't drop the hint.
+  if (http.hasHeader("X-Refresh-Rate")) {
+    int rr = http.header("X-Refresh-Rate").toInt();
+    if (rr > 0 && rr <= 1440) {
+      g_serverRefreshMin = rr;
+    }
   }
 
   int len = http.getSize();
@@ -445,6 +470,16 @@ void checkForUpdate(int battPct, bool buttonWake) {
 }
 
 int fetchSleepMinutes() {
+  // Prefer the X-Refresh-Rate header the server sent on the most
+  // recent /display.bin reply — saves a separate round trip and lets
+  // the server adapt per-request (e.g. on low battery / quiet hours).
+  if (g_serverRefreshMin > 0) {
+    int mins = g_serverRefreshMin;
+    if (mins < 1) mins = 1;
+    if (mins > 1440) mins = 1440;
+    return mins;
+  }
+  // Legacy fallback for older servers that don't emit the header.
   String url = addToken(String(activeServerBase) + "/sleep");
   HTTPClient http;
   http.setTimeout(5000);

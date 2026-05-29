@@ -21,7 +21,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `b-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.3.1"
+#define FW_VERSION "1.4.0"
 #define FW_BOARD   "b"
 #define OTA_MIN_BATT_PCT 50
 
@@ -91,6 +91,8 @@ volatile bool refreshRequested = false;
 const char* g_wakeLabel = "?";
 float       g_battV     = NAN;
 int         g_battPct   = -1;
+// X-Refresh-Rate captured from the last /display.bin response.
+int         g_serverRefreshMin = -1;
 
 // Pin-change ISR: mirror button state to buzzer AND latch a refresh
 // request on press. While awake, any press buzzes for the duration the
@@ -208,11 +210,24 @@ uint8_t* downloadImage() {
   HTTPClient http;
   http.setTimeout(60000);
   http.begin(url);
+  if (!isnan(g_battV))     http.addHeader("Battery-Voltage", String(g_battV, 2));
+  if (g_battPct >= 0)      http.addHeader("Battery-Pct",     String(g_battPct));
+  http.addHeader("RSSI",       String(WiFi.RSSI()));
+  http.addHeader("FW-Version", FW_VERSION);
+  http.addHeader("FW-Board",   FW_BOARD);
+  const char* keepHeaders[] = { "X-Refresh-Rate" };
+  http.collectHeaders(keepHeaders, 1);
+
   int code = http.GET();
   if (code != 200) {
     Serial.printf("HTTP %d\n", code);
     http.end();
     return nullptr;
+  }
+
+  if (http.hasHeader("X-Refresh-Rate")) {
+    int rr = http.header("X-Refresh-Rate").toInt();
+    if (rr > 0 && rr <= 1440) g_serverRefreshMin = rr;
   }
 
   int len = http.getSize();
@@ -369,6 +384,12 @@ void checkForUpdate(int battPct, bool buttonWake) {
 }
 
 int fetchSleepMinutes() {
+  if (g_serverRefreshMin > 0) {
+    int mins = g_serverRefreshMin;
+    if (mins < 1) mins = 1;
+    if (mins > 1440) mins = 1440;
+    return mins;
+  }
   String url = addToken(String(activeServerBase) + "/sleep");
   HTTPClient http;
   http.setTimeout(5000);
