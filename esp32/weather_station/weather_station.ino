@@ -43,7 +43,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.10.3"
+#define FW_VERSION "1.10.4"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -972,6 +972,14 @@ void pushImage(const uint8_t* buf) {
 // `wakeCause` is the reason we entered this cycle (cold boot, button,
 // or timer); used to gate the press-acknowledgement beep and the
 // "refresh done" chime.
+// How often to re-probe the LAN/cloud /health to refresh the chosen
+// base. The Mac LAN server can come up or go away during the day;
+// without re-probing the device would stay locked to whichever was
+// reachable the first time. Probe every 10 cycles ≈ every ~10 min at
+// the default 1-min refresh interval.
+#define SERVER_REPROBE_EVERY 10
+static int g_cyclesSinceProbe = 999;   // force a probe on the first cycle
+
 int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
   bool coldBoot   = (wakeCause == ESP_SLEEP_WAKEUP_UNDEFINED);
   bool buttonWake = (wakeCause == ESP_SLEEP_WAKEUP_EXT1);
@@ -993,17 +1001,23 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
   int sleepMin = DEFAULT_SLEEP_MIN;
 
   // Re-use the existing association if light sleep kept it alive;
-  // only re-join when truly disconnected.
+  // only re-join when truly disconnected. Light sleep can silently
+  // drop the association on some APs, so we always check WiFi.status
+  // before assuming we're up.
   bool wifiOk = (WiFi.status() == WL_CONNECTED);
   if (!wifiOk) {
+    Serial.println("WiFi dropped — reconnecting");
     wifiOk = connectWiFi();
   }
-  // Pick a server base on the first cycle (or after a reconnect)
-  // even if WiFi was already up from provisionWiFi at boot — the
-  // selector was previously skipped on "already connected" paths,
-  // leaving activeServerBase empty and every URL hostless.
-  if (wifiOk && (!activeServerBase || !*activeServerBase)) {
+  // Server-base selection. Run on cold boot, after every reconnect,
+  // and periodically (~every 10 cycles) so the device can re-evaluate
+  // LAN vs cloud as the Mac server comes up/down during the day.
+  if (wifiOk && ((!activeServerBase || !*activeServerBase)
+                 || g_cyclesSinceProbe >= SERVER_REPROBE_EVERY)) {
     selectServerBase();
+    g_cyclesSinceProbe = 0;
+  } else {
+    g_cyclesSinceProbe++;
   }
 
   if (!wifiOk) {
