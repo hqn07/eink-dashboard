@@ -40,7 +40,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.9.2"
+#define FW_VERSION "1.9.3"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -222,7 +222,25 @@ void selectServerBase() {
 // `eink-setup` and blocks for up to 3 minutes waiting for the user to
 // pick a network on their phone. Either way, on success NVS holds the
 // chosen SSID/password so all future WiFi.begin() calls just work.
+// Apply post-connect radio knobs. Must run AFTER the link is up,
+// otherwise the calls silently no-op or wedge the driver:
+//   setSleep(false) before WiFi.begin → radio stuck at WL_IDLE_STATUS
+//                                       (espressif/arduino-esp32#8877)
+//   setTxPower      before WiFi.mode  → silent no-op
+//                                       (espressif/arduino-esp32#9858)
+void applyWiFiTuning() {
+  WiFi.setSleep(false);                       // no modem-sleep gaps
+  WiFi.setTxPower(WIFI_POWER_19_5dBm);        // crank to chip max
+  Serial.printf("WiFi tuning applied — SSID=%s RSSI=%d\n",
+                WiFi.SSID().c_str(), WiFi.RSSI());
+}
+
 bool provisionWiFi() {
+  // Force STA mode BEFORE WiFiManager touches the radio. Without this,
+  // esp_wifi_get_config returns garbage (not null-terminated), making
+  // WiFiManager log "No Credentials Saved" even when the user just
+  // submitted the portal — tzapu/WiFiManager#1490.
+  WiFi.mode(WIFI_STA);
   WiFiManager wm;
   wm.setConfigPortalTimeout(180);     // 3 min portal timeout
   wm.setConnectTimeout(20);           // 20 s per initial connect attempt
@@ -231,6 +249,7 @@ bool provisionWiFi() {
   if (ok) {
     Serial.printf("WiFi provisioned: %s  RSSI=%d\n",
                   WiFi.SSID().c_str(), WiFi.RSSI());
+    applyWiFiTuning();
   } else {
     Serial.println("WiFi provisioning failed/timed out");
   }
@@ -269,7 +288,7 @@ bool connectWiFiOnce(unsigned long timeoutMs = 15000) {
 bool connectWiFi() {
   for (int attempt = 1; attempt <= 3; attempt++) {
     Serial.printf("WiFi attempt %d/3\n", attempt);
-    if (connectWiFiOnce()) return true;
+    if (connectWiFiOnce()) { applyWiFiTuning(); return true; }
     WiFi.disconnect(true, true);
     delay(1000);
   }
@@ -931,18 +950,9 @@ void setup() {
   // WiFi is up and the server has been selected.
   loadAuthFromNVS();
 
-  // Two reliability knobs, paired:
-  //   setSleep(false)   — keep the radio fully awake between cycles.
-  //                       Burns more battery (~80 mA vs ~20 mA modem-
-  //                       sleep) but the association survives picky APs
-  //                       that deauth clients during DTIM idle gaps —
-  //                       exactly the landlord-AP failure pattern.
-  //   setTxPower(MAX)   — ESP32 defaults to a conservative TX power on
-  //                       this Arduino core; cranking to 19.5 dBm gives
-  //                       the antenna a fighting chance from across the
-  //                       room.
-  WiFi.setSleep(false);
-  WiFi.setTxPower(WIFI_POWER_19_5dBm);
+  // No WiFi.setSleep / setTxPower here — they must run AFTER the radio
+  // is associated. See applyWiFiTuning() (called once provisionWiFi
+  // and connectWiFi succeed).
 
   // Run WiFiManager once. If creds are already in NVS this returns
   // fast; otherwise it blocks on the captive portal so the user can
