@@ -43,7 +43,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.10.2"
+#define FW_VERSION "1.10.3"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -997,7 +997,13 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
   bool wifiOk = (WiFi.status() == WL_CONNECTED);
   if (!wifiOk) {
     wifiOk = connectWiFi();
-    if (wifiOk) selectServerBase();
+  }
+  // Pick a server base on the first cycle (or after a reconnect)
+  // even if WiFi was already up from provisionWiFi at boot — the
+  // selector was previously skipped on "already connected" paths,
+  // leaving activeServerBase empty and every URL hostless.
+  if (wifiOk && (!activeServerBase || !*activeServerBase)) {
+    selectServerBase();
   }
 
   if (!wifiOk) {
