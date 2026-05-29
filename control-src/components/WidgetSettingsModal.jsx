@@ -137,26 +137,43 @@ export default function WidgetSettingsModal({
   // ResizeObserver and re-fit on every resize. Must be declared
   // BEFORE the open/draft early return so React sees the same hook
   // order on every render.
+  //
+  // Initial state is intentionally small (300x220) so the first paint
+  // doesn't overshoot — the framer-motion entry animation means
+  // ResizeObserver may not fire with the final size for ~150 ms, and
+  // we'd rather under-scale briefly than render a clipped widget.
   const previewColRef = useRef(null);
-  const [previewBox, setPreviewBox] = useState({ w: 720, h: 560 });
+  const [previewBox, setPreviewBox] = useState({ w: 300, h: 220 });
   useEffect(() => {
     if (!open) return;
-    const el = previewColRef.current;
-    if (!el) return;
+    let raf = 0;
+    let timers = [];
     const update = () => {
-      const r = el.getBoundingClientRect();
-      // Account for the label row above the frame (~28px) and the
-      // column's padding so the frame doesn't push the modal scrollbar.
-      setPreviewBox({
-        w: Math.max(120, r.width - 24),
-        h: Math.max(120, r.height - 40)
-      });
+      const el = previewColRef.current;
+      if (!el) return;
+      // clientWidth/Height = content + padding, excluding border + scrollbar
+      // — what we actually have for the preview frame. Subtract the
+      // .wsm-col padding (20 22) + label gap (~32) so the scaled frame
+      // doesn't push past the column edges.
+      const w = Math.max(120, el.clientWidth  - 44);
+      const h = Math.max(120, el.clientHeight - 72);
+      setPreviewBox({ w, h });
     };
-    update();
+    // Re-measure: immediately, on next animation frame, and again after
+    // framer-motion settles so the final column size is captured even
+    // when the modal opens mid-animation.
+    raf = requestAnimationFrame(update);
+    timers.push(setTimeout(update, 200));
+    timers.push(setTimeout(update, 500));
     const ro = new ResizeObserver(update);
-    ro.observe(el);
+    if (previewColRef.current) ro.observe(previewColRef.current);
     window.addEventListener('resize', update);
-    return () => { ro.disconnect(); window.removeEventListener('resize', update); };
+    return () => {
+      cancelAnimationFrame(raf);
+      timers.forEach(clearTimeout);
+      ro.disconnect();
+      window.removeEventListener('resize', update);
+    };
   }, [open]);
 
   if (!open || !draft) return null;
