@@ -4,6 +4,7 @@
 // `dangerouslySetInnerHTML` and styled via /static/dashboard.css.
 
 import { pickTier } from './widgets.js';
+import { MIGRATED_RENDERERS } from './widgets/_registry.js';
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({
@@ -535,25 +536,15 @@ const RENDERERS = {
     `;
   },
 
-  clock: ({ clockNow, settings }) => {
-    if (!clockNow) return `<div class="empty" style="border:0;padding:14px 0">NO TIME</div>`;
-    const c = clockNow;
-    const s = settings || {};
-    const cls = c.style === 'thin' ? 'clock-thin' : 'clock-big';
-    const ampm = c.ampm ? `<span class="clock-ampm">${c.ampm}</span>` : '';
-    const date = c.dateLine ? `<div class="clock-date">${escapeHtml(c.dateLine)}</div>` : '';
-    return `
-      <div class="clock ${cls}">
-        <div class="clock-time autofit" data-min-font="22">${c.timeStr}${ampm}</div>
-        ${date}
-      </div>
-    `;
-  },
+  // clock — migrated to control-src/widgets/clock.js (Phase A)
 
 };
 
 export function renderWidget(id, data) {
-  const fn = RENDERERS[id];
+  // Prefer the per-widget module (Phase A migrations) over the legacy
+  // RENDERERS map. Either way the contract is the same — a pure
+  // function from ctx to HTML string.
+  const fn = MIGRATED_RENDERERS[id] || RENDERERS[id];
   if (!fn) return '';
   try { return fn(data || {}); } catch { return ''; }
 }

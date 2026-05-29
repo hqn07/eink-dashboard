@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { CaretUp, CaretDown } from '@phosphor-icons/react';
 import { geocode } from '../api.js';
+import { MIGRATED_FORMS } from '../widgets/_registry.js';
 
 // Per-tile widget-data forms. Each form reads/writes a flat `values`
 // object that lives at `layoutItem.settings` — the canonical (and
@@ -301,9 +302,25 @@ function LocationFields({ values, onChange }) {
 
 // =================== WIDGET FORMS ===================
 
+// Field primitives passed into migrated per-widget Form modules so
+// each module doesn't have to re-import them. Add new ones here as
+// they appear in widget forms.
+const FIELD_PRIMITIVES = {
+  TextField, SelectField, ToggleField, SliderField, CsvField,
+  ListEditor, LocationFields, TypographyFields
+};
+
 export default function WidgetForm({ widgetId, values, onChange }) {
   const v = values || {};
   const patch = (p) => onChange({ ...v, ...p });
+
+  // Phase A migrations: per-widget modules under control-src/widgets/
+  // export a Form component. Dispatch to it before falling through to
+  // the legacy switch below.
+  const MigratedForm = MIGRATED_FORMS[widgetId];
+  if (MigratedForm) {
+    return <MigratedForm values={v} patch={patch} onChange={onChange} fields={FIELD_PRIMITIVES} />;
+  }
 
   switch (widgetId) {
     case 'mac_nowplaying': {
@@ -340,39 +357,7 @@ export default function WidgetForm({ widgetId, values, onChange }) {
         </div>
       );
 
-    case 'clock': {
-      const fmt = v.format === '24h' ? '24h' : '12h';
-      const style = v.style === 'thin' ? 'thin' : 'big';
-      const showDate = v.showDate !== false;
-      return (
-        <>
-          <SelectField
-            label="Format"
-            value={fmt}
-            options={[
-              { value: '12h', label: '12-hour (3:34 PM)' },
-              { value: '24h', label: '24-hour (15:34)' }
-            ]}
-            onChange={(x) => patch({ format: x })}
-          />
-          <SelectField
-            label="Style"
-            value={style}
-            options={[
-              { value: 'big',  label: 'Big chunky' },
-              { value: 'thin', label: 'Thin' }
-            ]}
-            onChange={(x) => patch({ style: x })}
-          />
-          <ToggleField
-            label="Show date below time"
-            value={showDate}
-            onChange={(x) => patch({ showDate: x })}
-          />
-          <TypographyFields values={v} onChange={onChange} />
-        </>
-      );
-    }
+    // clock — migrated to control-src/widgets/clock.js
 
     case 'stocks':
       return (

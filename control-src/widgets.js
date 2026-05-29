@@ -2,6 +2,16 @@
 // public/dashboard.html, which keeps its own mirror) and the React editor.
 // Sizes are predefined presets per widget so users pick from a small set
 // rather than dragging arbitrary corners.
+//
+// Per-widget refactor (Phase A): each widget can move into a single
+// module under control-src/widgets/<id>.js. The registry pulls those
+// defs in via the MIGRATED_DEFS map and spreads them with the
+// `...migratedDef('<id>')` shorthand below. Inlined defs still work
+// for unmigrated widgets.
+import { MIGRATED_DEFS } from './widgets/_registry.js';
+function migratedDef(id) {
+  return MIGRATED_DEFS[id] || (() => { throw new Error(`No migrated def for ${id}`); })();
+}
 
 export const GRID_COLS = 24;
 export const GRID_ROWS = 12;
@@ -153,22 +163,7 @@ export const WIDGET_REGISTRY = [
     defaults: () => ({})
   },
   {
-    id: 'clock',
-    label: 'Clock',
-    requires: 'clock',
-    minSize: { w: 4, h: 2 },
-    sizes: {
-      S:  { w: 6, h: 3 },
-      M:  { w: 8, h: 4 },
-      L:  { w: 12, h: 6 },
-      XL: { w: 24, h: 6 }
-    },
-    defaultSize: 'M',
-    defaults: () => ({
-      format: '12h', showDate: true, style: 'big',
-      fontScale: 1,
-      padding: 14
-    })
+    ...migratedDef('clock')
   }
 ];
 
