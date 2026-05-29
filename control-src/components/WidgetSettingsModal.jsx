@@ -161,8 +161,15 @@ export default function WidgetSettingsModal({
 
   const classes = ['cell', `cell-${draft.widgetId}`];
   if (draft.flush) classes.push('cell-flush');
+  // EditorGrid merges per-item data (perItem[item.id]) into the render
+  // context so each tile sees its own fetched payload — without this,
+  // mac_nowplaying / mac_battery / clock / per-tile weather all collapse
+  // to the "no data" placeholder in the modal preview even though they
+  // render fine on the dashboard.
+  const itemSlot = (previewData && previewData.perItem && previewData.perItem[draft.id]) || {};
   const previewHtml = renderWidget(draft.widgetId, {
     ...previewData,
+    ...itemSlot,
     cellW: draft.w,
     cellH: draft.h,
     density: draft.density,
