@@ -383,7 +383,10 @@ html, body {
 }
 
 .msg-text {
-  font-family: 'DM Serif Display', serif;
+  /* Inherits font-family from .widget-msg so the per-tile picker wins.
+   * Default look (DM Serif Display) still applied via typographyCss's
+   * `serif` default key. */
+  font-family: inherit;
   font-style: italic;
   font-size: 22px;
   line-height: 1.05;
@@ -391,7 +394,7 @@ html, body {
 }
 
 .msg-sub {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit;
   font-weight: 500;
   font-size: 12px;
   letter-spacing: 2px;
@@ -552,12 +555,10 @@ html, body {
   display: flex; flex-direction: column; justify-content: center; gap: 4px;
 }
 .mac-np-title {
-  /* Layered fallback: DM Serif Display first; if the user's network
-   * lost the Google Font this round, Iowan Old Style + Times pick up
-   * Vietnamese diacritics and other glyphs DM Serif Display doesn't
-   * ship. Without the fallback, browsers swap to a sans-serif system
-   * font and the layout shifts mid-render. */
-  font-family: 'DM Serif Display', 'Iowan Old Style', 'Times New Roman', serif;
+  /* Inherits font-family from .mac-np-card so the per-tile typography
+   * picker takes effect; the default still resolves to DM Serif via
+   * typographyCss's `serif` key in widget-render.js. */
+  font-family: inherit;
   font-weight: 700;
   line-height: 1.05;
   overflow: hidden;
@@ -649,8 +650,10 @@ html, body {
   line-height: 0.95;
   font-feature-settings: 'tnum' 1;
 }
-.clock-big .clock-time  { font-family: 'DM Serif Display', serif; font-weight: 700; }
-.clock-thin .clock-time { font-family: 'JetBrains Mono', monospace; font-weight: 300; letter-spacing: 1px; }
+/* font-family inherits from .clock so the per-tile typography
+ * picker takes effect; style preset only controls weight + spacing. */
+.clock-big .clock-time  { font-family: inherit; font-weight: 700; }
+.clock-thin .clock-time { font-family: inherit; font-weight: 300; letter-spacing: 1px; }
 .clock-ampm {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700; font-size: 0.35em; margin-left: 0.3em;
