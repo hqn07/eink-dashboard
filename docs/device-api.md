@@ -210,6 +210,27 @@ CI time (see `.github/workflows/build-firmware.yml`). A future change
 will move per-device auth onto the wire protocol via `/api/setup` +
 `X-API-Key`.
 
+## Layout primitives & playlists (server-side)
+
+Each `cfg.screens[i]` carries a `layoutKind` field. Values:
+
+- `free` (default, backwards-compatible) — uses the saved freeform
+  `layout[]` of `{widgetId, x, y, w, h}` tiles.
+- `full` — one widget filling the 24×12 grid.
+- `half_horizontal` — two widgets stacked (top: 24×6, bottom: 24×6).
+- `half_vertical` — two widgets side-by-side (left: 12×12, right: 12×12).
+- `quadrant` — four widgets, one per quarter (12×6 each).
+
+Primitive screens populate widgets via a `slots[]` field — an ordered
+list of `{widgetId, settings?}` entries, one per slot. The server
+generates the layout array at render time so the renderer doesn't need
+to know about layoutKind.
+
+Playlist mode: setting `cfg.playlist = { enabled: true, minutesPerScreen: 5 }`
+rotates through every enabled screen on a fixed wall-clock cadence,
+ignoring per-screen schedules. Deterministic — the active screen is
+`floor(epochMinutes / minutesPerScreen) % screens.length`.
+
 ## Versioning policy
 
 - **v1** (current) — everything documented above.

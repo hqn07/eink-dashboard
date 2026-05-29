@@ -391,7 +391,53 @@ const DEFAULT_CHROME = {
   }
 };
 
-const GRID_VERSION = 3;
+const GRID_VERSION = 4;
+
+// Fixed-rect layout primitives. Each entry maps a layoutKind name to
+// an ordered list of cell rectangles on the 24x12 grid; screens with
+// `layoutKind !== 'free'` populate widgets by slot index instead of
+// dragging tiles around. Mirrors TRMNL's full / half_h / half_v /
+// quadrant primitive set so authoring stays predictable.
+const LAYOUT_SLOTS = {
+  full:            [{ x: 0,  y: 0, w: 24, h: 12 }],
+  half_horizontal: [{ x: 0,  y: 0, w: 24, h: 6  }, { x: 0,  y: 6, w: 24, h: 6 }],
+  half_vertical:   [{ x: 0,  y: 0, w: 12, h: 12 }, { x: 12, y: 0, w: 12, h: 12 }],
+  quadrant:        [
+    { x: 0,  y: 0, w: 12, h: 6 },
+    { x: 12, y: 0, w: 12, h: 6 },
+    { x: 0,  y: 6, w: 12, h: 6 },
+    { x: 12, y: 6, w: 12, h: 6 }
+  ]
+};
+
+// Resolve the layout array a screen should render. For `free` (the
+// legacy default) we return the saved freeform `layout[]`. For one of
+// the four primitives we generate the layout from `slots[]` (a list of
+// widget ids, one per slot) so the renderer doesn't need to know about
+// layoutKind.
+function resolveScreenLayout(screen) {
+  if (!screen) return [];
+  const kind = screen.layoutKind || 'free';
+  if (kind === 'free') return Array.isArray(screen.layout) ? screen.layout : [];
+  const slots = LAYOUT_SLOTS[kind];
+  if (!slots) return Array.isArray(screen.layout) ? screen.layout : [];
+  const picks = Array.isArray(screen.slots) ? screen.slots : [];
+  const out = [];
+  for (let i = 0; i < slots.length; i++) {
+    const widgetId = picks[i] && picks[i].widgetId ? picks[i].widgetId : picks[i];
+    if (!widgetId) continue;
+    out.push({
+      id: `slot-${i}-${widgetId}`,
+      widgetId,
+      x: slots[i].x, y: slots[i].y, w: slots[i].w, h: slots[i].h,
+      enabled: true,
+      // Slot-based items pass through any per-slot settings the user saved.
+      settings: (picks[i] && picks[i].settings) || undefined
+    });
+  }
+  return out;
+}
+
 function migrateLayoutV1ToV2(layout) {
   return (layout || []).map(l => ({
     ...l,
@@ -431,6 +477,12 @@ function migrateConfigToScreens(cfg) {
     const v = cfg.gridVersion || 1;
     if (v < 2) screens = screens.map(s => ({ ...s, layout: migrateLayoutV1ToV2(s.layout) }));
     if (v < 3) screens = screens.map(s => ({ ...s, layout: migrateLayoutV2ToV3(s.layout) }));
+    // v4: every screen gains a `layoutKind` field. Default `free` so
+    // existing freeform grids keep working — opt-in to a primitive
+    // (full / half_horizontal / half_vertical / quadrant) is a deliberate
+    // edit, not a migration side-effect.
+    if (v < 4) screens = screens.map(s =>
+      s.layoutKind ? s : { ...s, layoutKind: 'free' });
     screens = screens.map(s => s.chrome
       ? s
       : { ...s, chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)) });
@@ -484,6 +536,19 @@ function migrateConfigToScreens(cfg) {
 // back to the default screen when no schedule matches.
 function pickActiveScreen(cfg) {
   if (!cfg.screens || !cfg.screens.length) return null;
+  // Playlist mode: cycle through every enabled screen on a fixed
+  // wall-clock cadence, independent of per-screen schedules.
+  // Deterministic (no in-memory counter) so multiple calls in the
+  // same refresh window resolve to the same screen.
+  const playlist = cfg.playlist || {};
+  if (playlist.enabled) {
+    const live = cfg.screens.filter(s => s.enabled !== false);
+    if (live.length) {
+      const minutesPer = Math.max(1, parseInt(playlist.minutesPerScreen, 10) || 5);
+      const epochMin = Math.floor(Date.now() / 60000);
+      return live[Math.floor(epochMin / minutesPer) % live.length];
+    }
+  }
   const now = localMinutesNow(cfg.timezone || 'UTC');
   for (const s of cfg.screens) {
     const ints = scheduleIntervals(s.schedule);
@@ -747,7 +812,7 @@ app.get('/dashboard', checkDeviceAuth, async (req, res) => {
   try {
     const cfg = await loadConfig();
     const { units, screen, activeScreen } = resolveVariant(req, cfg);
-    const layout = activeScreen ? activeScreen.layout : [];
+    const layout = resolveScreenLayout(activeScreen);
     const data = await buildWidgetData(cfg, units, layout);
 
     const html = await loadDashboardHtml();
@@ -1149,7 +1214,7 @@ app.get('/api/preview-data', checkDeviceAuth, async (req, res) => {
   try {
     const cfg = await loadConfig();
     const { units, screen, activeScreen } = resolveVariant(req, cfg);
-    const layout = activeScreen ? activeScreen.layout : [];
+    const layout = resolveScreenLayout(activeScreen);
     const data = await buildWidgetData(cfg, units, layout);
     const chrome = (activeScreen && activeScreen.chrome) || DEFAULT_CHROME;
     const battery = await loadBatteryState();
