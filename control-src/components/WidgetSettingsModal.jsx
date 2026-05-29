@@ -165,7 +165,8 @@ export default function WidgetSettingsModal({
     ...previewData,
     cellW: draft.w,
     cellH: draft.h,
-    density: draft.density
+    density: draft.density,
+    settings: draft.settings
   }) || '';
   const cellHtml =
     `<div class="${classes.join(' ')}" style="width:${dashW}px;height:${dashH}px">${previewHtml}</div>`;

@@ -389,7 +389,7 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
         >
           {enabled.map(l => {
             const itemSlot = (previewData && previewData.perItem && previewData.perItem[l.id]) || {};
-            const inner = renderWidget(l.widgetId, { ...previewData, ...itemSlot, cellW: l.w, cellH: l.h, density: l.density }) || '';
+            const inner = renderWidget(l.widgetId, { ...previewData, ...itemSlot, cellW: l.w, cellH: l.h, density: l.density, settings: l.settings }) || '';
             const dashW = l.w * (DASH_W / GRID_COLS);
             const dashH = l.h * (BODY_H / GRID_ROWS);
             const classes = ['cell', `cell-${l.widgetId}`];

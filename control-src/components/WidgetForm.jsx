@@ -60,6 +60,28 @@ function ToggleField({ label, value, onChange, help }) {
   );
 }
 
+// Numeric slider with a live readout. `step`, `min`, `max` are passed
+// straight to the input; `format` lets a widget print a unit suffix
+// (e.g. px, ×) without changing the underlying number.
+function SliderField({ label, value, min, max, step = 1, onChange, format, help }) {
+  const display = format ? format(value) : value;
+  return (
+    <label className="wsm-field">
+      <span className="wsm-field-label">
+        {label} <span className="wsm-field-help" style={{ marginLeft: 6 }}>{display}</span>
+      </span>
+      <input
+        type="range"
+        min={min} max={max} step={step}
+        value={value}
+        onChange={e => onChange(Number(e.target.value))}
+        style={{ width: '100%' }}
+      />
+      {help && <span className="wsm-field-help">{help}</span>}
+    </label>
+  );
+}
+
 function CsvField({ label, value, onCommit, placeholder, help }) {
   const joined = (value || []).join(', ');
   const [raw, setRaw] = useState(joined);
@@ -237,7 +259,44 @@ export default function WidgetForm({ widgetId, values, onChange }) {
   const patch = (p) => onChange({ ...v, ...p });
 
   switch (widgetId) {
-    case 'mac_nowplaying':
+    case 'mac_nowplaying': {
+      const variant  = v.variant  || 'time_bookends';
+      const fontScale = Number.isFinite(v.fontScale) ? v.fontScale : 1;
+      const padding   = Number.isFinite(v.padding)   ? v.padding   : 14;
+      return (
+        <>
+          <div className="wsm-field-help" style={{ marginBottom: 6 }}>
+            Variants apply on tiles big enough to stack the art above the
+            title (extended/full tiers). Smaller tiles fall back to the
+            standard inline layout.
+          </div>
+          <SelectField
+            label="Side-space variant"
+            value={variant}
+            options={[
+              { value: 'time_bookends', label: 'Time bookends (elapsed · remaining)' },
+              { value: 'centered',      label: 'Centered (no bookends)' }
+            ]}
+            onChange={(x) => patch({ variant: x })}
+          />
+          <SliderField
+            label="Title size"
+            min={0.7} max={1.4} step={0.05}
+            value={fontScale}
+            onChange={(x) => patch({ fontScale: x })}
+            format={(x) => `${Math.round(x * 100)}%`}
+          />
+          <SliderField
+            label="Inner padding"
+            min={0} max={30} step={1}
+            value={padding}
+            onChange={(x) => patch({ padding: x })}
+            format={(x) => `${x}px`}
+          />
+        </>
+      );
+    }
+
     case 'mac_battery':
       return (
         <div className="wsm-placeholder">

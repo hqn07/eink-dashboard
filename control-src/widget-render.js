@@ -31,9 +31,13 @@ function fmtSec(s) {
 // Future customizability — let users pick what fills the side-space
 // (time bookends today; vertical text / play state / metadata later).
 // See memory `project_eink_widget_customizability_roadmap.md`.
-function renderNowPlaying(np, cellW, cellH, density) {
+function renderNowPlaying(np, cellW, cellH, density, settings) {
   const tier = pickTier(cellW || 0, cellH || 0, density);
   const stateIcon = np.isPlaying ? '▶' : '❚❚';
+  const s = settings || {};
+  const variant   = s.variant   || 'time_bookends';
+  const fontScale = Number.isFinite(s.fontScale) ? s.fontScale : 1;
+  const padding   = Number.isFinite(s.padding)   ? s.padding   : 14;
   const TIER_CFG = {
     tiny:     { art: 0,   maxFont: 20, showProgress: false, showSource: false, stacked: false },
     compact:  { art: 56,  maxFont: 26, showProgress: false, showSource: false, stacked: false },
@@ -60,19 +64,22 @@ function renderNowPlaying(np, cellW, cellH, density) {
     const progressBar = hasProgress
       ? `<div class="mac-np-bar mac-np-bar-only"><div class="mac-np-bar-fill" style="width:${pct.toFixed(1)}%"></div></div>`
       : '';
+    const showBookends = variant !== 'centered';
+    const maxFont = Math.max(14, Math.round(cfg.maxFont * fontScale));
+    const cardStyle = `padding:${padding}px;`;
     return `
-      <div class="mac-np-card mac-np-stacked mac-np-tier-${tier}">
+      <div class="mac-np-card mac-np-stacked mac-np-tier-${tier} mac-np-var-${variant}" style="${cardStyle}">
         <div class="mac-np-head">
           <span class="col-title">NOW PLAYING</span>
         </div>
         <div class="mac-np-stacked-row">
-          <div class="mac-np-bookend mac-np-bookend-left">${elapsedStr}</div>
+          ${showBookends ? `<div class="mac-np-bookend mac-np-bookend-left">${elapsedStr}</div>` : ''}
           ${artInner}
-          <div class="mac-np-bookend mac-np-bookend-right">${remainStr}</div>
+          ${showBookends ? `<div class="mac-np-bookend mac-np-bookend-right">${remainStr}</div>` : ''}
         </div>
         <div class="mac-np-state-big">${stateIcon}</div>
         <div class="mac-np-stacked-text">
-          <div class="mac-np-title autofit" data-min-font="14" data-max-font="${cfg.maxFont}">${escapeHtml(np.title)}</div>
+          <div class="mac-np-title autofit" data-min-font="14" data-max-font="${maxFont}">${escapeHtml(np.title)}</div>
           <div class="mac-np-meta">${artistAlbum || '—'}</div>
           ${source ? `<div class="mac-np-source">${source}</div>` : ''}
         </div>
@@ -472,11 +479,11 @@ const RENDERERS = {
     `;
   },
 
-  mac_nowplaying: ({ macNowPlaying, cellW, cellH, density }) => {
+  mac_nowplaying: ({ macNowPlaying, cellW, cellH, density, settings }) => {
     if (!macNowPlaying) {
       return `<div class="col-title">NOW PLAYING</div><div class="empty" style="border:0;padding:14px 0">MAC OFFLINE</div>`;
     }
-    return renderNowPlaying(macNowPlaying, cellW, cellH, density);
+    return renderNowPlaying(macNowPlaying, cellW, cellH, density, settings);
   },
 
   mac_battery: ({ macBattery }) => {

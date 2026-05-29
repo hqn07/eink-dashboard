@@ -117,7 +117,17 @@ export const WIDGET_REGISTRY = [
       XXL: { w: 24, h: 12 }
     },
     defaultSize: 'M',
-    defaults: () => ({})
+    defaults: () => ({
+      // Side-space layout when the tile is large enough to stack art
+      // above the title. `time_bookends` keeps elapsed/remaining time
+      // flanking the cover; `centered` drops them so the art breathes.
+      variant: 'time_bookends',
+      // Multiplier on the autofit max font size — lets the user dial
+      // the title up or down without resizing the tile.
+      fontScale: 1,
+      // Inner padding in pixels. 0 = flush.
+      padding: 14
+    })
   },
   {
     id: 'mac_battery',

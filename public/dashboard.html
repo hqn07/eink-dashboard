@@ -523,9 +523,13 @@
       requires: 'mac_nowplaying',
       sizes: { S:{w:8,h:4}, M:{w:12,h:5}, L:{w:24,h:5}, XL:{w:24,h:8} },
       defaultSize: 'M',
-      render: ({ macNowPlaying, cellW, cellH, density }) => {
+      render: ({ macNowPlaying, cellW, cellH, density, settings }) => {
         if (!macNowPlaying) return placeholder('NOW PLAYING', 'MAC OFFLINE', 'msg');
         const np = macNowPlaying;
+        const s = settings || {};
+        const variant   = s.variant   || 'time_bookends';
+        const fontScale = Number.isFinite(s.fontScale) ? s.fontScale : 1;
+        const padding   = Number.isFinite(s.padding)   ? s.padding   : 14;
         const tier = pickTier(cellW || 0, cellH || 0, density);
         const TIER_CFG = {
           tiny:     { art: 0,   maxFont: 20, showProgress: false, showSource: false, stacked: false },
@@ -560,19 +564,21 @@
           const progressBar = hasProgress
             ? `<div class="mac-np-bar mac-np-bar-only"><div class="mac-np-bar-fill" style="width:${pct.toFixed(1)}%"></div></div>`
             : '';
+          const showBookends = variant !== 'centered';
+          const maxFont = Math.max(14, Math.round(cfg.maxFont * fontScale));
           return `
-            <div class="mac-np-card mac-np-stacked mac-np-tier-${tier}">
+            <div class="mac-np-card mac-np-stacked mac-np-tier-${tier} mac-np-var-${variant}" style="padding:${padding}px;">
               <div class="mac-np-head">
                 <span class="col-title">NOW PLAYING</span>
               </div>
               <div class="mac-np-stacked-row">
-                <div class="mac-np-bookend mac-np-bookend-left">${elapsedStr}</div>
+                ${showBookends ? `<div class="mac-np-bookend mac-np-bookend-left">${elapsedStr}</div>` : ''}
                 ${artInner}
-                <div class="mac-np-bookend mac-np-bookend-right">${remainStr}</div>
+                ${showBookends ? `<div class="mac-np-bookend mac-np-bookend-right">${remainStr}</div>` : ''}
               </div>
               <div class="mac-np-state-big">${stateIcon}</div>
               <div class="mac-np-stacked-text">
-                <div class="mac-np-title autofit" data-min-font="14" data-max-font="${cfg.maxFont}">${escapeHtml(np.title)}</div>
+                <div class="mac-np-title autofit" data-min-font="14" data-max-font="${maxFont}">${escapeHtml(np.title)}</div>
                 <div class="mac-np-meta">${artistAlbum || '—'}</div>
                 ${source ? `<div class="mac-np-source">${source}</div>` : ''}
               </div>
@@ -905,7 +911,8 @@
     const itemCtx = {
       ...ctx,
       ...(perItem[item.id] || {}),
-      cellW: item.w, cellH: item.h, density: item.density
+      cellW: item.w, cellH: item.h, density: item.density,
+      settings: item.settings
     };
     const inner = def.render(itemCtx);
     if (!inner) continue;
