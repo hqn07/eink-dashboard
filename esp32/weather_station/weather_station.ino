@@ -27,6 +27,10 @@
 // and picks the home network. Cached in NVS automatically — subsequent
 // boots reuse the same creds without showing the portal.
 #include <WiFiManager.h>
+// NVS-backed per-device identity. The api_key here is requested from
+// the server's POST /api/setup on first boot and reused on every HTTP
+// call thereafter via an X-API-Key header.
+#include <Preferences.h>
 
 // =================== CONFIG ===================
 // Per-device secrets live in secrets.h (gitignored). Copy
@@ -35,7 +39,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.8.0"
+#define FW_VERSION "1.9.0"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -297,6 +301,72 @@ String addToken(String url) {
   return url;
 }
 
+// ============ Per-device identity (NVS) ============
+
+Preferences prefs;
+String g_apiKey     = "";
+String g_friendlyId = "";
+
+void loadAuthFromNVS() {
+  prefs.begin("eink", true);   // read-only
+  g_apiKey     = prefs.getString("api_key",     "");
+  g_friendlyId = prefs.getString("friendly_id", "");
+  prefs.end();
+  if (g_apiKey.length()) {
+    Serial.printf("Loaded api_key (friendly_id=%s)\n", g_friendlyId.c_str());
+  }
+}
+
+void saveAuthToNVS(const String& k, const String& fid) {
+  prefs.begin("eink", false);  // rw
+  prefs.putString("api_key",     k);
+  prefs.putString("friendly_id", fid);
+  prefs.end();
+  g_apiKey     = k;
+  g_friendlyId = fid;
+}
+
+// Attach the device's per-device api key as an HTTP header. Server
+// also accepts the legacy ?token= fleet credential, so it's fine to
+// call addAuth on requests that already went through addToken.
+void addAuth(HTTPClient& http) {
+  if (g_apiKey.length() > 0) {
+    http.addHeader("X-API-Key", g_apiKey);
+  }
+}
+
+// First-boot enrollment. POSTs MAC + fw_version + board to /api/setup;
+// stores the returned api_key/friendly_id to NVS so subsequent requests
+// can authenticate per-device.
+bool enrollDevice() {
+  if (g_apiKey.length() > 0) return true;
+  String url = String(activeServerBase) + "/api/setup";
+  Serial.printf("Enrolling: POST %s\n", url.c_str());
+  HTTPClient http;
+  http.setTimeout(8000);
+  http.begin(url);
+  http.addHeader("Content-Type", "application/json");
+  String body = String("{\"mac\":\"") + WiFi.macAddress() +
+                "\",\"fw_version\":\"" + FW_VERSION +
+                "\",\"board\":\"" + FW_BOARD + "\"}";
+  int code = http.POST(body);
+  if (code != 200) {
+    Serial.printf("Enroll HTTP %d\n", code);
+    http.end();
+    return false;
+  }
+  String resp = http.getString();
+  http.end();
+  StaticJsonDocument<256> doc;
+  if (deserializeJson(doc, resp) != DeserializationError::Ok) return false;
+  const char* k   = doc["api_key"]     | "";
+  const char* fid = doc["friendly_id"] | "";
+  if (!k || !*k) return false;
+  saveAuthToNVS(k, fid);
+  Serial.printf("Enrolled (friendly_id=%s)\n", fid);
+  return true;
+}
+
 // Download the full 48000-byte image into a heap buffer.
 // Returns nullptr on failure (caller frees on success).
 uint8_t* downloadImage() {
@@ -306,6 +376,7 @@ uint8_t* downloadImage() {
   HTTPClient http;
   http.setTimeout(60000);   // Railway cold start can take 30-60s
   http.begin(url);
+  addAuth(http);
   // Telemetry headers — server uses these for adaptive refresh and
   // logs them per request. Server v1 ignores any it doesn't recognise.
   if (!isnan(g_battV))     http.addHeader("Battery-Voltage", String(g_battV, 2));
@@ -411,6 +482,7 @@ void postBattery(float v, int pct) {
   HTTPClient http;
   http.setTimeout(5000);
   http.begin(url);
+  addAuth(http);
   http.addHeader("Content-Type", "application/json");
   char body[80];
   snprintf(body, sizeof(body), "{\"v\":%.2f,\"pct\":%d}", v, pct);
@@ -444,6 +516,7 @@ void checkForUpdate(int battPct, bool buttonWake) {
   HTTPClient http;
   http.setTimeout(10000);
   http.begin(url);
+  addAuth(http);
   int code = http.GET();
   if (code == 204) {
     Serial.println("OTA: up-to-date");
@@ -513,6 +586,7 @@ int fetchSleepMinutes() {
   HTTPClient http;
   http.setTimeout(5000);
   http.begin(url);
+  addAuth(http);
   int code = http.GET();
   int mins = DEFAULT_SLEEP_MIN;
   if (code == 200) {
@@ -559,6 +633,7 @@ bool fetchNextAlarm(NextAlarm* out) {
   HTTPClient http;
   http.setTimeout(5000);
   http.begin(url);
+  addAuth(http);
   int code = http.GET();
   if (code != 200) {
     http.end();
@@ -765,6 +840,11 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
   }
 
   warmServer();
+  // First-boot enrollment. enrollDevice() is a no-op when g_apiKey is
+  // already populated, so this is cheap on every cycle. If the server
+  // is unreachable on cold boot the device falls back to the legacy
+  // ?token= fleet credential until enrollment succeeds.
+  if (g_apiKey.length() == 0) enrollDevice();
   postBattery(battV, battPct);
   checkForUpdate(battPct, buttonWake);   // may not return (reboots on success)
   syncTime();
@@ -836,6 +916,11 @@ void setup() {
 
   setupBattery();
 
+  // Restore the per-device api_key from NVS if we already enrolled.
+  // The first /api/setup POST happens later inside runCycle, once
+  // WiFi is up and the server has been selected.
+  loadAuthFromNVS();
+
   // Tell the WiFi driver to enter modem-sleep between DTIM beacons.
   // That's what lets the association survive esp_light_sleep_start()
   // without burning the radio's full ~80 mA. WiFi keeps the link;
@@ -848,15 +933,19 @@ void setup() {
   provisionWiFi();
 }
 
-// Wipe NVS-cached WiFi creds and reboot. Triggered by holding the
-// refresh button for 5 s. On the next boot, provisionWiFi() finds no
-// saved network and opens the captive portal.
+// Wipe NVS-cached WiFi creds + per-device api_key and reboot.
+// Triggered by holding the refresh button for 5 s. On the next boot,
+// provisionWiFi() reopens the captive portal and runCycle() re-enrolls
+// against the server with a fresh identity.
 void factoryReset() {
-  Serial.println("FACTORY RESET — wiping WiFi creds");
+  Serial.println("FACTORY RESET — wiping WiFi creds + api_key");
   buzzerOn();
   delay(1000);
   buzzerOff();
-  WiFi.disconnect(true, true);   // erase config + disconnect
+  WiFi.disconnect(true, true);   // erase WiFi config + disconnect
+  prefs.begin("eink", false);
+  prefs.clear();                 // drop api_key + friendly_id
+  prefs.end();
   delay(200);
   ESP.restart();
 }

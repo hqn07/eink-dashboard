@@ -33,6 +33,7 @@ const CONFIG_PATH = path.join(__dirname, 'data', 'config.json');
 // hiding the baked-in defaults that shipped with the image.
 const DEFAULT_CONFIG_PATH = path.join(__dirname, 'data-defaults', 'config.default.json');
 const BATTERY_PATH = path.join(__dirname, 'data', 'battery.json');
+const DEVICES_PATH = path.join(__dirname, 'data', 'devices.json');
 
 // Loud warning when no DEVICE_TOKEN is set in production: the control
 // panel + config API end up wide-open. Local dev intentionally allows
@@ -119,6 +120,48 @@ async function saveBatteryState(state) {
     console.warn('Battery persist failed:', err.message);
   }
 }
+
+// ---------- Device registry ----------
+//
+// Keyed by lowercased MAC. Each record holds the long-lived api_key
+// the device sends as X-API-Key, a human-friendly id for the control
+// UI, and the most recent telemetry (fw_version, board, last_seen).
+//
+// Loaded once at startup so checkDeviceAuth can do a synchronous
+// lookup; saveDevices() updates both the cache and the on-disk file.
+let _devicesCache = null;
+function loadDevicesSync() {
+  if (_devicesCache) return _devicesCache;
+  try {
+    const raw = fs.readFileSync(DEVICES_PATH, 'utf8');
+    const obj = JSON.parse(raw);
+    _devicesCache = obj && typeof obj === 'object' ? obj : {};
+  } catch (_) {
+    _devicesCache = {};
+  }
+  return _devicesCache;
+}
+async function saveDevices(d) {
+  _devicesCache = d;
+  try {
+    const tmp = DEVICES_PATH + '.tmp';
+    await fsp.writeFile(tmp, JSON.stringify(d, null, 2));
+    await fsp.rename(tmp, DEVICES_PATH);
+  } catch (err) {
+    console.warn('Devices persist failed:', err.message);
+  }
+}
+function findDeviceByKey(apiKey) {
+  const all = loadDevicesSync();
+  for (const mac of Object.keys(all)) {
+    if (all[mac].api_key === apiKey) return all[mac];
+  }
+  return null;
+}
+function genApiKey()     { return require('crypto').randomBytes(24).toString('hex'); }
+function genFriendlyId() { return require('crypto').randomBytes(3).toString('hex').toUpperCase(); }
+// Seed the cache so the first auth call doesn't hit a sync read.
+loadDevicesSync();
 
 // Dashboard HTML template — read once, then cached. We refresh from disk
 // on mtime change so editing public/dashboard.html in dev hot-applies.
@@ -593,6 +636,23 @@ function resolveRefreshMinutes(cfg) {
 // ---------- Auth ----------
 
 function checkDeviceAuth(req, res, next) {
+  // Per-device API key takes precedence — once a device enrolls via
+  // /api/setup it sends X-API-Key on every request. Successful lookup
+  // attaches the device record to req.device for downstream handlers
+  // and bumps last_seen_at so the control UI can show liveness.
+  const apiKey = req.headers['x-api-key'];
+  if (apiKey) {
+    const dev = findDeviceByKey(String(apiKey));
+    if (dev) {
+      req.device = dev;
+      dev.last_seen_at = Date.now();
+      return next();
+    }
+    return res.status(401).send('Bad api key');
+  }
+  // Legacy fleet-wide token. Keeps existing firmware working until
+  // every device has enrolled via /api/setup. Also unlocks admin
+  // endpoints like GET /api/devices.
   if (!DEVICE_TOKEN) return next();
   const tok = req.query.token || req.headers['x-device-token'];
   if (tok !== DEVICE_TOKEN) return res.status(401).send('Bad token');
@@ -1396,6 +1456,61 @@ app.get('/firmware/:file', checkDeviceAuth, (req, res) => {
   res.sendFile(full, (err) => {
     if (err && !res.headersSent) res.status(404).send('not found');
   });
+});
+
+// ---------- Device enrollment ----------
+//
+// First-boot handshake: device POSTs its MAC; server returns a
+// long-lived api_key + a short friendly_id ("A3F2B7") for the
+// control UI. Idempotent — re-enrolling the same MAC returns the
+// existing record so a re-flashed device that lost NVS can recover.
+//
+// No auth: this is the bootstrap path. Rate-limited at the global
+// /api/* middleware to keep abuse from filling the device store.
+app.post('/api/setup', async (req, res) => {
+  try {
+    const mac = String((req.body && req.body.mac) || '').toLowerCase().trim();
+    if (!/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/.test(mac)) {
+      return res.status(400).json({ error: 'bad_mac' });
+    }
+    const devices = loadDevicesSync();
+    let dev = devices[mac];
+    if (!dev) {
+      dev = {
+        mac,
+        api_key:     genApiKey(),
+        friendly_id: genFriendlyId(),
+        first_seen_at: Date.now()
+      };
+    }
+    dev.last_seen_at = Date.now();
+    if (req.body && req.body.fw_version) dev.fw_version = String(req.body.fw_version);
+    if (req.body && req.body.board)      dev.board      = String(req.body.board);
+    devices[mac] = dev;
+    await saveDevices(devices);
+    res.json({ api_key: dev.api_key, friendly_id: dev.friendly_id });
+  } catch (err) {
+    console.error('setup error:', err);
+    res.status(500).json({ error: 'internal' });
+  }
+});
+
+// Admin: list every enrolled device + its last-seen telemetry. Auth'd
+// behind the fleet-wide DEVICE_TOKEN so per-device keys don't expose
+// the whole roster.
+app.get('/api/devices', checkDeviceAuth, (req, res) => {
+  const all = loadDevicesSync();
+  // Strip api_key from the response — UI doesn't need it and it's
+  // sensitive. friendly_id is the per-device handle.
+  const out = Object.values(all).map(d => ({
+    mac: d.mac,
+    friendly_id: d.friendly_id,
+    fw_version:  d.fw_version || null,
+    board:       d.board || null,
+    first_seen_at: d.first_seen_at || null,
+    last_seen_at:  d.last_seen_at || null
+  }));
+  res.json({ devices: out });
 });
 
 // Health

@@ -17,16 +17,19 @@ Current version: **v1**.
 
 ## Authentication
 
-If the server has the `DEVICE_TOKEN` env var set, every endpoint below
-(except `/health`) requires a matching token. The device may send it
-either way; the server accepts either:
+Two paths are supported in priority order:
 
-- Query string: `?token=<DEVICE_TOKEN>`
-- HTTP header: `X-Device-Token: <DEVICE_TOKEN>`
+1. **Per-device API key** (preferred). The device enrolls once via
+   `POST /api/setup` (see below), receives an `api_key`, and sends it
+   on every subsequent request as `X-API-Key: <key>`. Server matches
+   the key against the registry it persisted at enrollment.
+2. **Legacy fleet token**. If no `X-API-Key` is provided, the server
+   falls back to a shared `DEVICE_TOKEN` env var, sent as either
+   `?token=<DEVICE_TOKEN>` or `X-Device-Token: <DEVICE_TOKEN>`.
 
-A bad or missing token returns `401 Bad token`.
-
-When `DEVICE_TOKEN` is unset (single-user local dev), auth is skipped.
+A bad or missing credential returns `401`. When neither
+`DEVICE_TOKEN` nor any enrolled devices exist (single-user local dev),
+auth is skipped.
 
 ## Image format (v1)
 
@@ -47,6 +50,45 @@ that ask for it will negotiate via a separate path / Accept header.
 v1 is 1-bit-only.
 
 ## Endpoints
+
+### `POST /api/setup`
+
+First-boot enrollment. The device sends its MAC + firmware metadata,
+the server hands back a long-lived per-device API key + a short
+friendly id for the control UI.
+
+- Auth: **not required** (bootstrap path; rate-limited via the global
+  `/api/*` limit).
+- Request body:
+  ```
+  {
+    "mac":        "aa:bb:cc:dd:ee:ff",
+    "fw_version": "1.9.0",
+    "board":      "bw"
+  }
+  ```
+- Validation: `mac` must match `^([0-9a-f]{2}:){5}[0-9a-f]{2}$`
+  (case-insensitive). Re-enrolling the same MAC is idempotent and
+  returns the existing record so a re-flashed device that lost NVS
+  can recover its api_key.
+- Response:
+  ```
+  { "api_key": "<48-hex>", "friendly_id": "A3F2B7" }
+  ```
+
+The device persists both in NVS. `api_key` goes in every subsequent
+request's `X-API-Key` header; `friendly_id` is the user-facing handle.
+
+### `GET /api/devices`
+
+Lists every enrolled device + last-seen telemetry. Used by the
+control UI's fleet view.
+
+- Auth: requires the fleet-wide `DEVICE_TOKEN` (per-device keys
+  intentionally can't list other devices).
+- Response: `{ "devices": [{ mac, friendly_id, fw_version, board,
+  first_seen_at, last_seen_at }] }`.
+- `api_key` is intentionally stripped from the response.
 
 ### `GET /health`
 
