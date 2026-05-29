@@ -22,6 +22,7 @@
 #include <SPI.h>
 #include <driver/rtc_io.h>
 #include <esp_wifi.h>   // esp_wifi_get_config — saved SSID even while disconnected
+#include <esp_task_wdt.h>
 #include <time.h>
 // Captive-portal WiFi provisioning. On cold boot with no saved creds,
 // brings up an AP named `eink-setup`; the user joins from their phone
@@ -42,7 +43,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.10.0"
+#define FW_VERSION "1.10.1"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -269,8 +270,21 @@ static const char PORTAL_HTML[] PROGMEM =
 
 void openCaptivePortal() {
   Serial.println("Opening captive portal AP=eink-setup …");
+  // Deregister this task from any task watchdog that may have been
+  // attached during boot — the 5-minute portal loop is intentionally
+  // blocking and would otherwise trip TG1WDT_SYS_RESET.
+  esp_task_wdt_delete(NULL);
+
+  // Hard-reset WiFi state so leftover STA config from a prior
+  // WiFiManager attempt doesn't fight the AP we're about to start.
+  WiFi.persistent(false);
+  WiFi.disconnect(true, true);
+  delay(200);
   WiFi.mode(WIFI_AP);
-  WiFi.softAP("eink-setup");
+  delay(200);
+  bool apOk = WiFi.softAP("eink-setup");
+  Serial.printf("softAP started: %d\n", apOk);
+  delay(500);
   IPAddress apIP = WiFi.softAPIP();
   Serial.printf("Portal IP: %s\n", apIP.toString().c_str());
 
@@ -304,12 +318,22 @@ void openCaptivePortal() {
     portal.send(302, "text/plain", "");
   });
   portal.begin();
+  Serial.println("Portal ready — join WiFi `eink-setup`, browse http://192.168.4.1/");
 
   unsigned long start = millis();
+  unsigned long lastHb = 0;
   while (millis() - start < 5UL * 60UL * 1000UL) {
     dnsServer.processNextRequest();
     portal.handleClient();
-    delay(2);
+    // Heartbeat every 10 s so we know the loop is alive even with no
+    // client traffic. Helps tell "device crashed" from "user hasn't
+    // joined the AP yet" while reading serial.
+    if (millis() - lastHb > 10000) {
+      lastHb = millis();
+      Serial.printf("Portal alive (%lus / 300)\n", (millis() - start) / 1000);
+    }
+    delay(10);
+    yield();
   }
   Serial.println("Portal timed out");
   portal.stop();
