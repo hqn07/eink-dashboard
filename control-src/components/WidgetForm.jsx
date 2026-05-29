@@ -376,13 +376,16 @@ export default function WidgetForm({ widgetId, values, onChange }) {
 
     case 'stocks':
       return (
-        <CsvField
-          label="Symbols (comma separated)"
-          value={v.symbols}
-          onCommit={(arr) => patch({ symbols: arr })}
-          placeholder="AAPL, BTC-USD, ETH-USD"
-          help="Yahoo Finance tickers. Crypto: e.g. BTC-USD."
-        />
+        <>
+          <CsvField
+            label="Symbols (comma separated)"
+            value={v.symbols}
+            onCommit={(arr) => patch({ symbols: arr })}
+            placeholder="AAPL, BTC-USD, ETH-USD"
+            help="Yahoo Finance tickers. Crypto: e.g. BTC-USD."
+          />
+          <TypographyFields values={v} onChange={onChange} />
+        </>
       );
 
     case 'message':
@@ -431,6 +434,7 @@ export default function WidgetForm({ widgetId, values, onChange }) {
     case 'calendar':
       return (
         <>
+          <TypographyFields values={v} onChange={onChange} />
           <ListEditor
             label="iCal feed URLs"
             items={v.icalUrls}
@@ -462,10 +466,13 @@ export default function WidgetForm({ widgetId, values, onChange }) {
     // ----- Location-derived widgets -----
     case 'weather_hero':
       return (
-        <LocationFields
-          values={v}
-          onChange={(loc) => onChange(loc)}
-        />
+        <>
+          <LocationFields
+            values={v}
+            onChange={(loc) => onChange({ ...v, ...loc })}
+          />
+          <TypographyFields values={v} onChange={onChange} />
+        </>
       );
     case 'weather_forecast':
       return (
@@ -483,6 +490,7 @@ export default function WidgetForm({ widgetId, values, onChange }) {
             })}
             help="Open-Meteo returns up to 7 days; larger tiles fit more."
           />
+          <TypographyFields values={v} onChange={onChange} />
         </>
       );
 

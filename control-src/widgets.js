@@ -37,7 +37,9 @@ export const WIDGET_REGISTRY = [
     defaults: (ctx) => ({
       city: (ctx && ctx.city) || '',
       lat:  (ctx && Number.isFinite(ctx.lat)) ? ctx.lat : null,
-      lon:  (ctx && Number.isFinite(ctx.lon)) ? ctx.lon : null
+      lon:  (ctx && Number.isFinite(ctx.lon)) ? ctx.lon : null,
+      fontScale: 1,
+      padding: 14
     })
   },
   {
@@ -56,7 +58,9 @@ export const WIDGET_REGISTRY = [
       city: (ctx && ctx.city) || '',
       lat:  (ctx && Number.isFinite(ctx.lat)) ? ctx.lat : null,
       lon:  (ctx && Number.isFinite(ctx.lon)) ? ctx.lon : null,
-      forecastDays: null
+      forecastDays: null,
+      fontScale: 1,
+      padding: 14
     })
   },
   {
@@ -74,10 +78,8 @@ export const WIDGET_REGISTRY = [
     defaultSize: 'M',
     defaults: () => ({
       text: '', subtitle: '', schedule: [],
-      // Typography (Phase 2): font family picked from the small set of
-      // already-loaded faces, scale multiplier on the autofit max
-      // font, inner padding.
-      fontFamily: 'serif',
+      // Typography seeds — fontFamily intentionally left unset so the
+      // widget's mixed default look survives until the user picks.
       fontScale: 1,
       padding: 14
     })
@@ -94,7 +96,7 @@ export const WIDGET_REGISTRY = [
       XL: { w: 24, h: 8 }
     },
     defaultSize: 'M',
-    defaults: () => ({ icalUrls: [] })
+    defaults: () => ({ icalUrls: [], fontScale: 1, padding: 14 })
   },
   {
     id: 'stocks',
@@ -108,7 +110,7 @@ export const WIDGET_REGISTRY = [
       XL: { w: 24, h: 12 }
     },
     defaultSize: 'M',
-    defaults: () => ({ symbols: [] })
+    defaults: () => ({ symbols: [], fontScale: 1, padding: 14 })
   },
   // Mac-only widgets — only render data when the server is running on
   // the user's Mac (LAN path). On Railway/Linux they show MAC OFFLINE.
@@ -130,12 +132,10 @@ export const WIDGET_REGISTRY = [
       // above the title. `time_bookends` keeps elapsed/remaining time
       // flanking the cover; `centered` drops them so the art breathes.
       variant: 'time_bookends',
-      // Typography (Phase 2)
-      fontFamily: 'serif',
-      // Multiplier on the autofit max font size — lets the user dial
-      // the title up or down without resizing the tile.
+      // Typography seeds: fontScale + padding only. fontFamily stays
+      // unset so the widget keeps its mixed-internal default look
+      // until the user explicitly picks a family in the modal.
       fontScale: 1,
-      // Inner padding in pixels. 0 = flush.
       padding: 14
     })
   },
@@ -166,8 +166,6 @@ export const WIDGET_REGISTRY = [
     defaultSize: 'M',
     defaults: () => ({
       format: '12h', showDate: true, style: 'big',
-      // Typography (Phase 2)
-      fontFamily: 'mono',
       fontScale: 1,
       padding: 14
     })

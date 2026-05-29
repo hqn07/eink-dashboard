@@ -141,13 +141,16 @@
     mono:   "'JetBrains Mono', ui-monospace, monospace",
     system: "system-ui, -apple-system, 'Segoe UI', sans-serif"
   };
-  function typographyCss(s, defaultFamily) {
-    const fam = FONT_STACKS[s && s.fontFamily]
-             || FONT_STACKS[defaultFamily]
-             || FONT_STACKS.serif;
-    const pad = Number.isFinite(s && s.padding) ? s.padding : null;
-    let css = `font-family:${fam};`;
-    if (pad !== null) css += `padding:${pad}px;`;
+  function typographyCss(s) {
+    if (!s) return '';
+    let css = '';
+    const fam = FONT_STACKS[s.fontFamily];
+    if (fam) {
+      css += `--w-font:${fam};font-family:${fam};`;
+    }
+    if (Number.isFinite(s.padding)) {
+      css += `padding:${s.padding}px;`;
+    }
     return css;
   }
 
@@ -401,7 +404,7 @@
         const txtPx = Math.round(t.txtSize * scale);
         const subPx = Math.round(t.subSize * scale);
         return `
-          <div class="widget widget-msg" style="${typographyCss(s, 'serif')}">
+          <div class="widget widget-msg">
             <div class="msg-text" style="font-size:${txtPx}px">${md(escapeHtml(m.text))}</div>
             ${t.showSub && m.subtitle ? `<div class="msg-sub" style="font-size:${subPx}px">${md(escapeHtml(m.subtitle))}</div>` : ''}
           </div>
@@ -588,7 +591,7 @@
           const showBookends = variant !== 'centered';
           const maxFont = Math.max(14, Math.round(cfg.maxFont * fontScale));
           return `
-            <div class="mac-np-card mac-np-stacked mac-np-tier-${tier} mac-np-var-${variant}" style="${typographyCss(s, 'serif')}">
+            <div class="mac-np-card mac-np-stacked mac-np-tier-${tier} mac-np-var-${variant}">
               <div class="mac-np-head">
                 <span class="col-title">NOW PLAYING</span>
               </div>
@@ -665,7 +668,7 @@
         const ampm = c.ampm ? `<span class="clock-ampm">${c.ampm}</span>` : '';
         const date = c.dateLine ? `<div class="clock-date">${escapeHtml(c.dateLine)}</div>` : '';
         return `
-          <div class="clock ${cls}" style="${typographyCss(s, 'mono')}">
+          <div class="clock ${cls}">
             <div class="clock-time autofit" data-min-font="22">${c.timeStr}${ampm}</div>
             ${date}
           </div>
@@ -943,6 +946,10 @@
     if (item.y + item.h >= GRID_ROWS) classes.push('cell-edge-bottom');
     if (item.flush) classes.push('cell-flush');
     const cell = el('div', classes.join(' '), inner);
+    // Per-tile typography lives on the cell wrapper so the global
+    // .cell[style*="--w-font"] override rule can reach every child.
+    const typo = typographyCss(item.settings);
+    if (typo) cell.setAttribute('style', cell.getAttribute('style') ? cell.getAttribute('style') + ';' + typo : typo);
     cell.style.gridColumn = `${item.x + 1} / span ${item.w}`;
     cell.style.gridRow    = `${item.y + 1} / span ${item.h}`;
     body.appendChild(cell);

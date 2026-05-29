@@ -21,14 +21,22 @@ const FONT_STACKS = {
   system: "system-ui, -apple-system, 'Segoe UI', sans-serif"
 };
 
-// Build a style attribute fragment for a widget's outer wrapper from
-// per-tile typography settings. `defaultFamily` is what the widget's
-// CSS picks when settings are missing or unset.
-function typographyCss(s, defaultFamily) {
-  const fam = FONT_STACKS[s && s.fontFamily] || FONT_STACKS[defaultFamily] || FONT_STACKS.serif;
-  const pad = Number.isFinite(s && s.padding) ? s.padding : null;
-  let css = `font-family:${fam};`;
-  if (pad !== null) css += `padding:${pad}px;`;
+// Build a style fragment for a widget's outer wrapper from per-tile
+// typography settings. Only emits the relevant declarations when the
+// user actually picked them — an unset fontFamily preserves the
+// per-widget default look (the mixed serif/sans/mono baked into each
+// widget's CSS). When set, --w-font is emitted so the .cell-level
+// override rule in dashboard.css can force every child to inherit.
+export function typographyCss(s) {
+  if (!s) return '';
+  let css = '';
+  const fam = FONT_STACKS[s.fontFamily];
+  if (fam) {
+    css += `--w-font:${fam};font-family:${fam};`;
+  }
+  if (Number.isFinite(s.padding)) {
+    css += `padding:${s.padding}px;`;
+  }
   return css;
 }
 
@@ -87,10 +95,10 @@ function renderNowPlaying(np, cellW, cellH, density, settings) {
       : '';
     const showBookends = variant !== 'centered';
     const maxFont = Math.max(14, Math.round(cfg.maxFont * fontScale));
-    // Use typographyCss for font family; padding is already part of it.
-    const cardStyle = typographyCss(s, 'serif');
+    // Typography (font + padding) is applied at the .cell wrapper by
+    // EditorGrid/dashboard.html, so no inline style needed here.
     return `
-      <div class="mac-np-card mac-np-stacked mac-np-tier-${tier} mac-np-var-${variant}" style="${cardStyle}">
+      <div class="mac-np-card mac-np-stacked mac-np-tier-${tier} mac-np-var-${variant}">
         <div class="mac-np-head">
           <span class="col-title">NOW PLAYING</span>
         </div>
@@ -382,7 +390,7 @@ const RENDERERS = {
     const txtPx = Math.round(t.txtSize * scale);
     const subPx = Math.round(t.subSize * scale);
     return `
-      <div class="widget widget-msg" style="${typographyCss(s, 'serif')}">
+      <div class="widget widget-msg">
         <div class="msg-text" style="font-size:${txtPx}px">${md(escapeHtml(text))}</div>
         ${t.showSub && sub ? `<div class="msg-sub" style="font-size:${subPx}px">${md(escapeHtml(sub))}</div>` : ''}
       </div>
@@ -535,7 +543,7 @@ const RENDERERS = {
     const ampm = c.ampm ? `<span class="clock-ampm">${c.ampm}</span>` : '';
     const date = c.dateLine ? `<div class="clock-date">${escapeHtml(c.dateLine)}</div>` : '';
     return `
-      <div class="clock ${cls}" style="${typographyCss(s, 'mono')}">
+      <div class="clock ${cls}">
         <div class="clock-time autofit" data-min-font="22">${c.timeStr}${ampm}</div>
         ${date}
       </div>
