@@ -55,21 +55,25 @@ jobs:
           arduino-cli lib install "ArduinoJson"
           arduino-cli lib install "Adafruit GFX Library"
           arduino-cli lib install "Adafruit BusIO"
+          # Captive-portal provisioning. Required by the bw sketch as
+          # of 1.8.0. Pin to a known-good release.
+          arduino-cli lib install "WiFiManager@2.0.17"
 
       - name: Generate secrets.h from GitHub Secrets
         env:
+          # WIFI_SSID / WIFI_PASSWORD intentionally not consumed for the
+          # bw sketch: 1.8.0+ uses captive-portal provisioning. They
+          # remain available for the b sketch, which is still on the
+          # baked-in-creds path.
           WIFI_SSID:         ${{ secrets.WIFI_SSID }}
           WIFI_PASSWORD:     ${{ secrets.WIFI_PASSWORD }}
           DEVICE_TOKEN:      ${{ secrets.DEVICE_TOKEN }}
           SERVER_BASE_LAN:   ${{ secrets.SERVER_BASE_LAN }}
           SERVER_BASE_CLOUD: ${{ secrets.SERVER_BASE_CLOUD }}
         run: |
-          if [ -z "$WIFI_SSID" ] || [ -z "$WIFI_PASSWORD" ]; then
-            echo "::error::WIFI_SSID and WIFI_PASSWORD repo secrets must be set" >&2
-            exit 1
-          fi
-          # Note: EOF is unquoted so the variables expand. GitHub Actions
-          # masks secret values in logs automatically.
+          # Both sketches share secrets.h schema. The bw sketch ignores
+          # ssid/password at runtime (WiFiManager loads from NVS); the b
+          # sketch still references them.
           cat > ${{ matrix.sketch }}/secrets.h <<EOF
           #pragma once
           const char* ssid            = "${WIFI_SSID}";

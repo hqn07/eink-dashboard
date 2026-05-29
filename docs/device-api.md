@@ -191,6 +191,25 @@ contract. Listed here for completeness; firmware should not call them.
 | `GET /api/geocode`, `/api/reverse-geocode`, `/api/weather-check` | Location/weather setup helpers for the control UI. |
 | `GET /api/health/widgets` | Per-widget last-fetch status. |
 
+## Provisioning (out of band)
+
+WiFi credentials live in the device's NVS, not the HTTP protocol. As
+of firmware 1.8.0 (bw):
+
+- On cold boot with empty NVS, the device brings up an open WiFi AP
+  named `eink-setup`. The user joins from a phone; iOS/Android
+  captive-portal detection auto-loads a configuration page where they
+  pick their network and enter the password. WiFi creds persist in
+  NVS after the first successful connect.
+- Holding the refresh button for 5 seconds wipes WiFi creds and
+  restarts the device, re-triggering the captive portal on the next
+  boot.
+
+Server URL + device token are still baked into the firmware image at
+CI time (see `.github/workflows/build-firmware.yml`). A future change
+will move per-device auth onto the wire protocol via `/api/setup` +
+`X-API-Key`.
+
 ## Versioning policy
 
 - **v1** (current) — everything documented above.

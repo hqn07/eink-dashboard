@@ -22,6 +22,11 @@
 #include <SPI.h>
 #include <driver/rtc_io.h>
 #include <time.h>
+// Captive-portal WiFi provisioning. On cold boot with no saved creds,
+// brings up an AP named `eink-setup`; the user joins from their phone
+// and picks the home network. Cached in NVS automatically — subsequent
+// boots reuse the same creds without showing the portal.
+#include <WiFiManager.h>
 
 // =================== CONFIG ===================
 // Per-device secrets live in secrets.h (gitignored). Copy
@@ -30,7 +35,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.7.0"
+#define FW_VERSION "1.8.0"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -207,6 +212,26 @@ void selectServerBase() {
 
 // =================== WIFI ===================
 
+// Cold-boot WiFi provisioning. If creds were already saved (NVS), this
+// returns quickly. Otherwise it brings up a captive portal AP named
+// `eink-setup` and blocks for up to 3 minutes waiting for the user to
+// pick a network on their phone. Either way, on success NVS holds the
+// chosen SSID/password so all future WiFi.begin() calls just work.
+bool provisionWiFi() {
+  WiFiManager wm;
+  wm.setConfigPortalTimeout(180);     // 3 min portal timeout
+  wm.setConnectTimeout(20);           // 20 s per initial connect attempt
+  Serial.println("WiFi provisioning (autoConnect)…");
+  bool ok = wm.autoConnect("eink-setup");
+  if (ok) {
+    Serial.printf("WiFi provisioned: %s  RSSI=%d\n",
+                  WiFi.SSID().c_str(), WiFi.RSSI());
+  } else {
+    Serial.println("WiFi provisioning failed/timed out");
+  }
+  return ok;
+}
+
 bool connectWiFiOnce(unsigned long timeoutMs = 15000) {
   WiFi.mode(WIFI_STA);
   // Don't pass `true, true` to disconnect — that erases stored creds
@@ -215,7 +240,11 @@ bool connectWiFiOnce(unsigned long timeoutMs = 15000) {
   // lets the radio reuse the cached BSSID and skip the full auth dance.
   WiFi.disconnect();
   delay(100);
-  WiFi.begin(ssid, password);
+  // No explicit ssid/password — ESP32 retains the last successful pair
+  // in NVS (set originally by WiFiManager). WiFi.begin() with no args
+  // reuses that, which lets us swap out captive-portal provisioning
+  // without baking creds into the firmware image.
+  WiFi.begin();
   Serial.print("WiFi");
   unsigned long start = millis();
   while (WiFi.status() != WL_CONNECTED && (millis() - start) < timeoutMs) {
@@ -631,7 +660,12 @@ void drawFailScreen(const char* reason) {
 
     display.setCursor(20, y); y += 30;
     display.print("SSID:    ");
-    display.print(ssid);
+    // WiFi.SSID() returns the NVS-cached SSID set by WiFiManager.
+    // Falls back to "(unset)" before provisioning has run.
+    {
+      String s = WiFi.SSID();
+      display.print(s.length() ? s.c_str() : "(unset)");
+    }
 
     display.setCursor(20, y); y += 30;
     display.print("SERVER:  ");
@@ -807,10 +841,42 @@ void setup() {
   // without burning the radio's full ~80 mA. WiFi keeps the link;
   // the CPU sleeps; we don't pay re-join cost every cycle.
   WiFi.setSleep(true);
+
+  // Run WiFiManager once. If creds are already in NVS this returns
+  // fast; otherwise it blocks on the captive portal so the user can
+  // configure WiFi on first boot or after a factory reset.
+  provisionWiFi();
+}
+
+// Wipe NVS-cached WiFi creds and reboot. Triggered by holding the
+// refresh button for 5 s. On the next boot, provisionWiFi() finds no
+// saved network and opens the captive portal.
+void factoryReset() {
+  Serial.println("FACTORY RESET — wiping WiFi creds");
+  buzzerOn();
+  delay(1000);
+  buzzerOff();
+  WiFi.disconnect(true, true);   // erase config + disconnect
+  delay(200);
+  ESP.restart();
 }
 
 void loop() {
   esp_sleep_wakeup_cause_t wakeCause = esp_sleep_get_wakeup_cause();
+
+  // 5-second-hold factory reset. We only check on button wakes; a
+  // regular timer wake skips this so the user can't accidentally
+  // reset by holding the button before sleep ended naturally.
+  if (wakeCause == ESP_SLEEP_WAKEUP_EXT1) {
+    unsigned long pressStart = millis();
+    while (digitalRead(BTN_REFRESH) == LOW) {
+      if (millis() - pressStart > 5000) {
+        factoryReset();   // never returns
+      }
+      delay(50);
+    }
+  }
+
   int sleepMin = runCycle(wakeCause);
   uint64_t sleepUs = (uint64_t)sleepMin * 60ULL * 1000000ULL;
 
