@@ -82,6 +82,53 @@ function SliderField({ label, value, min, max, step = 1, onChange, format, help 
   );
 }
 
+// Reusable typography block — font family + scale + padding. Used by
+// widgets that opt into the Phase 2 typography settings. Values land
+// at `values.fontFamily`, `values.fontScale`, `values.padding`.
+//
+// Family list is intentionally short: only fonts already loaded via
+// public/fonts/fonts.css survive Sharp's threshold render. Adding an
+// arbitrary family here would just fall back to a system font on the
+// device.
+const FONT_FAMILIES = [
+  { value: 'serif',  label: 'DM Serif Display (editorial)' },
+  { value: 'sans',   label: 'Oswald (condensed sans)' },
+  { value: 'mono',   label: 'JetBrains Mono' },
+  { value: 'system', label: 'System default' }
+];
+
+function TypographyFields({ values, onChange }) {
+  const v = values || {};
+  const patch = (p) => onChange({ ...v, ...p });
+  const family = v.fontFamily || 'serif';
+  const scale  = Number.isFinite(v.fontScale) ? v.fontScale : 1;
+  const padding = Number.isFinite(v.padding)   ? v.padding   : 14;
+  return (
+    <>
+      <SelectField
+        label="Font family"
+        value={family}
+        options={FONT_FAMILIES}
+        onChange={(x) => patch({ fontFamily: x })}
+      />
+      <SliderField
+        label="Font scale"
+        min={0.7} max={1.4} step={0.05}
+        value={scale}
+        onChange={(x) => patch({ fontScale: x })}
+        format={(x) => `${Math.round(x * 100)}%`}
+      />
+      <SliderField
+        label="Inner padding"
+        min={0} max={30} step={1}
+        value={padding}
+        onChange={(x) => patch({ padding: x })}
+        format={(x) => `${x}px`}
+      />
+    </>
+  );
+}
+
 function CsvField({ label, value, onCommit, placeholder, help }) {
   const joined = (value || []).join(', ');
   const [raw, setRaw] = useState(joined);
@@ -261,8 +308,6 @@ export default function WidgetForm({ widgetId, values, onChange }) {
   switch (widgetId) {
     case 'mac_nowplaying': {
       const variant  = v.variant  || 'time_bookends';
-      const fontScale = Number.isFinite(v.fontScale) ? v.fontScale : 1;
-      const padding   = Number.isFinite(v.padding)   ? v.padding   : 14;
       return (
         <>
           <div className="wsm-field-help" style={{ marginBottom: 6 }}>
@@ -279,20 +324,7 @@ export default function WidgetForm({ widgetId, values, onChange }) {
             ]}
             onChange={(x) => patch({ variant: x })}
           />
-          <SliderField
-            label="Title size"
-            min={0.7} max={1.4} step={0.05}
-            value={fontScale}
-            onChange={(x) => patch({ fontScale: x })}
-            format={(x) => `${Math.round(x * 100)}%`}
-          />
-          <SliderField
-            label="Inner padding"
-            min={0} max={30} step={1}
-            value={padding}
-            onChange={(x) => patch({ padding: x })}
-            format={(x) => `${x}px`}
-          />
+          <TypographyFields values={v} onChange={onChange} />
         </>
       );
     }
@@ -337,6 +369,7 @@ export default function WidgetForm({ widgetId, values, onChange }) {
             value={showDate}
             onChange={(x) => patch({ showDate: x })}
           />
+          <TypographyFields values={v} onChange={onChange} />
         </>
       );
     }
@@ -368,6 +401,7 @@ export default function WidgetForm({ widgetId, values, onChange }) {
             onChange={(x) => patch({ subtitle: x })}
             placeholder="Optional second line"
           />
+          <TypographyFields values={v} onChange={onChange} />
           <ListEditor
             label="Scheduled messages (override default in their window)"
             items={v.schedule}

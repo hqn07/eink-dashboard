@@ -72,7 +72,15 @@ export const WIDGET_REGISTRY = [
       XL: { w: 24, h: 6 }
     },
     defaultSize: 'M',
-    defaults: () => ({ text: '', subtitle: '', schedule: [] })
+    defaults: () => ({
+      text: '', subtitle: '', schedule: [],
+      // Typography (Phase 2): font family picked from the small set of
+      // already-loaded faces, scale multiplier on the autofit max
+      // font, inner padding.
+      fontFamily: 'serif',
+      fontScale: 1,
+      padding: 14
+    })
   },
   {
     id: 'calendar',
@@ -122,6 +130,8 @@ export const WIDGET_REGISTRY = [
       // above the title. `time_bookends` keeps elapsed/remaining time
       // flanking the cover; `centered` drops them so the art breathes.
       variant: 'time_bookends',
+      // Typography (Phase 2)
+      fontFamily: 'serif',
       // Multiplier on the autofit max font size — lets the user dial
       // the title up or down without resizing the tile.
       fontScale: 1,
@@ -154,7 +164,13 @@ export const WIDGET_REGISTRY = [
       XL: { w: 24, h: 6 }
     },
     defaultSize: 'M',
-    defaults: () => ({ format: '12h', showDate: true, style: 'big' })
+    defaults: () => ({
+      format: '12h', showDate: true, style: 'big',
+      // Typography (Phase 2)
+      fontFamily: 'mono',
+      fontScale: 1,
+      padding: 14
+    })
   }
 ];
 

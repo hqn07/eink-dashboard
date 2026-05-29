@@ -134,6 +134,23 @@
     }[c]));
   }
 
+  // Mirror of widget-render.js's typography helpers. Keep in sync.
+  const FONT_STACKS = {
+    serif:  "'DM Serif Display', Georgia, 'Iowan Old Style', serif",
+    sans:   "'Oswald', 'Arial Narrow', sans-serif",
+    mono:   "'JetBrains Mono', ui-monospace, monospace",
+    system: "system-ui, -apple-system, 'Segoe UI', sans-serif"
+  };
+  function typographyCss(s, defaultFamily) {
+    const fam = FONT_STACKS[s && s.fontFamily]
+             || FONT_STACKS[defaultFamily]
+             || FONT_STACKS.serif;
+    const pad = Number.isFinite(s && s.padding) ? s.padding : null;
+    let css = `font-family:${fam};`;
+    if (pad !== null) css += `padding:${pad}px;`;
+    return css;
+  }
+
   // Weather icons vendored from sevesalm/eInk-weather-display under
   // /static/icons/sevesalm/<name>.svg. Mapping mirrors widgets/icons.js
   // and control-src/widget-render.js — keep all three in sync.
@@ -367,9 +384,10 @@
       requires: 'message',
       sizes: { XS:{w:8,h:3}, S:{w:8,h:4}, M:{w:10,h:4}, L:{w:24,h:4}, XL:{w:24,h:6} },
       defaultSize: 'M',
-      render: ({ cfg, resolvedMessage, cellW, cellH, density }) => {
+      render: ({ cfg, resolvedMessage, cellW, cellH, density, settings }) => {
         const m = resolvedMessage || cfg.message;
         if (!m || !m.text) return placeholder('MESSAGE', 'Set a headline in settings', 'msg');
+        const s = settings || {};
         const tier = pickTier(cellW, cellH, density);
         const matrix = {
           tiny:     { txtSize: 14, subSize: 10, showSub: false },
@@ -379,10 +397,13 @@
           full:     { txtSize: 36, subSize: 14, showSub: true  }
         };
         const t = matrix[tier];
+        const scale = Number.isFinite(s.fontScale) ? s.fontScale : 1;
+        const txtPx = Math.round(t.txtSize * scale);
+        const subPx = Math.round(t.subSize * scale);
         return `
-          <div class="widget widget-msg">
-            <div class="msg-text" style="font-size:${t.txtSize}px">${md(escapeHtml(m.text))}</div>
-            ${t.showSub && m.subtitle ? `<div class="msg-sub" style="font-size:${t.subSize}px">${md(escapeHtml(m.subtitle))}</div>` : ''}
+          <div class="widget widget-msg" style="${typographyCss(s, 'serif')}">
+            <div class="msg-text" style="font-size:${txtPx}px">${md(escapeHtml(m.text))}</div>
+            ${t.showSub && m.subtitle ? `<div class="msg-sub" style="font-size:${subPx}px">${md(escapeHtml(m.subtitle))}</div>` : ''}
           </div>
         `;
       }
@@ -567,7 +588,7 @@
           const showBookends = variant !== 'centered';
           const maxFont = Math.max(14, Math.round(cfg.maxFont * fontScale));
           return `
-            <div class="mac-np-card mac-np-stacked mac-np-tier-${tier} mac-np-var-${variant}" style="padding:${padding}px;">
+            <div class="mac-np-card mac-np-stacked mac-np-tier-${tier} mac-np-var-${variant}" style="${typographyCss(s, 'serif')}">
               <div class="mac-np-head">
                 <span class="col-title">NOW PLAYING</span>
               </div>
@@ -636,14 +657,15 @@
       requires: 'clock',
       sizes: { S:{w:6,h:3}, M:{w:8,h:4}, L:{w:12,h:6}, XL:{w:24,h:6} },
       defaultSize: 'M',
-      render: ({ clockNow }) => {
+      render: ({ clockNow, settings }) => {
         if (!clockNow) return `<div class="empty" style="border:0;padding:14px 0">NO TIME</div>`;
         const c = clockNow;
+        const s = settings || {};
         const cls = c.style === 'thin' ? 'clock-thin' : 'clock-big';
         const ampm = c.ampm ? `<span class="clock-ampm">${c.ampm}</span>` : '';
         const date = c.dateLine ? `<div class="clock-date">${escapeHtml(c.dateLine)}</div>` : '';
         return `
-          <div class="clock ${cls}">
+          <div class="clock ${cls}" style="${typographyCss(s, 'mono')}">
             <div class="clock-time autofit" data-min-font="22">${c.timeStr}${ampm}</div>
             ${date}
           </div>

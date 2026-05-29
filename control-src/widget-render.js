@@ -11,6 +11,27 @@ function escapeHtml(s) {
   }[c]));
 }
 
+// Map the semantic font-family keys we expose in the WidgetSettings
+// modal to actual CSS stacks. Keep this in lockstep with the mirror
+// table in public/dashboard.html.
+const FONT_STACKS = {
+  serif:  "'DM Serif Display', Georgia, 'Iowan Old Style', serif",
+  sans:   "'Oswald', 'Arial Narrow', sans-serif",
+  mono:   "'JetBrains Mono', ui-monospace, monospace",
+  system: "system-ui, -apple-system, 'Segoe UI', sans-serif"
+};
+
+// Build a style attribute fragment for a widget's outer wrapper from
+// per-tile typography settings. `defaultFamily` is what the widget's
+// CSS picks when settings are missing or unset.
+function typographyCss(s, defaultFamily) {
+  const fam = FONT_STACKS[s && s.fontFamily] || FONT_STACKS[defaultFamily] || FONT_STACKS.serif;
+  const pad = Number.isFinite(s && s.padding) ? s.padding : null;
+  let css = `font-family:${fam};`;
+  if (pad !== null) css += `padding:${pad}px;`;
+  return css;
+}
+
 // Format seconds as M:SS — used by the Now Playing progress display.
 function fmtSec(s) {
   if (!Number.isFinite(s) || s < 0) return '--:--';
@@ -66,7 +87,8 @@ function renderNowPlaying(np, cellW, cellH, density, settings) {
       : '';
     const showBookends = variant !== 'centered';
     const maxFont = Math.max(14, Math.round(cfg.maxFont * fontScale));
-    const cardStyle = `padding:${padding}px;`;
+    // Use typographyCss for font family; padding is already part of it.
+    const cardStyle = typographyCss(s, 'serif');
     return `
       <div class="mac-np-card mac-np-stacked mac-np-tier-${tier} mac-np-var-${variant}" style="${cardStyle}">
         <div class="mac-np-head">
@@ -342,8 +364,9 @@ const RENDERERS = {
       `).join('')}
     `;
   },
-  message: ({ cfg, resolvedMessage, cellW, cellH, density }) => {
+  message: ({ cfg, resolvedMessage, cellW, cellH, density, settings }) => {
     const m = resolvedMessage || (cfg && cfg.message) || {};
+    const s = settings || {};
     const text = m.text || 'Custom message';
     const sub  = m.subtitle || '';
     const tier = pickTier(cellW, cellH, density);
@@ -355,10 +378,13 @@ const RENDERERS = {
       full:     { txtSize: 36, subSize: 14, showSub: true  }
     };
     const t = matrix[tier];
+    const scale = Number.isFinite(s.fontScale) ? s.fontScale : 1;
+    const txtPx = Math.round(t.txtSize * scale);
+    const subPx = Math.round(t.subSize * scale);
     return `
-      <div class="widget widget-msg">
-        <div class="msg-text" style="font-size:${t.txtSize}px">${md(escapeHtml(text))}</div>
-        ${t.showSub && sub ? `<div class="msg-sub" style="font-size:${t.subSize}px">${md(escapeHtml(sub))}</div>` : ''}
+      <div class="widget widget-msg" style="${typographyCss(s, 'serif')}">
+        <div class="msg-text" style="font-size:${txtPx}px">${md(escapeHtml(text))}</div>
+        ${t.showSub && sub ? `<div class="msg-sub" style="font-size:${subPx}px">${md(escapeHtml(sub))}</div>` : ''}
       </div>
     `;
   },
@@ -501,14 +527,15 @@ const RENDERERS = {
     `;
   },
 
-  clock: ({ clockNow }) => {
+  clock: ({ clockNow, settings }) => {
     if (!clockNow) return `<div class="empty" style="border:0;padding:14px 0">NO TIME</div>`;
     const c = clockNow;
+    const s = settings || {};
     const cls = c.style === 'thin' ? 'clock-thin' : 'clock-big';
     const ampm = c.ampm ? `<span class="clock-ampm">${c.ampm}</span>` : '';
     const date = c.dateLine ? `<div class="clock-date">${escapeHtml(c.dateLine)}</div>` : '';
     return `
-      <div class="clock ${cls}">
+      <div class="clock ${cls}" style="${typographyCss(s, 'mono')}">
         <div class="clock-time autofit" data-min-font="22">${c.timeStr}${ampm}</div>
         ${date}
       </div>
