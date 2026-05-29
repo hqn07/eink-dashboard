@@ -15,8 +15,8 @@
 
 const { execFile } = require('child_process');
 const { promisify } = require('util');
-const sharp = require('sharp');
 const status = require('./_status');
+const { ditherImageToBase64 } = require('./_dither');
 const execFileP = promisify(execFile);
 
 const CACHE_MS = 5 * 1000;
@@ -55,46 +55,11 @@ async function readField(key, opts) {
   }
 }
 
-// Convert nowplaying-cli's raw artwork bytes (jpeg/png) into a
-// 1-bit Floyd-Steinberg dithered PNG, base64-encoded for embedding in
-// the dashboard HTML. Matches the largest art slot rendered by the
-// widget so big tiles don't show an upscaled blur.
+// Album art: dither at 320x320 to match the largest art slot the
+// widget renders. Shared FS implementation lives in widgets/_dither.js
+// so other widgets can reuse it.
 async function ditherArtwork(rawBuf) {
-  const SIZE = 320;
-  // Greyscale + resize first.
-  const { data, info } = await sharp(rawBuf)
-    .resize(SIZE, SIZE, { fit: 'cover' })
-    .greyscale()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  const w = info.width;
-  const h = info.height;
-  // Use signed buffer so we can carry errors below zero.
-  const buf = new Int16Array(w * h);
-  for (let i = 0; i < buf.length; i++) buf[i] = data[i];
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = y * w + x;
-      const oldVal = buf[i];
-      const newVal = oldVal < 128 ? 0 : 255;
-      buf[i] = newVal;
-      const err = oldVal - newVal;
-      if (x + 1 < w)         buf[i + 1] += (err * 7) >> 4;
-      if (y + 1 < h) {
-        if (x - 1 >= 0)      buf[i + w - 1] += (err * 3) >> 4;
-                             buf[i + w]     += (err * 5) >> 4;
-        if (x + 1 < w)       buf[i + w + 1] += (err * 1) >> 4;
-      }
-    }
-  }
-  const out = Buffer.alloc(buf.length);
-  for (let i = 0; i < buf.length; i++) {
-    out[i] = buf[i] > 127 ? 255 : 0;
-  }
-  const png = await sharp(out, {
-    raw: { width: w, height: h, channels: 1 }
-  }).png({ compressionLevel: 9 }).toBuffer();
-  return png.toString('base64');
+  return ditherImageToBase64(rawBuf, { size: 320, fit: 'cover' });
 }
 
 async function fetchArtwork() {

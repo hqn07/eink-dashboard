@@ -1,0 +1,201 @@
+# E-Ink Dashboard — Device HTTP API
+
+Wire protocol between the ESP32 firmware and the dashboard server. This
+is the contract; firmware and server can evolve independently as long
+as both sides honor a documented version.
+
+Current version: **v1**.
+
+## Conventions
+
+- All paths are relative to the active server base. The firmware
+  selects between `serverBaseLan` and `serverBaseCloud` at boot via a
+  `/health` probe.
+- Methods, headers, response codes are HTTP/1.1.
+- JSON payloads are UTF-8.
+- Time values are Unix milliseconds unless otherwise noted.
+
+## Authentication
+
+If the server has the `DEVICE_TOKEN` env var set, every endpoint below
+(except `/health`) requires a matching token. The device may send it
+either way; the server accepts either:
+
+- Query string: `?token=<DEVICE_TOKEN>`
+- HTTP header: `X-Device-Token: <DEVICE_TOKEN>`
+
+A bad or missing token returns `401 Bad token`.
+
+When `DEVICE_TOKEN` is unset (single-user local dev), auth is skipped.
+
+## Image format (v1)
+
+The display is **800 × 480**, 1-bit. The packed binary form is exactly
+**48000 bytes** (800 × 480 / 8).
+
+- Bytes are row-major, top-to-bottom.
+- Within each byte, MSB-first.
+- Bit `1` = white, bit `0` = black. Matches GxEPD2's `drawImage(...,
+  black_on_white=false)`.
+
+The two-zone refresh endpoints split the same image into a top header
+strip (60 rows = 6000 bytes) and a body region (420 rows = 42000
+bytes). The split is a clean byte boundary; no re-packing.
+
+Future versions may add a 2-bit-per-pixel grayscale variant; clients
+that ask for it will negotiate via a separate path / Accept header.
+v1 is 1-bit-only.
+
+## Endpoints
+
+### `GET /health`
+
+Connectivity probe. Used by the firmware to pick between LAN and cloud
+server bases at boot.
+
+- Auth: **not required** (intentionally — needs to work before the
+  device can prove anything).
+- Response: `200 {"ok": true, "ts": <ms>}`.
+
+### `GET /display.bin`
+
+Full 800×480 1-bit dashboard image, packed as 48000 bytes.
+
+- Response headers:
+  - `Content-Type: application/octet-stream`
+  - `Cache-Control: no-store`
+  - `X-Image-Width: 800`
+  - `X-Image-Height: 480`
+- Body: 48000 bytes, MSB-first, 1=white / 0=black.
+
+### `GET /display-header.bin`
+
+Top 60-row slice of `/display.bin` (the always-changing header band).
+Used for partial-refresh experiments on BW panels.
+
+- Body: 6000 bytes.
+- ETag-supported: server sends a strong `ETag`, device can send
+  `If-None-Match` and receive `304 Not Modified`.
+- `X-Image-Height: 60`.
+
+### `GET /display-body.bin`
+
+Next 420 rows after the header strip.
+
+- Body: 42000 bytes.
+- ETag-supported (as above).
+- `X-Image-Height: 420`.
+
+### `GET /sleep`
+
+How long the firmware should sleep before the next refresh. Resolves
+to the active screen's `refreshMinutes` if set, else the global config
+default.
+
+- Response: `200 {"minutes": <int>, "screenId": <string|null>, "screenName": <string|null>}`.
+
+> v2 will fold this into a response header on `/display.bin`
+> (`X-Refresh-Rate`). The standalone endpoint stays for backwards
+> compatibility.
+
+### `POST /api/battery`
+
+Device reports its battery state. Persisted server-side so the value
+survives a restart between refresh cycles (~30 min apart).
+
+- Body: `{"v": <float volts>, "pct": <int 0-100>}`.
+- Validation: `0 <= v <= 6`, `0 <= pct <= 100`. Out-of-range → `400`.
+- Response: `200 {"ok": true}`.
+
+Triggers an image-cache invalidation so the next render shows the
+fresh value.
+
+### `GET /api/battery`
+
+Reads back the last-reported battery state. Used by the dashboard
+renderer (the device shouldn't need this).
+
+- Response: `{"v": <float|null>, "pct": <int|null>, "at": <ms|null>}`.
+
+### `GET /api/alarm/next`
+
+Next scheduled alarm (soonest enabled), so the device can shorten its
+sleep window to wake before it fires.
+
+- Response:
+  ```
+  {
+    "now":  <server-ms>,
+    "next": null
+        | { "ts": <ms-fire-time>, "label": <string>, "durationSec": 60 }
+  }
+  ```
+- `now` is the server's clock at request time. The firmware uses
+  `next.ts - now` to compute the delta, dodging ESP32 RTC drift.
+
+### `GET /api/firmware/manifest?board=<board>&from=<semver>`
+
+OTA check. Returns the newest available firmware binary for the given
+board if it's strictly newer than `from`.
+
+- Query:
+  - `board` — slug matching firmware filename prefix (e.g. `bw`, `b`).
+  - `from` — current firmware semver (e.g. `1.6.0`).
+- Responses:
+  - `204 No Content` — no upgrade available.
+  - `200`:
+    ```
+    {
+      "version": "1.6.1",
+      "board":   "bw",
+      "url":     "https://.../firmware/bw-1.6.1.bin?token=...",
+      "size":    1248320
+    }
+    ```
+  - `url` is absolute and already token-stamped if `DEVICE_TOKEN` is
+    set. The device feeds it straight into `httpUpdate.update(url)`.
+
+### `GET /firmware/:file`
+
+Raw firmware binary. Filename must match
+`<board>-<MAJOR>.<MINOR>.<PATCH>.bin`. Anything else returns `400`.
+
+- Response: `application/octet-stream`, the bare .bin contents.
+
+## Endpoints used by the control UI (not the device)
+
+These exist on the same server but aren't part of the firmware's
+contract. Listed here for completeness; firmware should not call them.
+
+| Path | Purpose |
+|------|---------|
+| `GET /dashboard` | The HTML page Puppeteer screenshots. |
+| `GET /display.png` | PNG of the current image. Browser preview only. |
+| `GET /control` | The React control-panel UI. |
+| `GET /widgets-matrix` | Layout debug grid. |
+| `GET/POST /api/config` | Read/write the dashboard config. |
+| `POST /api/config/reset` | Restore default config. |
+| `GET/POST /api/alarms` | Alarm CRUD. |
+| `GET /api/preview-data` | Sample data for the live preview. |
+| `GET /api/geocode`, `/api/reverse-geocode`, `/api/weather-check` | Location/weather setup helpers for the control UI. |
+| `GET /api/health/widgets` | Per-widget last-fetch status. |
+
+## Versioning policy
+
+- **v1** (current) — everything documented above.
+- A breaking change to any device-facing endpoint or the `/display.bin`
+  byte format bumps the contract to v2. Until v2 lands the server
+  promises:
+  - 48000-byte raw 1-bit blob at `/display.bin`.
+  - Sleep info at `/sleep` as JSON `{minutes, ...}`.
+  - OTA manifest at `/api/firmware/manifest` returns `204` or the JSON
+    shape above.
+  - Token auth via `?token=` or `X-Device-Token`.
+
+- Additive changes (new optional headers, new endpoints) do not bump
+  the version.
+
+- When v2 ships, the device negotiates by sending its supported
+  version in a request header; the server keeps v1 routes alive for
+  one full release cycle so older firmware on devices that haven't
+  yet OTA'd doesn't break.

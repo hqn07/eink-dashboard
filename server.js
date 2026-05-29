@@ -785,6 +785,102 @@ app.post('/api/config/reset', checkDeviceAuth, async (req, res) => {
   }
 });
 
+// ---------- Dev tooling ----------
+//
+// /dev/widget/:id renders a single widget at full screen with a
+// server-sent-events hot-reload script. Pair with editing widget HTML
+// or CSS — the page reloads on every save.
+//
+// Gated to non-production so Railway doesn't expose the watcher.
+
+const devSSEClients = new Set();
+let devWatchersStarted = false;
+
+function broadcastDevReload() {
+  for (const r of devSSEClients) {
+    try { r.write('event: reload\ndata: 1\n\n'); } catch (_) { /* drop */ }
+  }
+}
+
+function startDevWatchers() {
+  if (devWatchersStarted) return;
+  devWatchersStarted = true;
+  let pending = null;
+  const onChange = () => {
+    if (pending) clearTimeout(pending);
+    pending = setTimeout(() => { pending = null; broadcastDevReload(); }, 200);
+  };
+  const dirs = ['public', 'control-src', 'widgets', 'data-defaults'];
+  for (const d of dirs) {
+    try {
+      fs.watch(path.join(__dirname, d), { recursive: true }, onChange);
+    } catch (e) {
+      console.warn('[dev] watch skipped', d, e.message);
+    }
+  }
+  console.log('[dev] file watchers started');
+}
+
+app.get('/dev/events', (req, res) => {
+  if (IS_PROD) return res.status(404).end();
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    'Connection': 'keep-alive'
+  });
+  res.flushHeaders();
+  res.write(': connected\n\n');
+  devSSEClients.add(res);
+  startDevWatchers();
+  req.on('close', () => devSSEClients.delete(res));
+});
+
+app.get('/dev/widget/:id', checkDeviceAuth, async (req, res) => {
+  if (IS_PROD) return res.status(404).end();
+  try {
+    const id = String(req.params.id);
+    const sizeKey = req.query.size ? String(req.query.size) : null;
+
+    const cfg = await loadConfig();
+    const units = cfg.units || 'F';
+    // Single-widget layout. dashboard.html's expandLayout resolves
+    // the size preset to w/h via widgetById. Without a size, fill the
+    // whole 24x12 grid.
+    const item = { widgetId: id, x: 0, y: 0, enabled: true };
+    if (sizeKey) item.size = sizeKey;
+    else { item.w = 24; item.h = 12; }
+    const layout = [item];
+
+    const data = await buildWidgetData(cfg, units, layout);
+    const html = await loadDashboardHtml();
+    const payload = {
+      cfg, units, screen: 0, layout,
+      chrome: { header: { enabled: false }, footer: { enabled: false } },
+      ...data,
+      mode: 'dev',
+      devWidgetId: id,
+      generatedAt: new Date().toISOString()
+    };
+    let injected = html.replace(
+      '/*__DATA__*/',
+      `window.__DASHBOARD__ = ${jsonForScript(payload)};`
+    );
+    // EventSource auto-reload on any source file change.
+    const reloadScript = `<script>
+      try {
+        const es = new EventSource('/dev/events');
+        es.addEventListener('reload', () => location.reload());
+      } catch(e) {}
+    </script>`;
+    injected = injected.replace('</body>', reloadScript + '</body>');
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.send(injected);
+  } catch (err) {
+    console.error('Dev widget render error:', err);
+    res.status(500).send(safeError(err).error);
+  }
+});
+
 // Visual matrix — every widget at every preset size, top-to-bottom.
 // Pure dev tooling for spotting layout bugs before they hit the panel.
 app.get('/widgets-matrix', checkDeviceAuth, async (req, res) => {
