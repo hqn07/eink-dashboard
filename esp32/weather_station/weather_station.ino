@@ -43,7 +43,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.10.1"
+#define FW_VERSION "1.10.2"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -189,15 +189,29 @@ void beepLowBattery() {
 // below use this instead of the raw config constants.
 const char* activeServerBase = "";
 
+// Wrap HTTPClient.begin so HTTPS URLs go through WiFiClientSecure
+// with setInsecure() — Railway, Render, etc. all use TLS. Without
+// this every cloud call (probe, /display.bin, /api/*) silently fails
+// because the default HTTPClient can't validate the cert.
+// Caller-owned WiFiClientSecure to avoid lifetime issues across calls.
+bool httpBegin(HTTPClient& http, WiFiClientSecure& tls, const String& url) {
+  if (url.startsWith("https://")) {
+    tls.setInsecure();
+    return http.begin(tls, url);
+  }
+  return http.begin(url);
+}
+
 // Quick reachability probe — 3 s timeout, single /health round-trip.
 // Used to decide between the LAN server (typically a Mac on the same
 // network) and the always-on cloud deployment.
 bool probeBase(const char* base) {
   if (!base || !*base) return false;
   HTTPClient http;
+  WiFiClientSecure tls;
   http.setTimeout(3000);
   String url = String(base) + "/health";
-  if (!http.begin(url)) return false;
+  if (!httpBegin(http, tls, url)) return false;
   int code = http.GET();
   http.end();
   return code == 200;
@@ -420,8 +434,9 @@ bool connectWiFi() {
 void warmServer() {
   String url = String(activeServerBase) + "/health";
   HTTPClient http;
+  WiFiClientSecure tls;
   http.setTimeout(45000);
-  http.begin(url);
+  httpBegin(http, tls, url);
   Serial.print("Warming server... ");
   unsigned long t0 = millis();
   int code = http.GET();
@@ -479,8 +494,9 @@ bool enrollDevice() {
   String url = String(activeServerBase) + "/api/setup";
   Serial.printf("Enrolling: POST %s\n", url.c_str());
   HTTPClient http;
+  WiFiClientSecure tls;
   http.setTimeout(8000);
-  http.begin(url);
+  httpBegin(http, tls, url);
   http.addHeader("Content-Type", "application/json");
   String body = String("{\"mac\":\"") + WiFi.macAddress() +
                 "\",\"fw_version\":\"" + FW_VERSION +
@@ -510,8 +526,9 @@ uint8_t* downloadImage() {
   Serial.printf("GET %s\n", url.c_str());
 
   HTTPClient http;
+  WiFiClientSecure tls;
   http.setTimeout(60000);   // Railway cold start can take 30-60s
-  http.begin(url);
+  httpBegin(http, tls, url);
   addAuth(http);
   // Telemetry headers — server uses these for adaptive refresh and
   // logs them per request. Server v1 ignores any it doesn't recognise.
@@ -616,8 +633,9 @@ int batteryPctFromVoltage(float v) {
 void postBattery(float v, int pct) {
   String url = addToken(String(activeServerBase) + "/api/battery");
   HTTPClient http;
+  WiFiClientSecure tls;
   http.setTimeout(5000);
-  http.begin(url);
+  httpBegin(http, tls, url);
   addAuth(http);
   http.addHeader("Content-Type", "application/json");
   char body[80];
@@ -650,8 +668,9 @@ void checkForUpdate(int battPct, bool buttonWake) {
   url = addToken(url);
 
   HTTPClient http;
+  WiFiClientSecure tls;
   http.setTimeout(10000);
-  http.begin(url);
+  httpBegin(http, tls, url);
   addAuth(http);
   int code = http.GET();
   if (code == 204) {
@@ -720,8 +739,9 @@ int fetchSleepMinutes() {
   // Legacy fallback for older servers that don't emit the header.
   String url = addToken(String(activeServerBase) + "/sleep");
   HTTPClient http;
+  WiFiClientSecure tls;
   http.setTimeout(5000);
-  http.begin(url);
+  httpBegin(http, tls, url);
   addAuth(http);
   int code = http.GET();
   int mins = DEFAULT_SLEEP_MIN;
@@ -767,8 +787,9 @@ bool fetchNextAlarm(NextAlarm* out) {
 
   String url = addToken(String(activeServerBase) + "/api/alarm/next");
   HTTPClient http;
+  WiFiClientSecure tls;
   http.setTimeout(5000);
-  http.begin(url);
+  httpBegin(http, tls, url);
   addAuth(http);
   int code = http.GET();
   if (code != 200) {
