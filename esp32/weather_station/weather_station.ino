@@ -39,7 +39,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.9.0"
+#define FW_VERSION "1.9.1"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -921,11 +921,18 @@ void setup() {
   // WiFi is up and the server has been selected.
   loadAuthFromNVS();
 
-  // Tell the WiFi driver to enter modem-sleep between DTIM beacons.
-  // That's what lets the association survive esp_light_sleep_start()
-  // without burning the radio's full ~80 mA. WiFi keeps the link;
-  // the CPU sleeps; we don't pay re-join cost every cycle.
-  WiFi.setSleep(true);
+  // Two reliability knobs, paired:
+  //   setSleep(false)   — keep the radio fully awake between cycles.
+  //                       Burns more battery (~80 mA vs ~20 mA modem-
+  //                       sleep) but the association survives picky APs
+  //                       that deauth clients during DTIM idle gaps —
+  //                       exactly the landlord-AP failure pattern.
+  //   setTxPower(MAX)   — ESP32 defaults to a conservative TX power on
+  //                       this Arduino core; cranking to 19.5 dBm gives
+  //                       the antenna a fighting chance from across the
+  //                       room.
+  WiFi.setSleep(false);
+  WiFi.setTxPower(WIFI_POWER_19_5dBm);
 
   // Run WiFiManager once. If creds are already in NVS this returns
   // fast; otherwise it blocks on the captive portal so the user can
