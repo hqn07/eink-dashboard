@@ -55,9 +55,10 @@ jobs:
           arduino-cli lib install "ArduinoJson"
           arduino-cli lib install "Adafruit GFX Library"
           arduino-cli lib install "Adafruit BusIO"
-          # Captive-portal provisioning. Required by the bw sketch as
-          # of 1.8.0. Pin to a known-good release.
-          arduino-cli lib install "WiFiManager@2.0.17"
+          # No external captive-portal lib — bw 1.10.0+ uses a manual
+          # WebServer + DNSServer + Preferences flow that's built into
+          # the ESP32 Arduino core. WiFiManager 2.0.17 was incompatible
+          # with arduino-esp32 core 3.1.0+ (tzapu/WiFiManager#1797).
 
       - name: Generate secrets.h from GitHub Secrets
         env:

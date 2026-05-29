@@ -27,10 +27,12 @@
 // brings up an AP named `eink-setup`; the user joins from their phone
 // and picks the home network. Cached in NVS automatically — subsequent
 // boots reuse the same creds without showing the portal.
-#include <WiFiManager.h>
-// NVS-backed per-device identity. The api_key here is requested from
-// the server's POST /api/setup on first boot and reused on every HTTP
-// call thereafter via an X-API-Key header.
+// In-house captive portal replaces tzapu/WiFiManager — that lib
+// 2.0.17 silently breaks on arduino-esp32 core 3.1.0+ (issues
+// #1797, #1490). softAP + WebServer + Preferences gives us the same
+// flow in ~80 lines with no external dep.
+#include <WebServer.h>
+#include <DNSServer.h>
 #include <Preferences.h>
 
 // =================== CONFIG ===================
@@ -40,7 +42,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.9.3"
+#define FW_VERSION "1.10.0"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -235,40 +237,130 @@ void applyWiFiTuning() {
                 WiFi.SSID().c_str(), WiFi.RSSI());
 }
 
+// ---------- In-house captive portal ----------
+//
+// Keyed on the "wifi" Preferences namespace. NVS schema:
+//   ssid : String
+//   pass : String
+//
+// If both are empty at boot, openCaptivePortal() runs softAP +
+// WebServer at 192.168.4.1, serves a form, and saves whatever the
+// user submits. Block for up to 5 minutes; reboot on save.
+//
+// Bypasses every WiFiManager 2.0.17 + arduino-esp32 core 3.x bug
+// (tzapu/WiFiManager #1797, #1490) because no third-party lib is in
+// the path.
+Preferences wifiPrefs;
+DNSServer dnsServer;
+WebServer portal(80);
+
+static const char PORTAL_HTML[] PROGMEM =
+  "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>"
+  "<title>eink-setup</title>"
+  "<style>body{font-family:system-ui;max-width:420px;margin:24px auto;padding:0 16px;}"
+  "h1{font-size:20px}label{display:block;margin:14px 0 6px;font-weight:600}"
+  "input{width:100%;padding:10px;font-size:16px;border:2px solid #000;border-radius:0}"
+  "button{margin-top:18px;padding:12px 18px;font-size:16px;border:0;background:#000;color:#fff;width:100%}</style>"
+  "</head><body><h1>e-ink dashboard setup</h1>"
+  "<form action='/save' method='POST'>"
+  "<label>WiFi network (SSID)</label><input name='ssid' required>"
+  "<label>Password</label><input name='pass' type='password'>"
+  "<button>Save &amp; restart</button></form></body></html>";
+
+void openCaptivePortal() {
+  Serial.println("Opening captive portal AP=eink-setup …");
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP("eink-setup");
+  IPAddress apIP = WiFi.softAPIP();
+  Serial.printf("Portal IP: %s\n", apIP.toString().c_str());
+
+  // DNS hijack so iOS/Android captive-portal detection lands on us.
+  dnsServer.start(53, "*", apIP);
+
+  portal.on("/", HTTP_GET, []() {
+    portal.send_P(200, "text/html", PORTAL_HTML);
+  });
+  portal.on("/save", HTTP_POST, []() {
+    String ssid = portal.arg("ssid");
+    String pass = portal.arg("pass");
+    if (!ssid.length()) {
+      portal.send(400, "text/plain", "SSID required");
+      return;
+    }
+    wifiPrefs.begin("wifi", false);
+    wifiPrefs.putString("ssid", ssid);
+    wifiPrefs.putString("pass", pass);
+    wifiPrefs.end();
+    portal.send(200, "text/html",
+      "<html><body style='font-family:system-ui;text-align:center;padding:40px'>"
+      "<h2>Saved. Restarting…</h2></body></html>");
+    delay(800);
+    ESP.restart();
+  });
+  // Captive-portal redirect endpoints — iOS, Android, Windows probe
+  // these and follow the 302 back to the form.
+  portal.onNotFound([]() {
+    portal.sendHeader("Location", String("http://") + WiFi.softAPIP().toString(), true);
+    portal.send(302, "text/plain", "");
+  });
+  portal.begin();
+
+  unsigned long start = millis();
+  while (millis() - start < 5UL * 60UL * 1000UL) {
+    dnsServer.processNextRequest();
+    portal.handleClient();
+    delay(2);
+  }
+  Serial.println("Portal timed out");
+  portal.stop();
+  dnsServer.stop();
+  WiFi.softAPdisconnect(true);
+}
+
 bool provisionWiFi() {
-  // Force STA mode BEFORE WiFiManager touches the radio. Without this,
-  // esp_wifi_get_config returns garbage (not null-terminated), making
-  // WiFiManager log "No Credentials Saved" even when the user just
-  // submitted the portal — tzapu/WiFiManager#1490.
   WiFi.mode(WIFI_STA);
-  WiFiManager wm;
-  wm.setConfigPortalTimeout(180);     // 3 min portal timeout
-  wm.setConnectTimeout(20);           // 20 s per initial connect attempt
-  Serial.println("WiFi provisioning (autoConnect)…");
-  bool ok = wm.autoConnect("eink-setup");
-  if (ok) {
-    Serial.printf("WiFi provisioned: %s  RSSI=%d\n",
+  wifiPrefs.begin("wifi", true);
+  String ssid = wifiPrefs.getString("ssid", "");
+  String pass = wifiPrefs.getString("pass", "");
+  wifiPrefs.end();
+  if (ssid.length() == 0) {
+    Serial.println("No saved WiFi creds — launching portal");
+    openCaptivePortal();
+    return false;
+  }
+  Serial.printf("Connecting to saved SSID: %s\n", ssid.c_str());
+  WiFi.begin(ssid.c_str(), pass.c_str());
+  unsigned long start = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - start < 20000) {
+    delay(300); Serial.print(".");
+  }
+  Serial.println();
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.printf("WiFi up: %s RSSI=%d\n",
                   WiFi.SSID().c_str(), WiFi.RSSI());
     applyWiFiTuning();
-  } else {
-    Serial.println("WiFi provisioning failed/timed out");
+    return true;
   }
-  return ok;
+  Serial.println("Saved creds failed to connect");
+  return false;
 }
 
 bool connectWiFiOnce(unsigned long timeoutMs = 15000) {
   WiFi.mode(WIFI_STA);
-  // Don't pass `true, true` to disconnect — that erases stored creds
-  // and forces a full re-association, which on this landlord AP often
-  // gets the device locked out for a few seconds. A plain disconnect()
-  // lets the radio reuse the cached BSSID and skip the full auth dance.
   WiFi.disconnect();
   delay(100);
-  // No explicit ssid/password — ESP32 retains the last successful pair
-  // in NVS (set originally by WiFiManager). WiFi.begin() with no args
-  // reuses that, which lets us swap out captive-portal provisioning
-  // without baking creds into the firmware image.
-  WiFi.begin();
+  // Read creds from our Preferences namespace (set by the captive
+  // portal). Explicit args bypass any ambiguity about whether ESP32's
+  // auto-NVS cache is in sync.
+  wifiPrefs.begin("wifi", true);
+  String ssid = wifiPrefs.getString("ssid", "");
+  String pass = wifiPrefs.getString("pass", "");
+  wifiPrefs.end();
+  if (!ssid.length()) {
+    Serial.println("connectWiFiOnce: no saved SSID");
+    return false;
+  }
+  WiFi.begin(ssid.c_str(), pass.c_str());
   Serial.print("WiFi");
   unsigned long start = millis();
   while (WiFi.status() != WL_CONNECTED && (millis() - start) < timeoutMs) {
@@ -960,16 +1052,19 @@ void setup() {
   provisionWiFi();
 }
 
-// Wipe NVS-cached WiFi creds + per-device api_key and reboot.
-// Triggered by holding the refresh button for 5 s. On the next boot,
-// provisionWiFi() reopens the captive portal and runCycle() re-enrolls
-// against the server with a fresh identity.
+// Wipe both Preferences namespaces and reboot. Triggered by holding
+// the refresh button for 5 s — captive portal reopens and the device
+// re-enrolls against the server with a fresh identity on the next
+// successful provision.
 void factoryReset() {
   Serial.println("FACTORY RESET — wiping WiFi creds + api_key");
   buzzerOn();
   delay(1000);
   buzzerOff();
-  WiFi.disconnect(true, true);   // erase WiFi config + disconnect
+  WiFi.disconnect(true, true);
+  wifiPrefs.begin("wifi", false);
+  wifiPrefs.clear();             // drop ssid/pass
+  wifiPrefs.end();
   prefs.begin("eink", false);
   prefs.clear();                 // drop api_key + friendly_id
   prefs.end();
