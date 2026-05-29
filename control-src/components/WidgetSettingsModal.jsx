@@ -133,28 +133,10 @@ export default function WidgetSettingsModal({
     return () => document.removeEventListener('keydown', onKey);
   }, [open, dirty]);
 
-  if (!open || !draft) return null;
-  const def = widgetById(draft.widgetId) || { label: draft.widgetId, id: draft.widgetId };
-
-  function attemptClose() {
-    if (dirty) setShowDiscardPrompt(true);
-    else onCancel();
-  }
-
-  function setField(patch) {
-    setDraft(prev => ({ ...prev, ...patch }));
-  }
-
-  // Live preview matches EditorGrid's render path: same cellW/cellH
-  // dimensions on the dashboard's pixel grid, then scaled to fit
-  // whatever space the preview column has.
-  const dashW = draft.w * (DASH_W / GRID_COLS);
-  const dashH = draft.h * (BODY_H_BASE / GRID_ROWS);
-
   // Dynamic preview sizing — measure the preview column with a
-  // ResizeObserver and re-fit on every resize. Previously this used
-  // fixed PREVIEW_MAX_W/H constants which clipped the widget on
-  // larger tiles even when the modal had plenty of room.
+  // ResizeObserver and re-fit on every resize. Must be declared
+  // BEFORE the open/draft early return so React sees the same hook
+  // order on every render.
   const previewColRef = useRef(null);
   const [previewBox, setPreviewBox] = useState({ w: 720, h: 560 });
   useEffect(() => {
@@ -176,6 +158,24 @@ export default function WidgetSettingsModal({
     window.addEventListener('resize', update);
     return () => { ro.disconnect(); window.removeEventListener('resize', update); };
   }, [open]);
+
+  if (!open || !draft) return null;
+  const def = widgetById(draft.widgetId) || { label: draft.widgetId, id: draft.widgetId };
+
+  function attemptClose() {
+    if (dirty) setShowDiscardPrompt(true);
+    else onCancel();
+  }
+
+  function setField(patch) {
+    setDraft(prev => ({ ...prev, ...patch }));
+  }
+
+  // Live preview matches EditorGrid's render path: same cellW/cellH
+  // dimensions on the dashboard's pixel grid, then scaled to fit
+  // whatever space the preview column has.
+  const dashW = draft.w * (DASH_W / GRID_COLS);
+  const dashH = draft.h * (BODY_H_BASE / GRID_ROWS);
 
   const fitScale = Math.min(
     PREVIEW_MAX_SCALE,
