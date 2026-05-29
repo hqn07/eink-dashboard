@@ -11,9 +11,10 @@ const HEADER_H_BASE = 60;
 const FOOTER_H_BASE = 28;
 const BODY_H_BASE = DASH_H - HEADER_H_BASE - FOOTER_H_BASE;
 
-const PREVIEW_SCALE = 2;
-const PREVIEW_MAX_W = 720;
-const PREVIEW_MAX_H = 560;
+// Hard ceiling so the preview can't blow past 3× on a giant monitor —
+// the dither + autofit don't look great when extrapolated way past
+// the device's actual pixel count.
+const PREVIEW_MAX_SCALE = 3;
 
 // Override toggle + form for per-instance widget data. When the user
 // flips override ON for the first time, we snapshot the current global
@@ -145,17 +146,43 @@ export default function WidgetSettingsModal({
   }
 
   // Live preview matches EditorGrid's render path: same cellW/cellH
-  // dimensions on the dashboard's pixel grid, then scaled up.
+  // dimensions on the dashboard's pixel grid, then scaled to fit
+  // whatever space the preview column has.
   const dashW = draft.w * (DASH_W / GRID_COLS);
   const dashH = draft.h * (BODY_H_BASE / GRID_ROWS);
-  // Fit-to-modal: shrink the 2× target if it would overflow the
-  // preview frame (small laptops, mobile).
+
+  // Dynamic preview sizing — measure the preview column with a
+  // ResizeObserver and re-fit on every resize. Previously this used
+  // fixed PREVIEW_MAX_W/H constants which clipped the widget on
+  // larger tiles even when the modal had plenty of room.
+  const previewColRef = useRef(null);
+  const [previewBox, setPreviewBox] = useState({ w: 720, h: 560 });
+  useEffect(() => {
+    if (!open) return;
+    const el = previewColRef.current;
+    if (!el) return;
+    const update = () => {
+      const r = el.getBoundingClientRect();
+      // Account for the label row above the frame (~28px) and the
+      // column's padding so the frame doesn't push the modal scrollbar.
+      setPreviewBox({
+        w: Math.max(120, r.width - 24),
+        h: Math.max(120, r.height - 40)
+      });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener('resize', update);
+    return () => { ro.disconnect(); window.removeEventListener('resize', update); };
+  }, [open]);
+
   const fitScale = Math.min(
-    PREVIEW_SCALE,
-    PREVIEW_MAX_W / dashW,
-    PREVIEW_MAX_H / dashH
+    PREVIEW_MAX_SCALE,
+    previewBox.w / dashW,
+    previewBox.h / dashH
   );
-  const previewScale = Math.max(0.5, fitScale);
+  const previewScale = Math.max(0.4, fitScale);
   const frameW = dashW * previewScale;
   const frameH = dashH * previewScale;
 
@@ -254,7 +281,7 @@ export default function WidgetSettingsModal({
               </section>
             </div>
 
-            <div className="wsm-col wsm-col-preview">
+            <div className="wsm-col wsm-col-preview" ref={previewColRef}>
               <div className="wsm-preview-label">
                 Preview · {Math.round(previewScale * 100)}% · {draft.w}×{draft.h} cells
               </div>
