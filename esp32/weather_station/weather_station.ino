@@ -43,7 +43,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.10.4"
+#define FW_VERSION "1.10.5"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -1050,6 +1050,17 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
     if (!img) {
       Serial.println("Retry download once after 2s");
       delay(2000);
+      img = downloadImage();
+    }
+    // Adaptive fallback: if the chosen base failed twice, re-probe to
+    // switch LAN ↔ cloud and try one more time. Catches "Mac went to
+    // sleep mid-day so LAN /display.bin times out" without waiting for
+    // the next periodic re-probe (10 cycles away).
+    if (!img) {
+      Serial.println("Both attempts failed — re-probing server base");
+      selectServerBase();
+      g_cyclesSinceProbe = 0;
+      delay(500);
       img = downloadImage();
     }
     if (img) {
