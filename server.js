@@ -647,7 +647,13 @@ function checkDeviceAuth(req, res, next) {
       dev.last_seen_at = Date.now();
       return next();
     }
-    return res.status(401).send('Bad api key');
+    // Unknown api-key (e.g. firmware was enrolled against a different
+    // server, then pointed at this one). Fall through to the fleet
+    // token check instead of rejecting outright — that path is what
+    // the firmware uses pre-enrollment too, and re-enrollment
+    // happens automatically via the cycle's /api/setup call. Logging
+    // the stale key once helps debug "device migrated servers" cases.
+    console.warn('[auth] unknown X-API-Key, falling through to fleet token');
   }
   // Legacy fleet-wide token. Keeps existing firmware working until
   // every device has enrolled via /api/setup. Also unlocks admin
