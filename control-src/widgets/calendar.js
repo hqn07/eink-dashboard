@@ -12,7 +12,12 @@ export const def = {
     XL: { w: 24, h: 8 }
   },
   defaultSize: 'M',
-  defaults: () => ({ icalUrls: [], fontScale: 1, padding: 14 })
+  defaults: () => ({
+    icalUrls: [],
+    density: 'auto',     // 'auto' | 'compact' | 'standard' | 'rich'
+    fontScale: 1,
+    padding: 14
+  })
 };
 
 export function render({ events, cfg, settings, cellW, cellH, density }) {
@@ -20,7 +25,16 @@ export function render({ events, cfg, settings, cellW, cellH, density }) {
   if (!urls.length) return placeholder('UPCOMING', 'Paste an iCal URL in settings', 'calendar');
   const all = events || [];
   if (!all.length) return placeholder('UPCOMING', 'No events in the next 14 days', 'calendar');
-  const tier = pickTier(cellW, cellH, density);
+  // Per-tile density override wins over the layout-item density that
+  // the editor's grid passes through. 'auto' (or missing) keeps the
+  // pickTier behavior we had before.
+  const overrideDensity = settings && settings.density;
+  const effDensity =
+    overrideDensity === 'compact' ? 'sparse' :
+    overrideDensity === 'rich'    ? 'rich'   :
+    overrideDensity === 'standard'? undefined :
+                                    density;
+  const tier = pickTier(cellW, cellH, effDensity);
   const matrix = {
     tiny:     { events: 1, sections: false },
     compact:  { events: 2, sections: false },

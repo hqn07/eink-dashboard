@@ -40,10 +40,22 @@ if (process.platform !== 'darwin') {
 }
 
 let lastTrackKey = null;
+let lastSig = null; // signature of the last payload we actually sent
 
 function trackKeyOf(np) {
   if (!np) return null;
   return [np.title || '', np.artist || '', np.album || ''].join('\0');
+}
+
+// Signature for the no-op-skip check. Includes battery + a coarse
+// elapsed bucket so progress-bar advances still trigger a push, but a
+// truly idle agent (no song, battery flat) goes silent.
+function signatureOf(np, bt) {
+  const npPart = np
+    ? `${np.title || ''}|${np.artist || ''}|${np.album || ''}|${np.isPlaying ? 1 : 0}|${Math.round((np.elapsedSec || 0) / 5)}`
+    : 'null';
+  const btPart = bt ? `${bt.percent}|${bt.state}` : 'null';
+  return `${npPart}::${btPart}`;
 }
 
 async function pushOnce() {
@@ -52,6 +64,14 @@ async function pushOnce() {
     fetchMacNowPlaying().catch(() => null),
     fetchMacBattery().catch(() => null)
   ]);
+
+  // Skip the round-trip entirely when nothing has visibly changed since
+  // the last successful push. Server already de-dupes too, but the
+  // cheapest push is the one we never make.
+  const sig = signatureOf(np, bt);
+  if (sig === lastSig) {
+    return;
+  }
 
   const key = trackKeyOf(np);
   let payload;
@@ -85,6 +105,7 @@ async function pushOnce() {
       return;
     }
     lastTrackKey = key;
+    lastSig = sig;
     const dt = Date.now() - t0;
     const sentArt = !!(payload.nowplaying && payload.nowplaying.artworkBase64);
     const songLabel = np ? `${np.artist || '?'} — ${np.title || '?'}` : 'no song';

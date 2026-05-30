@@ -2,9 +2,20 @@ import React from 'react';
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { ListEditor, TypographyFields } = fields;
+  const { ListEditor, SelectField, TypographyFields } = fields;
   return (
     <>
+      <SelectField
+        label="Density"
+        value={v.density || 'auto'}
+        options={[
+          { value: 'auto',     label: 'Auto — by tile size' },
+          { value: 'compact',  label: 'Compact — fewer events' },
+          { value: 'standard', label: 'Standard' },
+          { value: 'rich',     label: 'Rich — more events + sections' }
+        ]}
+        onChange={(x) => patch({ density: x })}
+      />
       <TypographyFields values={v} onChange={onChange} />
       <ListEditor
         label="iCal feed URLs"
