@@ -1,8 +1,16 @@
 // Weather · Current — hero tile with big temperature + icon. Larger
 // tiers add stats, alert banner, sun-bar, and hourly strip.
+//
+// `settings.stats` (length-4 array) picks which fields fill the stats
+// grid on standard+ tiers. Each entry is one of: feels, humid, wind,
+// cloud, rise, set, gust, dew (dew falls back to humid if upstream
+// doesn't expose it). Default keeps the original feels/humid/wind/
+// cloud-or-rise behavior so old tiles look unchanged.
 
 import { pickTier, placeholder } from './_shared.js';
 import { icon, alertBanner, sunBar, hourlyStrip } from './_weather_shared.js';
+
+const DEFAULT_STATS = ['feels', 'humid', 'wind', 'cloud_or_rise'];
 
 export const def = {
   id: 'weather_hero',
@@ -21,10 +29,46 @@ export const def = {
     city: (ctx && ctx.city) || '',
     lat:  (ctx && Number.isFinite(ctx.lat)) ? ctx.lat : null,
     lon:  (ctx && Number.isFinite(ctx.lon)) ? ctx.lon : null,
+    stats: DEFAULT_STATS.slice(),
     fontScale: 1,
     padding: 14
   })
 };
+
+// Resolve a stat key to a { label, value } pair. Returns null when the
+// upstream payload doesn't expose the requested field — the caller
+// drops null entries so the grid doesn't render an empty cell.
+function statForKey(key, w) {
+  switch (key) {
+    case 'feels':
+      return { k: 'FEELS', v: `${w.feelsLike}°` };
+    case 'humid':
+      return { k: 'HUMID', v: `${w.humidity}%` };
+    case 'wind':
+      return {
+        k: 'WIND',
+        v: `${w.windDir} ${w.windSpeed}${w.windGust ? ` (G${w.windGust})` : ''} ${w.windUnit || ''}`.trim()
+      };
+    case 'gust':
+      if (!Number.isFinite(w.windGust)) return null;
+      return { k: 'GUST', v: `${w.windGust} ${w.windUnit || ''}`.trim() };
+    case 'cloud':
+      if (!Number.isFinite(w.cloudCover)) return null;
+      return { k: 'CLOUD', v: `${w.cloudCover}%` };
+    case 'rise':
+      return { k: 'RISE', v: w.sunrise || '—' };
+    case 'set':
+      return { k: 'SET',  v: w.sunset || '—' };
+    case 'cloud_or_rise':
+      // Legacy default: prefer cloud cover when present, fall back to
+      // sunrise so single-data installs still see something useful.
+      return Number.isFinite(w.cloudCover)
+        ? { k: 'CLOUD', v: `${w.cloudCover}%` }
+        : { k: 'RISE',  v: w.sunrise || '—' };
+    default:
+      return null;
+  }
+}
 
 export function render({ weather, units, cfg, settings, cellW, cellH, density }) {
   if (!weather) {
@@ -34,6 +78,7 @@ export function render({ weather, units, cfg, settings, cellW, cellH, density })
     return placeholder('WEATHER', hasLoc ? 'Data unavailable' : 'Set your location in settings', 'weather');
   }
   const w = weather;
+  const s = settings || {};
   const tier = pickTier(cellW, cellH, density);
   const staleClass = w.stale ? ' weather-stale' : '';
   const staleBadge = w.stale ? '<div class="stale-pill">CACHED</div>' : '';
@@ -44,13 +89,14 @@ export function render({ weather, units, cfg, settings, cellW, cellH, density })
   const heroIcon = (px) => `<div class="weather-icon" style="height:${px}px">${icon(w, px)}</div>`;
   const descLine = () => `<div class="weather-desc">${w.desc}</div>`;
   const hiloLine = () => `<div class="weather-hilo">HIGH ${w.tempMax}° &nbsp;·&nbsp; LOW ${w.tempMin}°</div>`;
-  const statsBlock = () => `
-    <div class="weather-stats">
-      <div class="stat"><span class="stat-k">FEELS</span><span class="stat-v">${w.feelsLike}°</span></div>
-      <div class="stat"><span class="stat-k">HUMID</span><span class="stat-v">${w.humidity}%</span></div>
-      <div class="stat"><span class="stat-k">WIND</span><span class="stat-v">${w.windDir} ${w.windSpeed}${w.windGust ? ` (G${w.windGust})` : ''} ${w.windUnit || ''}</span></div>
-      <div class="stat"><span class="stat-k">${Number.isFinite(w.cloudCover) ? 'CLOUD' : 'RISE'}</span><span class="stat-v">${Number.isFinite(w.cloudCover) ? w.cloudCover + '%' : w.sunrise}</span></div>
+  const statsKeys = Array.isArray(s.stats) && s.stats.length ? s.stats : DEFAULT_STATS;
+  const statsBlock = () => {
+    const cells = statsKeys.map(k => statForKey(k, w)).filter(Boolean).slice(0, 4);
+    if (!cells.length) return '';
+    return `<div class="weather-stats">
+      ${cells.map(c => `<div class="stat"><span class="stat-k">${c.k}</span><span class="stat-v">${c.v}</span></div>`).join('')}
     </div>`;
+  };
   switch (tier) {
     case 'tiny':
       return `<div class="weather-hero hero-tier-tiny${staleClass}">${staleBadge}${tempBlock(54)}</div>`;
@@ -75,3 +121,14 @@ export function render({ weather, units, cfg, settings, cellW, cellH, density })
       </div>${alertBanner(w)}${statsBlock()}${sunBar(w)}${hourlyStrip(w)}`;
   }
 }
+
+export const STAT_OPTIONS = [
+  { value: 'feels',         label: 'Feels-like temp' },
+  { value: 'humid',         label: 'Humidity' },
+  { value: 'wind',          label: 'Wind direction · speed' },
+  { value: 'gust',          label: 'Wind gust' },
+  { value: 'cloud',         label: 'Cloud cover %' },
+  { value: 'rise',          label: 'Sunrise' },
+  { value: 'set',           label: 'Sunset' },
+  { value: 'cloud_or_rise', label: 'Cloud → fallback to Sunrise' }
+];

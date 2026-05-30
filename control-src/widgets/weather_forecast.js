@@ -21,6 +21,8 @@ export const def = {
     lat:  (ctx && Number.isFinite(ctx.lat)) ? ctx.lat : null,
     lon:  (ctx && Number.isFinite(ctx.lon)) ? ctx.lon : null,
     forecastDays: null,
+    precipMode: 'auto',     // 'auto' | 'always' | 'never'
+    hiloStyle:  'stack',    // 'stack' | 'inline' | 'arrows'
     fontScale: 1,
     padding: 14
   })
@@ -34,6 +36,7 @@ export function render({ weather, cfg, settings, cellW, cellH }) {
       (cfg && Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon));
     return placeholder('FORECAST', hasLoc ? 'Data unavailable' : 'Set your location in settings', 'weather');
   }
+  const s = settings || {};
   const ch = cellH || 0, cw = cellW || 0;
   const userDays = parseInt(
     Number.isFinite(w.forecastDays)
@@ -51,18 +54,28 @@ export function render({ weather, cfg, settings, cellW, cellH }) {
     ? Math.max(1, Math.min(7, userDays))
     : autoDays;
   const iconPx = ch < 4 ? 26 : ch < 6 ? 28 : ch < 8 ? 32 : ch < 12 ? 34 : 38;
-  const showPrecip = cw >= 8;
+  const precipMode = s.precipMode || 'auto';
+  const showPrecip = precipMode === 'always' ? true
+                   : precipMode === 'never'  ? false
+                   :                            cw >= 8;
+  const hiloStyle = s.hiloStyle || 'stack';
   const list = w.forecast.slice(0, days);
+  const hiloBlock = (f) => {
+    if (hiloStyle === 'inline') {
+      return `<div class="fc-hilo fc-hilo-inline"><span class="fc-hi">${f.hi}°</span><span class="fc-hilo-sep"> / </span><span class="fc-lo">${f.lo}°</span></div>`;
+    }
+    if (hiloStyle === 'arrows') {
+      return `<div class="fc-hilo fc-hilo-arrows"><span class="fc-hi">↑${f.hi}°</span><span class="fc-lo">↓${f.lo}°</span></div>`;
+    }
+    return `<div class="fc-hilo"><div class="fc-hi">${f.hi}°</div><div class="fc-lo">${f.lo}°</div></div>`;
+  };
   return `
     <div class="col-title">${list.length}-DAY OUTLOOK</div>
     ${list.map(f => `
-      <div class="fc-row">
+      <div class="fc-row fc-hilo-${hiloStyle}">
         <div class="fc-day">${f.name}</div>
         <div class="fc-icon">${icon(f.main, iconPx)}</div>
-        <div class="fc-hilo">
-          <div class="fc-hi">${f.hi}°</div>
-          <div class="fc-lo">${f.lo}°</div>
-        </div>
+        ${hiloBlock(f)}
         ${showPrecip && Number.isFinite(f.precip) && f.precip > 0
           ? `<div class="fc-precip">${f.precip}%</div>` : '<div class="fc-precip"></div>'}
       </div>

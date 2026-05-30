@@ -365,6 +365,15 @@ html, body {
 .fc-hi { font-size: 18px; font-weight: 700; }
 .fc-lo { font-size: 13px; font-weight: 500; }
 
+/* Forecast hi/lo variants ----- */
+.fc-hilo-inline { display: flex; align-items: baseline; gap: 4px; justify-content: flex-end; }
+.fc-hilo-inline .fc-hi { font-size: 18px; }
+.fc-hilo-inline .fc-lo { font-size: 16px; }
+.fc-hilo-inline .fc-hilo-sep { font-size: 14px; opacity: .7; }
+.fc-hilo-arrows { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
+.fc-hilo-arrows .fc-hi { font-size: 16px; }
+.fc-hilo-arrows .fc-lo { font-size: 14px; }
+
 /* ============ RIGHT COLUMN WIDGETS ============ */
 
 .col-right {
