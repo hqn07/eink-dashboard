@@ -1529,6 +1529,11 @@ app.get('/api/battery', checkDeviceAuth, async (req, res) => {
 // what the server already has it can omit `artworkBase64` and we keep
 // the previous frame's image. Keeps bandwidth bounded (~50MB/mo).
 const macStateMod = require('./widgets/_mac_state');
+// Serialize mac-state writes so two concurrent agent pushes can't both
+// read `_lastTrackKey`, decide they're the same track, and race to
+// write — which would leave the artwork stuck null even after the
+// song actually changed.
+let _macStateChain = Promise.resolve();
 let _lastTrackKey = null;
 app.post('/api/mac-state', checkDeviceAuth, async (req, res) => {
   try {
@@ -1537,23 +1542,60 @@ app.post('/api/mac-state', checkDeviceAuth, async (req, res) => {
     const bt = body.battery || null;
     const trackKey = typeof body.trackKey === 'string' ? body.trackKey : null;
 
-    let mergedNp = np;
-    if (np && !('artworkBase64' in np) && trackKey && trackKey === _lastTrackKey) {
-      // Same track as the last push: keep whatever art we already have.
+    const result = await (_macStateChain = _macStateChain.then(async () => {
+      let mergedNp = np;
+      if (np && !('artworkBase64' in np) && trackKey && trackKey === _lastTrackKey) {
+        const prev = await macStateMod.read();
+        const prevArt = prev && prev.nowplaying && prev.nowplaying.artworkBase64;
+        mergedNp = { ...np, artworkBase64: prevArt || null };
+      }
+      if (trackKey) _lastTrackKey = trackKey;
       const prev = await macStateMod.read();
-      const prevArt = prev && prev.nowplaying && prev.nowplaying.artworkBase64;
-      mergedNp = { ...np, artworkBase64: prevArt || null };
-    }
-    if (trackKey) _lastTrackKey = trackKey;
+      await macStateMod.write({ nowplaying: mergedNp, battery: bt });
+      // Only force a re-render when the rendered payload actually
+      // changed. Battery percent ticking 87 → 86 is a real change; an
+      // identical no-op push from the agent (same song, same battery)
+      // shouldn't burn a Puppeteer cycle.
+      const changed = !sameMacState(prev, { nowplaying: mergedNp, battery: bt });
+      if (changed) invalidateImage();
+      return changed;
+    }).catch(err => {
+      console.error('mac-state chain error:', err);
+      throw err;
+    }));
 
-    await macStateMod.write({ nowplaying: mergedNp, battery: bt });
-    invalidateImage();
-    res.json({ ok: true });
+    res.json({ ok: true, changed: result });
   } catch (err) {
     console.error('mac-state error:', err);
     res.status(500).json(safeError(err));
   }
 });
+
+// Compare two mac-state snapshots for render-visible equality. Artwork
+// is hashed by length so the bytes themselves don't blow the comparison
+// up to several KB per call.
+function sameMacState(a, b) {
+  const npA = (a && a.nowplaying) || null;
+  const npB = (b && b.nowplaying) || null;
+  if (!npA !== !npB) return false;
+  if (npA && npB) {
+    if (npA.title !== npB.title) return false;
+    if (npA.artist !== npB.artist) return false;
+    if (npA.album !== npB.album) return false;
+    if (npA.isPlaying !== npB.isPlaying) return false;
+    if (Math.round((npA.elapsedSec || 0) / 5) !== Math.round((npB.elapsedSec || 0) / 5)) return false;
+    if ((npA.artworkBase64 || '').length !== (npB.artworkBase64 || '').length) return false;
+    if (npA.sourceLabel !== npB.sourceLabel) return false;
+  }
+  const btA = (a && a.battery) || null;
+  const btB = (b && b.battery) || null;
+  if (!btA !== !btB) return false;
+  if (btA && btB) {
+    if (btA.percent !== btB.percent) return false;
+    if (btA.state !== btB.state) return false;
+  }
+  return true;
+}
 
 app.get('/api/mac-state', checkDeviceAuth, async (req, res) => {
   const s = await macStateMod.read();

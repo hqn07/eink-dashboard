@@ -18,6 +18,10 @@ const STALE_MS = 5 * 60 * 1000; // 5 min — older than this = treat as offline.
 let mem = null; // last-known state (in-process cache to skip a disk read per request)
 
 function loadSync() {
+  // Clean up an orphaned `.tmp` if a previous process crashed between
+  // writeFile and rename. Quietly ignore — best effort, the real file
+  // still wins.
+  try { fs.unlinkSync(STATE_PATH + '.tmp'); } catch { /* not there */ }
   try {
     const raw = fs.readFileSync(STATE_PATH, 'utf8');
     mem = JSON.parse(raw);
