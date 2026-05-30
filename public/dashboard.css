@@ -601,9 +601,20 @@ html, body {
   text-overflow: ellipsis;
 }
 .mac-np-source {
-  font-size: 10px;
-  letter-spacing: 3px;
-  color: #555;
+  /* Was 10px / #555 / letter-spacing 3px — invisible at 1-bit
+   * threshold once Sharp rounds the gray pixels. Heavier weight,
+   * pure black, modest tracking so the words survive dithering. */
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #000;
+  text-transform: uppercase;
+}
+.mac-np-glyph {
+  /* Inline SVG play/pause glyph used by mac_nowplaying. Vertical-align
+   * so it lines up with adjacent text baselines rather than sitting
+   * on the baseline. */
+  vertical-align: -0.15em;
 }
 .mac-np-progress {
   display: flex; flex-direction: column; gap: 4px;

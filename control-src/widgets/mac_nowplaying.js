@@ -77,7 +77,12 @@ export function render({ macNowPlaying, cellW, cellH, density, settings }) {
   if (!macNowPlaying) return placeholder('NOW PLAYING', 'MAC OFFLINE', 'msg');
   const np = macNowPlaying;
   const tier = pickTier(cellW || 0, cellH || 0, density);
-  const stateIcon = np.isPlaying ? '▶' : '❚❚';
+  // Inline SVG instead of Unicode glyphs so the 1-bit threshold pass
+  // can't shear the bars. Both shapes are solid black on white at any
+  // size; `1em` sizing lets the surrounding CSS font-size scale them.
+  const stateIcon = np.isPlaying
+    ? '<svg class="mac-np-glyph" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M6 4l14 8-14 8z" fill="#000"/></svg>'
+    : '<svg class="mac-np-glyph" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><rect x="6" y="4" width="5" height="16" fill="#000"/><rect x="13" y="4" width="5" height="16" fill="#000"/></svg>';
   const s = settings || {};
   const variant   = s.variant   || 'time_bookends';
   const fontScale = Number.isFinite(s.fontScale) ? s.fontScale : 1;
