@@ -4,10 +4,13 @@ nixPkgs = ['nodejs_20', 'chromium']
 [phases.install]
 # `--include=dev` overrides Railway's default NPM_CONFIG_PRODUCTION=true
 # (which would skip vite + @vitejs/plugin-react and break the build step).
-cmds = ['npm install --include=dev']
+# `--loglevel=error` silences the deprecation warning about npm's
+# legacy `production` config — Railway logs npm's stderr at severity
+# `error`, which makes the warning look like a build failure.
+cmds = ['npm install --include=dev --loglevel=error']
 
 [phases.build]
-cmds = ['npm run build']
+cmds = ['npm run build --loglevel=error']
 
 [start]
 cmd = 'node server.js'
@@ -15,7 +18,7 @@ cmd = 'node server.js'
 [variables]
 PUPPETEER_SKIP_DOWNLOAD = '1'
 PUPPETEER_EXECUTABLE_PATH = '/nix/var/nix/profiles/default/bin/chromium'
-# Silences npm's deprecation warning about the legacy `production`
-# config that Railway still sets. The `--include=dev` flag above is
-# what actually controls install behaviour.
-NPM_CONFIG_PRODUCTION = 'false'
+# Suppress npm's warn-level output everywhere (install, build, and the
+# implicit `npm run start` that some Railway launchers use). Real
+# errors still get through at the `error` level.
+NPM_CONFIG_LOGLEVEL = 'error'
