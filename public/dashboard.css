@@ -652,6 +652,65 @@ html, body {
   margin-top: 6px;
 }
 
+/* ---- Side-space variants (extended / full tier) ---- */
+/* vertical_text: rotate the "NOW PLAYING" label 90° on each side of the
+ * cover art. */
+.mac-np-bookend-vert {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  letter-spacing: 4px;
+  font-size: 18px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+.mac-np-bookend-vert.mac-np-bookend-left  { transform: rotate(180deg); }
+
+/* play_state: big play/pause glyph mirroring on both sides. */
+.mac-np-bookend-glyph {
+  font-size: 56px;
+  line-height: 1;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+}
+
+/* bars: stacked dither bars per side. Pure decoration. */
+.mac-np-bookend-bars {
+  display: flex; flex-direction: column; gap: 6px;
+  min-width: 36px;
+  align-items: stretch;
+}
+.mac-np-bookend-bars > span {
+  display: block;
+  height: 6px;
+  background: #000;
+}
+.mac-np-bookend-bars > span:nth-child(2),
+.mac-np-bookend-bars > span:nth-child(4),
+.mac-np-bookend-bars > span:nth-child(6) {
+  height: 3px;
+}
+
+/* metadata: artist on the left, album / source on the right. Two-line
+ * stack with a tiny label above the value. */
+.mac-np-bookend-meta {
+  display: flex; flex-direction: column; gap: 4px;
+  min-width: 110px;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+.mac-np-bookend-meta .bookend-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #555;
+}
+.mac-np-bookend-meta .bookend-value {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 16px;
+  line-height: 1.1;
+}
+
 /* ---------- Clock widget ---------- */
 .clock {
   display: flex; flex-direction: column;

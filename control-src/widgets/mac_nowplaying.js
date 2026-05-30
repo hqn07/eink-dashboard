@@ -1,8 +1,57 @@
 // Mac · Now Playing — art + title + progress. Two layouts: horizontal
-// (tiny / compact / standard) and stacked (extended / full) with
-// optional time bookends flanking the cover art.
+// (tiny / compact / standard) and stacked (extended / full). The
+// stacked layout has a "side-space" slot on either side of the cover
+// art whose contents are picked by the `variant` setting — time
+// counters by default, or one of several decorative variants that
+// turn the side gutters into texture instead.
 
 import { escapeHtml, fmtSec, pickTier, placeholder } from './_shared.js';
+
+// What fills the bookend slots on each side of the cover art when the
+// tile is large enough to stack (extended / full tier). Returns the
+// raw HTML for the left + right slots; the render function drops them
+// into `.mac-np-stacked-row`.
+function sideSpaceSlots(variant, { np, elapsedStr, remainStr, stateIcon }) {
+  switch (variant) {
+    case 'centered':
+      return { left: '', right: '' };
+    case 'vertical_text':
+      return {
+        left:  `<div class="mac-np-bookend mac-np-bookend-vert mac-np-bookend-left">NOW PLAYING</div>`,
+        right: `<div class="mac-np-bookend mac-np-bookend-vert mac-np-bookend-right">NOW PLAYING</div>`
+      };
+    case 'play_state':
+      return {
+        left:  `<div class="mac-np-bookend mac-np-bookend-glyph mac-np-bookend-left">${stateIcon}</div>`,
+        right: `<div class="mac-np-bookend mac-np-bookend-glyph mac-np-bookend-right">${stateIcon}</div>`
+      };
+    case 'bars':
+      // Six stacked dither bars per side. Pure decoration that survives
+      // the 1-bit threshold without becoming noise.
+      return {
+        left:  `<div class="mac-np-bookend mac-np-bookend-bars mac-np-bookend-left"><span></span><span></span><span></span><span></span><span></span><span></span></div>`,
+        right: `<div class="mac-np-bookend mac-np-bookend-bars mac-np-bookend-right"><span></span><span></span><span></span><span></span><span></span><span></span></div>`
+      };
+    case 'metadata': {
+      const artist = escapeHtml(np.artist || '—');
+      const albumOrSource = np.album
+        ? `<span class="bookend-label">ALBUM</span><span class="bookend-value">${escapeHtml(np.album)}</span>`
+        : np.sourceLabel
+          ? `<span class="bookend-label">SOURCE</span><span class="bookend-value">${escapeHtml(np.sourceLabel)}</span>`
+          : '<span class="bookend-label">—</span>';
+      return {
+        left:  `<div class="mac-np-bookend mac-np-bookend-meta mac-np-bookend-left"><span class="bookend-label">ARTIST</span><span class="bookend-value">${artist}</span></div>`,
+        right: `<div class="mac-np-bookend mac-np-bookend-meta mac-np-bookend-right">${albumOrSource}</div>`
+      };
+    }
+    case 'time_bookends':
+    default:
+      return {
+        left:  `<div class="mac-np-bookend mac-np-bookend-left">${elapsedStr}</div>`,
+        right: `<div class="mac-np-bookend mac-np-bookend-right">${remainStr}</div>`
+      };
+  }
+}
 
 export const def = {
   id: 'mac_nowplaying',
@@ -58,7 +107,7 @@ export function render({ macNowPlaying, cellW, cellH, density, settings }) {
     const progressBar = hasProgress
       ? `<div class="mac-np-bar mac-np-bar-only"><div class="mac-np-bar-fill" style="width:${pct.toFixed(1)}%"></div></div>`
       : '';
-    const showBookends = variant !== 'centered';
+    const slots = sideSpaceSlots(variant, { np, elapsedStr, remainStr, stateIcon });
     const maxFont = Math.max(14, Math.round(cfg.maxFont * fontScale));
     return `
       <div class="mac-np-card mac-np-stacked mac-np-tier-${tier} mac-np-var-${variant}">
@@ -66,9 +115,9 @@ export function render({ macNowPlaying, cellW, cellH, density, settings }) {
           <span class="col-title">NOW PLAYING</span>
         </div>
         <div class="mac-np-stacked-row">
-          ${showBookends ? `<div class="mac-np-bookend mac-np-bookend-left">${elapsedStr}</div>` : ''}
+          ${slots.left}
           ${artInner}
-          ${showBookends ? `<div class="mac-np-bookend mac-np-bookend-right">${remainStr}</div>` : ''}
+          ${slots.right}
         </div>
         <div class="mac-np-state-big">${stateIcon}</div>
         <div class="mac-np-stacked-text">

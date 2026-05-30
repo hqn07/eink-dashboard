@@ -16,7 +16,11 @@ export function Form({ values, patch, onChange, fields }) {
         value={variant}
         options={[
           { value: 'time_bookends', label: 'Time bookends (elapsed · remaining)' },
-          { value: 'centered',      label: 'Centered (no bookends)' }
+          { value: 'centered',      label: 'Centered (no bookends)' },
+          { value: 'vertical_text', label: 'Vertical "NOW PLAYING" text' },
+          { value: 'play_state',    label: 'Big play/pause glyph' },
+          { value: 'bars',          label: 'Decorative bars' },
+          { value: 'metadata',      label: 'Artist · album / source labels' }
         ]}
         onChange={(x) => patch({ variant: x })}
       />
