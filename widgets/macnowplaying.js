@@ -17,7 +17,14 @@ const { execFile } = require('child_process');
 const { promisify } = require('util');
 const status = require('./_status');
 const { ditherImageToBase64 } = require('./_dither');
+const macState = require('./_mac_state');
 const execFileP = promisify(execFile);
+
+// `MAC_FROM_CACHE=1` forces the read-from-cache path even on darwin,
+// which is useful when running the cloud-mode pipeline locally for
+// testing (lets dev verify the cache shape without standing up Linux).
+const FROM_CACHE = process.env.MAC_FROM_CACHE === '1'
+  || process.platform !== 'darwin';
 
 const CACHE_MS = 5 * 1000;
 let cached = null;
@@ -127,7 +134,14 @@ async function fetchYtMusic() {
 }
 
 async function fetchMacNowPlaying() {
-  if (process.platform !== 'darwin') return null;
+  if (FROM_CACHE) {
+    // Cloud / non-darwin path: read the latest agent push from the
+    // shared on-disk cache. Stale entries (>STALE_MS) resolve to null
+    // so the renderer shows "MAC OFFLINE" instead of a frozen song.
+    const s = await macState.read();
+    if (!s || !macState.fresh(s.at)) return null;
+    return s.nowplaying || null;
+  }
   if (cached && (Date.now() - cached.at) < CACHE_MS) {
     status.cacheHit('mac_nowplaying');
     return cached.data;

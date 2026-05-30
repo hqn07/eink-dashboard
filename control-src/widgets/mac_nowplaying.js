@@ -1,15 +1,8 @@
-// Mac · Now Playing widget. Reads from the host Mac's MediaRemote
-// bridge (via nowplaying-cli) and the YouTube Music desktop app's
-// local HTTP API; renders title + artist + album + dithered cover art
-// + a progress bar.
-//
-// Two layouts per tier:
-//   horizontal (tiny / compact / standard) — art-left, text-right.
-//   stacked    (extended / full)           — art centered with time
-//                                            bookends + title block.
+// Mac · Now Playing — art + title + progress. Two layouts: horizontal
+// (tiny / compact / standard) and stacked (extended / full) with
+// optional time bookends flanking the cover art.
 
-import React from 'react';
-import { escapeHtml, fmtSec, pickTier } from './_shared.js';
+import { escapeHtml, fmtSec, pickTier, placeholder } from './_shared.js';
 
 export const def = {
   id: 'mac_nowplaying',
@@ -25,9 +18,6 @@ export const def = {
   },
   defaultSize: 'M',
   defaults: () => ({
-    // Side-space layout when the tile is big enough to stack art above
-    // the title. `time_bookends` keeps elapsed/remaining time flanking
-    // the cover; `centered` drops them so the art breathes.
     variant: 'time_bookends',
     fontScale: 1,
     padding: 14
@@ -35,9 +25,7 @@ export const def = {
 };
 
 export function render({ macNowPlaying, cellW, cellH, density, settings }) {
-  if (!macNowPlaying) {
-    return `<div class="col-title">NOW PLAYING</div><div class="empty" style="border:0;padding:14px 0">MAC OFFLINE</div>`;
-  }
+  if (!macNowPlaying) return placeholder('NOW PLAYING', 'MAC OFFLINE', 'msg');
   const np = macNowPlaying;
   const tier = pickTier(cellW || 0, cellH || 0, density);
   const stateIcon = np.isPlaying ? '▶' : '❚❚';
@@ -117,29 +105,4 @@ export function render({ macNowPlaying, cellW, cellH, density, settings }) {
       ${progress}
     </div>
   `;
-}
-
-export function Form({ values, patch, onChange, fields }) {
-  const v = values || {};
-  const { SelectField, TypographyFields } = fields;
-  const variant = v.variant || 'time_bookends';
-  return (
-    <>
-      <div className="wsm-field-help" style={{ marginBottom: 6 }}>
-        Variants apply on tiles big enough to stack the art above the
-        title (extended/full tiers). Smaller tiles fall back to the
-        standard inline layout.
-      </div>
-      <SelectField
-        label="Side-space variant"
-        value={variant}
-        options={[
-          { value: 'time_bookends', label: 'Time bookends (elapsed · remaining)' },
-          { value: 'centered',      label: 'Centered (no bookends)' }
-        ]}
-        onChange={(x) => patch({ variant: x })}
-      />
-      <TypographyFields values={v} onChange={onChange} />
-    </>
-  );
 }

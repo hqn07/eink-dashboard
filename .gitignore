@@ -6,6 +6,9 @@ node_modules/
 data/config.json
 data/device-token.txt
 data/battery.json
+data/devices.json
+data/mac-state.json
+data/mac-state.json.tmp
 *.log
 .cache/
 .vscode/

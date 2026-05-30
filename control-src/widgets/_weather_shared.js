@@ -87,6 +87,17 @@ export function sunBar(w) {
   `;
 }
 
+export function alertBanner(w) {
+  if (!w || !Array.isArray(w.alerts) || !w.alerts.length) return '';
+  const a = w.alerts[0];
+  return `
+    <div class="weather-alert">
+      <span class="alert-tag">⚠ ${a.severity || 'ALERT'}</span>
+      <span class="alert-text">${a.event}</span>
+    </div>
+  `;
+}
+
 export function hourlyStrip(w) {
   if (!w || !Array.isArray(w.hourly) || !w.hourly.length) return '';
   return `

@@ -25,6 +25,16 @@ const { fetchMacBattery } = require('./widgets/macbattery');
 const { buildClock } = require('./widgets/clock');
 const { computeNextAlarm, normalizeAlarmList } = require('./widgets/alarms');
 
+// SSR module — per-widget render functions + chrome helpers, no React.
+// Dynamically imported (ESM) at first use and cached. Lets /dashboard
+// produce the full page HTML server-side instead of shipping a
+// duplicate widget render block to the browser.
+let _ssrPromise = null;
+function loadSsr() {
+  if (!_ssrPromise) _ssrPromise = import('./control-src/widgets/_ssr.js');
+  return _ssrPromise;
+}
+
 const PORT = process.env.PORT || 3000;
 const DEVICE_TOKEN = process.env.DEVICE_TOKEN || '';
 const CONFIG_PATH = path.join(__dirname, 'data', 'config.json');
@@ -264,17 +274,6 @@ async function renderDashboardPng({ units, screen }) {
   } finally {
     try { await page.close(); } catch (_) {}
   }
-}
-
-// Safe JSON literal for embedding inside a <script> tag. Plain
-// JSON.stringify lets a payload containing "</script>" close the tag
-// and inject markup; U+2028/U+2029 are valid JSON but illegal in a JS
-// string literal and break parse. Escape both.
-function jsonForScript(obj) {
-  return JSON.stringify(obj)
-    .replace(/</g, '\\u003c')
-    .replace(/\u2028/g, '\\u2028')
-    .replace(/\u2029/g, '\\u2029');
 }
 
 // Contrast boost pushes near-128 anti-aliased font edges to either
@@ -867,7 +866,188 @@ function mergeEvents(list) {
   });
 }
 
-// Dashboard HTML — built from the active screen's layout + live data
+// ============ SSR PIPELINE ============
+//
+// Renders the full dashboard HTML server-side from the widget render
+// functions under control-src/widgets/<id>.js. The dashboard.html shell
+// is now just chrome (CSS link + autofit script); the body grid is
+// inlined as a static string the browser doesn't have to recompute.
+// Puppeteer still loads /dashboard via headless Chrome to snap the PNG,
+// but it only runs the autofit pass + font wait, not a widget loop.
+
+const GRID_COLS = 24;
+const GRID_ROWS = 12;
+
+function sizeFor(def, sizeKey) {
+  if (!def) return null;
+  const sizes = def.sizes || {};
+  const k = sizeKey && sizes[sizeKey] ? sizeKey : def.defaultSize;
+  return sizes[k] || null;
+}
+
+// Resolve a raw layout item to one with explicit w/h. Stored geometry
+// always wins; size preset is the fallback. Drops items pointing at
+// unknown widget ids.
+function expandLayout(rawLayout, defs) {
+  const out = [];
+  for (const raw of (rawLayout || [])) {
+    if (raw && raw.enabled === false) continue;
+    const widgetId = raw.widgetId || raw.id;
+    const def = defs[widgetId];
+    if (!def) continue;
+    const sz = sizeFor(def, raw.size) || { w: 8, h: 4 };
+    out.push({
+      id: raw.id || widgetId,
+      widgetId,
+      x: Number.isFinite(raw.x) ? raw.x : 0,
+      y: Number.isFinite(raw.y) ? raw.y : 0,
+      w: Number.isFinite(raw.w) ? raw.w : sz.w,
+      h: Number.isFinite(raw.h) ? raw.h : sz.h,
+      flush: !!raw.flush,
+      density: raw.density,
+      visibility: raw.visibility,
+      settings: raw.settings
+    });
+  }
+  return out;
+}
+
+function withinVisibility(vis, nowM) {
+  if (!vis || !vis.enabled) return true;
+  const a = parseHHMM(vis.from), b = parseHHMM(vis.to);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return true;
+  if (a === b) return true;
+  if (a < b) return nowM >= a && nowM < b;
+  return nowM >= a || nowM < b;
+}
+
+function htmlAttr(s) {
+  return String(s == null ? '' : s).replace(/"/g, '&quot;');
+}
+
+// Build the inner page HTML — header + body grid + footer. Per-tile
+// rendering pulls the per-item slot data via `perItem[item.id]` so each
+// tile gets its own context (overrides global where set).
+function buildPageBodyHtml({ payload, ssr, mode }) {
+  const { cfg, weather, events, units, stocks, resolvedMessage,
+          perItem, chrome, battery, layout: rawLayout, devWidgetId } = payload;
+
+  const defs = ssr.DEFS;
+  const layout = expandLayout(rawLayout, defs);
+  const ctxBase = {
+    cfg, weather, events, units,
+    stocks, resolvedMessage, chrome, battery
+  };
+  const data = { ...ctxBase, chrome };
+
+  // Matrix mode: every widget at every preset, stacked top-to-bottom.
+  if (mode === 'matrix') {
+    const PX_W = 800 / GRID_COLS, PX_H = 480 / GRID_ROWS;
+    let html = '<div class="page" id="page" style="width:100%;height:auto;display:flex;flex-direction:column;gap:32px;padding:32px;background:#fff">';
+    for (const id of Object.keys(defs)) {
+      const def = defs[id];
+      const sizes = def.sizes || {};
+      for (const key of Object.keys(sizes)) {
+        const { w: cw, h: ch } = sizes[key];
+        const cellWidth = cw * PX_W;
+        const cellHeight = ch * PX_H;
+        const itemCtx = { ...ctxBase, cellW: cw, cellH: ch, settings: typeof def.defaults === 'function' ? def.defaults() : undefined };
+        const inner = ssr.renderWidget(id, itemCtx);
+        html += `
+          <div style="border:2px solid #000;background:#fff">
+            <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#000;color:#fff;font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:2px;">
+              <span>${escapeHtmlServer(id)} · ${escapeHtmlServer(key)}</span>
+              <span>${cw}×${ch} · ${Math.round(cellWidth)}×${Math.round(cellHeight)}px</span>
+            </div>
+            <div class="cell cell-${escapeHtmlServer(id)}" style="width:${cellWidth}px;height:${cellHeight}px;margin:0">${inner}</div>
+          </div>`;
+      }
+    }
+    html += '</div>';
+    return html;
+  }
+
+  // Dev single-widget mode: full-screen single widget, no chrome.
+  if (mode === 'dev' && devWidgetId) {
+    const item = layout[0];
+    if (!item) return '<div class="page" id="page"></div>';
+    const itemCtx = {
+      ...ctxBase,
+      ...(perItem && perItem[item.id] || {}),
+      cellW: item.w, cellH: item.h, density: item.density, settings: item.settings
+    };
+    const inner = ssr.renderWidget(item.widgetId, itemCtx);
+    const typo = ssr.typographyCss(item.settings);
+    const cellStyle = `width:800px;height:480px;${typo}`;
+    return `<div class="page" id="page" style="grid-template-rows:0px minmax(0,1fr) 0px"><div class="hdr-stub"></div><main class="body body-grid" style="grid-template-columns:repeat(${GRID_COLS},minmax(0,1fr));grid-template-rows:repeat(${GRID_ROWS},minmax(0,1fr))"><div class="cell cell-${escapeHtmlServer(item.widgetId)}" style="grid-column:1 / span ${GRID_COLS};grid-row:1 / span ${GRID_ROWS};${typo}">${inner}</div></main><div class="ftr-stub"></div></div>`;
+  }
+
+  // Normal dashboard mode.
+  const headerOn = ssr.isHeaderOn(data);
+  const footerOn = ssr.isFooterOn(data);
+  const headerRow = headerOn ? '60px' : '0px';
+  const footerRow = footerOn ? '28px' : '0px';
+  const headerHtml = headerOn
+    ? `<header class="hdr hdr-${ssr.headerVariant(data)}">${ssr.renderHeader(data)}</header>`
+    : `<div class="hdr-stub"></div>`;
+  const footerHtml = footerOn
+    ? `<footer class="ftr ftr-${ssr.footerVariant(data)}">${ssr.renderFooter(data)}</footer>`
+    : `<div class="ftr-stub"></div>`;
+
+  const nowM = localMinutesNow((cfg && cfg.timezone) || 'UTC');
+  const cells = [];
+  for (const item of layout) {
+    if (!withinVisibility(item.visibility, nowM)) continue;
+    const itemCtx = {
+      ...ctxBase,
+      ...(perItem && perItem[item.id] || {}),
+      cellW: item.w, cellH: item.h, density: item.density, settings: item.settings
+    };
+    const inner = ssr.renderWidget(item.widgetId, itemCtx);
+    if (!inner) continue;
+    const classes = ['cell', `cell-${item.widgetId}`];
+    if (item.x + item.w >= GRID_COLS) classes.push('cell-edge-right');
+    if (item.y + item.h >= GRID_ROWS) classes.push('cell-edge-bottom');
+    if (item.flush) classes.push('cell-flush');
+    const styleParts = [
+      `grid-column:${item.x + 1} / span ${item.w}`,
+      `grid-row:${item.y + 1} / span ${item.h}`
+    ];
+    const typo = ssr.typographyCss(item.settings);
+    if (typo) styleParts.push(typo);
+    cells.push(`<div class="${classes.join(' ')}" style="${styleParts.join(';')}">${inner}</div>`);
+  }
+  const bodyInner = cells.length
+    ? cells.join('')
+    : `<div class="empty terminal-empty" style="grid-column:1 / span ${GRID_COLS};grid-row:1 / span ${GRID_ROWS}">&gt; NO_WIDGETS_ENABLED</div>`;
+
+  return `<div class="page" id="page" style="grid-template-rows:${headerRow} minmax(0, 1fr) ${footerRow}">${headerHtml}<main class="body body-grid" style="grid-template-columns:repeat(${GRID_COLS}, minmax(0, 1fr));grid-template-rows:repeat(${GRID_ROWS}, minmax(0, 1fr))">${bodyInner}</main>${footerHtml}</div>`;
+}
+
+function escapeHtmlServer(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+function renderPage({ payload, shell, ssr, mode }) {
+  const body = buildPageBodyHtml({ payload, ssr, mode });
+  const screen = payload && payload.screen != null ? String(payload.screen) : '';
+  const units = (payload && payload.units) || 'F';
+  const accent = payload && payload.cfg && payload.cfg.accent;
+  const accentTag = accent
+    ? `<style>:root{--accent:${htmlAttr(accent)}}</style>`
+    : '';
+  return shell
+    .replace('<!--__BODY__-->', body)
+    .replace('<!--__ACCENT__-->', accentTag)
+    .replace('data-screen=""', `data-screen="${htmlAttr(screen)}"`)
+    .replace('data-units=""',  `data-units="${htmlAttr(units)}"`);
+}
+
+// Dashboard HTML — built from the active screen's layout + live data.
+// All widget rendering happens server-side now (see buildPageBodyHtml);
+// the dashboard.html shell only carries CSS + an autofit pass.
 app.get('/dashboard', checkDeviceAuth, async (req, res) => {
   try {
     const cfg = await loadConfig();
@@ -875,7 +1055,7 @@ app.get('/dashboard', checkDeviceAuth, async (req, res) => {
     const layout = resolveScreenLayout(activeScreen);
     const data = await buildWidgetData(cfg, units, layout);
 
-    const html = await loadDashboardHtml();
+    const [shell, ssr] = await Promise.all([loadDashboardHtml(), loadSsr()]);
     const chrome = (activeScreen && activeScreen.chrome) || DEFAULT_CHROME;
     const battery = await loadBatteryState();
     const payload = {
@@ -883,12 +1063,9 @@ app.get('/dashboard', checkDeviceAuth, async (req, res) => {
       ...data,
       generatedAt: new Date().toISOString()
     };
-    const injected = html.replace(
-      '/*__DATA__*/',
-      `window.__DASHBOARD__ = ${jsonForScript(payload)};`
-    );
+    const html = renderPage({ payload, shell, ssr });
     res.set('Content-Type', 'text/html; charset=utf-8');
-    res.send(injected);
+    res.send(html);
   } catch (err) {
     console.error('Dashboard render error:', err);
     res.status(500).send(safeError(err).error);
@@ -971,25 +1148,21 @@ app.get('/dev/widget/:id', checkDeviceAuth, async (req, res) => {
     // Single-widget layout. dashboard.html's expandLayout resolves
     // the size preset to w/h via widgetById. Without a size, fill the
     // whole 24x12 grid.
-    const item = { widgetId: id, x: 0, y: 0, enabled: true };
+    const item = { id: `dev-${id}`, widgetId: id, x: 0, y: 0, enabled: true };
     if (sizeKey) item.size = sizeKey;
     else { item.w = 24; item.h = 12; }
     const layout = [item];
 
     const data = await buildWidgetData(cfg, units, layout);
-    const html = await loadDashboardHtml();
+    const [shell, ssr] = await Promise.all([loadDashboardHtml(), loadSsr()]);
     const payload = {
       cfg, units, screen: 0, layout,
       chrome: { header: { enabled: false }, footer: { enabled: false } },
       ...data,
-      mode: 'dev',
       devWidgetId: id,
       generatedAt: new Date().toISOString()
     };
-    let injected = html.replace(
-      '/*__DATA__*/',
-      `window.__DASHBOARD__ = ${jsonForScript(payload)};`
-    );
+    let html = renderPage({ payload, shell, ssr, mode: 'dev' });
     // EventSource auto-reload on any source file change.
     const reloadScript = `<script>
       try {
@@ -997,9 +1170,9 @@ app.get('/dev/widget/:id', checkDeviceAuth, async (req, res) => {
         es.addEventListener('reload', () => location.reload());
       } catch(e) {}
     </script>`;
-    injected = injected.replace('</body>', reloadScript + '</body>');
+    html = html.replace('</body>', reloadScript + '</body>');
     res.set('Content-Type', 'text/html; charset=utf-8');
-    res.send(injected);
+    res.send(html);
   } catch (err) {
     console.error('Dev widget render error:', err);
     res.status(500).send(safeError(err).error);
@@ -1019,20 +1192,16 @@ app.get('/widgets-matrix', checkDeviceAuth, async (req, res) => {
       { widgetId: 'stocks' }
     ];
     const data = await buildWidgetData(cfg, units, fakeLayout);
-    const html = await loadDashboardHtml();
+    const [shell, ssr] = await Promise.all([loadDashboardHtml(), loadSsr()]);
     const payload = {
       cfg, units, screen: 1, layout: [],
       chrome: { header: { enabled: false }, footer: { enabled: false } },
       ...data,
-      mode: 'matrix',
       generatedAt: new Date().toISOString()
     };
-    const injected = html.replace(
-      '/*__DATA__*/',
-      `window.__DASHBOARD__ = ${jsonForScript(payload)};`
-    );
+    const html = renderPage({ payload, shell, ssr, mode: 'matrix' });
     res.set('Content-Type', 'text/html; charset=utf-8');
-    res.send(injected);
+    res.send(html);
   } catch (err) {
     console.error('Matrix render error:', err);
     res.status(500).send(safeError(err).error);
@@ -1342,6 +1511,53 @@ app.post('/api/battery', checkDeviceAuth, async (req, res) => {
 app.get('/api/battery', checkDeviceAuth, async (req, res) => {
   const b = await loadBatteryState();
   res.json(b || { v: null, pct: null, at: null });
+});
+
+// ---------- Mac state (pushed from the Mac-side agent) ----------
+//
+// `mac-agent.js` running on the user's Mac periodically POSTs the
+// latest nowplaying + battery snapshot here. Cloud renderers read it
+// via the shared widgets/_mac_state cache. Payload shape:
+//   {
+//     nowplaying: { title, artist, album, isPlaying, durationSec,
+//                   elapsedSec, sourceLabel, artworkBase64 } | null,
+//     battery:    { percent, state } | null,
+//     trackKey:   <optional hash>
+//   }
+//
+// The agent dedupes artwork by track key — when the trackKey matches
+// what the server already has it can omit `artworkBase64` and we keep
+// the previous frame's image. Keeps bandwidth bounded (~50MB/mo).
+const macStateMod = require('./widgets/_mac_state');
+let _lastTrackKey = null;
+app.post('/api/mac-state', checkDeviceAuth, async (req, res) => {
+  try {
+    const body = req.body || {};
+    const np = body.nowplaying || null;
+    const bt = body.battery || null;
+    const trackKey = typeof body.trackKey === 'string' ? body.trackKey : null;
+
+    let mergedNp = np;
+    if (np && !('artworkBase64' in np) && trackKey && trackKey === _lastTrackKey) {
+      // Same track as the last push: keep whatever art we already have.
+      const prev = await macStateMod.read();
+      const prevArt = prev && prev.nowplaying && prev.nowplaying.artworkBase64;
+      mergedNp = { ...np, artworkBase64: prevArt || null };
+    }
+    if (trackKey) _lastTrackKey = trackKey;
+
+    await macStateMod.write({ nowplaying: mergedNp, battery: bt });
+    invalidateImage();
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('mac-state error:', err);
+    res.status(500).json(safeError(err));
+  }
+});
+
+app.get('/api/mac-state', checkDeviceAuth, async (req, res) => {
+  const s = await macStateMod.read();
+  res.json(s || { nowplaying: null, battery: null, at: null });
 });
 
 // ---------- Alarms ----------

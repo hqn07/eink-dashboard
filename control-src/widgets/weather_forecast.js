@@ -1,7 +1,7 @@
 // Weather · Forecast — N-day high/low strip. Day count auto-scales
 // with tile height; explicit setting wins.
 
-import React from 'react';
+import { placeholder } from './_shared.js';
 import { icon } from './_weather_shared.js';
 
 export const def = {
@@ -26,13 +26,14 @@ export const def = {
   })
 };
 
-export function render({ weather, cfg, cellW, cellH }) {
+export function render({ weather, cfg, settings, cellW, cellH }) {
   const w = weather;
   if (!w || !w.forecast || !w.forecast.length) {
-    return `<div class="col-title">FORECAST</div><div class="empty" style="border:0;padding:14px 0">NO DATA</div>`;
+    const hasLoc =
+      (settings && Number.isFinite(settings.lat) && Number.isFinite(settings.lon)) ||
+      (cfg && Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon));
+    return placeholder('FORECAST', hasLoc ? 'Data unavailable' : 'Set your location in settings', 'weather');
   }
-  // Day count is per-tile (slot.weather.forecastDays); fall back to
-  // legacy cfg.weather.forecastDays for tiles not yet re-saved.
   const ch = cellH || 0, cw = cellW || 0;
   const userDays = parseInt(
     Number.isFinite(w.forecastDays)
@@ -51,8 +52,7 @@ export function render({ weather, cfg, cellW, cellH }) {
     : autoDays;
   const iconPx = ch < 4 ? 26 : ch < 6 ? 28 : ch < 8 ? 32 : ch < 12 ? 34 : 38;
   const showPrecip = cw >= 8;
-  const max = days;
-  const list = w.forecast.slice(0, max);
+  const list = w.forecast.slice(0, days);
   return `
     <div class="col-title">${list.length}-DAY OUTLOOK</div>
     ${list.map(f => `
@@ -68,27 +68,4 @@ export function render({ weather, cfg, cellW, cellH }) {
       </div>
     `).join('')}
   `;
-}
-
-export function Form({ values, patch, onChange, fields }) {
-  const v = values || {};
-  const { LocationFields, TextField, TypographyFields } = fields;
-  return (
-    <>
-      <LocationFields
-        values={v}
-        onChange={(loc) => onChange({ ...v, ...loc })}
-      />
-      <TextField
-        label="Days to show (1–7 · blank = auto by tile height)"
-        type="number"
-        value={v.forecastDays ?? ''}
-        onChange={(x) => patch({
-          forecastDays: Number.isFinite(x) ? Math.max(1, Math.min(7, x)) : null
-        })}
-        help="Open-Meteo returns up to 7 days; larger tiles fit more."
-      />
-      <TypographyFields values={v} onChange={onChange} />
-    </>
-  );
 }

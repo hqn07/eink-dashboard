@@ -1,9 +1,8 @@
-// Weather · Current — hero tile with big temperature + icon + sunbar
-// + hourly strip on larger tiers.
+// Weather · Current — hero tile with big temperature + icon. Larger
+// tiers add stats, alert banner, sun-bar, and hourly strip.
 
-import React from 'react';
-import { pickTier } from './_shared.js';
-import { icon, fakeWeather, sunBar, hourlyStrip } from './_weather_shared.js';
+import { pickTier, placeholder } from './_shared.js';
+import { icon, alertBanner, sunBar, hourlyStrip } from './_weather_shared.js';
 
 export const def = {
   id: 'weather_hero',
@@ -18,8 +17,6 @@ export const def = {
     XL: { w: 24, h: 12 }
   },
   defaultSize: 'M',
-  // ctx is the one-time seed (from setup wizard's saved location) so
-  // a freshly-dropped tile starts with the user's home location.
   defaults: (ctx) => ({
     city: (ctx && ctx.city) || '',
     lat:  (ctx && Number.isFinite(ctx.lat)) ? ctx.lat : null,
@@ -29,8 +26,14 @@ export const def = {
   })
 };
 
-export function render({ weather, units, cellW, cellH, density }) {
-  const w = weather || fakeWeather(units);
+export function render({ weather, units, cfg, settings, cellW, cellH, density }) {
+  if (!weather) {
+    const hasLoc =
+      (settings && Number.isFinite(settings.lat) && Number.isFinite(settings.lon)) ||
+      (cfg && Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon));
+    return placeholder('WEATHER', hasLoc ? 'Data unavailable' : 'Set your location in settings', 'weather');
+  }
+  const w = weather;
   const tier = pickTier(cellW, cellH, density);
   const staleClass = w.stale ? ' weather-stale' : '';
   const staleBadge = w.stale ? '<div class="stale-pill">CACHED</div>' : '';
@@ -64,25 +67,11 @@ export function render({ weather, units, cellW, cellH, density }) {
     case 'extended':
       return `<div class="weather-hero hero-tier-extended${staleClass}">
         ${staleBadge}${heroIcon(110)}${tempBlock(96)}${descLine()}${hiloLine()}
-      </div>${statsBlock()}`;
+      </div>${alertBanner(w)}${statsBlock()}`;
     case 'full':
     default:
       return `<div class="weather-hero hero-tier-full${staleClass}">
         ${staleBadge}${heroIcon(130)}${tempBlock(96)}${descLine()}${hiloLine()}
-      </div>${statsBlock()}${sunBar(w)}${hourlyStrip(w)}`;
+      </div>${alertBanner(w)}${statsBlock()}${sunBar(w)}${hourlyStrip(w)}`;
   }
-}
-
-export function Form({ values, onChange, fields }) {
-  const v = values || {};
-  const { LocationFields, TypographyFields } = fields;
-  return (
-    <>
-      <LocationFields
-        values={v}
-        onChange={(loc) => onChange({ ...v, ...loc })}
-      />
-      <TypographyFields values={v} onChange={onChange} />
-    </>
-  );
 }

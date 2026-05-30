@@ -1,11 +1,8 @@
-// Shared helpers for per-widget modules under control-src/widgets/.
-//
-// Phase A of the widget refactor: each widget should own its `def`,
-// `render`, and `Form` in a sibling file under this dir and import
-// any cross-widget primitives from here. The legacy
-// control-src/widget-render.js + control-src/widgets.js still hold
-// the unmigrated widgets — they import the same primitives from
-// here so nothing has to change as widgets move over.
+// Shared primitives for per-widget modules under control-src/widgets/.
+// Each widget lives in a `<id>.js` (def + render) + `<id>.form.jsx`
+// (React form) pair and imports any cross-widget helpers from here.
+// Kept React-free so server.js can pull this in via the Node ESM import
+// path without dragging JSX into the import graph.
 
 export function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({
@@ -34,7 +31,8 @@ export const FONT_STACKS = {
 export const PLACEHOLDER_ICONS = {
   weather:  '<img src="/static/icons/sevesalm/cloudy.svg" width="64" height="64" alt="" />',
   calendar: '<svg viewBox="0 0 64 64"><rect x="8" y="14" width="48" height="42" fill="none" stroke="#000" stroke-width="4"/><line x1="8" y1="24" x2="56" y2="24" stroke="#000" stroke-width="4"/><line x1="20" y1="8" x2="20" y2="20" stroke="#000" stroke-width="4" stroke-linecap="round"/><line x1="44" y1="8" x2="44" y2="20" stroke="#000" stroke-width="4" stroke-linecap="round"/></svg>',
-  stocks:   '<svg viewBox="0 0 64 64"><polyline points="6,46 20,32 30,38 44,18 58,24" fill="none" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><line x1="6" y1="56" x2="58" y2="56" stroke="#000" stroke-width="4"/></svg>'
+  stocks:   '<svg viewBox="0 0 64 64"><polyline points="6,46 20,32 30,38 44,18 58,24" fill="none" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><line x1="6" y1="56" x2="58" y2="56" stroke="#000" stroke-width="4"/></svg>',
+  msg:      '<svg viewBox="0 0 64 64"><rect x="8" y="14" width="48" height="36" fill="none" stroke="#000" stroke-width="4"/><line x1="16" y1="26" x2="48" y2="26" stroke="#000" stroke-width="4"/><line x1="16" y1="34" x2="48" y2="34" stroke="#000" stroke-width="4"/><line x1="16" y1="42" x2="36" y2="42" stroke="#000" stroke-width="4"/></svg>'
 };
 
 // "Setup needed" placeholder shared by every widget that can render

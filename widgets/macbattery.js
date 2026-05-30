@@ -4,12 +4,20 @@
 const { exec } = require('child_process');
 const { promisify } = require('util');
 const status = require('./_status');
+const macState = require('./_mac_state');
 const execP = promisify(exec);
 const CACHE_MS = 60 * 1000;
 let cached = null;
 
+const FROM_CACHE = process.env.MAC_FROM_CACHE === '1'
+  || process.platform !== 'darwin';
+
 async function fetchMacBattery() {
-  if (process.platform !== 'darwin') return null;
+  if (FROM_CACHE) {
+    const s = await macState.read();
+    if (!s || !macState.fresh(s.at)) return null;
+    return s.battery || null;
+  }
   if (cached && (Date.now() - cached.at) < CACHE_MS) {
     status.cacheHit('mac_battery');
     return cached.data;

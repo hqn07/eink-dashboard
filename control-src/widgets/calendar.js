@@ -1,8 +1,4 @@
-// Calendar widget — fans out to all configured iCal feeds and merges
-// upcoming events. Sized via the standard tier matrix.
-
-import React from 'react';
-import { escapeHtml, pickTier } from './_shared.js';
+import { escapeHtml, pickTier, placeholder } from './_shared.js';
 
 export const def = {
   id: 'calendar',
@@ -19,11 +15,11 @@ export const def = {
   defaults: () => ({ icalUrls: [], fontScale: 1, padding: 14 })
 };
 
-export function render({ events, cellW, cellH, density }) {
-  const all = (events || []);
-  if (!all.length) {
-    return `<div class="widget widget-cal"><div class="widget-title">UPCOMING</div><div class="cal-row"><div class="cal-info"><div class="cal-title">No events</div></div></div></div>`;
-  }
+export function render({ events, cfg, settings, cellW, cellH, density }) {
+  const urls = collectUrls(settings, cfg);
+  if (!urls.length) return placeholder('UPCOMING', 'Paste an iCal URL in settings', 'calendar');
+  const all = events || [];
+  if (!all.length) return placeholder('UPCOMING', 'No events in the next 14 days', 'calendar');
   const tier = pickTier(cellW, cellH, density);
   const matrix = {
     tiny:     { events: 1, sections: false },
@@ -68,37 +64,14 @@ export function render({ events, cellW, cellH, density }) {
   `;
 }
 
-export function Form({ values, patch, onChange, fields }) {
-  const v = values || {};
-  const { ListEditor, TypographyFields } = fields;
-  return (
-    <>
-      <TypographyFields values={v} onChange={onChange} />
-      <ListEditor
-        label="iCal feed URLs"
-        items={v.icalUrls}
-        onChange={(items) => patch({ icalUrls: items })}
-        blank=""
-        replaceRow
-        addLabel="Add feed"
-        help={
-          <>
-            Events merge + dedupe.{' '}
-            <a href="https://support.google.com/calendar/answer/37648?hl=en#zippy=%2Cget-your-calendar-view-only"
-              target="_blank" rel="noopener noreferrer"
-              style={{ color: 'var(--mute)', textDecoration: 'underline' }}>
-              Where do I get this? →
-            </a>
-          </>
-        }
-        renderRow={(it, set) => (
-          <input type="url"
-            value={typeof it === 'string' ? it : ''}
-            placeholder="https://calendar.google.com/calendar/ical/..."
-            onChange={e => set(e.target.value)}
-            style={{ flex: 1 }} />
-        )}
-      />
-    </>
-  );
+function collectUrls(settings, cfg) {
+  const fromSettings = settings && Array.isArray(settings.icalUrls)
+    ? settings.icalUrls.filter(Boolean) : [];
+  if (fromSettings.length) return fromSettings;
+  const c = (cfg && cfg.calendar) || {};
+  if (Array.isArray(c.icalUrls) && c.icalUrls.filter(Boolean).length) {
+    return c.icalUrls.filter(Boolean);
+  }
+  if (c.icalUrl) return [c.icalUrl];
+  return [];
 }
