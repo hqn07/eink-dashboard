@@ -43,7 +43,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.11.1"
+#define FW_VERSION "1.11.2"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -631,11 +631,43 @@ float readBatteryVoltage() {
   return v_gpio * DIVIDER_RATIO;
 }
 
+// Lookup table mapping LiPo terminal voltage to remaining charge
+// percent. The top entry is below the textbook 4.20V because the
+// 1MΩ+1MΩ divider's 5% resistor tolerance plus the ESP32 ADC's
+// near-rail nonlinearity means a fully-charged 4.20V battery reads
+// around 4.10–4.17V on GPIO34. Calling 4.10V "100%" matches what the
+// device can actually measure when the cell is topped off.
+//
+// Below that, the curve follows a typical LiPo discharge profile at
+// low load — the cell sits near 3.7V for most of the runtime and
+// only sags below 3.5V near empty, so a linear formula would
+// underreport health for most of the battery's life.
+struct BattCalPoint { float v; int pct; };
+static const BattCalPoint BATT_CURVE[] = {
+  { 4.10f, 100 },
+  { 4.00f,  90 },
+  { 3.90f,  75 },
+  { 3.80f,  60 },
+  { 3.70f,  45 },
+  { 3.60f,  30 },
+  { 3.50f,  15 },
+  { 3.40f,   5 },
+  { 3.30f,   0 }
+};
+
 int batteryPctFromVoltage(float v) {
-  int pct = (int)((v - BATT_EMPTY_V) / (BATT_FULL_V - BATT_EMPTY_V) * 100.0f);
-  if (pct > 100) pct = 100;
-  if (pct < 0)   pct = 0;
-  return pct;
+  const int N = sizeof(BATT_CURVE) / sizeof(BATT_CURVE[0]);
+  if (v >= BATT_CURVE[0].v)     return 100;
+  if (v <= BATT_CURVE[N-1].v)   return 0;
+  for (int i = 0; i < N - 1; i++) {
+    const BattCalPoint& a = BATT_CURVE[i];
+    const BattCalPoint& b = BATT_CURVE[i + 1];
+    if (v <= a.v && v >= b.v) {
+      float t = (a.v - v) / (a.v - b.v);
+      return a.pct + (int)((b.pct - a.pct) * t + 0.5f);
+    }
+  }
+  return 0;
 }
 
 // Fire-and-forget POST. Battery telemetry is non-critical — short timeout,
