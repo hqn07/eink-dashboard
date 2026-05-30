@@ -43,7 +43,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.10.5"
+#define FW_VERSION "1.11.0"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -217,19 +217,18 @@ bool probeBase(const char* base) {
   return code == 200;
 }
 
+// Cloud-only: LAN base retired now that the Mac pushes its widget
+// state through the cloud agent. probeBase() is kept around for the
+// download retry chain (re-validates the cloud base after two failed
+// /display.bin calls).
 void selectServerBase() {
-  if (probeBase(serverBaseLan)) {
-    activeServerBase = serverBaseLan;
-    Serial.printf("Server: LAN (%s)\n", activeServerBase);
-    return;
-  }
   if (serverBaseCloud && *serverBaseCloud) {
     activeServerBase = serverBaseCloud;
-    Serial.printf("Server: CLOUD fallback (%s)\n", activeServerBase);
+    Serial.printf("Server: CLOUD (%s)\n", activeServerBase);
     return;
   }
-  activeServerBase = serverBaseLan;
-  Serial.printf("Server: no cloud configured, sticking with LAN (%s)\n", activeServerBase);
+  activeServerBase = "";
+  Serial.println("Server: no cloud base configured in secrets.h");
 }
 
 // =================== WIFI ===================
