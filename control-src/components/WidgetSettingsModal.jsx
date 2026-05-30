@@ -133,6 +133,24 @@ export default function WidgetSettingsModal({
     return () => document.removeEventListener('keydown', onKey);
   }, [open, dirty]);
 
+  // Lock the page scroll while the modal is open so wheel / touch
+  // gestures don't drift the editor underneath. Restore the prior
+  // overflow value on unmount so we don't stomp on whatever the host
+  // page had set.
+  useEffect(() => {
+    if (!open) return;
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+    };
+  }, [open]);
+
   // Dynamic preview sizing — measure the preview column with a
   // ResizeObserver and re-fit on every resize. Must be declared
   // BEFORE the open/draft early return so React sees the same hook
