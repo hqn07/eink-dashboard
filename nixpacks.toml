@@ -2,7 +2,9 @@
 nixPkgs = ['nodejs_20', 'chromium']
 
 [phases.install]
-cmds = ['npm install']
+# `--include=dev` overrides Railway's default NPM_CONFIG_PRODUCTION=true
+# (which would skip vite + @vitejs/plugin-react and break the build step).
+cmds = ['npm install --include=dev']
 
 [phases.build]
 cmds = ['npm run build']
@@ -13,3 +15,7 @@ cmd = 'node server.js'
 [variables]
 PUPPETEER_SKIP_DOWNLOAD = '1'
 PUPPETEER_EXECUTABLE_PATH = '/nix/var/nix/profiles/default/bin/chromium'
+# Silences npm's deprecation warning about the legacy `production`
+# config that Railway still sets. The `--include=dev` flag above is
+# what actually controls install behaviour.
+NPM_CONFIG_PRODUCTION = 'false'
