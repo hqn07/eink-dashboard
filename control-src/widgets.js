@@ -26,142 +26,15 @@ export const SCREENS = [1, 2];
 // Sizes are in 24x12 grid units. With body ≈ 800px × 392-452px, cells
 // are ~33px square. h heights match the 12x12 era; only w doubled.
 export const WIDGET_REGISTRY = [
-  {
-    id: 'weather_hero',
-    label: 'Weather · Current',
-    requires: 'weather',
-    minSize: { w: 6, h: 4 },
-    sizes: {
-      XS: { w: 8, h: 4 },
-      S:  { w: 8, h: 6 },
-      M:  { w: 8, h: 12 },
-      L:  { w: 12, h: 12 },
-      XL: { w: 24, h: 12 }
-    },
-    defaultSize: 'M',
-    // Every widget is on the self-contained-settings contract: tiles
-    // always carry their own `settings` object. The factory receives a
-    // one-time seed context (from the setup wizard's saved location) so
-    // a freshly-dropped weather tile renders the user's home location
-    // by default — the tile still owns its settings afterwards.
-    defaults: (ctx) => ({
-      city: (ctx && ctx.city) || '',
-      lat:  (ctx && Number.isFinite(ctx.lat)) ? ctx.lat : null,
-      lon:  (ctx && Number.isFinite(ctx.lon)) ? ctx.lon : null,
-      fontScale: 1,
-      padding: 14
-    })
-  },
-  {
-    id: 'weather_forecast',
-    label: 'Weather · Forecast',
-    requires: 'weather',
-    minSize: { w: 6, h: 6 },
-    sizes: {
-      S:  { w: 6, h: 8 },
-      M:  { w: 6, h: 12 },
-      L:  { w: 12, h: 12 },
-      XL: { w: 24, h: 6 }
-    },
-    defaultSize: 'M',
-    defaults: (ctx) => ({
-      city: (ctx && ctx.city) || '',
-      lat:  (ctx && Number.isFinite(ctx.lat)) ? ctx.lat : null,
-      lon:  (ctx && Number.isFinite(ctx.lon)) ? ctx.lon : null,
-      forecastDays: null,
-      fontScale: 1,
-      padding: 14
-    })
-  },
-  {
-    id: 'message',
-    label: 'Custom Message',
-    requires: 'message',
-    minSize: { w: 6, h: 2 },
-    sizes: {
-      XS: { w: 8, h: 3 },
-      S:  { w: 8, h: 4 },
-      M:  { w: 10, h: 4 },
-      L:  { w: 24, h: 4 },
-      XL: { w: 24, h: 6 }
-    },
-    defaultSize: 'M',
-    defaults: () => ({
-      text: '', subtitle: '', schedule: [],
-      // Typography seeds — fontFamily intentionally left unset so the
-      // widget's mixed default look survives until the user picks.
-      fontScale: 1,
-      padding: 14
-    })
-  },
-  {
-    id: 'calendar',
-    label: 'Calendar',
-    requires: 'calendar',
-    minSize: { w: 6, h: 3 },
-    sizes: {
-      S: { w: 8, h: 4 },
-      M: { w: 10, h: 4 },
-      L: { w: 24, h: 4 },
-      XL: { w: 24, h: 8 }
-    },
-    defaultSize: 'M',
-    defaults: () => ({ icalUrls: [], fontScale: 1, padding: 14 })
-  },
-  {
-    id: 'stocks',
-    label: 'Stocks / Crypto',
-    requires: 'stocks',
-    minSize: { w: 6, h: 3 },
-    sizes: {
-      S: { w: 8, h: 4 },
-      M: { w: 12, h: 6 },
-      L: { w: 24, h: 6 },
-      XL: { w: 24, h: 12 }
-    },
-    defaultSize: 'M',
-    defaults: () => ({ symbols: [], fontScale: 1, padding: 14 })
-  },
+  { ...migratedDef('weather_hero') },
+  { ...migratedDef('weather_forecast') },
+  { ...migratedDef('message') },
+  { ...migratedDef('calendar') },
+  { ...migratedDef('stocks') },
   // Mac-only widgets — only render data when the server is running on
   // the user's Mac (LAN path). On Railway/Linux they show MAC OFFLINE.
-  {
-    id: 'mac_nowplaying',
-    label: 'Mac · Now Playing',
-    requires: 'mac_nowplaying',
-    minSize: { w: 8, h: 4 },
-    sizes: {
-      S:   { w: 8,  h: 4 },
-      M:   { w: 12, h: 5 },
-      L:   { w: 16, h: 8 },
-      XL:  { w: 24, h: 10 },
-      XXL: { w: 24, h: 12 }
-    },
-    defaultSize: 'M',
-    defaults: () => ({
-      // Side-space layout when the tile is large enough to stack art
-      // above the title. `time_bookends` keeps elapsed/remaining time
-      // flanking the cover; `centered` drops them so the art breathes.
-      variant: 'time_bookends',
-      // Typography seeds: fontScale + padding only. fontFamily stays
-      // unset so the widget keeps its mixed-internal default look
-      // until the user explicitly picks a family in the modal.
-      fontScale: 1,
-      padding: 14
-    })
-  },
-  {
-    id: 'mac_battery',
-    label: 'Mac · Battery',
-    requires: 'mac_battery',
-    minSize: { w: 3, h: 2 },
-    sizes: {
-      S:  { w: 4, h: 2 },
-      M:  { w: 6, h: 3 },
-      L:  { w: 8, h: 3 }
-    },
-    defaultSize: 'S',
-    defaults: () => ({})
-  },
+  { ...migratedDef('mac_nowplaying') },
+  { ...migratedDef('mac_battery') },
   {
     ...migratedDef('clock')
   }

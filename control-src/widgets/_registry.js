@@ -4,10 +4,24 @@
 // Anything not in MIGRATED_DEFS / MIGRATED_RENDERERS / MIGRATED_FORMS
 // falls through to the legacy code path.
 
+import * as calendar from './calendar.jsx';
 import * as clock from './clock.jsx';
+import * as mac_battery from './mac_battery.jsx';
+import * as mac_nowplaying from './mac_nowplaying.jsx';
+import * as message from './message.jsx';
+import * as stocks from './stocks.jsx';
+import * as weather_forecast from './weather_forecast.jsx';
+import * as weather_hero from './weather_hero.jsx';
 
 const MODULES = [
-  clock
+  calendar,
+  clock,
+  mac_battery,
+  mac_nowplaying,
+  message,
+  stocks,
+  weather_forecast,
+  weather_hero
 ];
 
 // Widget-id → def (registry entry shape used by widgets.js).

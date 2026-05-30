@@ -323,57 +323,16 @@ export default function WidgetForm({ widgetId, values, onChange }) {
   }
 
   switch (widgetId) {
-    case 'mac_nowplaying': {
-      const variant  = v.variant  || 'time_bookends';
-      return (
-        <>
-          <div className="wsm-field-help" style={{ marginBottom: 6 }}>
-            Variants apply on tiles big enough to stack the art above the
-            title (extended/full tiers). Smaller tiles fall back to the
-            standard inline layout.
-          </div>
-          <SelectField
-            label="Side-space variant"
-            value={variant}
-            options={[
-              { value: 'time_bookends', label: 'Time bookends (elapsed · remaining)' },
-              { value: 'centered',      label: 'Centered (no bookends)' }
-            ]}
-            onChange={(x) => patch({ variant: x })}
-          />
-          <TypographyFields values={v} onChange={onChange} />
-        </>
-      );
-    }
+    // mac_nowplaying — migrated to control-src/widgets/mac_nowplaying.jsx
 
-    case 'mac_battery':
-      return (
-        <div className="wsm-placeholder">
-          <p className="wsm-note">
-            Reads from the host Mac when the dashboard server is
-            running on macOS. On Railway / cloud it shows "MAC OFFLINE".
-            No per-tile settings.
-          </p>
-        </div>
-      );
+    // mac_battery — migrated to control-src/widgets/mac_battery.jsx
 
     // clock — migrated to control-src/widgets/clock.js
 
-    case 'stocks':
-      return (
-        <>
-          <CsvField
-            label="Symbols (comma separated)"
-            value={v.symbols}
-            onCommit={(arr) => patch({ symbols: arr })}
-            placeholder="AAPL, BTC-USD, ETH-USD"
-            help="Yahoo Finance tickers. Crypto: e.g. BTC-USD."
-          />
-          <TypographyFields values={v} onChange={onChange} />
-        </>
-      );
+    // stocks — migrated to control-src/widgets/stocks.jsx
 
-    case 'message':
+    // message — migrated to control-src/widgets/message.jsx
+    case '__message_legacy_removed':
       return (
         <>
           <TextField
@@ -416,68 +375,11 @@ export default function WidgetForm({ widgetId, values, onChange }) {
         </>
       );
 
-    case 'calendar':
-      return (
-        <>
-          <TypographyFields values={v} onChange={onChange} />
-          <ListEditor
-            label="iCal feed URLs"
-            items={v.icalUrls}
-            onChange={(items) => patch({ icalUrls: items })}
-            blank=""
-            replaceRow
-            addLabel="Add feed"
-            help={
-              <>
-                Events merge + dedupe.{' '}
-                <a href="https://support.google.com/calendar/answer/37648?hl=en#zippy=%2Cget-your-calendar-view-only"
-                  target="_blank" rel="noopener noreferrer"
-                  style={{ color: 'var(--mute)', textDecoration: 'underline' }}>
-                  Where do I get this? →
-                </a>
-              </>
-            }
-            renderRow={(it, set) => (
-              <input type="url"
-                value={typeof it === 'string' ? it : ''}
-                placeholder="https://calendar.google.com/calendar/ical/..."
-                onChange={e => set(e.target.value)}
-                style={{ flex: 1 }} />
-            )}
-          />
-        </>
-      );
+    // calendar — migrated to control-src/widgets/calendar.jsx
 
     // ----- Location-derived widgets -----
-    case 'weather_hero':
-      return (
-        <>
-          <LocationFields
-            values={v}
-            onChange={(loc) => onChange({ ...v, ...loc })}
-          />
-          <TypographyFields values={v} onChange={onChange} />
-        </>
-      );
-    case 'weather_forecast':
-      return (
-        <>
-          <LocationFields
-            values={v}
-            onChange={(loc) => onChange({ ...v, ...loc })}
-          />
-          <TextField
-            label="Days to show (1–7 · blank = auto by tile height)"
-            type="number"
-            value={v.forecastDays ?? ''}
-            onChange={(x) => patch({
-              forecastDays: Number.isFinite(x) ? Math.max(1, Math.min(7, x)) : null
-            })}
-            help="Open-Meteo returns up to 7 days; larger tiles fit more."
-          />
-          <TypographyFields values={v} onChange={onChange} />
-        </>
-      );
+    // weather_hero — migrated to control-src/widgets/weather_hero.jsx
+    // weather_forecast — migrated to control-src/widgets/weather_forecast.jsx
 
     default:
       return (
