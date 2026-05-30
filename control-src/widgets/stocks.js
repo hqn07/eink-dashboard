@@ -12,7 +12,12 @@ export const def = {
     XL: { w: 24, h: 12 }
   },
   defaultSize: 'M',
-  defaults: () => ({ symbols: [], fontScale: 1, padding: 14 })
+  defaults: () => ({
+    symbols: [],
+    layout: 'hero_watch',  // 'hero_watch' | 'list_only' | 'hero_only'
+    fontScale: 1,
+    padding: 14
+  })
 };
 
 function spark(points, opts) {
@@ -32,7 +37,42 @@ function spark(points, opts) {
   return `<svg class="${cls}" viewBox="0 0 ${vbW} ${vbH}" preserveAspectRatio="none" style="${styles}"><path d="${path}" fill="none" stroke="#000" stroke-width="${sw}" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
 }
 
-export function render({ stocks, cellW, cellH, density }) {
+const dirArrow = v => v >= 0 ? '▲' : '▼';
+const dirCls   = v => v >= 0 ? 'up' : 'down';
+
+function heroBlock(hero, t) {
+  const heroChg = t.heroChg && Number.isFinite(hero.change)
+    ? `<span class="hero-chg ${dirCls(hero.change)}">${dirArrow(hero.change)} ${Math.abs(hero.change).toFixed(2)} (${hero.change >= 0 ? '+' : '−'}${Math.abs(hero.changePct).toFixed(2)}%)</span>`
+    : '';
+  const heroMeta = t.heroMeta && (hero.dayHigh || hero.dayLow)
+    ? `<div class="hero-meta">${hero.dayHigh ? `H ${hero.dayHigh}` : ''}${hero.dayHigh && hero.dayLow ? ' · ' : ''}${hero.dayLow ? `L ${hero.dayLow}` : ''}</div>`
+    : '';
+  const heroSparkHtml = t.heroSpark
+    ? spark(hero.spark, { cls: 'hero-spark', stroke: 2.5, style: 'flex:1;min-height:0;width:100%' })
+    : '';
+  return `
+    <div class="stock-hero">
+      <div class="hero-top">
+        <span class="hero-sym">${escapeHtml(hero.symbol)}</span>
+        ${heroChg}
+      </div>
+      <div class="hero-price autofit" data-min-font="22">${hero.price}</div>
+      ${heroMeta}
+      ${heroSparkHtml}
+    </div>`;
+}
+
+function watchRow(s, t) {
+  return `
+    <div class="stock-watch-row">
+      <span class="watch-sym">${escapeHtml(s.symbol)}</span>
+      ${t.watchSpark ? spark(s.spark, { cls: 'watch-spark', stroke: 2, style: 'height:18px;width:100%' }) : '<span></span>'}
+      <span class="watch-price">${s.price}</span>
+      ${t.watchChg ? `<span class="watch-chg ${dirCls(s.change)}">${dirArrow(s.change)} ${Math.abs(s.changePct).toFixed(2)}%</span>` : ''}
+    </div>`;
+}
+
+export function render({ stocks, settings, cellW, cellH, density }) {
   const list = stocks || [];
   if (!list.length) return placeholder('MARKETS', 'Add symbols (AAPL, BTC-USD) in settings', 'stocks');
   const tier = pickTier(cellW, cellH, density);
@@ -44,40 +84,43 @@ export function render({ stocks, cellW, cellH, density }) {
     full:     { watch: 7, heroSpark: true,  heroMeta: true,  heroChg: true,  watchSpark: true,  watchChg: true  }
   };
   const t = matrix[tier];
+  const s = settings || {};
+  const layout = s.layout || 'hero_watch';
+
+  if (layout === 'list_only') {
+    // Treat every symbol equally; no hero. Renders as many rows as the
+    // tier matrix allows (hero + watch count, inclusive).
+    const rowCount = 1 + t.watch;
+    const rows = list.slice(0, rowCount);
+    return `
+      <div class="widget widget-stocks stocks-list-mode">
+        <div class="widget-title">MARKETS</div>
+        <div class="stock-watch-list stock-list-full">
+          ${rows.map(s => watchRow(s, t)).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  if (layout === 'hero_only') {
+    // Just the first symbol — bigger hero card, no watchlist clutter.
+    const hero = list[0];
+    return `
+      <div class="widget widget-stocks stocks-hero-mode stocks-hero-only">
+        <div class="widget-title">MARKETS</div>
+        ${heroBlock(hero, t)}
+      </div>
+    `;
+  }
+
+  // Default: hero + watchlist.
   const hero = list[0];
   const watch = list.slice(1, 1 + t.watch);
-  const dirArrow = v => v >= 0 ? '▲' : '▼';
-  const dirCls = v => v >= 0 ? 'up' : 'down';
-  const heroChg = t.heroChg && Number.isFinite(hero.change)
-    ? `<span class="hero-chg ${dirCls(hero.change)}">${dirArrow(hero.change)} ${Math.abs(hero.change).toFixed(2)} (${hero.change >= 0 ? '+' : '−'}${Math.abs(hero.changePct).toFixed(2)}%)</span>`
-    : '';
-  const heroMeta = t.heroMeta && (hero.dayHigh || hero.dayLow)
-    ? `<div class="hero-meta">${hero.dayHigh ? `H ${hero.dayHigh}` : ''}${hero.dayHigh && hero.dayLow ? ' · ' : ''}${hero.dayLow ? `L ${hero.dayLow}` : ''}</div>`
-    : '';
-  const heroSparkHtml = t.heroSpark
-    ? spark(hero.spark, { cls: 'hero-spark', stroke: 2.5, style: 'flex:1;min-height:0;width:100%' })
-    : '';
-  const watchRows = watch.map(s => `
-    <div class="stock-watch-row">
-      <span class="watch-sym">${escapeHtml(s.symbol)}</span>
-      ${t.watchSpark ? spark(s.spark, { cls: 'watch-spark', stroke: 2, style: 'height:18px;width:100%' }) : '<span></span>'}
-      <span class="watch-price">${s.price}</span>
-      ${t.watchChg ? `<span class="watch-chg ${dirCls(s.change)}">${dirArrow(s.change)} ${Math.abs(s.changePct).toFixed(2)}%</span>` : ''}
-    </div>
-  `).join('');
   return `
     <div class="widget widget-stocks stocks-hero-mode">
       <div class="widget-title">MARKETS</div>
-      <div class="stock-hero">
-        <div class="hero-top">
-          <span class="hero-sym">${escapeHtml(hero.symbol)}</span>
-          ${heroChg}
-        </div>
-        <div class="hero-price autofit" data-min-font="22">${hero.price}</div>
-        ${heroMeta}
-        ${heroSparkHtml}
-      </div>
-      ${watch.length ? `<div class="stock-watch-list">${watchRows}</div>` : ''}
+      ${heroBlock(hero, t)}
+      ${watch.length ? `<div class="stock-watch-list">${watch.map(s => watchRow(s, t)).join('')}</div>` : ''}
     </div>
   `;
 }

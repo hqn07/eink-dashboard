@@ -23,6 +23,7 @@ import ScreenTabs from './components/ScreenTabs.jsx';
 import ScreenPresetPicker from './components/ScreenPresetPicker.jsx';
 import ScreenPanel from './components/ScreenPanel.jsx';
 import ChromePanel from './components/ChromePanel.jsx';
+import MacAgentBadge from './components/MacAgentBadge.jsx';
 import ScheduleTimeline from './components/ScheduleTimeline.jsx';
 import SetupWizard from './components/SetupWizard.jsx';
 import ToolsButton from './components/ToolsButton.jsx';
@@ -386,6 +387,7 @@ export default function App() {
           <h1>Dashboard Control</h1>
         </div>
         <div className="actions">
+          <MacAgentBadge />
           {cfg && (
             <ToolsButton
               cfg={cfg}

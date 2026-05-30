@@ -120,6 +120,12 @@ export async function fetchPreviewData(screen) {
   return r.json();
 }
 
+export async function fetchMacState() {
+  const r = await authFetch('/api/mac-state');
+  if (!r.ok) throw new Error(`mac-state ${r.status}`);
+  return r.json();
+}
+
 export async function geocode(query) {
   const q = (query || '').trim();
   if (q.length < 2) return [];

@@ -61,8 +61,27 @@ html, body {
 
 .app-header .actions {
   display: flex;
+  align-items: center;
   gap: 8px;
 }
+
+/* Mac-agent freshness pill — shows how recently launchd's
+ * mac-agent.js pushed state to the cloud. Inline in the header
+ * actions so dead pushes are obvious at a glance. */
+.mac-agent-badge {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  padding: 4px 8px;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+.mac-agent-badge--ok    { color: #1a7f37; }
+.mac-agent-badge--stale { color: #b35900; }
+.mac-agent-badge--off   { color: #555; }
+.mac-agent-badge--err   { color: #b00020; }
 
 main.layout {
   display: grid;

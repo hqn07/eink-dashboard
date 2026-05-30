@@ -1307,6 +1307,25 @@ img.icon { object-fit: contain; }
   padding-top: 4px;
   gap: 1px;
 }
+/* `list_only` layout: no hero card above, so kill the top border + let
+ * the rows expand vertically into the freed space. */
+.stocks-list-mode .stock-list-full {
+  border-top: 0;
+  padding-top: 0;
+  flex: 1;
+  min-height: 0;
+}
+.stocks-list-mode .stock-watch-row {
+  padding: 5px 0;
+}
+/* `hero_only` layout: lone hero block fills the tile; spark stretches
+ * to use the unused watchlist space. */
+.stocks-hero-only .stock-hero {
+  flex: 1;
+}
+.stocks-hero-only .hero-spark {
+  min-height: 80px;
+}
 .stock-watch-row {
   display: grid;
   grid-template-columns: 70px 1fr auto auto;
