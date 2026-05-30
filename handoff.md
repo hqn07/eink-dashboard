@@ -1,6 +1,80 @@
 # E-Ink Dashboard — Handoff
 
-State as of 2026-05-29. Read this + `CLAUDE.md` + memory pointers below before touching anything.
+State as of 2026-05-30. Read this + `CLAUDE.md` + memory pointers below before touching anything.
+
+## What shipped in the 2026-05-29 → 2026-05-30 session (commit `72b0b2e`)
+
+Two shipped items, both validated end-to-end against the live ESP32 + Railway:
+
+### Phase B / SSR — dashboard render consolidated server-side
+
+`public/dashboard.html` collapsed from ~1010 lines to ~47. The body
+grid is now built in `server.js` from the same per-widget render
+functions the React editor uses, so there's no longer a separate inline
+mirror to keep in sync.
+
+- Each widget moved to a `<id>.js` (def + render, no React) +
+  `<id>.form.jsx` (React Form) pair under `control-src/widgets/`.
+  Server dynamically imports the `.js` half via cached `await
+  import()` so JSX never enters Node's import graph.
+- New `control-src/widgets/_chrome.js` owns header/footer/typography
+  helpers — shared by server SSR + React editor.
+- New `control-src/widgets/_ssr.js` is the Node-side aggregator
+  (renderers + chrome re-exports).
+- `widget-render.js` is now a thin dispatcher + re-export of
+  `_chrome.js` so React editor import paths stay stable.
+- `server.js` gains `buildPageBodyHtml` + `renderPage` + cached
+  `loadSsr()`. `/dashboard`, `/widgets-matrix`, `/dev/widget/:id`
+  all share the same shell-injection path.
+- `_shared.js` picks up the `msg` placeholder glyph;
+  `_weather_shared.js` picks up `alertBanner`. Folding these in
+  restores alert banners in the editor preview too.
+
+Net: -1900 / +290 lines. Adding a new widget = one new file pair +
+one line in `_registry.js`/`_ssr.js`. Adding a variant knob = a
+single render-function edit. No more triple-sync.
+
+### Mac-on-cloud — push-based agent kills LAN-base dance
+
+ESP32 used to fall back between LAN (the Mac running `npm start`) and
+cloud (Railway), depending on which was reachable, so the Mac widgets
+only worked when the device picked LAN. Now ESP32 hits cloud-only and
+a Mac-side agent pushes state.
+
+- `widgets/_mac_state.js` — atomic-write on-disk cache at
+  `data/mac-state.json`. 5-minute staleness window.
+- `widgets/macnowplaying.js` + `widgets/macbattery.js` — read from
+  the cache whenever `MAC_FROM_CACHE=1` or the process isn't on
+  darwin. Stale = "MAC OFFLINE".
+- `server.js` — `POST /api/mac-state` (auth via `DEVICE_TOKEN`).
+  Server dedupes album art by `trackKey`; the agent can omit
+  `artworkBase64` when the song hasn't changed and the server
+  preserves the previously stored frame. Companion `GET` for
+  debugging.
+- `mac-agent.js` + `npm run mac-agent` — polls local Mac every 30 s
+  (configurable via `MAC_AGENT_INTERVAL_MS`), hashes
+  `title|artist|album`, POSTs to `CLOUD_URL`. ~50 MB/mo bandwidth
+  with realistic listening.
+- launchd plist at
+  `~/Library/LaunchAgents/com.huynguyen.eink-mac-agent.plist`
+  (RunAtLoad + KeepAlive). Survives reboot, auto-restarts on crash.
+  Logs to `/tmp/eink-mac-agent.log`.
+- `.env.example` documents `CLOUD_URL` + `MAC_AGENT_INTERVAL_MS` +
+  `MAC_FROM_CACHE`. `.gitignore` covers
+  `data/mac-state.json{,.tmp}` + `data/devices.json`.
+
+ESP32 deep-sleeps and hits only the Railway base — no more LAN
+re-probe failures killing the Mac widgets when DHCP shuffles or the
+Mac sleeps mid-day. Validated on hardware: agent push → cloud cache
+→ /display.bin render → physical e-ink screen showed Mac widgets the
+first refresh after deploy.
+
+### Bonus
+
+Dropped now-unused `jsonForScript` helper. Added `_shared.js` `msg`
+placeholder + `_weather_shared.js` `alertBanner`. `widgets/package.json`
+sets `{"type":"module"}` to silence Node's MODULE_TYPELESS warning when
+the SSR dynamic-import loads the ESM widget files.
 
 ## What shipped in the 2026-05-28 → 2026-05-29 session
 
