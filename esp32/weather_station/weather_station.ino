@@ -43,7 +43,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.11.0"
+#define FW_VERSION "1.11.1"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -148,6 +148,16 @@ int         g_battPct   = -1;
 // X-Refresh-Rate response header on /display.bin. -1 = none yet
 // (firmware falls back to /sleep until the server has answered once).
 int         g_serverRefreshMin = -1;
+// Populated by downloadImage on a failed fetch so drawFailScreen can
+// show the underlying HTTP code + a short tip per status. Resets to
+// 0 on every cycle entry so a fail screen always shows the *current*
+// cycle's failure, not a stale one from before.
+int         g_lastHttpCode = 0;
+// Survives deep sleep — `time_t` of the last successful download
+// (set immediately after pushImage). 0 = never. drawFailScreen shows
+// "Last good: Nm ago" so the user knows whether this is a fresh
+// outage or a long-running one.
+RTC_DATA_ATTR time_t g_lastGoodAt = 0;
 
 // Survives deep sleep. Set when drawFailScreen paints the connection
 // error (lots of solid black in the header banner), checked on the
@@ -544,6 +554,7 @@ uint8_t* downloadImage() {
   int code = http.GET();
   if (code != 200) {
     Serial.printf("HTTP %d\n", code);
+    g_lastHttpCode = code;
     http.end();
     return nullptr;
   }
@@ -869,6 +880,24 @@ void runAlarm(const char* label) {
 // =================== DISPLAY ===================
 
 // Draw a fallback "couldn't connect" screen so you know what's up
+// Map an HTTP/HTTPClient return code to a short troubleshooting tip
+// the user can act on without having to plug in a serial cable.
+// Negative codes are HTTPClient internals (see Arduino's HTTPClient.h).
+const char* httpHint(int code) {
+  if (code == 401) return "Tip: DEVICE_TOKEN mismatch (server vs firmware)";
+  if (code == 403) return "Tip: server rejected — check device enrollment";
+  if (code == 404) return "Tip: server URL wrong, /display.bin not found";
+  if (code == 408) return "Tip: server slow — cold start or overloaded";
+  if (code == 429) return "Tip: rate limited — too many requests";
+  if (code >= 500 && code < 600) return "Tip: server error — check Railway logs";
+  if (code ==  -1) return "Tip: TCP failed — DNS or firewall blocking";
+  if (code ==  -2) return "Tip: HTTPS lib failed to send the request";
+  if (code ==  -3) return "Tip: connection lost mid-request";
+  if (code == -11) return "Tip: read timed out — flaky WiFi";
+  if (code ==   0) return "Tip: no response yet — WiFi up but no route?";
+  return "";
+}
+
 void drawFailScreen(const char* reason) {
   g_lastRenderWasFail = true;
   display.setRotation(0);
@@ -885,17 +914,31 @@ void drawFailScreen(const char* reason) {
 
     display.setTextColor(GxEPD_BLACK);
     display.setTextSize(2);
-    int y = 100;
-    display.setCursor(20, y); y += 30;
-    display.print(reason);
+    int y = 80;
+    // Headline reason — same string the caller passed in. If we
+    // captured an HTTP code on this cycle, append it inline so the
+    // first eye-line carries the most useful info.
+    display.setCursor(20, y); y += 24;
+    if (g_lastHttpCode != 0) {
+      display.printf("%s (HTTP %d)", reason, g_lastHttpCode);
+    } else {
+      display.print(reason);
+    }
 
-    display.setCursor(20, y); y += 30;
-    display.print("SSID:    ");
-    // WiFi.SSID() only returns the SSID of the *current* association,
-    // so on the fail screen (= we're not connected) it's empty.
-    // esp_wifi_get_config reads the NVS-saved STA config that the
-    // last WiFi.begin / WiFiManager.autoConnect persisted, which is
-    // what the user actually wants to see when debugging.
+    // Hint line — small text, tailored to the HTTP code so the user
+    // doesn't have to memorise what 401 vs 404 means at a glance.
+    const char* hint = httpHint(g_lastHttpCode);
+    if (hint && *hint) {
+      display.setTextSize(1);
+      display.setCursor(20, y); y += 18;
+      display.print(hint);
+      display.setTextSize(2);
+    } else {
+      y += 6;
+    }
+
+    display.setCursor(20, y); y += 24;
+    display.print("SSID:     ");
     {
       String s = WiFi.SSID();
       if (!s.length()) {
@@ -905,35 +948,63 @@ void drawFailScreen(const char* reason) {
         }
       }
       display.print(s.length() ? s.c_str() : "(unset)");
+      // Append RSSI when we have a live association so weak signal
+      // can be ruled in or out at a glance.
+      if (WiFi.status() == WL_CONNECTED) {
+        display.printf("  %ddBm", WiFi.RSSI());
+      }
     }
 
-    display.setCursor(20, y); y += 30;
-    display.print("SERVER:  ");
+    display.setCursor(20, y); y += 24;
+    display.print("IP:       ");
+    if (WiFi.status() == WL_CONNECTED) {
+      display.print(WiFi.localIP().toString().c_str());
+    } else {
+      display.print("(no WiFi)");
+    }
+
+    display.setCursor(20, y); y += 24;
+    display.print("SERVER:   ");
     display.print((activeServerBase && *activeServerBase) ? activeServerBase : "(none yet)");
 
-    display.setCursor(20, y); y += 30;
+    display.setCursor(20, y); y += 24;
     display.print("FIRMWARE: ");
     display.print(FW_VERSION);
-    display.print(" (board=");
+    display.print(" (");
     display.print(FW_BOARD);
-    display.print(")");
+    display.print(")  ID: ");
+    display.print(g_friendlyId.length() ? g_friendlyId.c_str() : "(not enrolled)");
 
-    display.setCursor(20, y); y += 30;
-    display.print("WAKE:    ");
+    display.setCursor(20, y); y += 24;
+    display.print("WAKE:     ");
     display.print(g_wakeLabel);
 
-    display.setCursor(20, y); y += 30;
+    display.setCursor(20, y); y += 24;
     if (g_battPct >= 0 && !isnan(g_battV)) {
-      display.print("BATTERY: ");
+      display.print("BATTERY:  ");
       display.print(g_battV, 2);
       display.print("V (");
       display.print(g_battPct);
       display.print("%)");
     } else {
-      display.print("BATTERY: --");
+      display.print("BATTERY:  --");
     }
 
-    display.setCursor(20, y); y += 30;
+    display.setCursor(20, y); y += 24;
+    display.print("LAST OK:  ");
+    if (g_lastGoodAt > 0) {
+      time_t now = time(nullptr);
+      long ago = (long)(now - g_lastGoodAt);
+      if (ago < 0)         display.print("just now");
+      else if (ago < 60)   display.printf("%lds ago", ago);
+      else if (ago < 3600) display.printf("%ldm ago", ago / 60);
+      else if (ago < 86400)display.printf("%.1fh ago", ago / 3600.0);
+      else                 display.printf("%ldd ago", ago / 86400);
+    } else {
+      display.print("never (first boot?)");
+    }
+
+    display.setCursor(20, y); y += 24;
     display.print("Retrying in 5 min");
   } while (display.nextPage());
   display.hibernate();
@@ -988,6 +1059,9 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
                         : buttonWake ? "BTN_REFRESH"
                         : "timer";
   g_wakeLabel = wakeLabel;
+  // Wipe last cycle's HTTP code so a fail screen shows the current
+  // cycle's failure, not a stale one.
+  g_lastHttpCode = 0;
   Serial.printf("Wake cause: %d (%s)\n", wakeCause, wakeLabel);
 
   float battV   = readBatteryVoltage();
@@ -1065,6 +1139,7 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
     if (img) {
       pushImage(img);
       free(img);
+      g_lastGoodAt = time(nullptr);
       if (buttonWake) beepChime();
       sleepMin = fetchSleepMinutes();
       Serial.printf("Sleep %d min\n", sleepMin);
