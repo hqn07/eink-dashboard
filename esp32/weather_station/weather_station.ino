@@ -22,6 +22,7 @@
 #include <SPI.h>
 #include <driver/rtc_io.h>
 #include <esp_wifi.h>   // esp_wifi_get_config — saved SSID even while disconnected
+#include <esp_netif.h>  // esp_netif_set_dns_info — fallback DNS override
 #include <esp_task_wdt.h>
 #include <time.h>
 // Captive-portal WiFi provisioning. On cold boot with no saved creds,
@@ -43,7 +44,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.11.2"
+#define FW_VERSION "1.11.3"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -254,6 +255,25 @@ void selectServerBase() {
 //                                       (espressif/arduino-esp32#8877)
 //   setTxPower      before WiFi.mode  → silent no-op
 //                                       (espressif/arduino-esp32#9858)
+// Some captive / landlord-shared WiFi networks (SETUP-755E in this
+// case) hand out a DHCP DNS that drops requests for non-allowlisted
+// hosts. That looks like HTTP -1 ("TCP failed") on every cloud call
+// because gethostbyname blocks indefinitely. Force lwIP's resolver to
+// fall back to Cloudflare 1.1.1.1 and Google 8.8.8.8 once we have an
+// IP — both are typically reachable even when the AP's resolver is
+// hostile.
+void forceFallbackDns() {
+  esp_netif_t* sta = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+  if (!sta) return;
+  esp_netif_dns_info_t d{};
+  d.ip.u_addr.ip4.addr = 0x01010101; // 1.1.1.1
+  d.ip.type = ESP_IPADDR_TYPE_V4;
+  esp_netif_set_dns_info(sta, ESP_NETIF_DNS_MAIN,     &d);
+  d.ip.u_addr.ip4.addr = 0x08080808; // 8.8.8.8
+  esp_netif_set_dns_info(sta, ESP_NETIF_DNS_BACKUP,   &d);
+  Serial.println("DNS override: 1.1.1.1 / 8.8.8.8");
+}
+
 void applyWiFiTuning() {
   WiFi.setSleep(false);                       // no modem-sleep gaps
   WiFi.setTxPower(WIFI_POWER_19_5dBm);        // crank to chip max
@@ -386,6 +406,7 @@ bool provisionWiFi() {
     Serial.printf("WiFi up: %s RSSI=%d\n",
                   WiFi.SSID().c_str(), WiFi.RSSI());
     applyWiFiTuning();
+    forceFallbackDns();
     return true;
   }
   Serial.println("Saved creds failed to connect");
@@ -418,6 +439,7 @@ bool connectWiFiOnce(unsigned long timeoutMs = 15000) {
   if (WiFi.status() == WL_CONNECTED) {
     Serial.printf("Connected: %s  RSSI=%d\n",
                   WiFi.localIP().toString().c_str(), WiFi.RSSI());
+    forceFallbackDns();
     return true;
   }
   return false;
@@ -957,16 +979,15 @@ void drawFailScreen(const char* reason) {
       display.print(reason);
     }
 
-    // Hint line — small text, tailored to the HTTP code so the user
-    // doesn't have to memorise what 401 vs 404 means at a glance.
+    // Hint line — tailored to the HTTP code so the user doesn't have
+    // to memorise what 401 vs 404 means at a glance. Stays at size 2
+    // because size 1 text was getting chewed up by the 1-bit threshold
+    // on real hardware. If the hint won't fit on one line, the caller
+    // shortened it; we don't auto-wrap here.
     const char* hint = httpHint(g_lastHttpCode);
     if (hint && *hint) {
-      display.setTextSize(1);
-      display.setCursor(20, y); y += 18;
+      display.setCursor(20, y); y += 24;
       display.print(hint);
-      display.setTextSize(2);
-    } else {
-      y += 6;
     }
 
     display.setCursor(20, y); y += 24;
