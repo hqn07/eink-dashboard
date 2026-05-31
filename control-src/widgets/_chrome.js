@@ -127,6 +127,15 @@ export function renderFooter(data) {
   return `<span class="ftr-bullet">●</span> ${escapeHtml(tplString(f.text, tokens))}${battBadge}`;
 }
 
+// Extra class names the cell wrapper should carry based on the tile's
+// settings. Currently picks up `theme: 'inverted'` so the tile renders
+// as black-on-white instead of the default white-on-black.
+export function cellClasses(s) {
+  const out = [];
+  if (s && s.theme === 'inverted') out.push('cell-inverted');
+  return out;
+}
+
 // Per-tile typography → `style` attribute fragment for the .cell wrapper.
 // Empty string when the user hasn't picked anything so the per-widget
 // defaults still win.

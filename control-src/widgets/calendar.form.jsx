@@ -1,8 +1,17 @@
 import React from 'react';
 
+const PRESETS = [
+  { id: 'today',   label: 'Today — compact, today only',
+    values: { density: 'compact',  showDayLabel: false, showTime: true  } },
+  { id: 'week',    label: 'Week — rich list with sections',
+    values: { density: 'rich',     showDayLabel: true,  showTime: true  } },
+  { id: 'minimal', label: 'Minimal — titles only',
+    values: { density: 'standard', showDayLabel: false, showTime: false } }
+];
+
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { ListEditor, SelectField, TypographyFields, FormSection } = fields;
+  const { ListEditor, SelectField, ToggleField, TypographyFields, FormSection, PresetField } = fields;
   return (
     <>
       <FormSection title="Data">
@@ -33,6 +42,7 @@ export function Form({ values, patch, onChange, fields }) {
         />
       </FormSection>
       <FormSection title="Layout">
+        <PresetField presets={PRESETS} onApply={(vals) => onChange({ ...v, ...vals })} />
         <SelectField
           label="Density"
           value={v.density || 'auto'}
@@ -44,6 +54,12 @@ export function Form({ values, patch, onChange, fields }) {
           ]}
           onChange={(x) => patch({ density: x })}
         />
+      </FormSection>
+      <FormSection title="Show">
+        <ToggleField label="Day label (column with date)"
+          value={v.showDayLabel !== false} onChange={(x) => patch({ showDayLabel: x })} />
+        <ToggleField label="Event time"
+          value={v.showTime     !== false} onChange={(x) => patch({ showTime:     x })} />
       </FormSection>
       <FormSection title="Style">
         <TypographyFields values={v} onChange={onChange} />

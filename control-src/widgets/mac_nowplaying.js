@@ -68,6 +68,9 @@ export const def = {
   defaultSize: 'M',
   defaults: () => ({
     variant: 'time_bookends',
+    showAlbumArt: true,
+    showProgress: true,
+    showSource:   true,
     fontScale: 1,
     padding: 14
   })
@@ -94,17 +97,27 @@ export function render({ macNowPlaying, cellW, cellH, density, settings }) {
     full:     { art: 320, maxFont: 64, showProgress: true,  showSource: true,  stacked: true  }
   };
   const cfg = TIER_CFG[tier] || TIER_CFG.standard;
+  // Tile-level visibility toggles override the tier defaults. Tier
+  // still gates upward (e.g. a tiny tile never shows the progress bar
+  // even if the user enables it), but the toggle can hide an element
+  // the tier would otherwise have shown.
+  const allowArt      = s.showAlbumArt !== false;
+  const allowProgress = cfg.showProgress && s.showProgress !== false;
+  const allowSource   = cfg.showSource   && s.showSource   !== false;
   const artistAlbum = [np.artist, np.album].filter(Boolean).map(escapeHtml).join(' · ');
-  const source = cfg.showSource && np.sourceLabel ? `via ${escapeHtml(np.sourceLabel)}` : '';
-  const hasProgress = cfg.showProgress
+  const source = allowSource && np.sourceLabel ? `via ${escapeHtml(np.sourceLabel)}` : '';
+  const hasProgress = allowProgress
     && Number.isFinite(np.durationSec) && np.durationSec > 0
     && Number.isFinite(np.elapsedSec);
   const pct = hasProgress
     ? Math.max(0, Math.min(100, (np.elapsedSec || 0) / np.durationSec * 100))
     : 0;
-  const artInner = np.artworkBase64
-    ? `<img class="mac-np-art" style="width:${cfg.art}px;height:${cfg.art}px" src="data:image/png;base64,${np.artworkBase64}" alt="" />`
-    : `<div class="mac-np-art mac-np-art-empty" style="width:${cfg.art}px;height:${cfg.art}px">${stateIcon}</div>`;
+  const artSize = allowArt ? cfg.art : 0;
+  const artInner = artSize === 0
+    ? ''
+    : (np.artworkBase64
+      ? `<img class="mac-np-art" style="width:${artSize}px;height:${artSize}px" src="data:image/png;base64,${np.artworkBase64}" alt="" />`
+      : `<div class="mac-np-art mac-np-art-empty" style="width:${artSize}px;height:${artSize}px">${stateIcon}</div>`);
 
   if (cfg.stacked) {
     const elapsedStr = hasProgress ? fmtSec(np.elapsedSec) : '';
@@ -135,7 +148,7 @@ export function render({ macNowPlaying, cellW, cellH, density, settings }) {
     `;
   }
 
-  const art = cfg.art === 0 ? '' : artInner;
+  const art = artInner;
   const progress = hasProgress
     ? `<div class="mac-np-progress">
          <div class="mac-np-bar"><div class="mac-np-bar-fill" style="width:${pct.toFixed(1)}%"></div></div>

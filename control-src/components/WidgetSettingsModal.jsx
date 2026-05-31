@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from '@phosphor-icons/react';
 import { GRID_COLS, GRID_ROWS, widgetById } from '../widgets.js';
-import { renderWidget, typographyCss } from '../widget-render.js';
+import { renderWidget, typographyCss, cellClasses } from '../widget-render.js';
 import WidgetForm from './WidgetForm.jsx';
 
 const DASH_W = 800;
@@ -223,6 +223,7 @@ export default function WidgetSettingsModal({
 
   const classes = ['cell', `cell-${draft.widgetId}`];
   if (draft.flush) classes.push('cell-flush');
+  classes.push(...cellClasses(draft.settings));
   // EditorGrid merges per-item data (perItem[item.id]) into the render
   // context so each tile sees its own fetched payload — without this,
   // mac_nowplaying / mac_battery / clock / per-tile weather all collapse

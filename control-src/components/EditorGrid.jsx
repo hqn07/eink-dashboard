@@ -3,7 +3,7 @@ import GridLayout from 'react-grid-layout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gear, X } from '@phosphor-icons/react';
 import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById, makeInstance } from '../widgets.js';
-import { renderWidget, renderHeader, renderFooter, isHeaderOn, isFooterOn, headerVariant, footerVariant, typographyCss } from '../widget-render.js';
+import { renderWidget, renderHeader, renderFooter, isHeaderOn, isFooterOn, headerVariant, footerVariant, typographyCss, cellClasses } from '../widget-render.js';
 import WidgetSettingsModal from './WidgetSettingsModal.jsx';
 
 // Editor cells must align 1:1 with dashboard cells so widget previews
@@ -400,6 +400,7 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
             if (l.x + l.w >= GRID_COLS) classes.push('cell-edge-right');
             if (l.y + l.h >= GRID_ROWS) classes.push('cell-edge-bottom');
             if (l.flush) classes.push('cell-flush');
+            classes.push(...cellClasses(l.settings));
             const cellHtml = `<div class="${classes.join(' ')}" style="width:${dashW}px;height:${dashH}px;${typoStyle}">${inner}</div>`;
             const isSelected = selectedId === l.id;
             return (

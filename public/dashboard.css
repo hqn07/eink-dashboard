@@ -220,6 +220,39 @@ html, body {
 .cell.cell-edge-right  { border-right: none; }
 .cell.cell-edge-bottom { border-bottom: none; }
 
+/* Inverted theme — solid black tile with white ink. Filters cover SVG
+ * fills + bg images (album art, weather icons) so a play glyph that
+ * was solid black on white still reads as solid white on black. The
+ * filter pass burns CPU but at 1-bit it's the simplest way to invert
+ * everything inside without rewriting every widget's render. */
+.cell.cell-inverted {
+  background: #000;
+  color: #fff;
+}
+.cell.cell-inverted * {
+  border-color: #fff !important;
+  color: #fff;
+}
+.cell.cell-inverted svg path,
+.cell.cell-inverted svg rect,
+.cell.cell-inverted svg polyline,
+.cell.cell-inverted svg circle {
+  fill: #fff;
+  stroke: #fff;
+}
+.cell.cell-inverted img.icon,
+.cell.cell-inverted img.batt-icon,
+.cell.cell-inverted img.mac-np-art,
+.cell.cell-inverted .ph-icon img,
+.cell.cell-inverted .ph-icon svg {
+  filter: invert(1);
+}
+.cell.cell-inverted .stale-pill,
+.cell.cell-inverted .ph-tag {
+  background: #fff !important;
+  color: #000 !important;
+}
+
 /* Flush mode: widget bleeds to the tile's edges — no padding, no
  * grid borders. Useful for full-width hero widgets (message bar,
  * black bar, big quote). */

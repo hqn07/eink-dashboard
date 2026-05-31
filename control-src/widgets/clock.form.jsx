@@ -1,14 +1,26 @@
 import React from 'react';
 
+const PRESETS = [
+  { id: 'big',  label: 'Big chunky with date',
+    values: { style: 'big',  showDate: true,  format: '12h' } },
+  { id: 'thin', label: 'Thin clean with date',
+    values: { style: 'thin', showDate: true,  format: '12h' } },
+  { id: 'time_only', label: 'Time only (no date)',
+    values: { style: 'big',  showDate: false, format: '12h' } },
+  { id: '24h', label: '24-hour minimal',
+    values: { style: 'thin', showDate: true,  format: '24h' } }
+];
+
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { SelectField, ToggleField, TypographyFields, FormSection } = fields;
+  const { SelectField, ToggleField, TypographyFields, FormSection, PresetField } = fields;
   const fmt = v.format === '24h' ? '24h' : '12h';
   const style = v.style === 'thin' ? 'thin' : 'big';
   const showDate = v.showDate !== false;
   return (
     <>
       <FormSection title="Layout">
+        <PresetField presets={PRESETS} onApply={(vals) => onChange({ ...v, ...vals })} />
         <SelectField
           label="Format"
           value={fmt}

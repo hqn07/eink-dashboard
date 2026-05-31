@@ -15,6 +15,8 @@ export const def = {
   defaults: () => ({
     icalUrls: [],
     density: 'auto',     // 'auto' | 'compact' | 'standard' | 'rich'
+    showDayLabel: true,
+    showTime:     true,
     fontScale: 1,
     padding: 14
   })
@@ -44,12 +46,14 @@ export function render({ events, cfg, settings, cellW, cellH, density }) {
   };
   const t = matrix[tier];
   const list = all.slice(0, t.events);
+  const showDayLabel = !settings || settings.showDayLabel !== false;
+  const showTime     = !settings || settings.showTime     !== false;
   const row = ev => `
     <div class="cal-row ${ev.isAllDay ? 'allday' : ''}">
-      <div class="cal-day">${escapeHtml(ev.dayLabel || '')}</div>
+      ${showDayLabel ? `<div class="cal-day">${escapeHtml(ev.dayLabel || '')}</div>` : ''}
       <div class="cal-info">
         <div class="cal-title">${escapeHtml(ev.title || '')}</div>
-        <div class="cal-time">${escapeHtml(ev.startLabel || '')}</div>
+        ${showTime ? `<div class="cal-time">${escapeHtml(ev.startLabel || '')}</div>` : ''}
       </div>
     </div>`;
   if (!t.sections) {

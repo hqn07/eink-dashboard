@@ -1015,6 +1015,7 @@ function buildPageBodyHtml({ payload, ssr, mode }) {
     if (item.x + item.w >= GRID_COLS) classes.push('cell-edge-right');
     if (item.y + item.h >= GRID_ROWS) classes.push('cell-edge-bottom');
     if (item.flush) classes.push('cell-flush');
+    classes.push(...ssr.cellClasses(item.settings));
     const styleParts = [
       `grid-column:${item.x + 1} / span ${item.w}`,
       `grid-row:${item.y + 1} / span ${item.h}`

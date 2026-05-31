@@ -104,6 +104,7 @@ function TypographyFields({ values, onChange }) {
   const family = v.fontFamily || 'serif';
   const scale  = Number.isFinite(v.fontScale) ? v.fontScale : 1;
   const padding = Number.isFinite(v.padding)   ? v.padding   : 14;
+  const theme  = v.theme === 'inverted' ? 'inverted' : 'normal';
   return (
     <>
       <SelectField
@@ -113,7 +114,7 @@ function TypographyFields({ values, onChange }) {
         onChange={(x) => patch({ fontFamily: x })}
       />
       <SliderField
-        label="Font scale"
+        label="Content scale"
         min={0.7} max={1.4} step={0.05}
         value={scale}
         onChange={(x) => patch({ fontScale: x })}
@@ -125,6 +126,15 @@ function TypographyFields({ values, onChange }) {
         value={padding}
         onChange={(x) => patch({ padding: x })}
         format={(x) => `${x}px`}
+      />
+      <SelectField
+        label="Theme"
+        value={theme}
+        options={[
+          { value: 'normal',   label: 'Normal (black on white)' },
+          { value: 'inverted', label: 'Inverted (white on black)' }
+        ]}
+        onChange={(x) => patch({ theme: x })}
       />
     </>
   );
@@ -315,13 +325,41 @@ function FormSection({ title, children }) {
   );
 }
 
+// Preset picker. Each preset is `{ id, label, values }`. Picking one
+// merges `values` into the current draft via the provided onApply.
+// The picker stays unselected ("Custom") so users can tweak after
+// applying without the dropdown lying about which preset is active.
+function PresetField({ presets, onApply }) {
+  if (!Array.isArray(presets) || !presets.length) return null;
+  return (
+    <div className="wsm-row">
+      <label className="wsm-field-label">Preset</label>
+      <select
+        className="wsm-field-input"
+        value=""
+        onChange={(e) => {
+          const id = e.target.value;
+          const hit = presets.find(p => p.id === id);
+          if (hit) onApply(hit.values);
+          e.target.value = '';
+        }}
+      >
+        <option value="" disabled>Pick a preset…</option>
+        {presets.map(p => (
+          <option key={p.id} value={p.id}>{p.label}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 // Field primitives passed into migrated per-widget Form modules so
 // each module doesn't have to re-import them. Add new ones here as
 // they appear in widget forms.
 const FIELD_PRIMITIVES = {
   TextField, SelectField, ToggleField, SliderField, CsvField,
   ListEditor, LocationFields, TypographyFields,
-  FormSection
+  FormSection, PresetField
 };
 
 export default function WidgetForm({ widgetId, values, onChange }) {

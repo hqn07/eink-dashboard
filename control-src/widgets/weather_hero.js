@@ -30,6 +30,11 @@ export const def = {
     lat:  (ctx && Number.isFinite(ctx.lat)) ? ctx.lat : null,
     lon:  (ctx && Number.isFinite(ctx.lon)) ? ctx.lon : null,
     stats: DEFAULT_STATS.slice(),
+    showStats:  true,
+    showHourly: true,
+    showSunbar: true,
+    showAlerts: true,
+    showDesc:   true,
     fontScale: 1,
     padding: 14
   })
@@ -87,16 +92,20 @@ export function render({ weather, units, cfg, settings, cellW, cellH, density })
       <span class="temp-num">${w.temp}</span><span class="temp-deg" style="font-size:${Math.round(size*0.6)}px">°${units}</span>
     </div>`;
   const heroIcon = (px) => `<div class="weather-icon" style="height:${px}px">${icon(w, px)}</div>`;
-  const descLine = () => `<div class="weather-desc">${w.desc}</div>`;
+  const descLine = () => (s.showDesc !== false) ? `<div class="weather-desc">${w.desc}</div>` : '';
   const hiloLine = () => `<div class="weather-hilo">HIGH ${w.tempMax}° &nbsp;·&nbsp; LOW ${w.tempMin}°</div>`;
   const statsKeys = Array.isArray(s.stats) && s.stats.length ? s.stats : DEFAULT_STATS;
   const statsBlock = () => {
+    if (s.showStats === false) return '';
     const cells = statsKeys.map(k => statForKey(k, w)).filter(Boolean).slice(0, 4);
     if (!cells.length) return '';
     return `<div class="weather-stats">
       ${cells.map(c => `<div class="stat"><span class="stat-k">${c.k}</span><span class="stat-v">${c.v}</span></div>`).join('')}
     </div>`;
   };
+  const alerts = s.showAlerts !== false ? alertBanner(w) : '';
+  const sunBlock = s.showSunbar !== false ? sunBar(w) : '';
+  const hourly   = s.showHourly !== false ? hourlyStrip(w) : '';
   switch (tier) {
     case 'tiny':
       return `<div class="weather-hero hero-tier-tiny${staleClass}">${staleBadge}${tempBlock(54)}</div>`;
@@ -113,12 +122,12 @@ export function render({ weather, units, cfg, settings, cellW, cellH, density })
     case 'extended':
       return `<div class="weather-hero hero-tier-extended${staleClass}">
         ${staleBadge}${heroIcon(110)}${tempBlock(96)}${descLine()}${hiloLine()}
-      </div>${alertBanner(w)}${statsBlock()}`;
+      </div>${alerts}${statsBlock()}`;
     case 'full':
     default:
       return `<div class="weather-hero hero-tier-full${staleClass}">
         ${staleBadge}${heroIcon(130)}${tempBlock(96)}${descLine()}${hiloLine()}
-      </div>${alertBanner(w)}${statsBlock()}${sunBar(w)}${hourlyStrip(w)}`;
+      </div>${alerts}${statsBlock()}${sunBlock}${hourly}`;
   }
 }
 

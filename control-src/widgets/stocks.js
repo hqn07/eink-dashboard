@@ -15,6 +15,8 @@ export const def = {
   defaults: () => ({
     symbols: [],
     layout: 'hero_watch',  // 'hero_watch' | 'list_only' | 'hero_only'
+    showSpark:  true,
+    showChange: true,
     fontScale: 1,
     padding: 14
   })
@@ -83,9 +85,18 @@ export function render({ stocks, settings, cellW, cellH, density }) {
     extended: { watch: 5, heroSpark: true,  heroMeta: true,  heroChg: true,  watchSpark: true,  watchChg: true  },
     full:     { watch: 7, heroSpark: true,  heroMeta: true,  heroChg: true,  watchSpark: true,  watchChg: true  }
   };
-  const t = matrix[tier];
+  const tBase = matrix[tier];
   const s = settings || {};
   const layout = s.layout || 'hero_watch';
+  // Apply per-tile show toggles on top of the tier-level matrix; toggle
+  // can only HIDE, not force-show on a tier that wouldn't allow it.
+  const t = {
+    ...tBase,
+    heroSpark:  tBase.heroSpark  && s.showSpark  !== false,
+    watchSpark: tBase.watchSpark && s.showSpark  !== false,
+    heroChg:    tBase.heroChg    && s.showChange !== false,
+    watchChg:   tBase.watchChg   && s.showChange !== false
+  };
 
   if (layout === 'list_only') {
     // Treat every symbol equally; no hero. Renders as many rows as the

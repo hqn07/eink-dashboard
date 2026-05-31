@@ -14,6 +14,7 @@ export {
   isHeaderOn, isFooterOn,
   headerVariant, footerVariant,
   typographyCss,
+  cellClasses,
   DEFAULT_CHROME
 } from './widgets/_chrome.js';
 

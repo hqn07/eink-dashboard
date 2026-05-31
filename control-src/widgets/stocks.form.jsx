@@ -1,8 +1,19 @@
 import React from 'react';
 
+const PRESETS = [
+  { id: 'default', label: 'Default — hero + watchlist',
+    values: { layout: 'hero_watch', showSpark: true,  showChange: true  } },
+  { id: 'list',    label: 'List — every symbol equal',
+    values: { layout: 'list_only',  showSpark: true,  showChange: true  } },
+  { id: 'lead',    label: 'Lead only — single symbol focus',
+    values: { layout: 'hero_only',  showSpark: true,  showChange: true  } },
+  { id: 'minimal', label: 'Minimal — prices only',
+    values: { layout: 'list_only',  showSpark: false, showChange: false } }
+];
+
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { CsvField, SelectField, TypographyFields, FormSection } = fields;
+  const { CsvField, SelectField, ToggleField, TypographyFields, FormSection, PresetField } = fields;
   return (
     <>
       <FormSection title="Data">
@@ -15,6 +26,7 @@ export function Form({ values, patch, onChange, fields }) {
         />
       </FormSection>
       <FormSection title="Layout">
+        <PresetField presets={PRESETS} onApply={(vals) => onChange({ ...v, ...vals })} />
         <SelectField
           label="Layout"
           value={v.layout || 'hero_watch'}
@@ -25,6 +37,12 @@ export function Form({ values, patch, onChange, fields }) {
           ]}
           onChange={(x) => patch({ layout: x })}
         />
+      </FormSection>
+      <FormSection title="Show">
+        <ToggleField label="Sparkline charts"
+          value={v.showSpark  !== false} onChange={(x) => patch({ showSpark:  x })} />
+        <ToggleField label="Change %"
+          value={v.showChange !== false} onChange={(x) => patch({ showChange: x })} />
       </FormSection>
       <FormSection title="Style">
         <TypographyFields values={v} onChange={onChange} />

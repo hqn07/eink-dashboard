@@ -23,6 +23,8 @@ export const def = {
     forecastDays: null,
     precipMode: 'auto',     // 'auto' | 'always' | 'never'
     hiloStyle:  'stack',    // 'stack' | 'inline' | 'arrows'
+    showIcons:  true,
+    showDayName: true,
     fontScale: 1,
     padding: 14
   })
@@ -69,12 +71,14 @@ export function render({ weather, cfg, settings, cellW, cellH }) {
     }
     return `<div class="fc-hilo"><div class="fc-hi">${f.hi}°</div><div class="fc-lo">${f.lo}°</div></div>`;
   };
+  const showIcons   = s.showIcons   !== false;
+  const showDayName = s.showDayName !== false;
   return `
     <div class="col-title">${list.length}-DAY OUTLOOK</div>
     ${list.map(f => `
       <div class="fc-row fc-hilo-${hiloStyle}">
-        <div class="fc-day">${f.name}</div>
-        <div class="fc-icon">${icon(f.main, iconPx)}</div>
+        ${showDayName ? `<div class="fc-day">${f.name}</div>` : ''}
+        ${showIcons   ? `<div class="fc-icon">${icon(f.main, iconPx)}</div>` : ''}
         ${hiloBlock(f)}
         ${showPrecip && Number.isFinite(f.precip) && f.precip > 0
           ? `<div class="fc-precip">${f.precip}%</div>` : '<div class="fc-precip"></div>'}

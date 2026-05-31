@@ -31,5 +31,6 @@ export {
   renderHeader, renderFooter,
   isHeaderOn, isFooterOn,
   headerVariant, footerVariant,
-  typographyCss
+  typographyCss,
+  cellClasses
 } from './_chrome.js';
