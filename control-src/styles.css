@@ -1279,6 +1279,25 @@ input[type="text"], input[type="url"], textarea {
   padding-bottom: 6px;
   border-bottom: 1.5px solid var(--ink);
 }
+
+/* Per-widget Form subsection — grouping for the migrated widget forms
+ * (Data / Content / Layout / Style). Lighter visual weight than the
+ * top-level wsm-section so the form still reads as one column rather
+ * than four. */
+.wsm-subsection { margin-bottom: 18px; }
+.wsm-subsection:last-child { margin-bottom: 0; }
+.wsm-subsection-title {
+  font-family: 'Oswald', 'Arial Narrow', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--mute);
+  margin: 0 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px dashed var(--mute);
+}
+.wsm-subsection-body > :last-child { margin-bottom: 0; }
 .wsm-row {
   display: flex;
   align-items: center;

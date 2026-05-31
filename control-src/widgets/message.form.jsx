@@ -2,46 +2,52 @@ import React from 'react';
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, ListEditor, TypographyFields } = fields;
+  const { TextField, ListEditor, TypographyFields, FormSection } = fields;
   return (
     <>
-      <TextField
-        label="Default headline"
-        value={v.text}
-        onChange={(x) => patch({ text: x })}
-        placeholder="Today's message…"
-        help="Markdown supported: **bold**, *italic*."
-      />
-      <TextField
-        label="Default subtitle"
-        value={v.subtitle}
-        onChange={(x) => patch({ subtitle: x })}
-        placeholder="Optional second line"
-      />
-      <TypographyFields values={v} onChange={onChange} />
-      <ListEditor
-        label="Scheduled messages (override default in their window)"
-        items={v.schedule}
-        onChange={(schedule) => patch({ schedule })}
-        blank={{ from: '06:00', to: '12:00', text: '', subtitle: '' }}
-        addLabel="Add scheduled message"
-        help="First match wins. Windows wrap midnight if `to` < `from`."
-        renderRow={(it, set) => (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <input type="time" value={it.from || ''} onChange={e => set({ from: e.target.value })}
-                style={{ width: 110 }} />
-              <span style={{ fontSize: 11 }}>→</span>
-              <input type="time" value={it.to || ''} onChange={e => set({ to: e.target.value })}
-                style={{ width: 110 }} />
+      <FormSection title="Content">
+        <TextField
+          label="Default headline"
+          value={v.text}
+          onChange={(x) => patch({ text: x })}
+          placeholder="Today's message…"
+          help="Markdown supported: **bold**, *italic*."
+        />
+        <TextField
+          label="Default subtitle"
+          value={v.subtitle}
+          onChange={(x) => patch({ subtitle: x })}
+          placeholder="Optional second line"
+        />
+      </FormSection>
+      <FormSection title="Data">
+        <ListEditor
+          label="Scheduled messages (override default in their window)"
+          items={v.schedule}
+          onChange={(schedule) => patch({ schedule })}
+          blank={{ from: '06:00', to: '12:00', text: '', subtitle: '' }}
+          addLabel="Add scheduled message"
+          help="First match wins. Windows wrap midnight if `to` < `from`."
+          renderRow={(it, set) => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <input type="time" value={it.from || ''} onChange={e => set({ from: e.target.value })}
+                  style={{ width: 110 }} />
+                <span style={{ fontSize: 11 }}>→</span>
+                <input type="time" value={it.to || ''} onChange={e => set({ to: e.target.value })}
+                  style={{ width: 110 }} />
+              </div>
+              <input type="text" value={it.text || ''} placeholder="Headline (this slot)"
+                onChange={e => set({ text: e.target.value })} />
+              <input type="text" value={it.subtitle || ''} placeholder="Subtitle (optional)"
+                onChange={e => set({ subtitle: e.target.value })} />
             </div>
-            <input type="text" value={it.text || ''} placeholder="Headline (this slot)"
-              onChange={e => set({ text: e.target.value })} />
-            <input type="text" value={it.subtitle || ''} placeholder="Subtitle (optional)"
-              onChange={e => set({ subtitle: e.target.value })} />
-          </div>
-        )}
-      />
+          )}
+        />
+      </FormSection>
+      <FormSection title="Style">
+        <TypographyFields values={v} onChange={onChange} />
+      </FormSection>
     </>
   );
 }

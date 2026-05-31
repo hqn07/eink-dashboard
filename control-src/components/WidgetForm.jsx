@@ -302,12 +302,26 @@ function LocationFields({ values, onChange }) {
 
 // =================== WIDGET FORMS ===================
 
+// Sectioned form layout. Each widget Form groups its fields into one
+// or more <FormSection> blocks (Data / Content / Layout / Style) so
+// users don't see a flat 30-field column. Mirrors the
+// TRMNL plugin editor + mushroom-card grouping pattern.
+function FormSection({ title, children }) {
+  return (
+    <div className="wsm-subsection">
+      <div className="wsm-subsection-title">{title}</div>
+      <div className="wsm-subsection-body">{children}</div>
+    </div>
+  );
+}
+
 // Field primitives passed into migrated per-widget Form modules so
 // each module doesn't have to re-import them. Add new ones here as
 // they appear in widget forms.
 const FIELD_PRIMITIVES = {
   TextField, SelectField, ToggleField, SliderField, CsvField,
-  ListEditor, LocationFields, TypographyFields
+  ListEditor, LocationFields, TypographyFields,
+  FormSection
 };
 
 export default function WidgetForm({ widgetId, values, onChange }) {
