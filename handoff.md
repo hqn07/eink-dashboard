@@ -1,6 +1,128 @@
 # E-Ink Dashboard — Handoff
 
-State as of 2026-05-30. Read this + `CLAUDE.md` + memory pointers below before touching anything.
+State as of 2026-05-31. Read this + `CLAUDE.md` + memory pointers below before touching anything.
+
+> **Customization phases A–F complete** (commits `50bc1f7` + `90204c7`).
+> See `project_eink_widget_customizability_roadmap.md` for the full
+> per-widget knob catalog and open follow-ups.
+
+
+## What shipped in the 2026-05-30 → 2026-05-31 session (commits `e96c77f` → `90204c7`)
+
+Long customization session — finished the per-tile knob roadmap and
+fixed a pile of 1-bit threshold + auth gotchas surfaced along the way.
+
+### Customization roadmap — phases A through F shipped
+
+Modal form rewritten per the TRMNL plugin editor + HA mushroom-card
+pattern (research summarized in commit `90204c7`'s body).
+
+- **Phase A (commit `50bc1f7`):** Each per-widget Form groups fields
+  into named `FormSection`s — `Data / Content / Layout / Show / Style`.
+  Flat 8-field columns scaled poorly; sections cap perceived complexity.
+  Pure restructure, no field added or removed.
+- **Phase B (in `90204c7`):** Every widget gains flat `show_X` toggles
+  for sub-elements. mac_nowplaying gets showAlbumArt / showProgress /
+  showSource; weather_hero gets show {Desc, Stats, Alerts, Sunbar,
+  Hourly}; weather_forecast gets showDayName / showIcons; calendar
+  gets showDayLabel / showTime; stocks gets showSpark / showChange.
+  Defaults preserve prior rendering; toggles only ever HIDE.
+- **Phase E (in `90204c7`):** New `PresetField` primitive plus per-widget
+  preset lists (3–4 each) so users can "pick a look" without fiddling
+  individual knobs — `editorial / minimal / wind / sun` for weather,
+  `default / minimal / bold / art_off` for now-playing, etc.
+  Picker resets after applying so the user can keep tweaking.
+- **Phase F (in `90204c7`):** Universal `theme: 'inverted'` knob in
+  TypographyFields. New `cellClasses(settings)` helper on
+  `widgets/_chrome.js` returns extra classes for the .cell wrapper —
+  consumed by the SSR pipeline, the editor preview, AND the modal
+  preview from a single source. `.cell-inverted` flips to solid
+  black tile + white ink, including SVG fills and raster-image inversion.
+- Variant pass earlier in the session (commits `e96c77f`, `41f469a`,
+  `5bc0af4`, `d1a0a24`) shipped concrete variant knobs:
+  - mac_nowplaying side-space: `time_bookends` (default) /
+    `centered` / `vertical_text` / `play_state` / `bars` / `metadata`
+  - weather_hero `stats[4]` slot picker — feels / humid / wind / gust /
+    cloud / rise / set / cloud_or_rise
+  - weather_forecast `precipMode` (auto/always/never) +
+    `hiloStyle` (stack/inline/arrows)
+  - calendar `density` override
+  - stocks `layout` (hero_watch / list_only / hero_only)
+
+### Mac-agent freshness badge (in `d1a0a24`)
+
+New `MacAgentBadge.jsx` in the /control header reads `GET /api/mac-state`
+every 15 s and shows "MAC AGENT: 7s ago" coloured green / orange / gray /
+red for fresh / stale / never / endpoint-down. Tooltip points the user
+at `/tmp/eink-mac-agent.log` so a dead launchd job is obvious without
+SSHing in.
+
+### Mac-state hardening (commit `87a62ad`)
+
+Post-mortem audit found three issues with the original Mac-on-cloud
+write path:
+- `_lastTrackKey` race when two pushes raced — fixed with a
+  single-slot Promise chain (`_macStateChain`).
+- Orphan `data/mac-state.json.tmp` from a writer crash — `loadSync`
+  now unlinks it on startup.
+- `invalidateImage()` fired on every push even when nothing changed,
+  trashing the 60 s image cache. New `sameMacState()` compares the
+  new payload (5-second elapsed bucket) to the previous and skips
+  the invalidation when render output wouldn't differ.
+
+### Firmware 1.11.x — cloud-only + actionable fail screen + battery curve
+
+- **1.11.0 (commit `1434c27`):** `selectServerBase()` is cloud-only;
+  the LAN base + probe were removed now that the Mac-side agent
+  pushes state through the cloud. ESP32 stays on the Railway base
+  permanently — no more LAN ↔ cloud dance.
+- **1.11.1 (commit `8ab5e55`):** Fail screen surfaces the underlying
+  HTTP code (`Could not fetch image (HTTP 401)`), a per-code one-liner
+  tip (`Tip: DEVICE_TOKEN mismatch (server vs firmware)` for 401,
+  similar for 404/-1/-11/5xx), WiFi RSSI, local IP, friendly_id, and
+  "LAST OK: 2h ago" backed by an RTC_DATA_ATTR timestamp that survives
+  deep sleep.
+- **1.11.2 (commit `7955614`):** Battery percent now uses a nonlinear
+  LiPo curve (4.10 V → 100 %, 3.30 V → 0 %) so a fully-charged cell
+  actually reads 100 %. The old linear formula maxed out at 88–97 %
+  because the 1 MΩ+1 MΩ divider + ESP32 ADC nonlinearity cap real
+  readings around 4.10 V.
+
+### Server-side auth softening (commit `6a3aab0`)
+
+`checkDeviceAuth` used to reject any request that carried an unknown
+`X-API-Key` outright. That bricked devices that had enrolled against
+the local server and then were repointed at the cloud — the api_key
+in their NVS wasn't known to the cloud's `devices.json`. Now: unknown
+X-API-Key falls through to the fleet `?token=` check, so the legacy
+credential still rescues the device.
+
+### Build pipeline noise (commits `b564d4c`, `5540d61`, `e881d43`)
+
+Railway log aggregator flags npm stderr at severity=error, so an
+otherwise harmless `npm warn config production` looked like a build
+failure. Fixed by:
+- `npm install --include=dev` so devDependencies (vite + plugin-react)
+  are present for the build phase.
+- Wrapping npm in `env -u NPM_CONFIG_PRODUCTION` so the deprecated
+  legacy config var isn't visible to npm.
+- New `Procfile` (`web: node server.js`) bypasses `npm start`
+  entirely on launchers that prefer Procfile over nixpacks `[start]`.
+
+### Misc polish
+
+- `1007f83`: Settings modal locks `html`/`body` overflow on open so
+  wheel/touch gestures don't scroll the editor underneath the panel.
+- `e65a906`: mac_nowplaying state glyph swapped from Unicode ❚❚ to
+  inline SVG — Sharp's threshold pass was clipping the thin bars.
+  Also bumped `.mac-np-source` from 10 px / #555 / wide-letter-spacing
+  to 13 px / weight 700 / pure black; the old style dithered into
+  noise on the panel.
+- `96a570f`: `typographyCss` emits `zoom: <scale>` for fontScale so
+  every widget visibly scales (not just message + mac_nowplaying that
+  multiplied the value themselves). WidgetSettingsModal cellHtml now
+  passes the typoStyle into the live preview so font/scale/padding
+  changes are visible while editing.
 
 ## What shipped in the 2026-05-29 → 2026-05-30 session (commit `72b0b2e`)
 
