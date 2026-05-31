@@ -240,11 +240,24 @@ html, body {
   fill: #fff;
   stroke: #fff;
 }
+/* Sevesalm weather + battery glyphs are black-on-opaque-white. Plain
+ * `invert(1)` flips that white background to black, which produces a
+ * solid black rectangle that hides whatever sits behind/below the
+ * image (the temp number, the next tile row, etc.). `brightness(0)`
+ * first collapses every opaque pixel to pure black; `invert(1)` then
+ * flips that to pure white. Transparent pixels stay transparent, so
+ * the surrounding black tile bleeds through and nothing else gets
+ * occluded.
+ *
+ * Album art (mac-np-art) is a real photograph — we want a tonal
+ * inversion there, so it keeps the plain `invert(1)` filter. */
 .cell.cell-inverted img.icon,
 .cell.cell-inverted img.batt-icon,
-.cell.cell-inverted img.mac-np-art,
 .cell.cell-inverted .ph-icon img,
 .cell.cell-inverted .ph-icon svg {
+  filter: brightness(0) invert(1);
+}
+.cell.cell-inverted img.mac-np-art {
   filter: invert(1);
 }
 .cell.cell-inverted .stale-pill,
