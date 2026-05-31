@@ -14,6 +14,7 @@ export const def = {
   defaultSize: 'M',
   defaults: () => ({
     icalUrls: [],
+    title: '',
     density: 'auto',     // 'auto' | 'compact' | 'standard' | 'rich'
     showDayLabel: true,
     showTime:     true,
@@ -24,9 +25,12 @@ export const def = {
 
 export function render({ events, cfg, settings, cellW, cellH, density }) {
   const urls = collectUrls(settings, cfg);
-  if (!urls.length) return placeholder('UPCOMING', 'Paste an iCal URL in settings', 'calendar');
+  const titleLabel = (settings && typeof settings.title === 'string' && settings.title.trim())
+    ? settings.title.trim()
+    : 'UPCOMING';
+  if (!urls.length) return placeholder(titleLabel, 'Paste an iCal URL in settings', 'calendar');
   const all = events || [];
-  if (!all.length) return placeholder('UPCOMING', 'No events in the next 14 days', 'calendar');
+  if (!all.length) return placeholder(titleLabel, 'No events in the next 14 days', 'calendar');
   // Per-tile density override wins over the layout-item density that
   // the editor's grid passes through. 'auto' (or missing) keeps the
   // pickTier behavior we had before.
@@ -59,7 +63,7 @@ export function render({ events, cfg, settings, cellW, cellH, density }) {
   if (!t.sections) {
     return `
       <div class="widget widget-cal">
-        <div class="widget-title">UPCOMING</div>
+        <div class="widget-title">${escapeHtml(titleLabel)}</div>
         ${list.map(row).join('')}
       </div>
     `;
@@ -73,7 +77,7 @@ export function render({ events, cfg, settings, cellW, cellH, density }) {
   }
   return `
     <div class="widget widget-cal">
-      <div class="widget-title">UPCOMING</div>
+      <div class="widget-title">${escapeHtml(titleLabel)}</div>
       ${order.map(s => `
         <div class="cal-section-title">${s}</div>
         ${groups[s].map(row).join('')}

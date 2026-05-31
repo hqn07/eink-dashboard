@@ -1,7 +1,7 @@
 // Weather · Forecast — N-day high/low strip. Day count auto-scales
 // with tile height; explicit setting wins.
 
-import { placeholder } from './_shared.js';
+import { escapeHtml, placeholder } from './_shared.js';
 import { icon } from './_weather_shared.js';
 
 export const def = {
@@ -21,6 +21,7 @@ export const def = {
     lat:  (ctx && Number.isFinite(ctx.lat)) ? ctx.lat : null,
     lon:  (ctx && Number.isFinite(ctx.lon)) ? ctx.lon : null,
     forecastDays: null,
+    title: '',
     precipMode: 'auto',     // 'auto' | 'always' | 'never'
     hiloStyle:  'stack',    // 'stack' | 'inline' | 'arrows'
     showIcons:  true,
@@ -73,8 +74,11 @@ export function render({ weather, cfg, settings, cellW, cellH }) {
   };
   const showIcons   = s.showIcons   !== false;
   const showDayName = s.showDayName !== false;
+  const titleLabel = (s.title && String(s.title).trim())
+    ? String(s.title).trim()
+    : `${list.length}-DAY OUTLOOK`;
   return `
-    <div class="col-title">${list.length}-DAY OUTLOOK</div>
+    <div class="col-title">${escapeHtml(titleLabel)}</div>
     ${list.map(f => `
       <div class="fc-row fc-hilo-${hiloStyle}">
         ${showDayName ? `<div class="fc-day">${f.name}</div>` : ''}

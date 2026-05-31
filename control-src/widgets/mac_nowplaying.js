@@ -11,14 +11,14 @@ import { escapeHtml, fmtSec, pickTier, placeholder } from './_shared.js';
 // tile is large enough to stack (extended / full tier). Returns the
 // raw HTML for the left + right slots; the render function drops them
 // into `.mac-np-stacked-row`.
-function sideSpaceSlots(variant, { np, elapsedStr, remainStr, stateIcon }) {
+function sideSpaceSlots(variant, { np, elapsedStr, remainStr, stateIcon, titleLabel }) {
   switch (variant) {
     case 'centered':
       return { left: '', right: '' };
     case 'vertical_text':
       return {
-        left:  `<div class="mac-np-bookend mac-np-bookend-vert mac-np-bookend-left">NOW PLAYING</div>`,
-        right: `<div class="mac-np-bookend mac-np-bookend-vert mac-np-bookend-right">NOW PLAYING</div>`
+        left:  `<div class="mac-np-bookend mac-np-bookend-vert mac-np-bookend-left">${escapeHtml(titleLabel)}</div>`,
+        right: `<div class="mac-np-bookend mac-np-bookend-vert mac-np-bookend-right">${escapeHtml(titleLabel)}</div>`
       };
     case 'play_state':
       return {
@@ -67,6 +67,7 @@ export const def = {
   },
   defaultSize: 'M',
   defaults: () => ({
+    title: '',
     variant: 'time_bookends',
     showAlbumArt: true,
     showProgress: true,
@@ -77,7 +78,10 @@ export const def = {
 };
 
 export function render({ macNowPlaying, cellW, cellH, density, settings }) {
-  if (!macNowPlaying) return placeholder('NOW PLAYING', 'MAC OFFLINE', 'msg');
+  const titleLabel = (settings && typeof settings.title === 'string' && settings.title.trim())
+    ? settings.title.trim()
+    : 'NOW PLAYING';
+  if (!macNowPlaying) return placeholder(titleLabel, 'MAC OFFLINE', 'msg');
   const np = macNowPlaying;
   const tier = pickTier(cellW || 0, cellH || 0, density);
   // Inline SVG instead of Unicode glyphs so the 1-bit threshold pass
@@ -125,12 +129,12 @@ export function render({ macNowPlaying, cellW, cellH, density, settings }) {
     const progressBar = hasProgress
       ? `<div class="mac-np-bar mac-np-bar-only"><div class="mac-np-bar-fill" style="width:${pct.toFixed(1)}%"></div></div>`
       : '';
-    const slots = sideSpaceSlots(variant, { np, elapsedStr, remainStr, stateIcon });
+    const slots = sideSpaceSlots(variant, { np, elapsedStr, remainStr, stateIcon, titleLabel });
     const maxFont = Math.max(14, Math.round(cfg.maxFont * fontScale));
     return `
       <div class="mac-np-card mac-np-stacked mac-np-tier-${tier} mac-np-var-${variant}">
         <div class="mac-np-head">
-          <span class="col-title">NOW PLAYING</span>
+          <span class="col-title">${escapeHtml(titleLabel)}</span>
         </div>
         <div class="mac-np-stacked-row">
           ${slots.left}

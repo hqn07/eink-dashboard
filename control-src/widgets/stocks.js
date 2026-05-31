@@ -14,6 +14,7 @@ export const def = {
   defaultSize: 'M',
   defaults: () => ({
     symbols: [],
+    title: '',
     layout: 'hero_watch',  // 'hero_watch' | 'list_only' | 'hero_only'
     showSpark:  true,
     showChange: true,
@@ -76,7 +77,10 @@ function watchRow(s, t) {
 
 export function render({ stocks, settings, cellW, cellH, density }) {
   const list = stocks || [];
-  if (!list.length) return placeholder('MARKETS', 'Add symbols (AAPL, BTC-USD) in settings', 'stocks');
+  const titleLabel = (settings && typeof settings.title === 'string' && settings.title.trim())
+    ? settings.title.trim()
+    : 'MARKETS';
+  if (!list.length) return placeholder(titleLabel, 'Add symbols (AAPL, BTC-USD) in settings', 'stocks');
   const tier = pickTier(cellW, cellH, density);
   const matrix = {
     tiny:     { watch: 0, heroSpark: false, heroMeta: false, heroChg: false, watchSpark: false, watchChg: false },
@@ -105,7 +109,7 @@ export function render({ stocks, settings, cellW, cellH, density }) {
     const rows = list.slice(0, rowCount);
     return `
       <div class="widget widget-stocks stocks-list-mode">
-        <div class="widget-title">MARKETS</div>
+        <div class="widget-title">${escapeHtml(titleLabel)}</div>
         <div class="stock-watch-list stock-list-full">
           ${rows.map(s => watchRow(s, t)).join('')}
         </div>
@@ -118,7 +122,7 @@ export function render({ stocks, settings, cellW, cellH, density }) {
     const hero = list[0];
     return `
       <div class="widget widget-stocks stocks-hero-mode stocks-hero-only">
-        <div class="widget-title">MARKETS</div>
+        <div class="widget-title">${escapeHtml(titleLabel)}</div>
         ${heroBlock(hero, t)}
       </div>
     `;
@@ -129,7 +133,7 @@ export function render({ stocks, settings, cellW, cellH, density }) {
   const watch = list.slice(1, 1 + t.watch);
   return `
     <div class="widget widget-stocks stocks-hero-mode">
-      <div class="widget-title">MARKETS</div>
+      <div class="widget-title">${escapeHtml(titleLabel)}</div>
       ${heroBlock(hero, t)}
       ${watch.length ? `<div class="stock-watch-list">${watch.map(s => watchRow(s, t)).join('')}</div>` : ''}
     </div>

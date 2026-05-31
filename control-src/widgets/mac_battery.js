@@ -11,16 +11,19 @@ export const def = {
     L:  { w: 8, h: 3 }
   },
   defaultSize: 'S',
-  defaults: () => ({ fontScale: 1, padding: 14 })
+  defaults: () => ({ title: '', fontScale: 1, padding: 14 })
 };
 
-export function render({ macBattery }) {
-  if (!macBattery) return placeholder('MAC', 'OFFLINE', 'msg');
+export function render({ macBattery, settings }) {
+  const titleLabel = (settings && typeof settings.title === 'string' && settings.title.trim())
+    ? settings.title.trim()
+    : 'MAC BATTERY';
+  if (!macBattery) return placeholder(titleLabel.split(/\s+/)[0] || 'MAC', 'OFFLINE', 'msg');
   const charging = /charg/i.test(macBattery.state);
   const arrow = charging ? '⚡' : '';
   return `
     <div class="mac-batt">
-      <div class="col-title">MAC BATTERY</div>
+      <div class="col-title">${escapeHtml(titleLabel)}</div>
       <div class="mac-batt-pct autofit" data-min-font="22">${macBattery.percent}%${arrow}</div>
       <div class="mac-batt-state">${escapeHtml(macBattery.state.toUpperCase())}</div>
     </div>

@@ -13,7 +13,7 @@ const PRESETS = [
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { CsvField, SelectField, ToggleField, TypographyFields, FormSection, PresetField } = fields;
+  const { TextField, CsvField, SelectField, ToggleField, TypographyFields, FormSection, PresetField } = fields;
   return (
     <>
       <FormSection title="Data">
@@ -27,6 +27,13 @@ export function Form({ values, patch, onChange, fields }) {
       </FormSection>
       <FormSection title="Layout">
         <PresetField presets={PRESETS} onApply={(vals) => onChange({ ...v, ...vals })} />
+        <TextField
+          label="Tile heading"
+          value={v.title || ''}
+          onChange={(x) => patch({ title: x })}
+          placeholder="MARKETS"
+          help="Leave blank to keep the default heading."
+        />
         <SelectField
           label="Layout"
           value={v.layout || 'hero_watch'}

@@ -13,12 +13,19 @@ const PRESETS = [
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { SelectField, ToggleField, TypographyFields, FormSection, PresetField } = fields;
+  const { TextField, SelectField, ToggleField, TypographyFields, FormSection, PresetField } = fields;
   const variant = v.variant || 'time_bookends';
   return (
     <>
       <FormSection title="Layout">
         <PresetField presets={PRESETS} onApply={(vals) => onChange({ ...v, ...vals })} />
+        <TextField
+          label="Tile heading"
+          value={v.title || ''}
+          onChange={(x) => patch({ title: x })}
+          placeholder="NOW PLAYING"
+          help="Leave blank to keep the default heading."
+        />
         <div className="wsm-field-help" style={{ marginBottom: 6 }}>
           Variants apply on tiles big enough to stack the art above the
           title (extended/full tiers). Smaller tiles fall back to the

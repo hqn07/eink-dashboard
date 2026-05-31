@@ -25,6 +25,13 @@ export function Form({ values, patch, onChange, fields }) {
       <FormSection title="Content">
         <PresetField presets={PRESETS} onApply={(vals) => onChange({ ...v, ...vals })} />
         <TextField
+          label="Tile heading"
+          value={v.title || ''}
+          onChange={(x) => patch({ title: x })}
+          placeholder="N-DAY OUTLOOK"
+          help="Leave blank for the default (varies with day count)."
+        />
+        <TextField
           label="Days to show (1–7 · blank = auto by tile height)"
           type="number"
           value={v.forecastDays ?? ''}
