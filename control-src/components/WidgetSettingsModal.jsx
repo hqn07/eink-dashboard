@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from '@phosphor-icons/react';
 import { GRID_COLS, GRID_ROWS, widgetById } from '../widgets.js';
-import { renderWidget } from '../widget-render.js';
+import { renderWidget, typographyCss } from '../widget-render.js';
 import WidgetForm from './WidgetForm.jsx';
 
 const DASH_W = 800;
@@ -237,8 +237,13 @@ export default function WidgetSettingsModal({
     density: draft.density,
     settings: draft.settings
   }) || '';
+  // Apply per-tile typography (font family / scale / padding) to the
+  // preview cell so the modal mirrors what the dashboard will render
+  // post-save. Without this, the typography sliders silently do
+  // nothing in the live preview and the user thinks they're broken.
+  const typoStyle = typographyCss(draft.settings);
   const cellHtml =
-    `<div class="${classes.join(' ')}" style="width:${dashW}px;height:${dashH}px">${previewHtml}</div>`;
+    `<div class="${classes.join(' ')}" style="width:${dashW}px;height:${dashH}px;${typoStyle}">${previewHtml}</div>`;
 
   const density = draft.density || '';
 

@@ -130,6 +130,13 @@ export function renderFooter(data) {
 // Per-tile typography → `style` attribute fragment for the .cell wrapper.
 // Empty string when the user hasn't picked anything so the per-widget
 // defaults still win.
+//
+// fontScale uses `zoom` to scale every descendant (text, SVG, padding)
+// in one shot. Every widget has its own hard-coded px sizes, so a
+// CSS-variable approach would require touching each render function.
+// `zoom` is well-supported in headless Chromium (Puppeteer) and works
+// per-element without affecting siblings — exactly what the per-tile
+// slider promises.
 export function typographyCss(s) {
   if (!s) return '';
   let css = '';
@@ -139,6 +146,9 @@ export function typographyCss(s) {
   }
   if (Number.isFinite(s.padding)) {
     css += `padding:${s.padding}px;`;
+  }
+  if (Number.isFinite(s.fontScale) && Math.abs(s.fontScale - 1) > 0.001) {
+    css += `zoom:${s.fontScale};`;
   }
   return css;
 }
