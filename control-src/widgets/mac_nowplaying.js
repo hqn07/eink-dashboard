@@ -74,9 +74,12 @@ export const def = {
     showSource:    true,
     showStateIcon: true,
     showColTitle:  true,        // toggle the "NOW PLAYING" heading
+    showSongTitle: true,        // toggle the song title line
+    showArtist:    true,        // toggle the artist · album line
     headerAlign:   'left',      // 'left' | 'center' | 'right'
     artPosition:   'right',     // 'left' | 'right' (horizontal layout only)
     textAlign:     'left',      // 'left' | 'center' | 'right' (artist/title block)
+    textOffsetY:   0,           // -120..+120 px vertical nudge for the text block
     fontScale: 1,
     padding: 14
   })
@@ -115,9 +118,15 @@ export function render({ macNowPlaying, cellW, cellH, density, settings }) {
   const allowSource    = cfg.showSource   && s.showSource   !== false;
   const allowStateIcon = s.showStateIcon !== false;
   const allowColTitle  = s.showColTitle  !== false;
+  const allowSongTitle = s.showSongTitle !== false;
+  const allowArtist    = s.showArtist    !== false;
   const headerAlign    = s.headerAlign === 'center' || s.headerAlign === 'right' ? s.headerAlign : 'left';
   const textAlign      = s.textAlign   === 'center' || s.textAlign   === 'right' ? s.textAlign   : 'left';
   const artPosition    = s.artPosition === 'left' ? 'left' : 'right';
+  // Clamp the user's slider to a sane range so they can't push the
+  // text block out of the tile entirely.
+  const textOffsetY    = Math.max(-120, Math.min(120, parseInt(s.textOffsetY, 10) || 0));
+  const textOffsetStyle = textOffsetY ? `transform:translateY(${textOffsetY}px);` : '';
   // The horizontal layout puts art on one side and the text block on
   // the other. `art-right` (default) keeps the original layout; the
   // user can flip to `art-left` to swap which column the cover sits in.
@@ -156,9 +165,9 @@ export function render({ macNowPlaying, cellW, cellH, density, settings }) {
           ${slots.right}
         </div>
         ${allowStateIcon ? `<div class="mac-np-state-big">${stateIcon}</div>` : ''}
-        <div class="mac-np-stacked-text">
-          <div class="mac-np-title autofit" data-min-font="14" data-max-font="${maxFont}">${escapeHtml(np.title)}</div>
-          <div class="mac-np-meta">${artistAlbum || '—'}</div>
+        <div class="mac-np-stacked-text" style="${textOffsetStyle}">
+          ${allowSongTitle ? `<div class="mac-np-title autofit" data-min-font="14" data-max-font="${maxFont}">${escapeHtml(np.title)}</div>` : ''}
+          ${allowArtist ? `<div class="mac-np-meta">${artistAlbum || '—'}</div>` : ''}
           ${source ? `<div class="mac-np-source">${source}</div>` : ''}
         </div>
         ${progressBar}
@@ -181,9 +190,9 @@ export function render({ macNowPlaying, cellW, cellH, density, settings }) {
       </div>` : ''}
       <div class="mac-np-body ${bodyDirClass}">
         ${art}
-        <div class="mac-np-text">
-          <div class="mac-np-title autofit" data-min-font="14" data-max-font="${cfg.maxFont}">${escapeHtml(np.title)}</div>
-          <div class="mac-np-meta">${artistAlbum || '—'}</div>
+        <div class="mac-np-text" style="${textOffsetStyle}">
+          ${allowSongTitle ? `<div class="mac-np-title autofit" data-min-font="14" data-max-font="${cfg.maxFont}">${escapeHtml(np.title)}</div>` : ''}
+          ${allowArtist ? `<div class="mac-np-meta">${artistAlbum || '—'}</div>` : ''}
           ${source ? `<div class="mac-np-source">${source}</div>` : ''}
         </div>
       </div>

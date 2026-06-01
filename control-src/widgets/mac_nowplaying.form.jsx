@@ -13,7 +13,7 @@ const PRESETS = [
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, SelectField, ToggleField, TypographyFields, FormSection, PresetField } = fields;
+  const { TextField, SelectField, ToggleField, SliderField, TypographyFields, FormSection, PresetField } = fields;
   const variant = v.variant || 'time_bookends';
   return (
     <>
@@ -50,6 +50,16 @@ export function Form({ values, patch, onChange, fields }) {
           label='"NOW PLAYING" heading'
           value={v.showColTitle !== false}
           onChange={(x) => patch({ showColTitle: x })}
+        />
+        <ToggleField
+          label="Song title"
+          value={v.showSongTitle !== false}
+          onChange={(x) => patch({ showSongTitle: x })}
+        />
+        <ToggleField
+          label="Artist · album line"
+          value={v.showArtist !== false}
+          onChange={(x) => patch({ showArtist: x })}
         />
         <ToggleField
           label="Album art"
@@ -101,6 +111,13 @@ export function Form({ values, patch, onChange, fields }) {
             { value: 'right',  label: 'Right' }
           ]}
           onChange={(x) => patch({ textAlign: x })}
+        />
+        <SliderField
+          label="Text block vertical offset"
+          min={-120} max={120} step={2}
+          value={Number.isFinite(v.textOffsetY) ? v.textOffsetY : 0}
+          onChange={(x) => patch({ textOffsetY: x })}
+          format={(x) => x === 0 ? '0' : (x > 0 ? `+${x}px down` : `${x}px up`)}
         />
       </FormSection>
       <FormSection title="Style">
