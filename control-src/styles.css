@@ -1325,6 +1325,12 @@ input[type="text"], input[type="url"], textarea {
  * than four. */
 .wsm-subsection { margin-bottom: 18px; }
 .wsm-subsection:last-child { margin-bottom: 0; }
+/* Section title is hidden when the section is wrapped in a Tabs.Content
+ * (the tab trigger already labels it). When the form is NOT tabbed
+ * (legacy fallback / forms with a single section), the title shows
+ * normally. */
+.wsm-tabs-content .wsm-subsection { margin-bottom: 0; }
+.wsm-tabs-content .wsm-subsection > .wsm-subsection-title { display: none; }
 .wsm-subsection-title {
   font-family: 'Oswald', 'Arial Narrow', sans-serif;
   text-transform: uppercase;
@@ -1337,6 +1343,56 @@ input[type="text"], input[type="url"], textarea {
   border-bottom: 1px dashed var(--mute);
 }
 .wsm-subsection-body > :last-child { margin-bottom: 0; }
+
+/* Tabs surface for the widget settings form. Editorial palette: solid
+ * black underline marks active, dashed mute rule under inactives.
+ * Uses Radix Tabs so keyboard nav (arrow keys, Home/End) + a11y come
+ * for free. */
+.wsm-tabs {
+  display: flex;
+  flex-direction: column;
+}
+.wsm-tabs-list {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1.5px solid var(--ink);
+  margin-bottom: 16px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.wsm-tabs-trigger {
+  font-family: 'Oswald', 'Arial Narrow', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mute);
+  background: none;
+  border: 0;
+  padding: 8px 14px;
+  margin-bottom: -1.5px;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: color 120ms, border-color 120ms;
+  white-space: nowrap;
+}
+.wsm-tabs-trigger:hover { color: var(--ink); }
+.wsm-tabs-trigger[data-state="active"] {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+.wsm-tabs-trigger:focus-visible {
+  outline: 2px dashed var(--ink);
+  outline-offset: 2px;
+}
+.wsm-tabs-content {
+  outline: none;
+  animation: wsmTabIn 140ms ease-out;
+}
+@keyframes wsmTabIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 .wsm-row {
   display: flex;
   align-items: center;

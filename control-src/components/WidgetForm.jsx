@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import * as Tabs from '@radix-ui/react-tabs';
 import { CaretUp, CaretDown } from '@phosphor-icons/react';
 import { geocode } from '../api.js';
 import { MIGRATED_FORMS } from '../widgets/_registry.js';
@@ -316,12 +317,80 @@ function LocationFields({ values, onChange }) {
 // or more <FormSection> blocks (Data / Content / Layout / Style) so
 // users don't see a flat 30-field column. Mirrors the
 // TRMNL plugin editor + mushroom-card grouping pattern.
+//
+// The actual layout — stacked sections vs Radix tabs — is decided
+// by `TabbedForm` below. FormSection itself just renders a titled
+// block; TabbedForm walks the rendered tree, splits the sections
+// into tabs, and re-uses the original DOM structure inside each
+// Tabs.Content.
 function FormSection({ title, children }) {
   return (
-    <div className="wsm-subsection">
+    <div className="wsm-subsection" data-section-title={title}>
       <div className="wsm-subsection-title">{title}</div>
       <div className="wsm-subsection-body">{children}</div>
     </div>
+  );
+}
+
+// Render the migrated widget Form and split its FormSection children
+// into a Radix Tabs surface. Every migrated Form is a pure render
+// function (no hooks, no state, no side effects), so calling it
+// directly to introspect its children is safe — the constraint is
+// documented at the top of each `<id>.form.jsx`.
+function TabbedForm({ MigratedForm, formProps }) {
+  // Pure-component call. Equivalent to JSX `<MigratedForm {...props} />`
+  // but without going through React's renderer, so we can walk the
+  // resulting element tree before mounting.
+  const tree = MigratedForm(formProps);
+  const flat = React.Children.toArray(
+    React.isValidElement(tree) && tree.type === React.Fragment
+      ? tree.props.children
+      : tree
+  );
+  const sections = flat.filter(c => React.isValidElement(c) && c.type === FormSection);
+  const extras   = flat.filter(c => !React.isValidElement(c) || c.type !== FormSection);
+
+  const titles = sections.map(s => s.props.title);
+  const [active, setActive] = useState(titles[0] || '');
+
+  // Snap active back to the first valid tab if the form's section
+  // list changes (e.g. preset adds a new section). Avoids leaving
+  // the user on a tab that no longer exists.
+  if (titles.length && !titles.includes(active)) {
+    setActive(titles[0]);
+    return null; // re-render with the corrected active
+  }
+
+  if (!sections.length) {
+    return <>{tree}</>;
+  }
+
+  return (
+    <>
+      {extras}
+      <Tabs.Root value={active} onValueChange={setActive} className="wsm-tabs">
+        <Tabs.List className="wsm-tabs-list" aria-label="Widget settings sections">
+          {sections.map(s => (
+            <Tabs.Trigger
+              key={s.props.title}
+              value={s.props.title}
+              className="wsm-tabs-trigger"
+            >
+              {s.props.title}
+            </Tabs.Trigger>
+          ))}
+        </Tabs.List>
+        {sections.map(s => (
+          <Tabs.Content
+            key={s.props.title}
+            value={s.props.title}
+            className="wsm-tabs-content"
+          >
+            {s.props.children}
+          </Tabs.Content>
+        ))}
+      </Tabs.Root>
+    </>
   );
 }
 
@@ -371,7 +440,12 @@ export default function WidgetForm({ widgetId, values, onChange }) {
   // the legacy switch below.
   const MigratedForm = MIGRATED_FORMS[widgetId];
   if (MigratedForm) {
-    return <MigratedForm values={v} patch={patch} onChange={onChange} fields={FIELD_PRIMITIVES} />;
+    return (
+      <TabbedForm
+        MigratedForm={MigratedForm}
+        formProps={{ values: v, patch, onChange, fields: FIELD_PRIMITIVES }}
+      />
+    );
   }
 
   switch (widgetId) {
