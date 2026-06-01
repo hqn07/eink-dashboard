@@ -69,9 +69,10 @@ export const def = {
   defaults: () => ({
     title: '',
     variant: 'time_bookends',
-    showAlbumArt: true,
-    showProgress: true,
-    showSource:   true,
+    showAlbumArt:  true,
+    showProgress:  true,
+    showSource:    true,
+    showStateIcon: true,
     fontScale: 1,
     padding: 14
   })
@@ -108,6 +109,7 @@ export function render({ macNowPlaying, cellW, cellH, density, settings }) {
   const allowArt      = s.showAlbumArt !== false;
   const allowProgress = cfg.showProgress && s.showProgress !== false;
   const allowSource   = cfg.showSource   && s.showSource   !== false;
+  const allowStateIcon = s.showStateIcon !== false;
   const artistAlbum = [np.artist, np.album].filter(Boolean).map(escapeHtml).join(' · ');
   const source = allowSource && np.sourceLabel ? `via ${escapeHtml(np.sourceLabel)}` : '';
   const hasProgress = allowProgress
@@ -141,7 +143,7 @@ export function render({ macNowPlaying, cellW, cellH, density, settings }) {
           ${artInner}
           ${slots.right}
         </div>
-        <div class="mac-np-state-big">${stateIcon}</div>
+        ${allowStateIcon ? `<div class="mac-np-state-big">${stateIcon}</div>` : ''}
         <div class="mac-np-stacked-text">
           <div class="mac-np-title autofit" data-min-font="14" data-max-font="${maxFont}">${escapeHtml(np.title)}</div>
           <div class="mac-np-meta">${artistAlbum || '—'}</div>
@@ -162,7 +164,7 @@ export function render({ macNowPlaying, cellW, cellH, density, settings }) {
   return `
     <div class="mac-np-card mac-np-tier-${tier}">
       <div class="mac-np-head">
-        <span class="mac-np-state">${stateIcon}</span>
+        ${allowStateIcon ? `<span class="mac-np-state">${stateIcon}</span>` : ''}
         <span class="col-title">NOW PLAYING</span>
       </div>
       <div class="mac-np-body">

@@ -240,6 +240,18 @@ html, body {
   fill: #fff;
   stroke: #fff;
 }
+/* Album-art empty fallback uses a white bg by default — invert the
+ * art container itself so the dark theme doesn't end up with a solid
+ * white square covering the whole space when the agent hasn't sent
+ * artwork yet (mostly: no song playing, or song just changed and art
+ * is still uploading). */
+.cell.cell-inverted .mac-np-art,
+.cell.cell-inverted .mac-np-art-empty {
+  background: #000;
+  border-color: #fff;
+  color: #fff;
+}
+
 /* Plain `invert(1)` on the sevesalm glyphs + photographic album art.
  * The sevesalm SVGs ship with transparent backgrounds (the explicit
  * `style="background-color: white"` was stripped in this commit), so

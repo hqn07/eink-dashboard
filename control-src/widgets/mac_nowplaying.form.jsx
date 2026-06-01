@@ -61,6 +61,11 @@ export function Form({ values, patch, onChange, fields }) {
           value={v.showSource !== false}
           onChange={(x) => patch({ showSource: x })}
         />
+        <ToggleField
+          label="Play / pause glyph (▶ / ❚❚)"
+          value={v.showStateIcon !== false}
+          onChange={(x) => patch({ showStateIcon: x })}
+        />
       </FormSection>
       <FormSection title="Style">
         <TypographyFields values={v} onChange={onChange} />
