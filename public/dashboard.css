@@ -688,6 +688,13 @@ html, body {
    * on the baseline. */
   vertical-align: -0.15em;
 }
+.mac-batt-bolt {
+  /* Solid SVG lightning bolt rendered inline next to the battery
+   * percentage. Inherits black on normal theme + flips to white on
+   * `.cell-inverted` via the global SVG fill rule. */
+  vertical-align: -0.1em;
+  margin-left: 0.15em;
+}
 .mac-np-progress {
   display: flex; flex-direction: column; gap: 4px;
 }

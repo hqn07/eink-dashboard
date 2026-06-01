@@ -20,7 +20,14 @@ export function render({ macBattery, settings }) {
     : 'MAC BATTERY';
   if (!macBattery) return placeholder(titleLabel.split(/\s+/)[0] || 'MAC', 'OFFLINE', 'msg');
   const charging = /charg/i.test(macBattery.state);
-  const arrow = charging ? '⚡' : '';
+  // Solid inline SVG lightning bolt instead of the U+26A1 emoji. The
+  // emoji rendered as a yellow glyph in Chrome's color-emoji font
+  // which (1) is gray-not-black on the threshold pass and (2) didn't
+  // invert correctly on the dark theme. Solid black SVG threshold-
+  // safe + invertible.
+  const arrow = charging
+    ? '<svg class="mac-batt-bolt" viewBox="0 0 24 24" width="0.7em" height="0.7em" aria-hidden="true"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" fill="#000"/></svg>'
+    : '';
   return `
     <div class="mac-batt">
       <div class="col-title">${escapeHtml(titleLabel)}</div>
