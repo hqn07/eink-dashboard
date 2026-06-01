@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import GridLayout from 'react-grid-layout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gear, X } from '@phosphor-icons/react';
+import * as HoverCard from '@radix-ui/react-hover-card';
 import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById, makeInstance } from '../widgets.js';
 import { renderWidget, renderHeader, renderFooter, isHeaderOn, isFooterOn, headerVariant, footerVariant, typographyCss, cellClasses } from '../widget-render.js';
 import WidgetSettingsModal from './WidgetSettingsModal.jsx';
@@ -26,6 +27,25 @@ function smallestSizeKey(def) {
     const sa = def.sizes[a]; const sb = def.sizes[b];
     return (sb.w * sb.h) < (sa.w * sa.h) ? b : a;
   }, def.defaultSize);
+}
+
+// Showcase size per widget — what HoverCard renders on hover. Picked
+// by hand so each widget looks its best instead of always the
+// smallest preset. Fallback: the widget's defaultSize.
+const SHOWCASE_SIZE_BY_ID = {
+  clock:            'S',
+  mac_battery:      'S',
+  message:          'M',
+  calendar:         'M',
+  weather_forecast: 'M',
+  stocks:           'M',
+  weather_hero:     'L',
+  mac_nowplaying:   'L'
+};
+function showcaseSizeKey(def) {
+  const hint = SHOWCASE_SIZE_BY_ID[def.id];
+  if (hint && def.sizes[hint]) return hint;
+  return def.defaultSize;
 }
 
 export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onChange, onError, onCommitItemNow }) {
@@ -536,35 +556,86 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
             const html = `<div class="cell cell-${def.id}" style="width:${dashW}px;height:${dashH}px">${inner}</div>`;
             const cardScale = Math.min(180 / dashW, 140 / dashH, 0.5);
             const count = enabled.filter(l => l.widgetId === def.id).length;
+
+            // Showcase preview — bigger render shown on hover via Radix
+            // HoverCard. Scaled to fit a 480x280 popover so even L
+            // widgets don't take over the page. Renders the same
+            // widget-render output the canvas uses so it matches what
+            // the user gets on drop.
+            const showcaseKey = showcaseSizeKey(def);
+            const { w: sw, h: sh } = def.sizes[showcaseKey];
+            const showcaseW = sw * (DASH_W / GRID_COLS);
+            const showcaseH = sh * (BODY_H / GRID_ROWS);
+            const showcaseScale = Math.min(
+              480 / showcaseW,
+              280 / showcaseH,
+              0.9
+            );
+            const showcaseHtml = `<div class="cell cell-${def.id}" style="width:${showcaseW}px;height:${showcaseH}px">${inner}</div>`;
+
             return (
-              <motion.div
-                key={def.id}
-                layout
-                className="palette-card"
-                draggable
-                onDragStart={(e) => onPoolDragStart(e, def.id)}
-                onClick={() => addToCanvas(def.id)}
-                title={`${def.label} — drag onto canvas or click to add`}
-              >
-                <div
-                  className="palette-card-preview"
-                  style={{ width: dashW * cardScale, height: dashH * cardScale }}
-                >
-                  <div
-                    className="palette-card-scale"
-                    style={{
-                      width: dashW,
-                      height: dashH,
-                      transform: `scale(${cardScale})`,
-                      transformOrigin: 'top left'
-                    }}
-                    dangerouslySetInnerHTML={{ __html: html }}
-                  />
-                </div>
-                <div className="palette-card-label">
-                  {def.label}{count > 0 ? ` · ${count} ON` : ''}
-                </div>
-              </motion.div>
+              <HoverCard.Root key={def.id} openDelay={250} closeDelay={100}>
+                <HoverCard.Trigger asChild>
+                  <motion.div
+                    layout
+                    className="palette-card"
+                    draggable
+                    onDragStart={(e) => onPoolDragStart(e, def.id)}
+                    onClick={() => addToCanvas(def.id)}
+                    title={`${def.label} — drag onto canvas or click to add`}
+                  >
+                    <div
+                      className="palette-card-preview"
+                      style={{ width: dashW * cardScale, height: dashH * cardScale }}
+                    >
+                      <div
+                        className="palette-card-scale"
+                        style={{
+                          width: dashW,
+                          height: dashH,
+                          transform: `scale(${cardScale})`,
+                          transformOrigin: 'top left'
+                        }}
+                        dangerouslySetInnerHTML={{ __html: html }}
+                      />
+                    </div>
+                    <div className="palette-card-label">
+                      {def.label}{count > 0 ? ` · ${count} ON` : ''}
+                    </div>
+                  </motion.div>
+                </HoverCard.Trigger>
+                <HoverCard.Portal>
+                  <HoverCard.Content
+                    className="palette-hover-card"
+                    side="right"
+                    sideOffset={12}
+                    collisionPadding={16}
+                  >
+                    <div className="palette-hover-label">
+                      {def.label} · {showcaseKey} · {sw}×{sh}
+                    </div>
+                    <div
+                      className="palette-hover-preview"
+                      style={{
+                        width:  showcaseW * showcaseScale,
+                        height: showcaseH * showcaseScale
+                      }}
+                    >
+                      <div
+                        className="palette-card-scale"
+                        style={{
+                          width: showcaseW,
+                          height: showcaseH,
+                          transform: `scale(${showcaseScale})`,
+                          transformOrigin: 'top left'
+                        }}
+                        dangerouslySetInnerHTML={{ __html: showcaseHtml }}
+                      />
+                    </div>
+                    <HoverCard.Arrow className="palette-hover-arrow" />
+                  </HoverCard.Content>
+                </HoverCard.Portal>
+              </HoverCard.Root>
             );
           })}
         </div>

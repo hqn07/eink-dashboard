@@ -879,6 +879,45 @@ input[type="text"], input[type="url"], textarea {
 }
 .palette-card:active { cursor: grabbing; }
 .palette-card:hover { background: #faf8f3; }
+
+/* HoverCard popover — Radix renders into a portal so this lives at
+ * document root. Keep it bounded (max 480x320 incl. label/padding) so
+ * the showcase preview never takes over the page; the inline scale
+ * inside renders the widget at its showcase size. */
+.palette-hover-card {
+  background: #fff;
+  border: 2px solid var(--ink);
+  padding: 12px;
+  max-width: 504px;
+  max-height: 360px;
+  box-shadow: 6px 6px 0 0 var(--ink);
+  z-index: 90;
+  animation: paletteHoverIn 140ms ease-out;
+}
+@keyframes paletteHoverIn {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.palette-hover-label {
+  font-family: 'Oswald', 'Arial Narrow', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mute);
+  margin: 0 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--mute);
+}
+.palette-hover-preview {
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #ddd;
+}
+.palette-hover-arrow {
+  fill: var(--ink);
+}
 .palette-card-preview {
   position: relative;
   background: #fff;

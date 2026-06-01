@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
+    "@radix-ui/react-hover-card": "^1.1.15",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "express-rate-limit": "^8.5.2",
