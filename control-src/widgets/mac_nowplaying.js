@@ -73,6 +73,10 @@ export const def = {
     showProgress:  true,
     showSource:    true,
     showStateIcon: true,
+    showColTitle:  true,        // toggle the "NOW PLAYING" heading
+    headerAlign:   'left',      // 'left' | 'center' | 'right'
+    artPosition:   'right',     // 'left' | 'right' (horizontal layout only)
+    textAlign:     'left',      // 'left' | 'center' | 'right' (artist/title block)
     fontScale: 1,
     padding: 14
   })
@@ -106,10 +110,18 @@ export function render({ macNowPlaying, cellW, cellH, density, settings }) {
   // still gates upward (e.g. a tiny tile never shows the progress bar
   // even if the user enables it), but the toggle can hide an element
   // the tier would otherwise have shown.
-  const allowArt      = s.showAlbumArt !== false;
-  const allowProgress = cfg.showProgress && s.showProgress !== false;
-  const allowSource   = cfg.showSource   && s.showSource   !== false;
+  const allowArt       = s.showAlbumArt !== false;
+  const allowProgress  = cfg.showProgress && s.showProgress !== false;
+  const allowSource    = cfg.showSource   && s.showSource   !== false;
   const allowStateIcon = s.showStateIcon !== false;
+  const allowColTitle  = s.showColTitle  !== false;
+  const headerAlign    = s.headerAlign === 'center' || s.headerAlign === 'right' ? s.headerAlign : 'left';
+  const textAlign      = s.textAlign   === 'center' || s.textAlign   === 'right' ? s.textAlign   : 'left';
+  const artPosition    = s.artPosition === 'left' ? 'left' : 'right';
+  // The horizontal layout puts art on one side and the text block on
+  // the other. `art-right` (default) keeps the original layout; the
+  // user can flip to `art-left` to swap which column the cover sits in.
+  const bodyDirClass   = artPosition === 'left' ? 'mac-np-body-art-left' : 'mac-np-body-art-right';
   const artistAlbum = [np.artist, np.album].filter(Boolean).map(escapeHtml).join(' · ');
   const source = allowSource && np.sourceLabel ? `via ${escapeHtml(np.sourceLabel)}` : '';
   const hasProgress = allowProgress
@@ -134,10 +146,10 @@ export function render({ macNowPlaying, cellW, cellH, density, settings }) {
     const slots = sideSpaceSlots(variant, { np, elapsedStr, remainStr, stateIcon, titleLabel });
     const maxFont = Math.max(14, Math.round(cfg.maxFont * fontScale));
     return `
-      <div class="mac-np-card mac-np-stacked mac-np-tier-${tier} mac-np-var-${variant}">
-        <div class="mac-np-head">
+      <div class="mac-np-card mac-np-stacked mac-np-tier-${tier} mac-np-var-${variant} mac-np-text-${textAlign}">
+        ${allowColTitle ? `<div class="mac-np-head mac-np-head-${headerAlign}">
           <span class="col-title">${escapeHtml(titleLabel)}</span>
-        </div>
+        </div>` : ''}
         <div class="mac-np-stacked-row">
           ${slots.left}
           ${artInner}
@@ -162,12 +174,12 @@ export function render({ macNowPlaying, cellW, cellH, density, settings }) {
        </div>`
     : '';
   return `
-    <div class="mac-np-card mac-np-tier-${tier}">
-      <div class="mac-np-head">
+    <div class="mac-np-card mac-np-tier-${tier} mac-np-text-${textAlign}">
+      ${allowColTitle ? `<div class="mac-np-head mac-np-head-${headerAlign}">
         ${allowStateIcon ? `<span class="mac-np-state">${stateIcon}</span>` : ''}
-        <span class="col-title">NOW PLAYING</span>
-      </div>
-      <div class="mac-np-body">
+        <span class="col-title">${escapeHtml(titleLabel)}</span>
+      </div>` : ''}
+      <div class="mac-np-body ${bodyDirClass}">
         ${art}
         <div class="mac-np-text">
           <div class="mac-np-title autofit" data-min-font="14" data-max-font="${cfg.maxFont}">${escapeHtml(np.title)}</div>

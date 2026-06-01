@@ -47,6 +47,11 @@ export function Form({ values, patch, onChange, fields }) {
       </FormSection>
       <FormSection title="Show">
         <ToggleField
+          label='"NOW PLAYING" heading'
+          value={v.showColTitle !== false}
+          onChange={(x) => patch({ showColTitle: x })}
+        />
+        <ToggleField
           label="Album art"
           value={v.showAlbumArt !== false}
           onChange={(x) => patch({ showAlbumArt: x })}
@@ -65,6 +70,37 @@ export function Form({ values, patch, onChange, fields }) {
           label="Play / pause glyph (▶ / ❚❚)"
           value={v.showStateIcon !== false}
           onChange={(x) => patch({ showStateIcon: x })}
+        />
+      </FormSection>
+      <FormSection title="Position">
+        <SelectField
+          label='"NOW PLAYING" heading position'
+          value={v.headerAlign || 'left'}
+          options={[
+            { value: 'left',   label: 'Left' },
+            { value: 'center', label: 'Center' },
+            { value: 'right',  label: 'Right' }
+          ]}
+          onChange={(x) => patch({ headerAlign: x })}
+        />
+        <SelectField
+          label="Album art side (horizontal layout)"
+          value={v.artPosition || 'right'}
+          options={[
+            { value: 'right', label: 'Right of text' },
+            { value: 'left',  label: 'Left of text' }
+          ]}
+          onChange={(x) => patch({ artPosition: x })}
+        />
+        <SelectField
+          label="Artist / song text alignment"
+          value={v.textAlign || 'left'}
+          options={[
+            { value: 'left',   label: 'Left' },
+            { value: 'center', label: 'Center' },
+            { value: 'right',  label: 'Right' }
+          ]}
+          onChange={(x) => patch({ textAlign: x })}
         />
       </FormSection>
       <FormSection title="Style">

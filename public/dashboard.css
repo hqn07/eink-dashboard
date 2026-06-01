@@ -607,6 +607,26 @@ html, body {
   font-family: 'JetBrains Mono', monospace;
 }
 .mac-np-head { display: flex; align-items: center; gap: 8px; }
+/* Per-tile header alignment knob — moves the "NOW PLAYING" heading
+ * (plus its inline state glyph when present) inside the row. */
+.mac-np-head-left   { justify-content: flex-start; }
+.mac-np-head-center { justify-content: center; }
+.mac-np-head-right  { justify-content: flex-end; }
+
+/* Per-tile text alignment knob — applies to the artist / song /
+ * source block inside `.mac-np-text`. The stacked layout already
+ * centers; this rule overrides when the user picks something else. */
+.mac-np-text-left   .mac-np-text { text-align: left;   align-items: flex-start; }
+.mac-np-text-center .mac-np-text { text-align: center; align-items: center; }
+.mac-np-text-right  .mac-np-text { text-align: right;  align-items: flex-end; }
+.mac-np-stacked.mac-np-text-left   .mac-np-stacked-text { text-align: left;  align-items: flex-start; }
+.mac-np-stacked.mac-np-text-center .mac-np-stacked-text { text-align: center; align-items: center; }
+.mac-np-stacked.mac-np-text-right  .mac-np-stacked-text { text-align: right;  align-items: flex-end; }
+
+/* Art position knob (horizontal layout only). Flip the body's flex
+ * direction so the cover sits on the chosen side of the text block. */
+.mac-np-body-art-right { flex-direction: row; }
+.mac-np-body-art-left  { flex-direction: row-reverse; }
 .mac-np-state {
   font-size: 18px; font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
