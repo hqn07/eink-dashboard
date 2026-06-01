@@ -5,6 +5,7 @@ import { Gear, X } from '@phosphor-icons/react';
 import * as HoverCard from '@radix-ui/react-hover-card';
 import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById, makeInstance } from '../widgets.js';
 import { renderWidget, renderHeader, renderFooter, isHeaderOn, isFooterOn, headerVariant, footerVariant, typographyCss, cellClasses } from '../widget-render.js';
+import { demoCtxForWidget } from '../widgets/_pool_demo.js';
 import WidgetSettingsModal from './WidgetSettingsModal.jsx';
 
 // Editor cells must align 1:1 with dashboard cells so widget previews
@@ -550,7 +551,14 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
           {palette.map(def => {
             const sizeKey = smallestSizeKey(def);
             const { w, h } = def.sizes[sizeKey];
-            const inner = renderWidget(def.id, previewData) || '';
+            // Pool tiles render with frozen demo data so a brand-new
+            // user doesn't see "SETUP NEEDED" placeholders before
+            // they've configured anything. Each render gets its own
+            // cellW/cellH so size-conditional logic (forecast day
+            // count, weather hourly strip, calendar sections) shows
+            // the appropriate fidelity for the size being previewed.
+            const thumbCtx = demoCtxForWidget(def.id, w, h);
+            const inner = renderWidget(def.id, thumbCtx) || '';
             const dashW = w * (DASH_W / GRID_COLS);
             const dashH = h * (BODY_H / GRID_ROWS);
             const html = `<div class="cell cell-${def.id}" style="width:${dashW}px;height:${dashH}px">${inner}</div>`;
@@ -571,7 +579,9 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
               280 / showcaseH,
               0.9
             );
-            const showcaseHtml = `<div class="cell cell-${def.id}" style="width:${showcaseW}px;height:${showcaseH}px">${inner}</div>`;
+            const showcaseCtx  = demoCtxForWidget(def.id, sw, sh);
+            const showcaseInner = renderWidget(def.id, showcaseCtx) || '';
+            const showcaseHtml = `<div class="cell cell-${def.id}" style="width:${showcaseW}px;height:${showcaseH}px">${showcaseInner}</div>`;
 
             return (
               <HoverCard.Root key={def.id} openDelay={250} closeDelay={100}>

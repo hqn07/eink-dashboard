@@ -1,0 +1,115 @@
+// Demo data used by the widget pool / hover-card preview. Each
+// pool tile renders with this instead of the live config so users see
+// what a fully-configured widget will look like, not the
+// SETUP NEEDED placeholder. The numbers/copy are deliberately
+// generic ("Coffee with Lia", AAPL, partly cloudy 82°F) so nothing
+// reads like a real user's data — and they're frozen, not derived
+// from the current date, so the pool preview is reproducible.
+
+export const DEMO_WEATHER = {
+  temp: 82, feelsLike: 86, tempMin: 68, tempMax: 90,
+  humidity: 64,
+  windSpeed: 7, windGust: 11, windDir: 'NW', windUnit: 'mph',
+  cloudCover: 38,
+  desc: 'PARTLY CLOUDY', main: 'Clouds',
+  sunrise: '6:24',  sunset:  '8:22',
+  sunriseMin: 384,  sunsetMin: 1222,  nowMin: 700,
+  forecast: [
+    { name: 'MON', hi: 82, lo: 68, main: 'Clouds', precip: 20 },
+    { name: 'TUE', hi: 79, lo: 67, main: 'Rain',   precip: 70 },
+    { name: 'WED', hi: 77, lo: 65, main: 'Rain',   precip: 80 },
+    { name: 'THU', hi: 80, lo: 66, main: 'Clear',  precip:  5 },
+    { name: 'FRI', hi: 84, lo: 69, main: 'Clear',  precip:  0 },
+    { name: 'SAT', hi: 88, lo: 71, main: 'Clouds', precip: 15 },
+    { name: 'SUN', hi: 85, lo: 70, main: 'Clouds', precip: 30 }
+  ],
+  hourly: [
+    { label: '9P',  temp: 78, main: 'Clear', precip:  5 },
+    { label: '10P', temp: 76, main: 'Clear', precip:  5 },
+    { label: '11P', temp: 74, main: 'Clear', precip:  5 },
+    { label: '12A', temp: 72, main: 'Clouds', precip: 10 },
+    { label: '1A',  temp: 71, main: 'Clouds', precip: 15 },
+    { label: '2A',  temp: 70, main: 'Rain',   precip: 60 }
+  ],
+  stale: false,
+  units: 'F'
+};
+
+export const DEMO_EVENTS = [
+  { title: 'Coffee with Lia',       dayLabel: 'MON', startLabel: '9:00 AM',  section: 'TODAY' },
+  { title: 'Brand workshop',        dayLabel: 'MON', startLabel: '12:30 PM', section: 'TODAY' },
+  { title: 'Standup',               dayLabel: 'TUE', startLabel: '10:00 AM', section: 'LATER' },
+  { title: 'Dentist',               dayLabel: 'WED', startLabel: '3:00 PM',  section: 'LATER' },
+  { title: 'Yoga',                  dayLabel: 'THU', startLabel: '7:00 AM',  section: 'LATER' },
+  { title: "Mom's birthday",        dayLabel: 'FRI', startLabel: 'all day',  section: 'LATER', isAllDay: true },
+  { title: 'Dinner · 11 Madison',   dayLabel: 'SAT', startLabel: '7:30 PM',  section: 'LATER' },
+  { title: 'Market run',            dayLabel: 'SUN', startLabel: '11:00 AM', section: 'LATER' }
+];
+
+export const DEMO_STOCKS = [
+  { symbol: 'AAPL',    price: '189.84', change:  1.24, changePct:  0.66, dayHigh: '190.20', dayLow: '187.55',
+    spark: [186, 187, 188, 188.5, 189, 189.5, 189.84] },
+  { symbol: 'NVDA',    price: '124.32', change: -0.85, changePct: -0.68,
+    spark: [126, 125.5, 125, 124.7, 124.5, 124.4, 124.32] },
+  { symbol: 'BTC-USD', price: '67423',  change: 412,   changePct:  0.61,
+    spark: [67000, 67050, 67100, 67200, 67300, 67400, 67423] },
+  { symbol: 'TSLA',    price: '255.46', change:  3.21, changePct:  1.27,
+    spark: [251, 252, 253, 253.5, 254, 255, 255.46] },
+  { symbol: 'GOOG',    price: '174.12', change:  0.42, changePct:  0.24,
+    spark: [173, 173.4, 173.7, 174, 174.05, 174.1, 174.12] }
+];
+
+export const DEMO_NOWPLAYING = {
+  title: 'Empty Seats',
+  artist: 'Crumb',
+  album: 'Pioneer Works',
+  isPlaying: true,
+  durationSec: 217,
+  elapsedSec: 84,
+  sourceLabel: 'SPOTIFY',
+  artworkBase64: null
+};
+
+export const DEMO_BATTERY = { percent: 87, state: 'charging' };
+
+export const DEMO_MESSAGE = { text: 'Welcome home.', subtitle: 'Be present.' };
+
+export const DEMO_CLOCK = {
+  timeStr: '9:18',
+  ampm: 'PM',
+  dateLine: 'FRI MAY 31',
+  style: 'big'
+};
+
+// Returns a render context for the given widget id with demo data
+// plumbed into the slots the widget expects. cellW + cellH come from
+// the size the pool is rendering at so widgets that branch on tier
+// (forecast day count, hi-tier-only hourly strip, etc.) render at
+// the size's actual fidelity.
+export function demoCtxForWidget(id, cellW, cellH) {
+  const base = { cellW, cellH, units: 'F', cfg: {} };
+  switch (id) {
+    case 'weather_hero':
+      return { ...base, weather: DEMO_WEATHER,
+        settings: { lat: 0, lon: 0, stats: ['feels','humid','wind','cloud'] } };
+    case 'weather_forecast':
+      return { ...base, weather: DEMO_WEATHER,
+        settings: { lat: 0, lon: 0 } };
+    case 'calendar':
+      return { ...base, events: DEMO_EVENTS,
+        settings: { icalUrls: ['demo'] } };
+    case 'stocks':
+      return { ...base, stocks: DEMO_STOCKS,
+        settings: { symbols: ['AAPL'] } };
+    case 'mac_nowplaying':
+      return { ...base, macNowPlaying: DEMO_NOWPLAYING, settings: {} };
+    case 'mac_battery':
+      return { ...base, macBattery: DEMO_BATTERY, settings: {} };
+    case 'message':
+      return { ...base, resolvedMessage: DEMO_MESSAGE, settings: {} };
+    case 'clock':
+      return { ...base, clockNow: DEMO_CLOCK, settings: {} };
+    default:
+      return { ...base, settings: {} };
+  }
+}
