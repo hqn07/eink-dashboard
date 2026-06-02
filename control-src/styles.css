@@ -1465,6 +1465,36 @@ input[type="text"], input[type="url"], textarea {
 }
 .wsm-preview-scale { transform-origin: top left; }
 
+/* Layered preview — iframe under, PNG over. iframe shows the SSR
+ * HTML for instant feedback; the PNG render fades in on top once
+ * Puppeteer finishes. Both are absolutely positioned in the same
+ * scale-origin corner so they align pixel-for-pixel. */
+.wsm-preview-iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 0;
+  transform-origin: top left;
+  pointer-events: none; /* don't steal scroll / clicks from the modal */
+  background: #fff;
+}
+.wsm-preview-png {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  image-rendering: pixelated;
+  /* 140ms fade so the swap from iframe to PNG isn't jarring. */
+  animation: wsmPreviewPngIn 140ms ease-out;
+  background: #fff;
+}
+@keyframes wsmPreviewPngIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.wsm-preview-spinner { color: var(--mute); margin-left: 4px; }
+.wsm-preview-err     { color: #b00020; margin-left: 4px; }
+
 .wsm-footer {
   display: flex;
   align-items: center;

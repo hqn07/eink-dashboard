@@ -126,6 +126,19 @@ export async function fetchMacState() {
   return r.json();
 }
 
+// Single-widget PNG render — used by the settings modal preview to
+// show the bit-identical e-ink output of the current draft settings
+// after a debounce. Returns a Blob or throws on non-200.
+export async function fetchPreviewPng(body) {
+  const r = await authFetch('/api/preview-render', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body || {})
+  });
+  if (!r.ok) throw new Error(`preview-render ${r.status}`);
+  return r.blob();
+}
+
 export async function geocode(query) {
   const q = (query || '').trim();
   if (q.length < 2) return [];

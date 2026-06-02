@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from '@phosphor-icons/react';
 import { GRID_COLS, GRID_ROWS, widgetById } from '../widgets.js';
 import { renderWidget, typographyCss, cellClasses } from '../widget-render.js';
+import { fetchPreviewPng } from '../api.js';
 import WidgetForm from './WidgetForm.jsx';
 
 const DASH_W = 800;
@@ -206,9 +207,9 @@ export default function WidgetSettingsModal({
     setDraft(prev => ({ ...prev, ...patch }));
   }
 
-  // Live preview matches EditorGrid's render path: same cellW/cellH
-  // dimensions on the dashboard's pixel grid, then scaled to fit
-  // whatever space the preview column has.
+  // Preview dimensions — matches the dashboard's pixel grid so the
+  // iframe + screenshot pipeline get the same canvas they would on
+  // the live device.
   const dashW = draft.w * (DASH_W / GRID_COLS);
   const dashH = draft.h * (BODY_H_BASE / GRID_ROWS);
 
@@ -221,30 +222,69 @@ export default function WidgetSettingsModal({
   const frameW = dashW * previewScale;
   const frameH = dashH * previewScale;
 
-  const classes = ['cell', `cell-${draft.widgetId}`];
-  if (draft.flush) classes.push('cell-flush');
-  classes.push(...cellClasses(draft.settings));
-  // EditorGrid merges per-item data (perItem[item.id]) into the render
-  // context so each tile sees its own fetched payload — without this,
-  // mac_nowplaying / mac_battery / clock / per-tile weather all collapse
-  // to the "no data" placeholder in the modal preview even though they
-  // render fine on the dashboard.
-  const itemSlot = (previewData && previewData.perItem && previewData.perItem[draft.id]) || {};
-  const previewHtml = renderWidget(draft.widgetId, {
-    ...previewData,
-    ...itemSlot,
-    cellW: draft.w,
-    cellH: draft.h,
-    density: draft.density,
-    settings: draft.settings
-  }) || '';
-  // Apply per-tile typography (font family / scale / padding) to the
-  // preview cell so the modal mirrors what the dashboard will render
-  // post-save. Without this, the typography sliders silently do
-  // nothing in the live preview and the user thinks they're broken.
-  const typoStyle = typographyCss(draft.settings);
-  const cellHtml =
-    `<div class="${classes.join(' ')}" style="width:${dashW}px;height:${dashH}px;${typoStyle}">${previewHtml}</div>`;
+  // Stable hash of the draft settings — the iframe src + PNG body
+  // both key off this so a no-op change doesn't re-request a frame.
+  // Memoised so the iframe key only flips when something visible
+  // actually changes.
+  const settingsHash = useMemo(() => {
+    try { return JSON.stringify(draft.settings || {}); }
+    catch { return ''; }
+  }, [draft.settings]);
+
+  const iframeSrc = useMemo(() => {
+    if (!draft.widgetId) return '';
+    const qs = new URLSearchParams({
+      widget: draft.widgetId,
+      w: String(draft.w),
+      h: String(draft.h)
+    });
+    if (settingsHash && settingsHash !== '{}') {
+      qs.set('settings', btoa(unescape(encodeURIComponent(settingsHash))));
+    }
+    if (draft.density) qs.set('density', draft.density);
+    // Auth: api.js stores the DEVICE_TOKEN in localStorage; the
+    // iframe loads its src as a regular GET so it can't reuse
+    // api.js's fetch interceptor. Read the token out and append it.
+    try {
+      const tok = localStorage.getItem('deviceToken') || '';
+      if (tok) qs.set('token', tok);
+    } catch (_) {}
+    return `/preview/widget?${qs}`;
+  }, [draft.widgetId, draft.w, draft.h, settingsHash, draft.density]);
+
+  // 1-bit PNG preview — fetched on a 600ms idle debounce so a slider
+  // drag doesn't queue 50 Puppeteer screenshots. Initial state: null
+  // until the first render lands; the iframe shows live HTML in the
+  // meantime so the user gets instant feedback.
+  const [pngUrl, setPngUrl] = useState(null);
+  const [pngLoading, setPngLoading] = useState(false);
+  const [pngError, setPngError] = useState(false);
+  useEffect(() => {
+    if (!open || !draft.widgetId) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setPngLoading(true);
+      setPngError(false);
+      try {
+        const blob = await fetchPreviewPng({
+          widgetId: draft.widgetId,
+          w: draft.w, h: draft.h,
+          settings: draft.settings || {},
+          density: draft.density
+        });
+        if (cancelled) return;
+        const url = URL.createObjectURL(blob);
+        setPngUrl(prev => { if (prev) URL.revokeObjectURL(prev); return url; });
+        setPngLoading(false);
+      } catch (_) {
+        if (!cancelled) { setPngError(true); setPngLoading(false); }
+      }
+    }, 600);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [open, draft.widgetId, draft.w, draft.h, settingsHash, draft.density]);
+
+  // Revoke object URL on unmount to avoid leaking blobs.
+  useEffect(() => () => { if (pngUrl) URL.revokeObjectURL(pngUrl); }, [pngUrl]);
 
   const density = draft.density || '';
 
@@ -291,19 +331,40 @@ export default function WidgetSettingsModal({
             <div className="wsm-col wsm-col-preview" ref={previewColRef}>
               <div className="wsm-preview-label">
                 Preview · {Math.round(previewScale * 100)}% · {draft.w}×{draft.h} cells
+                {pngLoading && <span className="wsm-preview-spinner"> · rendering…</span>}
+                {pngError && !pngLoading && <span className="wsm-preview-err"> · png render failed</span>}
               </div>
               <div
                 className="wsm-preview-frame"
                 style={{ width: frameW, height: frameH }}
               >
-                <div
-                  className="wsm-preview-scale"
-                  style={{
-                    transform: `scale(${previewScale})`,
-                    transformOrigin: 'top left'
-                  }}
-                  dangerouslySetInnerHTML={{ __html: cellHtml }}
-                />
+                {/*
+                  Two-layer preview:
+                  1. <iframe> with the SSR HTML — instant updates as
+                     the user types, isolated DOM so autofit + font
+                     metrics match the dashboard render exactly.
+                  2. <img> with the Puppeteer/Sharp 1-bit PNG — swaps
+                     in once the debounced render finishes so the
+                     user sees the actual e-ink output. Falls back to
+                     the iframe if the PNG render fails or hasn't
+                     finished yet.
+                */}
+                {iframeSrc && (
+                  <iframe
+                    className="wsm-preview-iframe"
+                    src={iframeSrc}
+                    title="Widget HTML preview"
+                    style={{ width: dashW, height: dashH, transform: `scale(${previewScale})` }}
+                  />
+                )}
+                {pngUrl && (
+                  <img
+                    className="wsm-preview-png"
+                    src={pngUrl}
+                    alt=""
+                    style={{ width: dashW * previewScale, height: dashH * previewScale }}
+                  />
+                )}
               </div>
             </div>
           </div>
