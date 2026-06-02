@@ -29,6 +29,7 @@ export const def = {
     city: (ctx && ctx.city) || '',
     lat:  (ctx && Number.isFinite(ctx.lat)) ? ctx.lat : null,
     lon:  (ctx && Number.isFinite(ctx.lon)) ? ctx.lon : null,
+    unitsOverride: 'inherit',
     stats: DEFAULT_STATS.slice(),
     showStats:  true,
     showHourly: true,

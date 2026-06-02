@@ -20,6 +20,7 @@ export const def = {
     city: (ctx && ctx.city) || '',
     lat:  (ctx && Number.isFinite(ctx.lat)) ? ctx.lat : null,
     lon:  (ctx && Number.isFinite(ctx.lon)) ? ctx.lon : null,
+    unitsOverride: 'inherit',
     forecastDays: null,
     title: '',
     precipMode: 'auto',     // 'auto' | 'always' | 'never'

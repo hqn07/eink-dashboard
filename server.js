@@ -790,7 +790,10 @@ async function buildWidgetData(cfg, units, layout) {
           // resolves to a "NO DATA" stub so the renderer can't fall back
           // to global cfg.weather for this tile.
           const loc = resolveLoc(eff);
-          slot.weather = await fetchWeather(loc, process.env.OPENWEATHER_API_KEY, units);
+          const effUnits = (eff.unitsOverride === 'F' || eff.unitsOverride === 'C')
+            ? eff.unitsOverride : units;
+          slot.units = effUnits;
+          slot.weather = await fetchWeather(loc, process.env.OPENWEATHER_API_KEY, effUnits);
           if (slot.weather && loc && Number.isFinite(eff.lat) && Number.isFinite(eff.lon)) {
             const alerts = await fetchAlerts({ lat: eff.lat, lon: eff.lon }).catch(() => []);
             if (alerts && alerts.length) slot.weather.alerts = alerts;
@@ -801,7 +804,10 @@ async function buildWidgetData(cfg, units, layout) {
           // New contract: same as weather_hero — always populate slot
           // even if the tile has no configured location.
           const loc = resolveLoc(eff);
-          slot.weather = await fetchWeather(loc, process.env.OPENWEATHER_API_KEY, units);
+          const effUnits = (eff.unitsOverride === 'F' || eff.unitsOverride === 'C')
+            ? eff.unitsOverride : units;
+          slot.units = effUnits;
+          slot.weather = await fetchWeather(loc, process.env.OPENWEATHER_API_KEY, effUnits);
           if (slot.weather && loc && Number.isFinite(eff.lat) && Number.isFinite(eff.lon)) {
             const alerts = await fetchAlerts({ lat: eff.lat, lon: eff.lon }).catch(() => []);
             if (alerts && alerts.length) slot.weather.alerts = alerts;

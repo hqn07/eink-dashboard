@@ -34,6 +34,17 @@ export function Form({ values, patch, onChange, fields }) {
           values={v}
           onChange={(loc) => onChange({ ...v, ...loc })}
         />
+        <SelectField
+          label="Units (this tile only)"
+          value={v.unitsOverride || 'inherit'}
+          options={[
+            { value: 'inherit', label: 'Inherit (dashboard default)' },
+            { value: 'F',       label: 'Force °F' },
+            { value: 'C',       label: 'Force °C' }
+          ]}
+          onChange={(x) => patch({ unitsOverride: x })}
+          help="Overrides this tile's reading only — dashboard's main unit stays the same."
+        />
       </FormSection>
       <FormSection title="Content">
         <PresetField presets={PRESETS} onApply={(vals) => onChange({ ...v, ...vals })} />
