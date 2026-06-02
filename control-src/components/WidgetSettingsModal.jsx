@@ -195,6 +195,69 @@ export default function WidgetSettingsModal({
     };
   }, [open]);
 
+  // ---------- Preview hooks (must run on every render) ----------
+  // Pre-existing hooks above use the `open` early-return below them,
+  // but Rules of Hooks require the new preview hooks to run on every
+  // render too. The `?.` chain plus `|| ''` defaults make these safe
+  // when `draft` is null (modal closed).
+
+  const settingsHash = useMemo(() => {
+    if (!draft) return '';
+    try { return JSON.stringify(draft.settings || {}); }
+    catch { return ''; }
+  }, [draft?.settings]);
+
+  const iframeSrc = useMemo(() => {
+    if (!draft || !draft.widgetId) return '';
+    const qs = new URLSearchParams({
+      widget: draft.widgetId,
+      w: String(draft.w),
+      h: String(draft.h)
+    });
+    if (settingsHash && settingsHash !== '{}') {
+      qs.set('settings', btoa(unescape(encodeURIComponent(settingsHash))));
+    }
+    if (draft.density) qs.set('density', draft.density);
+    try {
+      const tok = localStorage.getItem('deviceToken') || '';
+      if (tok) qs.set('token', tok);
+    } catch (_) {}
+    return `/preview/widget?${qs}`;
+  }, [draft?.widgetId, draft?.w, draft?.h, settingsHash, draft?.density]);
+
+  // 1-bit PNG preview — fetched on a 600ms idle debounce so a slider
+  // drag doesn't queue 50 Puppeteer screenshots. Initial state: null
+  // until the first render lands; the iframe shows live HTML in the
+  // meantime so the user gets instant feedback.
+  const [pngUrl, setPngUrl] = useState(null);
+  const [pngLoading, setPngLoading] = useState(false);
+  const [pngError, setPngError] = useState(false);
+  useEffect(() => {
+    if (!open || !draft || !draft.widgetId) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setPngLoading(true);
+      setPngError(false);
+      try {
+        const blob = await fetchPreviewPng({
+          widgetId: draft.widgetId,
+          w: draft.w, h: draft.h,
+          settings: draft.settings || {},
+          density: draft.density
+        });
+        if (cancelled) return;
+        const url = URL.createObjectURL(blob);
+        setPngUrl(prev => { if (prev) URL.revokeObjectURL(prev); return url; });
+        setPngLoading(false);
+      } catch (_) {
+        if (!cancelled) { setPngError(true); setPngLoading(false); }
+      }
+    }, 600);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [open, draft?.widgetId, draft?.w, draft?.h, settingsHash, draft?.density]);
+
+  useEffect(() => () => { if (pngUrl) URL.revokeObjectURL(pngUrl); }, [pngUrl]);
+
   if (!open || !draft) return null;
   const def = widgetById(draft.widgetId) || { label: draft.widgetId, id: draft.widgetId };
 
@@ -221,70 +284,6 @@ export default function WidgetSettingsModal({
   const previewScale = Math.max(0.4, fitScale);
   const frameW = dashW * previewScale;
   const frameH = dashH * previewScale;
-
-  // Stable hash of the draft settings — the iframe src + PNG body
-  // both key off this so a no-op change doesn't re-request a frame.
-  // Memoised so the iframe key only flips when something visible
-  // actually changes.
-  const settingsHash = useMemo(() => {
-    try { return JSON.stringify(draft.settings || {}); }
-    catch { return ''; }
-  }, [draft.settings]);
-
-  const iframeSrc = useMemo(() => {
-    if (!draft.widgetId) return '';
-    const qs = new URLSearchParams({
-      widget: draft.widgetId,
-      w: String(draft.w),
-      h: String(draft.h)
-    });
-    if (settingsHash && settingsHash !== '{}') {
-      qs.set('settings', btoa(unescape(encodeURIComponent(settingsHash))));
-    }
-    if (draft.density) qs.set('density', draft.density);
-    // Auth: api.js stores the DEVICE_TOKEN in localStorage; the
-    // iframe loads its src as a regular GET so it can't reuse
-    // api.js's fetch interceptor. Read the token out and append it.
-    try {
-      const tok = localStorage.getItem('deviceToken') || '';
-      if (tok) qs.set('token', tok);
-    } catch (_) {}
-    return `/preview/widget?${qs}`;
-  }, [draft.widgetId, draft.w, draft.h, settingsHash, draft.density]);
-
-  // 1-bit PNG preview — fetched on a 600ms idle debounce so a slider
-  // drag doesn't queue 50 Puppeteer screenshots. Initial state: null
-  // until the first render lands; the iframe shows live HTML in the
-  // meantime so the user gets instant feedback.
-  const [pngUrl, setPngUrl] = useState(null);
-  const [pngLoading, setPngLoading] = useState(false);
-  const [pngError, setPngError] = useState(false);
-  useEffect(() => {
-    if (!open || !draft.widgetId) return;
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      setPngLoading(true);
-      setPngError(false);
-      try {
-        const blob = await fetchPreviewPng({
-          widgetId: draft.widgetId,
-          w: draft.w, h: draft.h,
-          settings: draft.settings || {},
-          density: draft.density
-        });
-        if (cancelled) return;
-        const url = URL.createObjectURL(blob);
-        setPngUrl(prev => { if (prev) URL.revokeObjectURL(prev); return url; });
-        setPngLoading(false);
-      } catch (_) {
-        if (!cancelled) { setPngError(true); setPngLoading(false); }
-      }
-    }, 600);
-    return () => { cancelled = true; clearTimeout(timer); };
-  }, [open, draft.widgetId, draft.w, draft.h, settingsHash, draft.density]);
-
-  // Revoke object URL on unmount to avoid leaking blobs.
-  useEffect(() => () => { if (pngUrl) URL.revokeObjectURL(pngUrl); }, [pngUrl]);
 
   const density = draft.density || '';
 
