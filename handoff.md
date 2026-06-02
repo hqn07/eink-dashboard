@@ -1,6 +1,156 @@
 # E-Ink Dashboard — Handoff
 
-State as of 2026-05-31. Read this + `CLAUDE.md` + memory pointers below before touching anything.
+State as of 2026-06-02. Read this + `CLAUDE.md` + memory pointers below before touching anything.
+
+## What shipped in the 2026-05-31 → 2026-06-02 session (`92bd733` → `4942c1b`)
+
+Customization roadmap finishing pass + Radix UI integration + a
+two-step preview architecture exploration that ended back at "fast
++ close" instead of "perfect + slow".
+
+### Phase D — per-tile title override (commit `3399632`)
+
+Hardcoded headings (`NOW PLAYING`, `MARKETS`, `UPCOMING`, `MAC
+BATTERY`, `N-DAY OUTLOOK`) replaced with `settings.title`. Blank
+falls back to the original default. Closes the last open variant
+phase from the customizability roadmap.
+
+### Inverted theme fixes (commits `72e2c9e`, `7649fc1`, `71af033`)
+
+Three follow-ups to the `theme: 'inverted'` knob added in Phase F.
+Sevesalm SVGs shipped with explicit `style="background-color:
+white"` + `fill="white"` on the root — under `filter: invert(1)`
+that became a solid black rectangle on the inverted tile, hiding
+the temperature number below. Stripped the inline background-color
+from all 21 SVGs; weather + battery glyphs now render as white
+outlines on the black tile. `.mac-np-art-empty` (the album-art
+fallback when no artwork is loaded) gains a `.cell-inverted`
+override so the black tile doesn't surface a white square.
+mac_nowplaying gains `showStateIcon` to hide the giant centered
+play / pause glyph entirely.
+
+### mac_nowplaying position knobs (commits `4332229`, `32b4924`)
+
+Substantial layout-control pass driven by user requests:
+
+- `showColTitle` toggle on the "NOW PLAYING" heading.
+- `headerAlign` (left / center / right) on that heading.
+- `artPosition` (left / right) for the horizontal layout — flips
+  which side the album cover sits on via flex-direction.
+- `textAlign` (left / center / right) on the artist + song block.
+- Split the meta-block visibility into two toggles: `showSongTitle`
+  and `showArtist` so users can hide the artist line independently
+  of the title.
+- `textOffsetY` slider (±120 px via `transform: translateY`) so the
+  user can pull the text block up against tall art (e.g. close the
+  gap below cover art on extended/full tier).
+
+CSS: `.mac-np-head-{left|center|right}`, `.mac-np-text-{...}` (also
+cascades into `.mac-np-stacked-text`), `.mac-np-body-art-{left|
+right}`. mac_nowplaying.form.jsx gains a Position section with the
+three SelectFields + the slider.
+
+### Widget pool — hover preview + demo data (commits `cfa14fb`, `bb2cbc9`)
+
+Widget pool used to render every card with live previewData, which
+meant a brand-new install showed SETUP NEEDED placeholders for
+half the widgets. Two changes:
+
+- **Hover-card preview (Radix UI)**: each palette card wraps its
+  thumbnail in `HoverCard.Trigger`. Hovering for 250 ms opens a
+  popover at the widget's "showcase" size (clock / mac_battery →
+  S, weather_forecast / message / calendar / stocks → M,
+  weather_hero / mac_nowplaying → L). Popover capped at 480×280
+  with hard-shadow editorial styling.
+- **Frozen demo data**: new `control-src/widgets/_pool_demo.js`
+  ships a generic dataset per widget — 82°F partly cloudy, 7-day
+  forecast, Crumb · Empty Seats with a stylised PNG placeholder
+  for album art (generated via Sharp at b/w-only so it threshold-
+  safe), AAPL / NVDA / BTC sparklines, a calendar week with
+  "Mom's birthday" so all-day badges + sections both fire.
+  Thumbnail + popover both render the same demo so the pool reads
+  as "this is what each widget will look like fully configured".
+
+### Tabbed widget settings (Radix UI) (commit `d769017`)
+
+Modal form rewritten with Radix `Tabs.Root` driven off the existing
+`<FormSection>` blocks. `TabbedForm` walks the rendered form's
+React tree, splits out the FormSection elements, and rebuilds each
+as a `Tabs.Content` keyed by its title. Pure-render-function
+constraint on `<id>.form.jsx` makes the direct call safe. CSS
+matches the editorial palette: solid-black underline on active,
+muted color on inactive, dashed focus ring, 140 ms fade-in.
+
+Removed the legacy top-of-modal Layout section (Flush edges +
+Density) in commit `42bf45d` — both were duplicates / vestigial
+once per-widget Layout tabs landed.
+
+### Battery + album-art polish (commit `46cc599`)
+
+Two e-ink threshold cleanups:
+
+- mac_battery charging indicator was U+26A1 ⚡ which Chrome
+  rendered through the colour-emoji font as a yellow glyph
+  — threshold rounded it inconsistently and the dark theme
+  couldn't invert it. Replaced with inline SVG `<path>` filled
+  `#000`, flips to `#fff` on `.cell-inverted` via the existing
+  global SVG rule.
+- Pool demo Now Playing widget gains a 160×160 base64 PNG of
+  nested rotated diamonds (palette: 2, b/w only) so the hover
+  popover doesn't render the empty-fallback square.
+
+### Settings modal preview — two-step architecture exploration
+
+The user reported the modal preview's MITSKI vertical position
+drifted vs the live editor canvas. The root cause: the modal's
+`dangerouslySetInnerHTML` mount skipped the autofit binary-search
+pass the live dashboard runs, plus cell pixel dimensions differed
+between the two contexts. Two paths:
+
+1. **Hybrid iframe + 1-bit PNG (commits `7bb1b00`, `204b3ff`,
+   `5079ac1`, `41fe001`)** — new server endpoints:
+   - `GET /preview/widget?widget=…&w=…&h=…&settings=<b64>` renders
+     a single widget through the SSR pipeline. New `preview` mode
+     in `buildPageBodyHtml` collapses the html / body / .page from
+     800×480 down to the widget's pixel size so an iframe at the
+     same dimensions matches 1 : 1 (no cropped corner of the full
+     dashboard).
+   - `POST /api/preview-render` Puppeteer screenshots the same
+     URL, runs the threshold + 1-bit palette pipeline /display.bin
+     uses, returns a bit-identical PNG. Concurrency capped at 2
+     in-flight so slider drags don't queue 50 simultaneous
+     screenshots.
+   Modal stacked an iframe (instant feedback) under a debounced
+   PNG (bit-fidelity once the 600 ms idle timer fires).
+
+2. **Revert: instant client render + autofit (commit `4942c1b`)** —
+   The user said the preview latency was unacceptable: iframe
+   reload on every keystroke + 600 ms PNG debounce + 1-2 s
+   Puppeteer queue made sliders flicker. Reverted to the original
+   `dangerouslySetInnerHTML` mount but added a post-mount autofit
+   pass that runs the same binary-search the dashboard's
+   `<script>` block runs. Close-to-pixel-perfect, instant.
+
+   The `/preview/widget` + `/api/preview-render` endpoints stay
+   in place — cheap to keep, useful for future "Save preview"
+   PNG-on-demand or external tooling.
+
+`5079ac1` was a hooks-order fix: the new preview hooks lived
+*after* the `if (!open || !draft) return null` guard so the first
+open from a closed modal tripped React's "more hooks than last
+render" check and unmounted the whole app — visible to the user as
+a fully blank /control page. Hoisted the hooks above the guard.
+
+### Misc
+
+- `cellClasses(settings)` now flows through the single-widget render
+  path (preview + dev) so theme: inverted reflects correctly in
+  both modes (`41fe001`).
+- `WidgetForm` extracts a `PresetField` primitive plus a
+  `FormSection` wrapper so widget forms can group fields into
+  sections — Tabs feed off the same structure.
+
+## What shipped in the 2026-05-30 → 2026-05-31 session (commits `e96c77f` → `90204c7`)
 
 > **Customization phases A–F complete** (commits `50bc1f7` + `90204c7`).
 > See `project_eink_widget_customizability_roadmap.md` for the full
