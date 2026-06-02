@@ -278,40 +278,6 @@ export default function WidgetSettingsModal({
           <div className="wsm-body">
             <div className="wsm-col wsm-col-settings">
               <section className="wsm-section">
-                <h3 className="wsm-section-title">Layout</h3>
-
-                <label className="wsm-row wsm-row-check">
-                  <input
-                    type="checkbox"
-                    checked={!!draft.flush}
-                    onChange={(e) => setField({ flush: e.target.checked })}
-                  />
-                  <span>Flush edges (no inner padding)</span>
-                </label>
-
-                <div className="wsm-row">
-                  <div className="wsm-label">Density</div>
-                  <div className="wsm-seg" role="radiogroup" aria-label="Content density">
-                    {[
-                      { v: '',       label: 'Balanced' },
-                      { v: 'rich',   label: 'Rich' },
-                      { v: 'sparse', label: 'Sparse' }
-                    ].map(opt => (
-                      <button
-                        key={opt.v || 'balanced'}
-                        type="button"
-                        role="radio"
-                        aria-checked={density === opt.v}
-                        className={`wsm-seg-btn ${density === opt.v ? 'on' : ''}`}
-                        onClick={() => setField({ density: opt.v || undefined })}
-                      >{opt.label}</button>
-                    ))}
-                  </div>
-                </div>
-              </section>
-
-              <section className="wsm-section">
-                <h3 className="wsm-section-title">Widget data</h3>
                 <PerInstanceDataBlock
                   widgetId={draft.widgetId}
                   itemId={draft.id}
