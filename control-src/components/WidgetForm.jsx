@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
+import * as Switch from '@radix-ui/react-switch';
 import { CaretUp, CaretDown } from '@phosphor-icons/react';
 import { geocode } from '../api.js';
 import { MIGRATED_FORMS } from '../widgets/_registry.js';
@@ -48,17 +49,23 @@ function SelectField({ label, value, options, onChange, help }) {
   );
 }
 
+let __toggleIdSeed = 0;
 function ToggleField({ label, value, onChange, help }) {
+  const idRef = useRef(null);
+  if (idRef.current == null) idRef.current = `wsm-sw-${++__toggleIdSeed}`;
   return (
-    <label className="wsm-row wsm-row-check">
-      <input
-        type="checkbox"
+    <div className="wsm-row wsm-row-switch">
+      <Switch.Root
+        id={idRef.current}
+        className="wsm-switch"
         checked={!!value}
-        onChange={e => onChange(e.target.checked)}
-      />
-      <span>{label}</span>
+        onCheckedChange={onChange}
+      >
+        <Switch.Thumb className="wsm-switch-thumb" />
+      </Switch.Root>
+      <label htmlFor={idRef.current} className="wsm-switch-label">{label}</label>
       {help && <span className="wsm-field-help" style={{ marginLeft: 6 }}>{help}</span>}
-    </label>
+    </div>
   );
 }
 

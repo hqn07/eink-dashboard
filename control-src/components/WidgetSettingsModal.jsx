@@ -1,8 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from '@phosphor-icons/react';
+import Skeleton, { SkeletonTheme } from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css';
 import { GRID_COLS, GRID_ROWS, widgetById } from '../widgets.js';
-import { renderWidget, typographyCss, cellClasses } from '../widget-render.js';
+import {
+  renderWidget, typographyCss, cellClasses,
+  renderHeader, renderFooter,
+  isHeaderOn, isFooterOn,
+  headerVariant, footerVariant
+} from '../widget-render.js';
 import WidgetForm from './WidgetForm.jsx';
 
 const DASH_W = 800;
@@ -236,27 +243,39 @@ export default function WidgetSettingsModal({
     setDraft(prev => ({ ...prev, ...patch }));
   }
 
-  // Preview dimensions — matches the dashboard's pixel grid so the
-  // iframe + screenshot pipeline get the same canvas they would on
-  // the live device.
-  const dashW = draft.w * (DASH_W / GRID_COLS);
-  const dashH = draft.h * (BODY_H_BASE / GRID_ROWS);
+  // Preview renders the FULL 800×480 page DOM (same chrome + grid the
+  // live dashboard uses) then translate+clip+scale to surface only the
+  // draft cell. CSS grid `1fr` rounding is identical to live, so there
+  // is no drift between modal preview and the on-device render.
+  const data = previewData || {};
+  const headerOn = isHeaderOn(data);
+  const footerOn = isFooterOn(data);
+  const headerH = headerOn ? HEADER_H_BASE : 0;
+  const footerH = footerOn ? FOOTER_H_BASE : 0;
+  const bodyH = DASH_H - headerH - footerH;
+
+  const cellPxW = (draft.w / GRID_COLS) * DASH_W;
+  const cellPxH = (draft.h / GRID_ROWS) * bodyH;
+  const cellPxLeft = (draft.x / GRID_COLS) * DASH_W;
+  const cellPxTop = headerH + (draft.y / GRID_ROWS) * bodyH;
 
   const fitScale = Math.min(
     PREVIEW_MAX_SCALE,
-    previewBox.w / dashW,
-    previewBox.h / dashH
+    previewBox.w / cellPxW,
+    previewBox.h / cellPxH
   );
   const previewScale = Math.max(0.4, fitScale);
-  const frameW = dashW * previewScale;
-  const frameH = dashH * previewScale;
+  const frameW = cellPxW * previewScale;
+  const frameH = cellPxH * previewScale;
 
   const classes = ['cell', `cell-${draft.widgetId}`];
   if (draft.flush) classes.push('cell-flush');
   classes.push(...cellClasses(draft.settings));
+  if (draft.x + draft.w >= GRID_COLS) classes.push('cell-edge-right');
+  if (draft.y + draft.h >= GRID_ROWS) classes.push('cell-edge-bottom');
   const itemSlot = (previewData && previewData.perItem && previewData.perItem[draft.id]) || {};
   const previewHtml = renderWidget(draft.widgetId, {
-    ...previewData,
+    ...data,
     ...itemSlot,
     cellW: draft.w,
     cellH: draft.h,
@@ -264,10 +283,20 @@ export default function WidgetSettingsModal({
     settings: draft.settings
   }) || '';
   const typoStyle = typographyCss(draft.settings);
-  const cellHtml =
-    `<div class="${classes.join(' ')}" style="width:${dashW}px;height:${dashH}px;${typoStyle}">${previewHtml}</div>`;
+  const cellStyle =
+    `grid-column:${draft.x + 1} / span ${draft.w};grid-row:${draft.y + 1} / span ${draft.h};${typoStyle}`;
+  const cellHtml = `<div class="${classes.join(' ')}" style="${cellStyle}">${previewHtml}</div>`;
+
+  const headerHtml = headerOn
+    ? `<header class="hdr hdr-${headerVariant(data)}">${renderHeader(data)}</header>`
+    : '<div class="hdr-stub"></div>';
+  const footerHtml = footerOn
+    ? `<footer class="ftr ftr-${footerVariant(data)}">${renderFooter(data)}</footer>`
+    : '<div class="ftr-stub"></div>';
+  const pageHtml = `<div class="page" style="grid-template-rows:${headerH}px minmax(0,1fr) ${footerH}px;width:${DASH_W}px;height:${DASH_H}px">${headerHtml}<main class="body body-grid" style="grid-template-columns:repeat(${GRID_COLS},minmax(0,1fr));grid-template-rows:repeat(${GRID_ROWS},minmax(0,1fr))">${cellHtml}</main>${footerHtml}</div>`;
 
   const density = draft.density || '';
+  const previewLoading = !previewData;
 
   return (
     <AnimatePresence>
@@ -315,17 +344,30 @@ export default function WidgetSettingsModal({
               </div>
               <div
                 className="wsm-preview-frame"
-                style={{ width: frameW, height: frameH }}
+                style={{ width: frameW, height: frameH, position: 'relative' }}
               >
                 <div
                   ref={previewCellRef}
                   className="wsm-preview-scale"
                   style={{
-                    transform: `scale(${previewScale})`,
+                    width: DASH_W,
+                    height: DASH_H,
+                    transform: `scale(${previewScale}) translate(${-cellPxLeft}px, ${-cellPxTop}px)`,
                     transformOrigin: 'top left'
                   }}
-                  dangerouslySetInnerHTML={{ __html: cellHtml }}
+                  dangerouslySetInnerHTML={{ __html: pageHtml }}
                 />
+                {previewLoading && (
+                  <div className="wsm-preview-skeleton">
+                    <SkeletonTheme baseColor="#1a1a1a" highlightColor="#3a3a3a" duration={1.1}>
+                      <Skeleton
+                        width={frameW}
+                        height={frameH}
+                        style={{ display: 'block', borderRadius: 0 }}
+                      />
+                    </SkeletonTheme>
+                  </div>
+                )}
               </div>
             </div>
           </div>
