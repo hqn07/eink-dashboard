@@ -974,7 +974,7 @@ function buildPageBodyHtml({ payload, ssr, mode }) {
   }
 
   // Dev single-widget mode: full-screen single widget, no chrome.
-  if (mode === 'dev' && devWidgetId) {
+  if ((mode === 'dev' || mode === 'preview') && devWidgetId) {
     const item = layout[0];
     if (!item) return '<div class="page" id="page"></div>';
     const itemCtx = {
@@ -984,8 +984,22 @@ function buildPageBodyHtml({ payload, ssr, mode }) {
     };
     const inner = ssr.renderWidget(item.widgetId, itemCtx);
     const typo = ssr.typographyCss(item.settings);
-    const cellStyle = `width:800px;height:480px;${typo}`;
-    return `<div class="page" id="page" style="grid-template-rows:0px minmax(0,1fr) 0px"><div class="hdr-stub"></div><main class="body body-grid" style="grid-template-columns:repeat(${GRID_COLS},minmax(0,1fr));grid-template-rows:repeat(${GRID_ROWS},minmax(0,1fr))"><div class="cell cell-${escapeHtmlServer(item.widgetId)}" style="grid-column:1 / span ${GRID_COLS};grid-row:1 / span ${GRID_ROWS};${typo}">${inner}</div></main><div class="ftr-stub"></div></div>`;
+    const extraClasses = ssr.cellClasses(item.settings).join(' ');
+    // Two flavours of single-widget render:
+    //
+    //  • `preview` — used by the modal preview iframe / PNG render.
+    //    The body grid spans only `item.w × item.h` cells, so a
+    //    14×12 tile renders into the iframe's viewport exactly
+    //    where it would on a real dashboard, without padding the
+    //    rest of the 800×480 page around it.
+    //
+    //  • `dev` — used by /dev/widget/:id for designer hot-reload.
+    //    Always fills the full 24×12 grid so the developer can see
+    //    every render-tier and tier-conditional branch at one URL.
+    const isPreview = mode === 'preview';
+    const cols = isPreview ? item.w : GRID_COLS;
+    const rows = isPreview ? item.h : GRID_ROWS;
+    return `<div class="page" id="page" style="grid-template-rows:0px minmax(0,1fr) 0px"><div class="hdr-stub"></div><main class="body body-grid" style="grid-template-columns:repeat(${cols},minmax(0,1fr));grid-template-rows:repeat(${rows},minmax(0,1fr))"><div class="cell cell-${escapeHtmlServer(item.widgetId)} ${extraClasses}" style="grid-column:1 / span ${cols};grid-row:1 / span ${rows};${typo}">${inner}</div></main><div class="ftr-stub"></div></div>`;
   }
 
   // Normal dashboard mode.
@@ -1042,12 +1056,22 @@ function renderPage({ payload, shell, ssr, mode }) {
   const screen = payload && payload.screen != null ? String(payload.screen) : '';
   const units = (payload && payload.units) || 'F';
   const accent = payload && payload.cfg && payload.cfg.accent;
-  const accentTag = accent
+  let extraStyle = accent
     ? `<style>:root{--accent:${htmlAttr(accent)}}</style>`
     : '';
+  // Preview mode: collapse the html/body/.page hardcoded 800×480 down
+  // to the widget's actual cell pixel size so the iframe viewport
+  // matches 1:1 instead of cropping a corner of the full dashboard.
+  if (mode === 'preview' && payload && Array.isArray(payload.layout) && payload.layout[0]) {
+    const item = payload.layout[0];
+    const PX_W = SCREEN_W / 24, PX_H = SCREEN_H / 12;
+    const pw = Math.round((item.w || 8) * PX_W);
+    const ph = Math.round((item.h || 4) * PX_H);
+    extraStyle += `<style>html,body,.page{width:${pw}px!important;height:${ph}px!important;overflow:hidden;}body{background:#fff;}.page{display:block!important;}main.body{width:${pw}px!important;height:${ph}px!important;}</style>`;
+  }
   return shell
     .replace('<!--__BODY__-->', body)
-    .replace('<!--__ACCENT__-->', accentTag)
+    .replace('<!--__ACCENT__-->', extraStyle)
     .replace('data-screen=""', `data-screen="${htmlAttr(screen)}"`)
     .replace('data-units=""',  `data-units="${htmlAttr(units)}"`);
 }
@@ -1261,7 +1285,7 @@ app.get('/preview/widget', checkDeviceAuth, async (req, res) => {
       density: req.query.density
     });
     const [shell, ssr] = await Promise.all([loadDashboardHtml(), loadSsr()]);
-    const html = renderPage({ payload, shell, ssr, mode: 'dev' });
+    const html = renderPage({ payload, shell, ssr, mode: 'preview' });
     res.set('Content-Type', 'text/html; charset=utf-8');
     // Don't long-cache — every keystroke produces a new URL via the
     // settings hash, and the user expects fresh data on reload.
@@ -1289,11 +1313,13 @@ async function renderPreviewPng({ widgetId, w, h, settings, units, density }) {
     page.setDefaultTimeout(12000);
     page.setDefaultNavigationTimeout(12000);
     try {
-      // The preview page renders at SCREEN_W × SCREEN_H but the widget
-      // itself is sized w*cell × h*cell inside; we screenshot only the
-      // widget's bounding box so the PNG isn't padded with the dev
-      // chrome's empty grid cells around it.
-      await page.setViewport({ width: SCREEN_W, height: SCREEN_H, deviceScaleFactor: 1 });
+      // Preview mode collapses the page chrome down to the widget's
+      // pixel size, so the viewport matches 1:1 — full screenshot is
+      // the widget, no cropping math.
+      const PX_W = SCREEN_W / 24, PX_H = SCREEN_H / 12;
+      const cellW = Math.max(1, Math.round(w * PX_W));
+      const cellH = Math.max(1, Math.round(h * PX_H));
+      await page.setViewport({ width: cellW, height: cellH, deviceScaleFactor: 1 });
       const qs = new URLSearchParams({
         widget: widgetId, w: String(w), h: String(h)
       });
@@ -1311,10 +1337,6 @@ async function renderPreviewPng({ widgetId, w, h, settings, units, density }) {
       ]);
       await page.waitForFunction(() => window.__autofitDone === true, { timeout: 3000 }).catch(() => {});
 
-      // Crop to the actual widget cell.
-      const PX_W = SCREEN_W / 24, PX_H = SCREEN_H / 12;
-      const cellW = Math.round(w * PX_W);
-      const cellH = Math.round(h * PX_H);
       const rgba = await page.screenshot({
         type: 'png',
         clip: { x: 0, y: 0, width: cellW, height: cellH }
