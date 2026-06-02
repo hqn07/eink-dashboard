@@ -1186,6 +1186,182 @@ app.get('/dev/widget/:id', checkDeviceAuth, async (req, res) => {
   }
 });
 
+// ---------- Modal preview (single-widget HTML + PNG) ----------
+//
+// The widget settings modal needs a high-fidelity preview as the user
+// edits draft settings. Two endpoints power it together:
+//
+//   GET  /preview/widget  → returns a tiny HTML page rendering one
+//                           widget at the requested w/h with the
+//                           supplied draft settings. The modal loads
+//                           this in an <iframe> so the preview gets
+//                           an isolated DOM that matches dashboard
+//                           SSR pixel-for-pixel. Updates as the user
+//                           types.
+//
+//   POST /api/preview-render → Puppeteer screenshots the same
+//                              `/preview/widget` page and runs the
+//                              dashboard's threshold pipeline so the
+//                              result is bit-identical to what
+//                              `/display.bin` ships to the ESP32.
+//                              Modal swaps the iframe for this PNG
+//                              after a debounce so the user sees the
+//                              actual final 1-bit render.
+//
+// Both endpoints accept the same parameters: widgetId, w, h, and a
+// base64-encoded JSON `settings` blob. They share the per-item
+// fetcher (buildWidgetData) so live data + per-tile overrides all
+// flow through normally.
+
+function decodeSettingsParam(raw) {
+  if (!raw) return null;
+  try {
+    const json = Buffer.from(String(raw), 'base64').toString('utf8');
+    const parsed = JSON.parse(json);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+async function buildPreviewPayload({ widgetId, w, h, settings, units, density }) {
+  const cfg = await loadConfig();
+  const effUnits = (units === 'C' || units === 'F') ? units : (cfg.units || 'F');
+  const item = {
+    id: `preview-${widgetId}`,
+    widgetId,
+    x: 0, y: 0,
+    w: Math.max(1, Math.min(24, parseInt(w, 10) || 8)),
+    h: Math.max(1, Math.min(12, parseInt(h, 10) || 4)),
+    enabled: true,
+    settings: settings || undefined,
+    density: density || undefined
+  };
+  const layout = [item];
+  const data = await buildWidgetData(cfg, effUnits, layout);
+  return {
+    cfg, units: effUnits, screen: 0, layout,
+    chrome: { header: { enabled: false }, footer: { enabled: false } },
+    ...data,
+    devWidgetId: widgetId,
+    generatedAt: new Date().toISOString()
+  };
+}
+
+app.get('/preview/widget', checkDeviceAuth, async (req, res) => {
+  try {
+    const widgetId = String(req.query.widget || '').trim();
+    if (!widgetId) return res.status(400).send('missing widget');
+    const settings = decodeSettingsParam(req.query.settings);
+    const payload = await buildPreviewPayload({
+      widgetId,
+      w: req.query.w, h: req.query.h,
+      settings,
+      units: req.query.units,
+      density: req.query.density
+    });
+    const [shell, ssr] = await Promise.all([loadDashboardHtml(), loadSsr()]);
+    const html = renderPage({ payload, shell, ssr, mode: 'dev' });
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    // Don't long-cache — every keystroke produces a new URL via the
+    // settings hash, and the user expects fresh data on reload.
+    res.set('Cache-Control', 'no-store');
+    res.send(html);
+  } catch (err) {
+    console.error('Preview render error:', err);
+    res.status(500).send(safeError(err).error);
+  }
+});
+
+// Cap concurrent Puppeteer screenshots so a sliding-input spam can't
+// stack 50 simultaneous renders.
+let _previewInflight = 0;
+const PREVIEW_MAX_INFLIGHT = 2;
+
+async function renderPreviewPng({ widgetId, w, h, settings, units, density }) {
+  if (_previewInflight >= PREVIEW_MAX_INFLIGHT) {
+    throw new Error('preview busy');
+  }
+  _previewInflight++;
+  try {
+    const browser = await getBrowser();
+    const page = await browser.newPage();
+    page.setDefaultTimeout(12000);
+    page.setDefaultNavigationTimeout(12000);
+    try {
+      // The preview page renders at SCREEN_W × SCREEN_H but the widget
+      // itself is sized w*cell × h*cell inside; we screenshot only the
+      // widget's bounding box so the PNG isn't padded with the dev
+      // chrome's empty grid cells around it.
+      await page.setViewport({ width: SCREEN_W, height: SCREEN_H, deviceScaleFactor: 1 });
+      const qs = new URLSearchParams({
+        widget: widgetId, w: String(w), h: String(h)
+      });
+      if (settings) {
+        qs.set('settings', Buffer.from(JSON.stringify(settings)).toString('base64'));
+      }
+      if (units) qs.set('units', units);
+      if (density) qs.set('density', density);
+      if (DEVICE_TOKEN) qs.set('token', DEVICE_TOKEN);
+      const url = `http://127.0.0.1:${PORT}/preview/widget?${qs}`;
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 12000 });
+      await Promise.race([
+        page.evaluate(() => document.fonts && document.fonts.ready),
+        new Promise(r => setTimeout(r, 3500))
+      ]);
+      await page.waitForFunction(() => window.__autofitDone === true, { timeout: 3000 }).catch(() => {});
+
+      // Crop to the actual widget cell.
+      const PX_W = SCREEN_W / 24, PX_H = SCREEN_H / 12;
+      const cellW = Math.round(w * PX_W);
+      const cellH = Math.round(h * PX_H);
+      const rgba = await page.screenshot({
+        type: 'png',
+        clip: { x: 0, y: 0, width: cellW, height: cellH }
+      });
+
+      // Run the same threshold pipeline /display.bin uses so the PNG
+      // is bit-identical to what the ESP32 will draw.
+      const { data, info } = await preThreshold(sharp(rgba))
+        .threshold(128)
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      const png = await sharp(data, {
+        raw: { width: info.width, height: info.height, channels: 1 }
+      }).png({ palette: true, colors: 2 }).toBuffer();
+      return png;
+    } finally {
+      try { await page.close(); } catch (_) {}
+    }
+  } finally {
+    _previewInflight--;
+  }
+}
+
+app.post('/api/preview-render', checkDeviceAuth, async (req, res) => {
+  try {
+    const body = req.body || {};
+    const widgetId = String(body.widgetId || '').trim();
+    if (!widgetId) return res.status(400).json({ error: 'missing widgetId' });
+    const w = Math.max(1, Math.min(24, parseInt(body.w, 10) || 8));
+    const h = Math.max(1, Math.min(12, parseInt(body.h, 10) || 4));
+    const png = await renderPreviewPng({
+      widgetId, w, h,
+      settings: body.settings || null,
+      units: body.units,
+      density: body.density
+    });
+    res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'no-store');
+    res.send(png);
+  } catch (err) {
+    const msg = err && err.message;
+    if (msg === 'preview busy') return res.status(503).json({ error: 'busy' });
+    console.error('Preview PNG error:', err);
+    res.status(500).json(safeError(err));
+  }
+});
+
 // Visual matrix — every widget at every preset size, top-to-bottom.
 // Pure dev tooling for spotting layout bugs before they hit the panel.
 app.get('/widgets-matrix', checkDeviceAuth, async (req, res) => {
