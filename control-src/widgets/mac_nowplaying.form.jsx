@@ -13,7 +13,10 @@ const PRESETS = [
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, SelectField, ToggleField, SliderField, TypographyFields, FormSection, PresetField } = fields;
+  const {
+    TextField, SelectField, SegmentedField, ToggleField, SliderField,
+    TypographyFields, FormSection, AdvancedGroup, PresetField
+  } = fields;
   const variant = v.variant || 'time_bookends';
   return (
     <>
@@ -83,24 +86,15 @@ export function Form({ values, patch, onChange, fields }) {
         />
       </FormSection>
       <FormSection title="Position">
-        <SelectField
-          label='"NOW PLAYING" heading position'
+        <SegmentedField
+          label='"NOW PLAYING" heading'
           value={v.headerAlign || 'left'}
           options={[
-            { value: 'left',   label: 'Left' },
-            { value: 'center', label: 'Center' },
-            { value: 'right',  label: 'Right' }
+            { value: 'left',   short: 'L', label: 'Left' },
+            { value: 'center', short: 'C', label: 'Center' },
+            { value: 'right',  short: 'R', label: 'Right' }
           ]}
           onChange={(x) => patch({ headerAlign: x })}
-        />
-        <SelectField
-          label="Album art side (horizontal layout)"
-          value={v.artPosition || 'right'}
-          options={[
-            { value: 'right', label: 'Right of text' },
-            { value: 'left',  label: 'Left of text' }
-          ]}
-          onChange={(x) => patch({ artPosition: x })}
         />
         <SelectField
           label="Album art shape"
@@ -113,23 +107,34 @@ export function Form({ values, patch, onChange, fields }) {
           ]}
           onChange={(x) => patch({ artShape: x })}
         />
-        <SelectField
-          label="Artist / song text alignment"
-          value={v.textAlign || 'left'}
-          options={[
-            { value: 'left',   label: 'Left' },
-            { value: 'center', label: 'Center' },
-            { value: 'right',  label: 'Right' }
-          ]}
-          onChange={(x) => patch({ textAlign: x })}
-        />
-        <SliderField
-          label="Text block vertical offset"
-          min={-120} max={120} step={2}
-          value={Number.isFinite(v.textOffsetY) ? v.textOffsetY : 0}
-          onChange={(x) => patch({ textOffsetY: x })}
-          format={(x) => x === 0 ? '0' : (x > 0 ? `+${x}px down` : `${x}px up`)}
-        />
+        <AdvancedGroup title="Advanced positioning">
+          <SegmentedField
+            label="Album art side"
+            value={v.artPosition || 'right'}
+            options={[
+              { value: 'left',  short: 'Left',  label: 'Left of text' },
+              { value: 'right', short: 'Right', label: 'Right of text' }
+            ]}
+            onChange={(x) => patch({ artPosition: x })}
+          />
+          <SegmentedField
+            label="Artist / song text"
+            value={v.textAlign || 'left'}
+            options={[
+              { value: 'left',   short: 'L', label: 'Left' },
+              { value: 'center', short: 'C', label: 'Center' },
+              { value: 'right',  short: 'R', label: 'Right' }
+            ]}
+            onChange={(x) => patch({ textAlign: x })}
+          />
+          <SliderField
+            label="Text block vertical offset"
+            min={-120} max={120} step={2}
+            value={Number.isFinite(v.textOffsetY) ? v.textOffsetY : 0}
+            onChange={(x) => patch({ textOffsetY: x })}
+            format={(x) => x === 0 ? '0' : (x > 0 ? `+${x}px down` : `${x}px up`)}
+          />
+        </AdvancedGroup>
       </FormSection>
       <FormSection title="Style">
         <TypographyFields values={v} onChange={onChange} />

@@ -13,7 +13,7 @@ const PRESETS = [
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { SelectField, ToggleField, TypographyFields, FormSection, PresetField } = fields;
+  const { SegmentedField, ToggleField, TypographyFields, FormSection, PresetField } = fields;
   const fmt = v.format === '24h' ? '24h' : '12h';
   const style = v.style === 'thin' ? 'thin' : 'big';
   const showDate = v.showDate !== false;
@@ -21,21 +21,21 @@ export function Form({ values, patch, onChange, fields }) {
     <>
       <FormSection title="Layout">
         <PresetField presets={PRESETS} onApply={(vals) => onChange({ ...v, ...vals })} />
-        <SelectField
+        <SegmentedField
           label="Format"
           value={fmt}
           options={[
-            { value: '12h', label: '12-hour (3:34 PM)' },
-            { value: '24h', label: '24-hour (15:34)' }
+            { value: '12h', short: '12h', label: '12-hour (3:34 PM)' },
+            { value: '24h', short: '24h', label: '24-hour (15:34)' }
           ]}
           onChange={(x) => patch({ format: x })}
         />
-        <SelectField
+        <SegmentedField
           label="Style"
           value={style}
           options={[
-            { value: 'big',  label: 'Big chunky' },
-            { value: 'thin', label: 'Thin' }
+            { value: 'big',  short: 'Big',  label: 'Big chunky' },
+            { value: 'thin', short: 'Thin', label: 'Thin' }
           ]}
           onChange={(x) => patch({ style: x })}
         />

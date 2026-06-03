@@ -13,7 +13,7 @@ const PRESETS = [
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { LocationFields, TextField, SelectField, ToggleField, TypographyFields, FormSection, PresetField } = fields;
+  const { LocationFields, TextField, SelectField, SegmentedField, ToggleField, TypographyFields, FormSection, PresetField } = fields;
   return (
     <>
       <FormSection title="Data">
@@ -53,23 +53,23 @@ export function Form({ values, patch, onChange, fields }) {
         />
       </FormSection>
       <FormSection title="Layout">
-        <SelectField
+        <SegmentedField
           label="Precipitation %"
           value={v.precipMode || 'auto'}
           options={[
-            { value: 'auto',   label: 'Auto — only on wider tiles' },
-            { value: 'always', label: 'Always show' },
-            { value: 'never',  label: 'Hide' }
+            { value: 'auto',   short: 'Auto',   label: 'Auto — wide tiles only' },
+            { value: 'always', short: 'Always', label: 'Always show' },
+            { value: 'never',  short: 'Hide',   label: 'Hide' }
           ]}
           onChange={(x) => patch({ precipMode: x })}
         />
-        <SelectField
+        <SegmentedField
           label="High / low style"
           value={v.hiloStyle || 'stack'}
           options={[
-            { value: 'stack',  label: 'Stacked (HI on top)' },
-            { value: 'inline', label: 'Inline (HI / LO)' },
-            { value: 'arrows', label: 'Arrows (↑HI · ↓LO)' }
+            { value: 'stack',  short: 'Stack',  label: 'Stacked (HI on top)' },
+            { value: 'inline', short: 'Inline', label: 'Inline (HI / LO)' },
+            { value: 'arrows', short: 'Arrows', label: 'Arrows (↑HI ↓LO)' }
           ]}
           onChange={(x) => patch({ hiloStyle: x })}
         />

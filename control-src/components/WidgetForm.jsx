@@ -356,6 +356,51 @@ function FormSection({ title, children }) {
   );
 }
 
+// Collapsible <details> group for low-traffic fields. Per NN/g, hides
+// the bottom-20% of settings behind a one-click reveal so the primary
+// fields aren't drowned out. Editorial styling matches the rest of the
+// modal (mono summary, hairline rule).
+function AdvancedGroup({ title = 'Advanced', children, defaultOpen = false }) {
+  return (
+    <details className="wsm-advanced" open={defaultOpen}>
+      <summary className="wsm-advanced-summary">{title}</summary>
+      <div className="wsm-advanced-body">{children}</div>
+    </details>
+  );
+}
+
+// Segmented control — replaces a SelectField when the choice is small
+// (2-4 options) and the value is naturally spatial (alignment,
+// position, side). One row instead of a dropdown; mirrors Figma's
+// alignment widget.
+function SegmentedField({ label, value, options, onChange, help }) {
+  return (
+    <div className="wsm-field">
+      {label && <span className="wsm-field-label">{label}</span>}
+      <div className="wsm-segmented" role="radiogroup" aria-label={label}>
+        {options.map(o => {
+          const active = String(o.value) === String(value);
+          return (
+            <button
+              key={o.value}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              className={`wsm-seg-btn ${active ? 'is-active' : ''}`}
+              onClick={() => onChange(o.value)}
+              title={o.title || o.label}
+            >
+              {o.icon ? <span className="wsm-seg-icon">{o.icon}</span> : null}
+              {o.short || o.label}
+            </button>
+          );
+        })}
+      </div>
+      {help && <span className="wsm-field-help">{help}</span>}
+    </div>
+  );
+}
+
 // Render the migrated widget Form and split its FormSection children
 // into a Radix Tabs surface. Every migrated Form is a pure render
 // function (no hooks, no state, no side effects), so calling it
@@ -451,8 +496,9 @@ function PresetField({ presets, onApply }) {
 // they appear in widget forms.
 const FIELD_PRIMITIVES = {
   TextField, SelectField, ToggleField, SliderField, CsvField,
+  SegmentedField,
   ListEditor, LocationFields, TypographyFields,
-  FormSection, PresetField
+  FormSection, AdvancedGroup, PresetField
 };
 
 export default function WidgetForm({ widgetId, values, onChange }) {

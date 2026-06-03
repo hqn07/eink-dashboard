@@ -13,7 +13,7 @@ const PRESETS = [
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, CsvField, SelectField, ToggleField, TypographyFields, FormSection, PresetField } = fields;
+  const { TextField, CsvField, SelectField, SegmentedField, ToggleField, TypographyFields, FormSection, PresetField } = fields;
   return (
     <>
       <FormSection title="Data">
@@ -44,13 +44,13 @@ export function Form({ values, patch, onChange, fields }) {
           ]}
           onChange={(x) => patch({ layout: x })}
         />
-        <SelectField
+        <SegmentedField
           label="Sparkline style"
           value={v.sparkStyle || 'line'}
           options={[
-            { value: 'line', label: 'Line (default)' },
-            { value: 'bars', label: 'Bars — vertical columns' },
-            { value: 'area', label: 'Area — line + soft fill' }
+            { value: 'line', short: 'Line', label: 'Line (default)' },
+            { value: 'bars', short: 'Bars', label: 'Vertical columns' },
+            { value: 'area', short: 'Area', label: 'Line + soft fill' }
           ]}
           onChange={(x) => patch({ sparkStyle: x })}
         />

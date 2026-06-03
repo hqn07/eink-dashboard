@@ -1429,6 +1429,76 @@ input[type="text"], input[type="url"], textarea {
 }
 .wsm-switch[data-state="checked"] .wsm-switch-thumb { transform: translateX(18px); }
 .wsm-switch-label { cursor: pointer; user-select: none; }
+
+/* Collapsible "Advanced" group inside a tab. Hides low-traffic fields
+ * by default per NN/g progressive disclosure. */
+.wsm-advanced {
+  border-top: 1px solid #d4d2cc;
+  margin-top: 16px;
+  padding-top: 4px;
+}
+.wsm-advanced-summary {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--mute);
+  cursor: pointer;
+  padding: 8px 0;
+  list-style: none;
+  user-select: none;
+}
+.wsm-advanced-summary::-webkit-details-marker { display: none; }
+.wsm-advanced-summary::before {
+  content: '+';
+  display: inline-block;
+  width: 14px;
+  font-weight: 700;
+}
+.wsm-advanced[open] > .wsm-advanced-summary::before { content: '−'; }
+.wsm-advanced-summary:hover { color: var(--ink); }
+.wsm-advanced-body { padding-top: 6px; }
+
+/* Segmented control — N inline buttons for spatial / small-N choices.
+ * Replaces a SelectField when the options map to a row of icons or
+ * 2-4 short labels (alignment, position, side). */
+.wsm-segmented {
+  display: inline-flex;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.wsm-seg-btn {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  background: #fff;
+  border: 0;
+  border-right: 1.5px solid var(--ink);
+  cursor: pointer;
+  color: var(--ink);
+  min-width: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.wsm-seg-btn:last-child { border-right: 0; }
+.wsm-seg-btn:hover:not(.is-active) { background: #f0eee8; }
+.wsm-seg-btn.is-active {
+  background: var(--ink);
+  color: #fff;
+}
+.wsm-seg-btn:focus-visible {
+  outline: 2px dashed var(--ink);
+  outline-offset: 2px;
+  z-index: 1;
+}
+.wsm-seg-icon { display: inline-flex; align-items: center; }
 .wsm-label {
   font-size: 12px;
   font-weight: 700;
