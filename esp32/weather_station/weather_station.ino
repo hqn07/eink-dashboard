@@ -44,7 +44,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.12.0"
+#define FW_VERSION "1.12.1"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -1323,13 +1323,12 @@ void setup() {
 
   hspi.begin(EPD_SCK, -1, EPD_MOSI, EPD_CS);
   display.epd2.selectSPI(hspi, SPISettings(4000000, MSBFIRST, SPI_MODE0));
-  // Cold boot → initial=true (full reset + clear pass that scrubs the
-  // panel). Deep-sleep wakes → initial=false (lighter reset, skip the
-  // clear) so the prior image stays visible until pushImage repaints
-  // it and the user doesn't see a flash on every refresh.
-  esp_sleep_wakeup_cause_t bootCause = esp_sleep_get_wakeup_cause();
-  bool coldBootInit = (bootCause == ESP_SLEEP_WAKEUP_UNDEFINED);
-  display.init(115200, coldBootInit, 2, false);
+  // Deep sleep fully powers the EPD controller down between cycles, so
+  // every wake — cold POR, timer, button — has to run the full panel
+  // init (reset pulse + `_initial_write/_refresh` flags). Skipping it
+  // with initial=false on timer/button wakes leaves the controller in
+  // a half-configured state and the next writeImage silently no-ops.
+  display.init(115200, true, 2, false);
 
   setupBattery();
 
