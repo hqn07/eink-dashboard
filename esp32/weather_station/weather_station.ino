@@ -44,7 +44,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.11.3"
+#define FW_VERSION "1.12.0"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -166,6 +166,24 @@ RTC_DATA_ATTR time_t g_lastGoodAt = 0;
 // fail-screen ghost from bleeding through.
 RTC_DATA_ATTR bool g_lastRenderWasFail = false;
 
+// Fast-reconnect cache. After the first successful full-scan join we
+// remember the AP's BSSID + channel + the DHCP-leased IP/gateway/mask
+// /DNS in RTC memory. Subsequent boots feed these directly to
+// `WiFi.begin(ssid, pass, channel, bssid)` + `WiFi.config(...)` so the
+// radio skips the SSID scan (~2 s) AND the DHCP handshake (~1.5 s).
+// Typical association drops from 4-6 s cold to 0.4-0.9 s warm. A failed
+// fast-reconnect falls through to the regular scan+DHCP path and the
+// cache is rewritten with whatever the AP just handed out.
+//
+// Reference: github.com/SensorsIot/ESP32-Quick-Wifi-Connect (Spiess).
+RTC_DATA_ATTR uint8_t  g_cachedBssid[6] = {0};
+RTC_DATA_ATTR int32_t  g_cachedChannel  = 0;
+RTC_DATA_ATTR uint32_t g_cachedLocalIp  = 0;
+RTC_DATA_ATTR uint32_t g_cachedGateway  = 0;
+RTC_DATA_ATTR uint32_t g_cachedSubnet   = 0;
+RTC_DATA_ATTR uint32_t g_cachedDns      = 0;
+RTC_DATA_ATTR bool     g_wifiCacheValid = false;
+
 
 // Pin-change ISR: mirror button state to buzzer AND latch a refresh
 // request on press. While awake, any press buzzes for the duration the
@@ -275,10 +293,33 @@ void forceFallbackDns() {
 }
 
 void applyWiFiTuning() {
-  WiFi.setSleep(false);                       // no modem-sleep gaps
-  WiFi.setTxPower(WIFI_POWER_19_5dBm);        // crank to chip max
+  // We deep-sleep between cycles, so modem-sleep no longer matters —
+  // the radio is fully off during sleep. Only the TX-power crank is
+  // worth keeping for range margin on the landlord AP.
+  WiFi.setTxPower(WIFI_POWER_19_5dBm);
   Serial.printf("WiFi tuning applied — SSID=%s RSSI=%d\n",
                 WiFi.SSID().c_str(), WiFi.RSSI());
+}
+
+// Snapshot the current association into RTC memory so the next deep-
+// sleep wake can skip the SSID scan + DHCP handshake. Called once a
+// fresh (full-path) connect succeeds.
+void cacheWifiState() {
+  uint8_t* bssid = WiFi.BSSID();
+  if (bssid) memcpy(g_cachedBssid, bssid, 6);
+  g_cachedChannel = WiFi.channel();
+  g_cachedLocalIp = (uint32_t)WiFi.localIP();
+  g_cachedGateway = (uint32_t)WiFi.gatewayIP();
+  g_cachedSubnet  = (uint32_t)WiFi.subnetMask();
+  g_cachedDns     = (uint32_t)WiFi.dnsIP();
+  g_wifiCacheValid = true;
+  Serial.printf("WiFi cache saved: ch=%d IP=%s\n",
+                g_cachedChannel, WiFi.localIP().toString().c_str());
+}
+
+void invalidateWifiCache() {
+  g_wifiCacheValid = false;
+  Serial.println("WiFi cache invalidated");
 }
 
 // ---------- In-house captive portal ----------
@@ -384,52 +425,68 @@ void openCaptivePortal() {
   WiFi.softAPdisconnect(true);
 }
 
-bool provisionWiFi() {
-  WiFi.mode(WIFI_STA);
+// Read saved SSID/password from the captive-portal Preferences namespace.
+// Returns true when both fields are populated.
+static bool loadSavedCreds(String& ssid, String& pass) {
   wifiPrefs.begin("wifi", true);
-  String ssid = wifiPrefs.getString("ssid", "");
-  String pass = wifiPrefs.getString("pass", "");
+  ssid = wifiPrefs.getString("ssid", "");
+  pass = wifiPrefs.getString("pass", "");
   wifiPrefs.end();
-  if (ssid.length() == 0) {
-    Serial.println("No saved WiFi creds — launching portal");
-    openCaptivePortal();
-    return false;
-  }
-  Serial.printf("Connecting to saved SSID: %s\n", ssid.c_str());
-  WiFi.begin(ssid.c_str(), pass.c_str());
+  return ssid.length() > 0;
+}
+
+// Fast-path connect using the RTC cache. Skips the SSID scan by passing
+// the saved BSSID + channel into WiFi.begin and skips DHCP by feeding
+// the prior lease into WiFi.config. ~600-900 ms warm-boot association.
+bool connectWiFiFast(unsigned long timeoutMs = 4000) {
+  if (!g_wifiCacheValid) return false;
+  String ssid, pass;
+  if (!loadSavedCreds(ssid, pass)) return false;
+
+  WiFi.mode(WIFI_STA);
+  WiFi.persistent(false);
+  WiFi.config(IPAddress(g_cachedLocalIp),
+              IPAddress(g_cachedGateway),
+              IPAddress(g_cachedSubnet),
+              IPAddress(g_cachedDns));
+  Serial.printf("WiFi fast: ch=%d BSSID=%02X:%02X:%02X:%02X:%02X:%02X\n",
+                g_cachedChannel,
+                g_cachedBssid[0], g_cachedBssid[1], g_cachedBssid[2],
+                g_cachedBssid[3], g_cachedBssid[4], g_cachedBssid[5]);
+  WiFi.begin(ssid.c_str(), pass.c_str(), g_cachedChannel, g_cachedBssid);
   unsigned long start = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - start < 20000) {
-    delay(300); Serial.print(".");
+  while (WiFi.status() != WL_CONNECTED && (millis() - start) < timeoutMs) {
+    delay(50);
   }
-  Serial.println();
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.printf("WiFi up: %s RSSI=%d\n",
-                  WiFi.SSID().c_str(), WiFi.RSSI());
-    applyWiFiTuning();
+    Serial.printf("Fast connect OK in %lu ms — RSSI=%d\n",
+                  millis() - start, WiFi.RSSI());
     forceFallbackDns();
     return true;
   }
-  Serial.println("Saved creds failed to connect");
+  Serial.printf("Fast connect FAILED after %lu ms — fall back to full scan\n",
+                millis() - start);
+  invalidateWifiCache();
+  WiFi.disconnect(true, true);
+  delay(100);
   return false;
 }
 
-bool connectWiFiOnce(unsigned long timeoutMs = 15000) {
-  WiFi.mode(WIFI_STA);
-  WiFi.disconnect();
-  delay(100);
-  // Read creds from our Preferences namespace (set by the captive
-  // portal). Explicit args bypass any ambiguity about whether ESP32's
-  // auto-NVS cache is in sync.
-  wifiPrefs.begin("wifi", true);
-  String ssid = wifiPrefs.getString("ssid", "");
-  String pass = wifiPrefs.getString("pass", "");
-  wifiPrefs.end();
-  if (!ssid.length()) {
-    Serial.println("connectWiFiOnce: no saved SSID");
+// Slow-path connect. Full scan + DHCP. Used on cold boot, when the AP
+// roamed channels, or when the fast path failed.
+bool connectWiFiFull(unsigned long timeoutMs = 15000) {
+  String ssid, pass;
+  if (!loadSavedCreds(ssid, pass)) {
+    Serial.println("connectWiFiFull: no saved SSID");
     return false;
   }
+  WiFi.mode(WIFI_STA);
+  WiFi.persistent(false);
+  WiFi.config((uint32_t)0, (uint32_t)0, (uint32_t)0);  // DHCP
+  WiFi.disconnect();
+  delay(100);
   WiFi.begin(ssid.c_str(), pass.c_str());
-  Serial.print("WiFi");
+  Serial.print("WiFi full");
   unsigned long start = millis();
   while (WiFi.status() != WL_CONNECTED && (millis() - start) < timeoutMs) {
     delay(300);
@@ -437,7 +494,8 @@ bool connectWiFiOnce(unsigned long timeoutMs = 15000) {
   }
   Serial.println();
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.printf("Connected: %s  RSSI=%d\n",
+    Serial.printf("Full connect OK in %lu ms — IP=%s RSSI=%d\n",
+                  millis() - start,
                   WiFi.localIP().toString().c_str(), WiFi.RSSI());
     forceFallbackDns();
     return true;
@@ -445,15 +503,46 @@ bool connectWiFiOnce(unsigned long timeoutMs = 15000) {
   return false;
 }
 
-// Retry WiFi a few times — landlord AP is flaky, single attempt fails often
+// Public entry used by both setup() and runCycle. Tries the fast path
+// first, falls back to the full path, retries the full path a couple
+// of times for the flaky landlord AP. Refreshes the RTC cache after
+// any successful full-path join so the next boot can take the fast
+// path again.
 bool connectWiFi() {
+  if (connectWiFiFast()) { applyWiFiTuning(); return true; }
   for (int attempt = 1; attempt <= 3; attempt++) {
-    Serial.printf("WiFi attempt %d/3\n", attempt);
-    if (connectWiFiOnce()) { applyWiFiTuning(); return true; }
+    Serial.printf("WiFi attempt %d/3 (full)\n", attempt);
+    if (connectWiFiFull()) {
+      applyWiFiTuning();
+      cacheWifiState();
+      return true;
+    }
     WiFi.disconnect(true, true);
     delay(1000);
   }
-  Serial.println("WiFi FAILED after 3 tries");
+  Serial.println("WiFi FAILED after 3 full-path tries");
+  return false;
+}
+
+// Cold-boot path: prefer the fast cache, then fall through to the full
+// path, then captive portal if no creds are saved at all. Same shape as
+// the old provisionWiFi so callers don't need to change.
+bool provisionWiFi() {
+  WiFi.mode(WIFI_STA);
+  WiFi.persistent(false);
+  String ssid, pass;
+  if (!loadSavedCreds(ssid, pass)) {
+    Serial.println("No saved WiFi creds — launching portal");
+    openCaptivePortal();
+    return false;
+  }
+  if (connectWiFiFast()) { applyWiFiTuning(); return true; }
+  if (connectWiFiFull()) {
+    applyWiFiTuning();
+    cacheWifiState();
+    return true;
+  }
+  Serial.println("Saved creds failed to connect (fast + full)");
   return false;
 }
 
@@ -1126,10 +1215,10 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
 
   int sleepMin = DEFAULT_SLEEP_MIN;
 
-  // Re-use the existing association if light sleep kept it alive;
-  // only re-join when truly disconnected. Light sleep can silently
-  // drop the association on some APs, so we always check WiFi.status
-  // before assuming we're up.
+  // setup() already ran connectWiFiFast → connectWiFiFull on every
+  // deep-sleep wake, so by the time we're here the radio is either up
+  // or definitively failed. If a USB-power active cycle dropped the
+  // association mid-loop, reconnect on demand.
   bool wifiOk = (WiFi.status() == WL_CONNECTED);
   if (!wifiOk) {
     Serial.println("WiFi dropped — reconnecting");
@@ -1234,9 +1323,13 @@ void setup() {
 
   hspi.begin(EPD_SCK, -1, EPD_MOSI, EPD_CS);
   display.epd2.selectSPI(hspi, SPISettings(4000000, MSBFIRST, SPI_MODE0));
-  // Force initial=true on cold boot to run the panel through its full
-  // reset + clear pass. Subsequent cycles re-init lighter in pushImage.
-  display.init(115200, true, 2, false);
+  // Cold boot → initial=true (full reset + clear pass that scrubs the
+  // panel). Deep-sleep wakes → initial=false (lighter reset, skip the
+  // clear) so the prior image stays visible until pushImage repaints
+  // it and the user doesn't see a flash on every refresh.
+  esp_sleep_wakeup_cause_t bootCause = esp_sleep_get_wakeup_cause();
+  bool coldBootInit = (bootCause == ESP_SLEEP_WAKEUP_UNDEFINED);
+  display.init(115200, coldBootInit, 2, false);
 
   setupBattery();
 
@@ -1247,7 +1340,9 @@ void setup() {
 
   // No WiFi.setSleep / setTxPower here — they must run AFTER the radio
   // is associated. See applyWiFiTuning() (called once provisionWiFi
-  // and connectWiFi succeed).
+  // and connectWiFi succeed). persistent(false) early so begin() never
+  // writes flash on every wake.
+  WiFi.persistent(false);
 
   // Run WiFiManager once. If creds are already in NVS this returns
   // fast; otherwise it blocks on the captive portal so the user can
@@ -1277,34 +1372,48 @@ void factoryReset() {
 
 void loop() {
   esp_sleep_wakeup_cause_t wakeCause = esp_sleep_get_wakeup_cause();
+  bool buttonWake = (wakeCause == ESP_SLEEP_WAKEUP_EXT1);
 
-  // 5-second-hold factory reset. We only check on button wakes; a
-  // regular timer wake skips this so the user can't accidentally
-  // reset by holding the button before sleep ended naturally.
-  if (wakeCause == ESP_SLEEP_WAKEUP_EXT1) {
-    unsigned long pressStart = millis();
+  // runCycle runs FIRST so a button press refreshes the display as fast
+  // as possible. The factory-reset hold check used to block here for up
+  // to 5 s before runCycle could start, which left the user staring at
+  // a stale screen and forced the WiFi reconnect to start after the AP
+  // had already aged the association out of its table. Now the dashboard
+  // refresh starts the moment we wake — the hold check happens after
+  // the cycle returns.
+  unsigned long wakeAtMs = millis();
+  int sleepMin = runCycle(wakeCause);
+  uint64_t sleepUs = (uint64_t)sleepMin * 60ULL * 1000000ULL;
+
+  // Long-press factory reset (button still held continuously since wake,
+  // for ≥5 s in total). Non-blocking: if the user already released the
+  // button during runCycle, this is a no-op. If they're still holding it,
+  // wait the remainder of the 5 s window before triggering the reset.
+  if (buttonWake) {
     while (digitalRead(BTN_REFRESH) == LOW) {
-      if (millis() - pressStart > 5000) {
+      if (millis() - wakeAtMs > 5000) {
         factoryReset();   // never returns
       }
       delay(50);
     }
   }
-
-  int sleepMin = runCycle(wakeCause);
-  uint64_t sleepUs = (uint64_t)sleepMin * 60ULL * 1000000ULL;
-
-  // Wait for button release so we don't immediately re-wake on
-  // ALL_LOW ext1 with a still-held button.
+  // Belt-and-braces: small grace window so a quick double-tap doesn't
+  // immediately re-wake from ALL_LOW with the button still pressed.
   unsigned long t0 = millis();
-  while (digitalRead(BTN_REFRESH) == LOW && millis() - t0 < 5000) {
+  while (digitalRead(BTN_REFRESH) == LOW && millis() - t0 < 1000) {
     delay(10);
   }
   buzzerOff();
 
-  // Mode select: USB → stay active (no sleep), battery → light sleep.
-  // Both keep WiFi associated, so the next cycle doesn't pay the
-  // re-join cost on a flaky AP.
+  // Mode select: USB → stay active (no sleep), battery → DEEP sleep.
+  //
+  // Deep sleep tears WiFi down completely, but the warm-boot fast-
+  // reconnect path (cached BSSID + channel + static IP) brings the
+  // radio back in ~700 ms — well under the cost of trying to keep the
+  // association alive across light sleep, which proved unreliable
+  // through `WiFi.setSleep(false)` + `esp_light_sleep_start()`. Deep
+  // sleep also draws ~10 µA vs light sleep's ~800 µA, so battery life
+  // jumps from weeks to months.
   float vbat = readBatteryVoltage();
   bool onUsb = vbat > VBAT_USB_THRESHOLD;
 
@@ -1319,12 +1428,12 @@ void loop() {
       delay(200);
     }
   } else {
-    Serial.printf("Battery (%.2fV) — light sleep %d min\n", vbat, sleepMin);
+    Serial.printf("Battery (%.2fV) — deep sleep %d min\n", vbat, sleepMin);
     rtc_gpio_pulldown_dis((gpio_num_t)BTN_REFRESH);
     rtc_gpio_pullup_en((gpio_num_t)BTN_REFRESH);
     esp_sleep_enable_timer_wakeup(sleepUs);
     esp_sleep_enable_ext1_wakeup(WAKE_PIN_MASK, ESP_EXT1_WAKEUP_ALL_LOW);
     Serial.flush();
-    esp_light_sleep_start();
+    esp_deep_sleep_start();   // does not return
   }
 }
