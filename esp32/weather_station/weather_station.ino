@@ -44,7 +44,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.12.1"
+#define FW_VERSION "1.12.2"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -176,6 +176,14 @@ RTC_DATA_ATTR bool g_lastRenderWasFail = false;
 // cache is rewritten with whatever the AP just handed out.
 //
 // Reference: github.com/SensorsIot/ESP32-Quick-Wifi-Connect (Spiess).
+// Captured early in setup() before WiFi powers up, so the reading is
+// taken under idle CPU draw rather than under WiFi-TX transients. The
+// LiPo discharge curve assumes open-circuit voltage; reading under
+// load lands 50-150 mV low and undercounts %. runCycle pulls this
+// value instead of re-reading mid-cycle.
+float g_idleBattV = NAN;
+int   g_idleBattPct = -1;
+
 RTC_DATA_ATTR uint8_t  g_cachedBssid[6] = {0};
 RTC_DATA_ATTR int32_t  g_cachedChannel  = 0;
 RTC_DATA_ATTR uint32_t g_cachedLocalIp  = 0;
@@ -729,16 +737,44 @@ void setupBattery() {
   analogSetPinAttenuation(BATTERY_PIN, ADC_11db);
 }
 
-// Returns battery voltage in volts. Averages 16 calibrated samples
-// (analogReadMilliVolts applies the per-chip eFuse Vref so we don't have
-// to assume Vref = 3.3V).
+// Returns battery voltage in volts. Takes 33 calibrated samples
+// (analogReadMilliVolts applies the per-chip eFuse Vref so we don't
+// have to assume Vref = 3.3V), drops the bottom 25 % to reject the
+// transient sag from any WiFi DTIM burst that lands inside the window,
+// and averages the remainder. The 5 ms inter-sample delay widens the
+// window past the AP beacon interval so a single beacon-aligned burst
+// can't dominate.
+//
+// Why so much defensive averaging:
+//   - 1 MΩ + 1 MΩ divider has a 500 kΩ Thevenin output that the ESP32
+//     ADC's sample/hold capacitor can't fully charge in the default
+//     conversion time. Multiple samples lets the cap re-equalise.
+//   - WiFi TX bursts pull 80-200 mA on the same rail; raw reads taken
+//     during a burst land 50-150 mV low.
+//   - Espressif's calibration eFuse handles the per-chip Vref offset
+//     but not the non-linearity near the top of the ADC range, so the
+//     same sample population gets clipped to mean-of-upper-quartile
+//     instead of straight average.
 float readBatteryVoltage() {
-  long sumMv = 0;
-  for (int i = 0; i < 16; i++) {
-    sumMv += analogReadMilliVolts(BATTERY_PIN);
-    delay(2);
+  const int N = 33;
+  int mv[N];
+  for (int i = 0; i < N; i++) {
+    mv[i] = (int)analogReadMilliVolts(BATTERY_PIN);
+    delay(5);
   }
-  float v_gpio = (sumMv / 16.0f) / 1000.0f;
+  // Insertion-sort — fine for N=33, no heap, no extra deps.
+  for (int i = 1; i < N; i++) {
+    int x = mv[i], j = i - 1;
+    while (j >= 0 && mv[j] > x) { mv[j + 1] = mv[j]; j--; }
+    mv[j + 1] = x;
+  }
+  // Average the top 50 % of the sorted samples. Reading-low is the
+  // dominant error mode (WiFi load), so trimming the bottom half is
+  // a directional bias correction, not just noise rejection.
+  long sum = 0;
+  int  count = 0;
+  for (int i = N / 2; i < N; i++) { sum += mv[i]; count++; }
+  float v_gpio = (sum / (float)count) / 1000.0f;
   return v_gpio * DIVIDER_RATIO;
 }
 
@@ -1206,8 +1242,12 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
   g_lastHttpCode = 0;
   Serial.printf("Wake cause: %d (%s)\n", wakeCause, wakeLabel);
 
-  float battV   = readBatteryVoltage();
-  int   battPct = batteryPctFromVoltage(battV);
+  // Prefer the pre-WiFi idle reading captured in setup() — it's taken
+  // before any TX bursts sag the rail, so it matches the LiPo-curve
+  // assumption of open-circuit voltage. Fall back to a fresh read only
+  // when setup didn't run (long-running USB-power active cycle).
+  float battV   = isfinite(g_idleBattV)   ? g_idleBattV   : readBatteryVoltage();
+  int   battPct = (g_idleBattPct >= 0)    ? g_idleBattPct : batteryPctFromVoltage(battV);
   g_battV   = battV;
   g_battPct = battPct;
   Serial.printf("Battery: %.2fV (%d%%)\n", battV, battPct);
@@ -1331,6 +1371,14 @@ void setup() {
   display.init(115200, true, 2, false);
 
   setupBattery();
+  // Snapshot the battery NOW, before WiFi powers up. WiFi TX bursts sag
+  // the 3V3 rail 50-150 mV under load, which throws the LiPo-curve
+  // lookup off by 10-20 % in the "I'm dying" direction. Reading at idle
+  // is the cheapest accuracy fix available — no hardware change needed.
+  g_idleBattV   = readBatteryVoltage();
+  g_idleBattPct = batteryPctFromVoltage(g_idleBattV);
+  Serial.printf("Battery (idle, pre-WiFi): %.2fV (%d%%)\n",
+                g_idleBattV, g_idleBattPct);
 
   // Restore the per-device api_key from NVS if we already enrolled.
   // The first /api/setup POST happens later inside runCycle, once
