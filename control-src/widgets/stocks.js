@@ -16,6 +16,7 @@ export const def = {
     symbols: [],
     title: '',
     layout: 'hero_watch',  // 'hero_watch' | 'list_only' | 'hero_only'
+    sparkStyle: 'line',    // 'line' | 'bars' | 'area'
     showSpark:  true,
     showChange: true,
     fontScale: 1,
@@ -28,16 +29,33 @@ function spark(points, opts) {
   const vbW = 100, vbH = 30, pad = 1;
   const min = Math.min(...points), max = Math.max(...points);
   const range = max - min || 1;
-  const step = (vbW - pad * 2) / (points.length - 1);
-  const path = points.map((v, i) => {
-    const x = pad + i * step;
-    const y = pad + (vbH - pad * 2) * (1 - (v - min) / range);
-    return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(' ');
-  const cls = opts && opts.cls ? opts.cls : 'stock-spark';
-  const styles = (opts && opts.style) ? opts.style : '';
-  const sw = opts && opts.stroke ? opts.stroke : 2;
-  return `<svg class="${cls}" viewBox="0 0 ${vbW} ${vbH}" preserveAspectRatio="none" style="${styles}"><path d="${path}" fill="none" stroke="#000" stroke-width="${sw}" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+  const cls = (opts && opts.cls) || 'stock-spark';
+  const styles = (opts && opts.style) || '';
+  const sw = (opts && opts.stroke) || 2;
+  const variant = (opts && opts.variant) || 'line';
+  const wrap = (body) => `<svg class="${cls}" viewBox="0 0 ${vbW} ${vbH}" preserveAspectRatio="none" style="${styles}">${body}</svg>`;
+  const xs = points.map((_, i) => pad + i * ((vbW - pad * 2) / (points.length - 1)));
+  const ys = points.map(v => pad + (vbH - pad * 2) * (1 - (v - min) / range));
+  if (variant === 'bars') {
+    const colW = (vbW - pad * 2) / points.length;
+    const barW = Math.max(0.6, colW * 0.7);
+    const baseY = vbH - pad;
+    const rects = points.map((_, i) => {
+      const x = pad + i * colW + (colW - barW) / 2;
+      const y = ys[i];
+      const h = Math.max(0.5, baseY - y);
+      return `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${barW.toFixed(2)}" height="${h.toFixed(2)}" fill="#000"/>`;
+    }).join('');
+    return wrap(rects);
+  }
+  const path = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ');
+  const stroke = `<path d="${path}" fill="none" stroke="#000" stroke-width="${sw}" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>`;
+  if (variant === 'area') {
+    const baseY = (vbH - pad).toFixed(1);
+    const areaPath = `${path} L${xs[xs.length - 1].toFixed(1)},${baseY} L${xs[0].toFixed(1)},${baseY} Z`;
+    return wrap(`<path d="${areaPath}" fill="#000" fill-opacity="0.18"/>${stroke}`);
+  }
+  return wrap(stroke);
 }
 
 const dirArrow = v => v >= 0 ? '▲' : '▼';
@@ -51,7 +69,7 @@ function heroBlock(hero, t) {
     ? `<div class="hero-meta">${hero.dayHigh ? `H ${hero.dayHigh}` : ''}${hero.dayHigh && hero.dayLow ? ' · ' : ''}${hero.dayLow ? `L ${hero.dayLow}` : ''}</div>`
     : '';
   const heroSparkHtml = t.heroSpark
-    ? spark(hero.spark, { cls: 'hero-spark', stroke: 2.5, style: 'flex:1;min-height:0;width:100%' })
+    ? spark(hero.spark, { cls: 'hero-spark', stroke: 2.5, style: 'flex:1;min-height:0;width:100%', variant: t.sparkVariant })
     : '';
   return `
     <div class="stock-hero">
@@ -69,7 +87,7 @@ function watchRow(s, t) {
   return `
     <div class="stock-watch-row">
       <span class="watch-sym">${escapeHtml(s.symbol)}</span>
-      ${t.watchSpark ? spark(s.spark, { cls: 'watch-spark', stroke: 2, style: 'height:18px;width:100%' }) : '<span></span>'}
+      ${t.watchSpark ? spark(s.spark, { cls: 'watch-spark', stroke: 2, style: 'height:18px;width:100%', variant: t.sparkVariant }) : '<span></span>'}
       <span class="watch-price">${s.price}</span>
       ${t.watchChg ? `<span class="watch-chg ${dirCls(s.change)}">${dirArrow(s.change)} ${Math.abs(s.changePct).toFixed(2)}%</span>` : ''}
     </div>`;
@@ -99,7 +117,8 @@ export function render({ stocks, settings, cellW, cellH, density }) {
     heroSpark:  tBase.heroSpark  && s.showSpark  !== false,
     watchSpark: tBase.watchSpark && s.showSpark  !== false,
     heroChg:    tBase.heroChg    && s.showChange !== false,
-    watchChg:   tBase.watchChg   && s.showChange !== false
+    watchChg:   tBase.watchChg   && s.showChange !== false,
+    sparkVariant: (s.sparkStyle === 'bars' || s.sparkStyle === 'area') ? s.sparkStyle : 'line'
   };
 
   if (layout === 'list_only') {

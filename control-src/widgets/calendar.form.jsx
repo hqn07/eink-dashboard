@@ -12,6 +12,14 @@ const PRESETS = [
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
   const { TextField, ListEditor, SelectField, ToggleField, TypographyFields, FormSection, PresetField } = fields;
+  const urls = Array.isArray(v.icalUrls) ? v.icalUrls.filter(Boolean) : [];
+  const disabled = Array.isArray(v.disabledFeeds) ? v.disabledFeeds : [];
+  const toggleFeed = (url, on) => {
+    const next = on
+      ? disabled.filter(u => u !== url)
+      : disabled.includes(url) ? disabled : [...disabled, url];
+    patch({ disabledFeeds: next });
+  };
   return (
     <>
       <FormSection title="Data">
@@ -40,6 +48,22 @@ export function Form({ values, patch, onChange, fields }) {
               style={{ flex: 1 }} />
           )}
         />
+        {urls.length > 1 && (
+          <div style={{ marginTop: 8 }}>
+            <div className="wsm-field-label">Active feeds</div>
+            <div className="wsm-field-help" style={{ marginBottom: 6 }}>
+              Switch a feed off to skip it without removing the URL.
+            </div>
+            {urls.map((url, i) => (
+              <ToggleField
+                key={`${url}-${i}`}
+                label={url.length > 48 ? `${url.slice(0, 44)}…` : url}
+                value={!disabled.includes(url)}
+                onChange={(on) => toggleFeed(url, on)}
+              />
+            ))}
+          </div>
+        )}
       </FormSection>
       <FormSection title="Layout">
         <PresetField presets={PRESETS} onApply={(vals) => onChange({ ...v, ...vals })} />

@@ -32,5 +32,6 @@ export {
   isHeaderOn, isFooterOn,
   headerVariant, footerVariant,
   typographyCss,
+  scaleWrap,
   cellClasses
 } from './_chrome.js';

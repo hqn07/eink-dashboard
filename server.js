@@ -774,7 +774,12 @@ async function buildWidgetData(cfg, units, layout) {
         case 'calendar': {
           // New contract: always set slot.events. Empty URL list resolves
           // to [] so the renderer never reaches the global cfg.calendar.
-          const urls = Array.isArray(eff.icalUrls) ? eff.icalUrls.filter(Boolean) : [];
+          // disabledFeeds (per-tile) filters URLs without removing them
+          // from the configured list so the user can flip a feed off
+          // temporarily.
+          const allUrls = Array.isArray(eff.icalUrls) ? eff.icalUrls.filter(Boolean) : [];
+          const disabled = new Set(Array.isArray(eff.disabledFeeds) ? eff.disabledFeeds : []);
+          const urls = allUrls.filter(u => !disabled.has(u));
           if (urls.length) {
             const lists = await Promise.all(urls.map(u => fetchEvents(u)));
             slot.events = mergeEvents(lists.flat());
@@ -988,7 +993,9 @@ function buildPageBodyHtml({ payload, ssr, mode }) {
       ...(perItem && perItem[item.id] || {}),
       cellW: item.w, cellH: item.h, density: item.density, settings: item.settings
     };
-    const inner = ssr.renderWidget(item.widgetId, itemCtx);
+    const innerRaw = ssr.renderWidget(item.widgetId, itemCtx);
+    const sw = ssr.scaleWrap(item.settings);
+    const inner = `${sw.open}${innerRaw}${sw.close}`;
     const typo = ssr.typographyCss(item.settings);
     const extraClasses = ssr.cellClasses(item.settings).join(' ');
     // Two flavours of single-widget render:
@@ -1029,8 +1036,10 @@ function buildPageBodyHtml({ payload, ssr, mode }) {
       ...(perItem && perItem[item.id] || {}),
       cellW: item.w, cellH: item.h, density: item.density, settings: item.settings
     };
-    const inner = ssr.renderWidget(item.widgetId, itemCtx);
-    if (!inner) continue;
+    const innerRaw = ssr.renderWidget(item.widgetId, itemCtx);
+    if (!innerRaw) continue;
+    const sw = ssr.scaleWrap(item.settings);
+    const inner = `${sw.open}${innerRaw}${sw.close}`;
     const classes = ['cell', `cell-${item.widgetId}`];
     if (item.x + item.w >= GRID_COLS) classes.push('cell-edge-right');
     if (item.y + item.h >= GRID_ROWS) classes.push('cell-edge-bottom');

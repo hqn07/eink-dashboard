@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Gear, X } from '@phosphor-icons/react';
 import * as HoverCard from '@radix-ui/react-hover-card';
 import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById, makeInstance } from '../widgets.js';
-import { renderWidget, renderHeader, renderFooter, isHeaderOn, isFooterOn, headerVariant, footerVariant, typographyCss, cellClasses } from '../widget-render.js';
+import { renderWidget, renderHeader, renderFooter, isHeaderOn, isFooterOn, headerVariant, footerVariant, typographyCss, scaleWrap, cellClasses } from '../widget-render.js';
 import { demoCtxForWidget } from '../widgets/_pool_demo.js';
 import WidgetSettingsModal from './WidgetSettingsModal.jsx';
 
@@ -410,7 +410,9 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
         >
           {enabled.map(l => {
             const itemSlot = (previewData && previewData.perItem && previewData.perItem[l.id]) || {};
-            const inner = renderWidget(l.widgetId, { ...previewData, ...itemSlot, cellW: l.w, cellH: l.h, density: l.density, settings: l.settings }) || '';
+            const innerRaw = renderWidget(l.widgetId, { ...previewData, ...itemSlot, cellW: l.w, cellH: l.h, density: l.density, settings: l.settings }) || '';
+            const swl = scaleWrap(l.settings);
+            const inner = `${swl.open}${innerRaw}${swl.close}`;
             // Per-tile typography (font family + padding) lives on the
             // cell wrapper so the global .cell[style*="--w-font"]
             // override rule can reach every child of every widget.

@@ -70,6 +70,7 @@ export const def = {
     title: '',
     variant: 'time_bookends',
     showAlbumArt:  true,
+    artShape:      'square',   // 'square' | 'rounded' | 'circle' | 'none'
     showProgress:  true,
     showSource:    true,
     showStateIcon: true,
@@ -113,7 +114,9 @@ export function render({ macNowPlaying, cellW, cellH, density, settings }) {
   // still gates upward (e.g. a tiny tile never shows the progress bar
   // even if the user enables it), but the toggle can hide an element
   // the tier would otherwise have shown.
-  const allowArt       = s.showAlbumArt !== false;
+  const artShape       = (s.artShape === 'rounded' || s.artShape === 'circle' || s.artShape === 'none')
+                           ? s.artShape : 'square';
+  const allowArt       = s.showAlbumArt !== false && artShape !== 'none';
   const allowProgress  = cfg.showProgress && s.showProgress !== false;
   const allowSource    = cfg.showSource   && s.showSource   !== false;
   const allowStateIcon = s.showStateIcon !== false;
@@ -140,11 +143,12 @@ export function render({ macNowPlaying, cellW, cellH, density, settings }) {
     ? Math.max(0, Math.min(100, (np.elapsedSec || 0) / np.durationSec * 100))
     : 0;
   const artSize = allowArt ? cfg.art : 0;
+  const artShapeClass = `mac-np-art-shape-${artShape}`;
   const artInner = artSize === 0
     ? ''
     : (np.artworkBase64
-      ? `<img class="mac-np-art" style="width:${artSize}px;height:${artSize}px" src="data:image/png;base64,${np.artworkBase64}" alt="" />`
-      : `<div class="mac-np-art mac-np-art-empty" style="width:${artSize}px;height:${artSize}px">${stateIcon}</div>`);
+      ? `<img class="mac-np-art ${artShapeClass}" style="width:${artSize}px;height:${artSize}px" src="data:image/png;base64,${np.artworkBase64}" alt="" />`
+      : `<div class="mac-np-art mac-np-art-empty ${artShapeClass}" style="width:${artSize}px;height:${artSize}px">${stateIcon}</div>`);
 
   if (cfg.stacked) {
     const elapsedStr = hasProgress ? fmtSec(np.elapsedSec) : '';

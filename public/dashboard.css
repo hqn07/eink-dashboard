@@ -640,6 +640,17 @@ html, body {
   image-rendering: pixelated;
   background: #fff;
 }
+.mac-np-art-shape-rounded { border-radius: 10px; overflow: hidden; }
+.mac-np-art-shape-circle  { border-radius: 50%; overflow: hidden; }
+
+/* Inner wrapper that carries the user's fontScale transform. Sized
+ * inverse to the scale so the post-transform paint still fills the
+ * cell content box exactly — replaces the old `zoom:N` approach so
+ * the user can pick an anchor (transform-origin). */
+.cell-scale {
+  display: block;
+  position: relative;
+}
 .mac-np-art-empty {
   display: flex; align-items: center; justify-content: center;
   font-size: 32px;

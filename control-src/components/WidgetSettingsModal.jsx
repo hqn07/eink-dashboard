@@ -5,7 +5,7 @@ import Skeleton, { SkeletonTheme } from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import { GRID_COLS, GRID_ROWS, widgetById } from '../widgets.js';
 import {
-  renderWidget, typographyCss, cellClasses,
+  renderWidget, typographyCss, cellClasses, scaleWrap,
   renderHeader, renderFooter,
   isHeaderOn, isFooterOn,
   headerVariant, footerVariant
@@ -274,7 +274,7 @@ export default function WidgetSettingsModal({
   if (draft.x + draft.w >= GRID_COLS) classes.push('cell-edge-right');
   if (draft.y + draft.h >= GRID_ROWS) classes.push('cell-edge-bottom');
   const itemSlot = (previewData && previewData.perItem && previewData.perItem[draft.id]) || {};
-  const previewHtml = renderWidget(draft.widgetId, {
+  const previewInner = renderWidget(draft.widgetId, {
     ...data,
     ...itemSlot,
     cellW: draft.w,
@@ -282,6 +282,8 @@ export default function WidgetSettingsModal({
     density: draft.density,
     settings: draft.settings
   }) || '';
+  const sw = scaleWrap(draft.settings);
+  const previewHtml = `${sw.open}${previewInner}${sw.close}`;
   const typoStyle = typographyCss(draft.settings);
   const cellStyle =
     `grid-column:${draft.x + 1} / span ${draft.w};grid-row:${draft.y + 1} / span ${draft.h};${typoStyle}`;

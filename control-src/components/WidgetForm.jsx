@@ -128,6 +128,23 @@ function TypographyFields({ values, onChange }) {
         onChange={(x) => patch({ fontScale: x })}
         format={(x) => `${Math.round(x * 100)}%`}
       />
+      <SelectField
+        label="Scale anchor"
+        value={v.scaleAnchor || 'top_left'}
+        options={[
+          { value: 'top_left',     label: 'Top-left (default)' },
+          { value: 'top',          label: 'Top-center' },
+          { value: 'top_right',    label: 'Top-right' },
+          { value: 'left',         label: 'Left-center' },
+          { value: 'center',       label: 'Center' },
+          { value: 'right',        label: 'Right-center' },
+          { value: 'bottom_left',  label: 'Bottom-left' },
+          { value: 'bottom',       label: 'Bottom-center' },
+          { value: 'bottom_right', label: 'Bottom-right' }
+        ]}
+        onChange={(x) => patch({ scaleAnchor: x })}
+        help="Where the scale transform anchors when Content scale ≠ 100 %."
+      />
       <SliderField
         label="Inner padding"
         min={0} max={30} step={1}

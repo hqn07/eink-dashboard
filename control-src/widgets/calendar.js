@@ -14,6 +14,7 @@ export const def = {
   defaultSize: 'M',
   defaults: () => ({
     icalUrls: [],
+    disabledFeeds: [],   // URL strings currently muted (server skips fetch)
     title: '',
     density: 'auto',     // 'auto' | 'compact' | 'standard' | 'rich'
     showDayLabel: true,

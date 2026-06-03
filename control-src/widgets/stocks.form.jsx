@@ -44,6 +44,16 @@ export function Form({ values, patch, onChange, fields }) {
           ]}
           onChange={(x) => patch({ layout: x })}
         />
+        <SelectField
+          label="Sparkline style"
+          value={v.sparkStyle || 'line'}
+          options={[
+            { value: 'line', label: 'Line (default)' },
+            { value: 'bars', label: 'Bars — vertical columns' },
+            { value: 'area', label: 'Area — line + soft fill' }
+          ]}
+          onChange={(x) => patch({ sparkStyle: x })}
+        />
       </FormSection>
       <FormSection title="Show">
         <ToggleField label="Sparkline charts"

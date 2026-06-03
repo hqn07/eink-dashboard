@@ -103,6 +103,17 @@ export function Form({ values, patch, onChange, fields }) {
           onChange={(x) => patch({ artPosition: x })}
         />
         <SelectField
+          label="Album art shape"
+          value={v.artShape || 'square'}
+          options={[
+            { value: 'square',  label: 'Square (default)' },
+            { value: 'rounded', label: 'Rounded corners' },
+            { value: 'circle',  label: 'Circle' },
+            { value: 'none',    label: 'Hide art entirely' }
+          ]}
+          onChange={(x) => patch({ artShape: x })}
+        />
+        <SelectField
           label="Artist / song text alignment"
           value={v.textAlign || 'left'}
           options={[
