@@ -44,7 +44,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.12.2"
+#define FW_VERSION "1.12.3"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -1368,7 +1368,14 @@ void setup() {
   // init (reset pulse + `_initial_write/_refresh` flags). Skipping it
   // with initial=false on timer/button wakes leaves the controller in
   // a half-configured state and the next writeImage silently no-ops.
-  display.init(115200, true, 2, false);
+  //
+  // Reset duration bumped from 2 ms → 50 ms to match GxEPD2's README
+  // recommendation for this panel. The shorter pulse left the
+  // controller in an indeterminate state coming out of hibernate, which
+  // showed up as "Busy Timeout!" on every _PowerOn / _Update_Full call
+  // — the panel was never registering the reset edge so BUSY never
+  // transitioned to ready.
+  display.init(115200, true, 50, false);
 
   setupBattery();
   // Snapshot the battery NOW, before WiFi powers up. WiFi TX bursts sag
