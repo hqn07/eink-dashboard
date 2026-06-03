@@ -112,6 +112,10 @@ export function demoCtxForWidget(id, cellW, cellH) {
       return { ...base, macNowPlaying: DEMO_NOWPLAYING, settings: {} };
     case 'mac_battery':
       return { ...base, macBattery: DEMO_BATTERY, settings: {} };
+    case 'eink_battery':
+      return { ...base,
+        battery: { v: 4.03, pct: 82, at: Date.now() - 5 * 60 * 1000 },
+        settings: {} };
     case 'message':
       return { ...base, resolvedMessage: DEMO_MESSAGE, settings: {} };
     case 'clock':

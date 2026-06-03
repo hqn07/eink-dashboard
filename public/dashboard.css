@@ -651,6 +651,66 @@ html, body {
   display: block;
   position: relative;
 }
+
+/* E-ink panel battery widget. Big percent + voltage + visual bar +
+ * staleness footer. Editorial palette (black on white); inversion
+ * relies on the same `filter: invert(1)` rule the rest of the cell
+ * uses for `cell-inverted`. */
+.eink-batt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  height: 100%;
+}
+.eink-batt-pct {
+  font-family: 'DM Serif Display', serif;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.eink-batt-bolt { vertical-align: -0.05em; }
+.eink-batt-volts {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.eink-batt-bar {
+  position: relative;
+  width: 110px;
+  height: 18px;
+  border: 2px solid #000;
+  background: #fff;
+  margin-top: 2px;
+}
+.eink-batt-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: #000;
+}
+.eink-batt-bar-tip {
+  position: absolute;
+  right: -6px;
+  top: 4px;
+  width: 4px;
+  height: 10px;
+  background: #000;
+}
+.eink-batt-age {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #555;
+  margin-top: auto;
+}
+.cell.cell-inverted .eink-batt-bar { border-color: #fff; background: #000; }
+.cell.cell-inverted .eink-batt-bar-fill { background: #fff; }
+.cell.cell-inverted .eink-batt-bar-tip { background: #fff; }
+.cell.cell-inverted .eink-batt-age { color: #aaa; }
 .mac-np-art-empty {
   display: flex; align-items: center; justify-content: center;
   font-size: 32px;

@@ -36,6 +36,7 @@ function smallestSizeKey(def) {
 const SHOWCASE_SIZE_BY_ID = {
   clock:            'S',
   mac_battery:      'S',
+  eink_battery:     'S',
   message:          'M',
   calendar:         'M',
   weather_forecast: 'M',
