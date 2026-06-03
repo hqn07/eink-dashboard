@@ -13,13 +13,14 @@ const PRESETS = [
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, CsvField, SelectField, SegmentedField, ToggleField, TypographyFields, FormSection, PresetField } = fields;
+  const { TextField, CsvField, SelectField, SegmentedField, ToggleField, TypographyFields, FormSection, PresetField, defaults = {} } = fields;
   return (
     <>
       <FormSection title="Data">
         <CsvField
           label="Symbols (comma separated)"
           value={v.symbols}
+          defaultValue={defaults.symbols}
           onCommit={(arr) => patch({ symbols: arr })}
           placeholder="AAPL, BTC-USD, ETH-USD"
           help="Yahoo Finance tickers. Crypto: e.g. BTC-USD."
@@ -30,6 +31,7 @@ export function Form({ values, patch, onChange, fields }) {
         <TextField
           label="Tile heading"
           value={v.title || ''}
+          defaultValue={defaults.title}
           onChange={(x) => patch({ title: x })}
           placeholder="MARKETS"
           help="Leave blank to keep the default heading."
@@ -37,6 +39,7 @@ export function Form({ values, patch, onChange, fields }) {
         <SelectField
           label="Layout"
           value={v.layout || 'hero_watch'}
+          defaultValue={defaults.layout}
           options={[
             { value: 'hero_watch', label: 'Hero + watchlist (default)' },
             { value: 'list_only',  label: 'List only — every symbol equal' },
@@ -47,6 +50,7 @@ export function Form({ values, patch, onChange, fields }) {
         <SegmentedField
           label="Sparkline style"
           value={v.sparkStyle || 'line'}
+          defaultValue={defaults.sparkStyle}
           options={[
             { value: 'line', short: 'Line', label: 'Line (default)' },
             { value: 'bars', short: 'Bars', label: 'Vertical columns' },
@@ -57,9 +61,11 @@ export function Form({ values, patch, onChange, fields }) {
       </FormSection>
       <FormSection title="Show">
         <ToggleField label="Sparkline charts"
-          value={v.showSpark  !== false} onChange={(x) => patch({ showSpark:  x })} />
+          value={v.showSpark  !== false} defaultValue={defaults.showSpark}
+          onChange={(x) => patch({ showSpark:  x })} />
         <ToggleField label="Change %"
-          value={v.showChange !== false} onChange={(x) => patch({ showChange: x })} />
+          value={v.showChange !== false} defaultValue={defaults.showChange}
+          onChange={(x) => patch({ showChange: x })} />
       </FormSection>
       <FormSection title="Style">
         <TypographyFields values={v} onChange={onChange} />

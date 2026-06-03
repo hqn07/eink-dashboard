@@ -13,7 +13,7 @@ const PRESETS = [
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { LocationFields, TextField, SelectField, SegmentedField, ToggleField, TypographyFields, FormSection, PresetField } = fields;
+  const { LocationFields, TextField, SelectField, SegmentedField, ToggleField, TypographyFields, FormSection, PresetField, defaults = {} } = fields;
   return (
     <>
       <FormSection title="Data">
@@ -24,6 +24,7 @@ export function Form({ values, patch, onChange, fields }) {
         <SelectField
           label="Units (this tile only)"
           value={v.unitsOverride || 'inherit'}
+          defaultValue={defaults.unitsOverride}
           options={[
             { value: 'inherit', label: 'Inherit (dashboard default)' },
             { value: 'F',       label: 'Force °F' },
@@ -38,6 +39,7 @@ export function Form({ values, patch, onChange, fields }) {
         <TextField
           label="Tile heading"
           value={v.title || ''}
+          defaultValue={defaults.title}
           onChange={(x) => patch({ title: x })}
           placeholder="N-DAY OUTLOOK"
           help="Leave blank for the default (varies with day count)."
@@ -46,6 +48,7 @@ export function Form({ values, patch, onChange, fields }) {
           label="Days to show (1–7 · blank = auto by tile height)"
           type="number"
           value={v.forecastDays ?? ''}
+          defaultValue={defaults.forecastDays}
           onChange={(x) => patch({
             forecastDays: Number.isFinite(x) ? Math.max(1, Math.min(7, x)) : null
           })}
@@ -56,6 +59,7 @@ export function Form({ values, patch, onChange, fields }) {
         <SegmentedField
           label="Precipitation %"
           value={v.precipMode || 'auto'}
+          defaultValue={defaults.precipMode}
           options={[
             { value: 'auto',   short: 'Auto',   label: 'Auto — wide tiles only' },
             { value: 'always', short: 'Always', label: 'Always show' },
@@ -66,6 +70,7 @@ export function Form({ values, patch, onChange, fields }) {
         <SegmentedField
           label="High / low style"
           value={v.hiloStyle || 'stack'}
+          defaultValue={defaults.hiloStyle}
           options={[
             { value: 'stack',  short: 'Stack',  label: 'Stacked (HI on top)' },
             { value: 'inline', short: 'Inline', label: 'Inline (HI / LO)' },
@@ -76,9 +81,11 @@ export function Form({ values, patch, onChange, fields }) {
       </FormSection>
       <FormSection title="Show">
         <ToggleField label="Day name (MON / TUE / …)"
-          value={v.showDayName !== false} onChange={(x) => patch({ showDayName: x })} />
+          value={v.showDayName !== false} defaultValue={defaults.showDayName}
+          onChange={(x) => patch({ showDayName: x })} />
         <ToggleField label="Weather icons"
-          value={v.showIcons   !== false} onChange={(x) => patch({ showIcons:   x })} />
+          value={v.showIcons   !== false} defaultValue={defaults.showIcons}
+          onChange={(x) => patch({ showIcons:   x })} />
       </FormSection>
       <FormSection title="Style">
         <TypographyFields values={v} onChange={onChange} />

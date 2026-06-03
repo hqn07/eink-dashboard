@@ -1499,6 +1499,46 @@ input[type="text"], input[type="url"], textarea {
   z-index: 1;
 }
 .wsm-seg-icon { display: inline-flex; align-items: center; }
+
+/* Per-field reset icon (Storybook / Figma pattern). Hidden until the
+ * row is hovered or focused; only emitted when the current value
+ * differs from the widget's registry default. Click reverts that one
+ * field without nuking the rest of the form. */
+.wsm-field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+.wsm-field-label-text { display: inline; }
+.wsm-reset-btn {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--mute);
+  margin-left: 6px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  opacity: 0;
+  transform: rotate(45deg);
+  transition: opacity 120ms ease, color 120ms ease, background 120ms ease;
+}
+.wsm-field:hover .wsm-reset-btn,
+.wsm-field:focus-within .wsm-reset-btn,
+.wsm-row:hover .wsm-reset-btn,
+.wsm-row:focus-within .wsm-reset-btn,
+.wsm-reset-btn:focus-visible {
+  opacity: 1;
+}
+.wsm-reset-btn:hover {
+  color: var(--ink);
+  background: #f0eee8;
+}
+.wsm-reset-btn:focus-visible {
+  outline: 2px dashed var(--ink);
+  outline-offset: 2px;
+}
 .wsm-label {
   font-size: 12px;
   font-weight: 700;

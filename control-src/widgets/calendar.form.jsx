@@ -11,7 +11,7 @@ const PRESETS = [
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, ListEditor, SelectField, ToggleField, TypographyFields, FormSection, PresetField } = fields;
+  const { TextField, ListEditor, SelectField, ToggleField, TypographyFields, FormSection, PresetField, defaults = {} } = fields;
   const urls = Array.isArray(v.icalUrls) ? v.icalUrls.filter(Boolean) : [];
   const disabled = Array.isArray(v.disabledFeeds) ? v.disabledFeeds : [];
   const toggleFeed = (url, on) => {
@@ -70,6 +70,7 @@ export function Form({ values, patch, onChange, fields }) {
         <TextField
           label="Tile heading"
           value={v.title || ''}
+          defaultValue={defaults.title}
           onChange={(x) => patch({ title: x })}
           placeholder="UPCOMING"
           help="Leave blank to keep the default heading."
@@ -77,6 +78,7 @@ export function Form({ values, patch, onChange, fields }) {
         <SelectField
           label="Density"
           value={v.density || 'auto'}
+          defaultValue={defaults.density}
           options={[
             { value: 'auto',     label: 'Auto — by tile size' },
             { value: 'compact',  label: 'Compact — fewer events' },
@@ -88,9 +90,11 @@ export function Form({ values, patch, onChange, fields }) {
       </FormSection>
       <FormSection title="Show">
         <ToggleField label="Day label (column with date)"
-          value={v.showDayLabel !== false} onChange={(x) => patch({ showDayLabel: x })} />
+          value={v.showDayLabel !== false} defaultValue={defaults.showDayLabel}
+          onChange={(x) => patch({ showDayLabel: x })} />
         <ToggleField label="Event time"
-          value={v.showTime     !== false} onChange={(x) => patch({ showTime:     x })} />
+          value={v.showTime     !== false} defaultValue={defaults.showTime}
+          onChange={(x) => patch({ showTime:     x })} />
       </FormSection>
       <FormSection title="Style">
         <TypographyFields values={v} onChange={onChange} />

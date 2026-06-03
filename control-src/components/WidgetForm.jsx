@@ -3,7 +3,7 @@ import * as Tabs from '@radix-ui/react-tabs';
 import * as Switch from '@radix-ui/react-switch';
 import { CaretUp, CaretDown } from '@phosphor-icons/react';
 import { geocode } from '../api.js';
-import { MIGRATED_FORMS } from '../widgets/_registry.js';
+import { MIGRATED_FORMS, MIGRATED_DEFS } from '../widgets/_registry.js';
 
 // Per-tile widget-data forms. Each form reads/writes a flat `values`
 // object that lives at `layoutItem.settings` — the canonical (and
@@ -18,10 +18,50 @@ import { MIGRATED_FORMS } from '../widgets/_registry.js';
 
 // =================== FIELD COMPONENTS ===================
 
-function TextField({ label, value, onChange, placeholder, type = 'text', help }) {
+// Cheap value compare for the reset-button visibility check. Strings,
+// numbers, booleans, and small arrays all flatten through JSON without
+// false positives. Returns true when `a` and `b` are equivalent.
+function sameFieldValue(a, b) {
+  if (a === b) return true;
+  if (a == null && b == null) return true;
+  try { return JSON.stringify(a) === JSON.stringify(b); }
+  catch { return false; }
+}
+
+// Hover-revealed reset icon next to the label. Renders when the caller
+// passed a `defaultValue` AND the current value differs from it. Click
+// reverts that one field to its widget-registry default. Storybook /
+// Figma pattern — single-field reset without nuking the whole form.
+function ResetButton({ onReset }) {
+  return (
+    <button
+      type="button"
+      className="wsm-reset-btn"
+      aria-label="Reset to default"
+      title="Reset to default"
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReset(); }}
+    >
+      ↻
+    </button>
+  );
+}
+
+function FieldLabel({ label, suffix, value, defaultValue, onReset }) {
+  const dirty = defaultValue !== undefined && !sameFieldValue(value, defaultValue);
+  return (
+    <span className="wsm-field-label">
+      <span className="wsm-field-label-text">{label}</span>
+      {suffix ? <span className="wsm-field-help" style={{ marginLeft: 6 }}>{suffix}</span> : null}
+      {dirty && <ResetButton onReset={onReset} />}
+    </span>
+  );
+}
+
+function TextField({ label, value, onChange, placeholder, type = 'text', help, defaultValue }) {
   return (
     <label className="wsm-field">
-      <span className="wsm-field-label">{label}</span>
+      <FieldLabel label={label} value={value} defaultValue={defaultValue}
+        onReset={() => onChange(defaultValue)} />
       <input
         type={type}
         value={value ?? ''}
@@ -35,10 +75,11 @@ function TextField({ label, value, onChange, placeholder, type = 'text', help })
   );
 }
 
-function SelectField({ label, value, options, onChange, help }) {
+function SelectField({ label, value, options, onChange, help, defaultValue }) {
   return (
     <label className="wsm-field">
-      <span className="wsm-field-label">{label}</span>
+      <FieldLabel label={label} value={value} defaultValue={defaultValue}
+        onReset={() => onChange(defaultValue)} />
       <select value={value ?? ''} onChange={e => onChange(e.target.value)}>
         {options.map(o => (
           <option key={o.value} value={o.value}>{o.label}</option>
@@ -50,9 +91,10 @@ function SelectField({ label, value, options, onChange, help }) {
 }
 
 let __toggleIdSeed = 0;
-function ToggleField({ label, value, onChange, help }) {
+function ToggleField({ label, value, onChange, help, defaultValue }) {
   const idRef = useRef(null);
   if (idRef.current == null) idRef.current = `wsm-sw-${++__toggleIdSeed}`;
+  const dirty = defaultValue !== undefined && !sameFieldValue(!!value, !!defaultValue);
   return (
     <div className="wsm-row wsm-row-switch">
       <Switch.Root
@@ -64,6 +106,7 @@ function ToggleField({ label, value, onChange, help }) {
         <Switch.Thumb className="wsm-switch-thumb" />
       </Switch.Root>
       <label htmlFor={idRef.current} className="wsm-switch-label">{label}</label>
+      {dirty && <ResetButton onReset={() => onChange(!!defaultValue)} />}
       {help && <span className="wsm-field-help" style={{ marginLeft: 6 }}>{help}</span>}
     </div>
   );
@@ -72,13 +115,12 @@ function ToggleField({ label, value, onChange, help }) {
 // Numeric slider with a live readout. `step`, `min`, `max` are passed
 // straight to the input; `format` lets a widget print a unit suffix
 // (e.g. px, ×) without changing the underlying number.
-function SliderField({ label, value, min, max, step = 1, onChange, format, help }) {
+function SliderField({ label, value, min, max, step = 1, onChange, format, help, defaultValue }) {
   const display = format ? format(value) : value;
   return (
     <label className="wsm-field">
-      <span className="wsm-field-label">
-        {label} <span className="wsm-field-help" style={{ marginLeft: 6 }}>{display}</span>
-      </span>
+      <FieldLabel label={label} suffix={display} value={value} defaultValue={defaultValue}
+        onReset={() => onChange(defaultValue)} />
       <input
         type="range"
         min={min} max={max} step={step}
@@ -106,6 +148,18 @@ const FONT_FAMILIES = [
   { value: 'system', label: 'System default' }
 ];
 
+// Defaults are shared across every widget that opts into the typography
+// block, so they're baked in here instead of being threaded from each
+// widget's def.defaults(). Single source of truth makes the reset icon
+// always know what "factory" means for these knobs.
+const TYPO_DEFAULTS = {
+  fontFamily: 'serif',
+  fontScale:  1,
+  scaleAnchor: 'top_left',
+  padding:    14,
+  theme:      'normal'
+};
+
 function TypographyFields({ values, onChange }) {
   const v = values || {};
   const patch = (p) => onChange({ ...v, ...p });
@@ -118,6 +172,7 @@ function TypographyFields({ values, onChange }) {
       <SelectField
         label="Font family"
         value={family}
+        defaultValue={TYPO_DEFAULTS.fontFamily}
         options={FONT_FAMILIES}
         onChange={(x) => patch({ fontFamily: x })}
       />
@@ -125,12 +180,14 @@ function TypographyFields({ values, onChange }) {
         label="Content scale"
         min={0.7} max={1.4} step={0.05}
         value={scale}
+        defaultValue={TYPO_DEFAULTS.fontScale}
         onChange={(x) => patch({ fontScale: x })}
         format={(x) => `${Math.round(x * 100)}%`}
       />
       <SelectField
         label="Scale anchor"
         value={v.scaleAnchor || 'top_left'}
+        defaultValue={TYPO_DEFAULTS.scaleAnchor}
         options={[
           { value: 'top_left',     label: 'Top-left (default)' },
           { value: 'top',          label: 'Top-center' },
@@ -149,12 +206,14 @@ function TypographyFields({ values, onChange }) {
         label="Inner padding"
         min={0} max={30} step={1}
         value={padding}
+        defaultValue={TYPO_DEFAULTS.padding}
         onChange={(x) => patch({ padding: x })}
         format={(x) => `${x}px`}
       />
       <SelectField
         label="Theme"
         value={theme}
+        defaultValue={TYPO_DEFAULTS.theme}
         options={[
           { value: 'normal',   label: 'Normal (black on white)' },
           { value: 'inverted', label: 'Inverted (white on black)' }
@@ -165,7 +224,7 @@ function TypographyFields({ values, onChange }) {
   );
 }
 
-function CsvField({ label, value, onCommit, placeholder, help }) {
+function CsvField({ label, value, onCommit, placeholder, help, defaultValue }) {
   const joined = (value || []).join(', ');
   const [raw, setRaw] = useState(joined);
   const [focused, setFocused] = useState(false);
@@ -177,7 +236,8 @@ function CsvField({ label, value, onCommit, placeholder, help }) {
   };
   return (
     <label className="wsm-field">
-      <span className="wsm-field-label">{label}</span>
+      <FieldLabel label={label} value={value || []} defaultValue={defaultValue}
+        onReset={() => { setRaw(((defaultValue || []).join(', '))); onCommit(defaultValue || []); }} />
       <input
         type="text"
         value={raw}
@@ -373,10 +433,17 @@ function AdvancedGroup({ title = 'Advanced', children, defaultOpen = false }) {
 // (2-4 options) and the value is naturally spatial (alignment,
 // position, side). One row instead of a dropdown; mirrors Figma's
 // alignment widget.
-function SegmentedField({ label, value, options, onChange, help }) {
+function SegmentedField({ label, value, options, onChange, help, defaultValue }) {
   return (
     <div className="wsm-field">
-      {label && <span className="wsm-field-label">{label}</span>}
+      {label && (
+        <FieldLabel
+          label={label}
+          value={value}
+          defaultValue={defaultValue}
+          onReset={() => onChange(defaultValue)}
+        />
+      )}
       <div className="wsm-segmented" role="radiogroup" aria-label={label}>
         {options.map(o => {
           const active = String(o.value) === String(value);
@@ -510,10 +577,19 @@ export default function WidgetForm({ widgetId, values, onChange }) {
   // the legacy switch below.
   const MigratedForm = MIGRATED_FORMS[widgetId];
   if (MigratedForm) {
+    // Compute per-widget factory defaults once so the form module can
+    // pass `defaultValue={defaults.X}` to any primitive that should
+    // surface a per-field reset icon.
+    const def = MIGRATED_DEFS[widgetId];
+    const defaults = (def && typeof def.defaults === 'function')
+      ? def.defaults() : {};
     return (
       <TabbedForm
         MigratedForm={MigratedForm}
-        formProps={{ values: v, patch, onChange, fields: FIELD_PRIMITIVES }}
+        formProps={{
+          values: v, patch, onChange,
+          fields: { ...FIELD_PRIMITIVES, defaults }
+        }}
       />
     );
   }

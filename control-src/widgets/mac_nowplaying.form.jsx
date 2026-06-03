@@ -15,7 +15,7 @@ export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
   const {
     TextField, SelectField, SegmentedField, ToggleField, SliderField,
-    TypographyFields, FormSection, AdvancedGroup, PresetField
+    TypographyFields, FormSection, AdvancedGroup, PresetField, defaults = {}
   } = fields;
   const variant = v.variant || 'time_bookends';
   return (
@@ -25,6 +25,7 @@ export function Form({ values, patch, onChange, fields }) {
         <TextField
           label="Tile heading"
           value={v.title || ''}
+          defaultValue={defaults.title}
           onChange={(x) => patch({ title: x })}
           placeholder="NOW PLAYING"
           help="Leave blank to keep the default heading."
@@ -37,6 +38,7 @@ export function Form({ values, patch, onChange, fields }) {
         <SelectField
           label="Side-space variant"
           value={variant}
+          defaultValue={defaults.variant}
           options={[
             { value: 'time_bookends', label: 'Time bookends (elapsed · remaining)' },
             { value: 'centered',      label: 'Centered (no bookends)' },
@@ -52,36 +54,43 @@ export function Form({ values, patch, onChange, fields }) {
         <ToggleField
           label='"NOW PLAYING" heading'
           value={v.showColTitle !== false}
+          defaultValue={defaults.showColTitle}
           onChange={(x) => patch({ showColTitle: x })}
         />
         <ToggleField
           label="Song title"
           value={v.showSongTitle !== false}
+          defaultValue={defaults.showSongTitle}
           onChange={(x) => patch({ showSongTitle: x })}
         />
         <ToggleField
           label="Artist · album line"
           value={v.showArtist !== false}
+          defaultValue={defaults.showArtist}
           onChange={(x) => patch({ showArtist: x })}
         />
         <ToggleField
           label="Album art"
           value={v.showAlbumArt !== false}
+          defaultValue={defaults.showAlbumArt}
           onChange={(x) => patch({ showAlbumArt: x })}
         />
         <ToggleField
           label="Progress bar + elapsed time"
           value={v.showProgress !== false}
+          defaultValue={defaults.showProgress}
           onChange={(x) => patch({ showProgress: x })}
         />
         <ToggleField
           label="Source label (via SPOTIFY / YT MUSIC)"
           value={v.showSource !== false}
+          defaultValue={defaults.showSource}
           onChange={(x) => patch({ showSource: x })}
         />
         <ToggleField
           label="Play / pause glyph (▶ / ❚❚)"
           value={v.showStateIcon !== false}
+          defaultValue={defaults.showStateIcon}
           onChange={(x) => patch({ showStateIcon: x })}
         />
       </FormSection>
@@ -89,6 +98,7 @@ export function Form({ values, patch, onChange, fields }) {
         <SegmentedField
           label='"NOW PLAYING" heading'
           value={v.headerAlign || 'left'}
+          defaultValue={defaults.headerAlign}
           options={[
             { value: 'left',   short: 'L', label: 'Left' },
             { value: 'center', short: 'C', label: 'Center' },
@@ -99,6 +109,7 @@ export function Form({ values, patch, onChange, fields }) {
         <SelectField
           label="Album art shape"
           value={v.artShape || 'square'}
+          defaultValue={defaults.artShape}
           options={[
             { value: 'square',  label: 'Square (default)' },
             { value: 'rounded', label: 'Rounded corners' },
@@ -111,6 +122,7 @@ export function Form({ values, patch, onChange, fields }) {
           <SegmentedField
             label="Album art side"
             value={v.artPosition || 'right'}
+            defaultValue={defaults.artPosition}
             options={[
               { value: 'left',  short: 'Left',  label: 'Left of text' },
               { value: 'right', short: 'Right', label: 'Right of text' }
@@ -120,6 +132,7 @@ export function Form({ values, patch, onChange, fields }) {
           <SegmentedField
             label="Artist / song text"
             value={v.textAlign || 'left'}
+            defaultValue={defaults.textAlign}
             options={[
               { value: 'left',   short: 'L', label: 'Left' },
               { value: 'center', short: 'C', label: 'Center' },
@@ -131,6 +144,7 @@ export function Form({ values, patch, onChange, fields }) {
             label="Text block vertical offset"
             min={-120} max={120} step={2}
             value={Number.isFinite(v.textOffsetY) ? v.textOffsetY : 0}
+            defaultValue={defaults.textOffsetY}
             onChange={(x) => patch({ textOffsetY: x })}
             format={(x) => x === 0 ? '0' : (x > 0 ? `+${x}px down` : `${x}px up`)}
           />

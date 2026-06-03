@@ -20,7 +20,7 @@ const PRESETS = [
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { LocationFields, SelectField, ToggleField, TypographyFields, FormSection, PresetField } = fields;
+  const { LocationFields, SelectField, ToggleField, TypographyFields, FormSection, PresetField, defaults = {} } = fields;
   const stats = Array.isArray(v.stats) && v.stats.length === 4 ? v.stats : DEFAULT_STATS;
   const setSlot = (idx, val) => {
     const next = stats.slice();
@@ -37,6 +37,7 @@ export function Form({ values, patch, onChange, fields }) {
         <SelectField
           label="Units (this tile only)"
           value={v.unitsOverride || 'inherit'}
+          defaultValue={defaults.unitsOverride}
           options={[
             { value: 'inherit', label: 'Inherit (dashboard default)' },
             { value: 'F',       label: 'Force °F' },
@@ -64,15 +65,20 @@ export function Form({ values, patch, onChange, fields }) {
       </FormSection>
       <FormSection title="Show">
         <ToggleField label="Description (OVERCAST / CLEAR / …)"
-          value={v.showDesc   !== false} onChange={(x) => patch({ showDesc:   x })} />
+          value={v.showDesc   !== false} defaultValue={defaults.showDesc}
+          onChange={(x) => patch({ showDesc:   x })} />
         <ToggleField label="Stats grid"
-          value={v.showStats  !== false} onChange={(x) => patch({ showStats:  x })} />
+          value={v.showStats  !== false} defaultValue={defaults.showStats}
+          onChange={(x) => patch({ showStats:  x })} />
         <ToggleField label="Severe weather alert banner"
-          value={v.showAlerts !== false} onChange={(x) => patch({ showAlerts: x })} />
+          value={v.showAlerts !== false} defaultValue={defaults.showAlerts}
+          onChange={(x) => patch({ showAlerts: x })} />
         <ToggleField label="Sun bar (sunrise → sunset)"
-          value={v.showSunbar !== false} onChange={(x) => patch({ showSunbar: x })} />
+          value={v.showSunbar !== false} defaultValue={defaults.showSunbar}
+          onChange={(x) => patch({ showSunbar: x })} />
         <ToggleField label="Hourly forecast strip"
-          value={v.showHourly !== false} onChange={(x) => patch({ showHourly: x })} />
+          value={v.showHourly !== false} defaultValue={defaults.showHourly}
+          onChange={(x) => patch({ showHourly: x })} />
       </FormSection>
       <FormSection title="Style">
         <TypographyFields values={v} onChange={onChange} />
