@@ -35,6 +35,7 @@ export const WIDGET_REGISTRY = [
   // the user's Mac (LAN path). On Railway/Linux they show MAC OFFLINE.
   { ...migratedDef('mac_nowplaying') },
   { ...migratedDef('mac_battery') },
+  { ...migratedDef('eink_battery') },
   {
     ...migratedDef('clock')
   }
