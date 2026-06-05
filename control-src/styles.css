@@ -1255,6 +1255,47 @@ input[type="text"], input[type="url"], textarea {
   box-shadow: 8px 8px 0 var(--ink);
   position: relative;
 }
+
+/* Right-side sheet variant — used by the per-tile widget settings panel.
+ * Backdrop is lighter so the editor canvas stays legible behind the sheet;
+ * the panel itself anchors to the right edge and runs full height. */
+.wsm-backdrop-sheet {
+  background: rgba(0, 0, 0, 0.32);
+  justify-content: flex-end;
+  align-items: stretch;
+  padding: 0;
+}
+.wsm-panel-sheet {
+  width: min(720px, 100vw);
+  max-width: 100vw;
+  max-height: 100vh;
+  height: 100vh;
+  border-width: 0 0 0 2px;
+  box-shadow: -8px 0 0 var(--ink), -16px 0 32px rgba(0, 0, 0, 0.18);
+}
+.wsm-panel-sheet .wsm-body {
+  grid-template-columns: 1fr;
+}
+.wsm-panel-sheet .wsm-col-settings {
+  border-right: 0;
+  border-bottom: 2px solid var(--ink);
+  max-height: 55vh;
+}
+.wsm-panel-sheet .wsm-col-preview {
+  background: var(--paper, #faf8f3);
+  border-bottom: 0;
+  padding-top: 16px;
+  padding-bottom: 16px;
+  min-height: 180px;
+}
+@media (min-width: 1100px) {
+  .wsm-panel-sheet .wsm-body { grid-template-columns: 1fr minmax(260px, 1fr); }
+  .wsm-panel-sheet .wsm-col-settings {
+    border-right: 2px solid var(--ink);
+    border-bottom: 0;
+    max-height: none;
+  }
+}
 .wsm-header {
   display: flex;
   align-items: center;
@@ -1325,12 +1366,12 @@ input[type="text"], input[type="url"], textarea {
  * than four. */
 .wsm-subsection { margin-bottom: 18px; }
 .wsm-subsection:last-child { margin-bottom: 0; }
-/* Section title is hidden when the section is wrapped in a Tabs.Content
- * (the tab trigger already labels it). When the form is NOT tabbed
- * (legacy fallback / forms with a single section), the title shows
+/* Section title is hidden when the section is wrapped in an Accordion
+ * (the accordion trigger already labels it). When the form is NOT
+ * accordion-wrapped (forms with a single section), the title shows
  * normally. */
-.wsm-tabs-content .wsm-subsection { margin-bottom: 0; }
-.wsm-tabs-content .wsm-subsection > .wsm-subsection-title { display: none; }
+.wsm-accordion-content .wsm-subsection { margin-bottom: 0; }
+.wsm-accordion-content .wsm-subsection > .wsm-subsection-title { display: none; }
 .wsm-subsection-title {
   font-family: 'Oswald', 'Arial Narrow', sans-serif;
   text-transform: uppercase;
@@ -1344,54 +1385,120 @@ input[type="text"], input[type="url"], textarea {
 }
 .wsm-subsection-body > :last-child { margin-bottom: 0; }
 
-/* Tabs surface for the widget settings form. Editorial palette: solid
- * black underline marks active, dashed mute rule under inactives.
- * Uses Radix Tabs so keyboard nav (arrow keys, Home/End) + a11y come
- * for free. */
-.wsm-tabs {
+/* Visual preset picker — replaces the old <select> dropdown with a row
+ * of rendered miniatures. Each card shows what the preset will produce
+ * on the user's own data, so picking "Editorial" vs "Minimal" is a
+ * visual choice, not a guess at what the name means. Mirrors the
+ * Gutenberg "Block Styles" + TRMNL plugin layout patterns. */
+.wsm-preset-cards-wrap { margin-bottom: 12px; }
+.wsm-preset-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.wsm-preset-card {
   display: flex;
   flex-direction: column;
-}
-.wsm-tabs-list {
-  display: flex;
-  gap: 2px;
-  border-bottom: 1.5px solid var(--ink);
-  margin-bottom: 16px;
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
-.wsm-tabs-trigger {
-  font-family: 'Oswald', 'Arial Narrow', sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--mute);
-  background: none;
-  border: 0;
-  padding: 8px 14px;
-  margin-bottom: -1.5px;
+  align-items: stretch;
+  gap: 4px;
+  padding: 4px;
+  background: #fff;
+  border: 2px solid transparent;
   cursor: pointer;
-  border-bottom: 3px solid transparent;
-  transition: color 120ms, border-color 120ms;
-  white-space: nowrap;
+  font-family: inherit;
+  color: inherit;
 }
-.wsm-tabs-trigger:hover { color: var(--ink); }
-.wsm-tabs-trigger[data-state="active"] {
-  color: var(--ink);
-  border-bottom-color: var(--ink);
-}
-.wsm-tabs-trigger:focus-visible {
+.wsm-preset-card:hover { border-color: var(--mute); }
+.wsm-preset-card.is-active { border-color: var(--ink); }
+.wsm-preset-card:focus-visible {
   outline: 2px dashed var(--ink);
   outline-offset: 2px;
 }
-.wsm-tabs-content {
-  outline: none;
-  animation: wsmTabIn 140ms ease-out;
+.wsm-preset-card-thumb {
+  position: relative;
+  background: #fff;
+  border: 1px solid var(--mute);
+  overflow: hidden;
 }
-@keyframes wsmTabIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+.wsm-preset-card.is-active .wsm-preset-card-thumb { border-color: var(--ink); }
+.wsm-preset-card-scale {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+.wsm-preset-card-label {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-align: center;
+  padding: 2px 0;
+}
+
+/* Accordion surface for the widget settings form. Editorial palette:
+ * each section gets a hairline rule + uppercase header. Caret rotates
+ * 90° on expand. Multiple sections can be open at once so users can
+ * cross-reference fields. */
+.wsm-accordion {
+  display: flex;
+  flex-direction: column;
+  border-top: 1.5px solid var(--ink);
+}
+.wsm-accordion-item {
+  border-bottom: 1.5px solid var(--ink);
+}
+.wsm-accordion-header { margin: 0; }
+.wsm-accordion-trigger {
+  font-family: 'Oswald', 'Arial Narrow', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  padding: 12px 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+}
+.wsm-accordion-trigger:hover { background: rgba(0, 0, 0, 0.04); }
+.wsm-accordion-trigger:focus-visible {
+  outline: 2px dashed var(--ink);
+  outline-offset: -2px;
+}
+.wsm-accordion-caret {
+  transition: transform 160ms ease-out;
+  flex: 0 0 auto;
+}
+.wsm-accordion-trigger[data-state="open"] .wsm-accordion-caret {
+  transform: rotate(90deg);
+}
+.wsm-accordion-title { flex: 1 1 auto; }
+.wsm-accordion-content {
+  overflow: hidden;
+}
+.wsm-accordion-content[data-state="open"] {
+  animation: wsmAccDown 180ms ease-out;
+}
+.wsm-accordion-content[data-state="closed"] {
+  animation: wsmAccUp 140ms ease-out;
+}
+.wsm-accordion-content-inner {
+  padding: 4px 6px 16px;
+}
+@keyframes wsmAccDown {
+  from { height: 0; opacity: 0; }
+  to   { height: var(--radix-accordion-content-height); opacity: 1; }
+}
+@keyframes wsmAccUp {
+  from { height: var(--radix-accordion-content-height); opacity: 1; }
+  to   { height: 0; opacity: 0; }
 }
 .wsm-row {
   display: flex;

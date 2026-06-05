@@ -1,9 +1,25 @@
-import React, { useEffect, useRef, useState } from 'react';
-import * as Tabs from '@radix-ui/react-tabs';
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import * as Accordion from '@radix-ui/react-accordion';
 import * as Switch from '@radix-ui/react-switch';
-import { CaretUp, CaretDown } from '@phosphor-icons/react';
+import { CaretUp, CaretDown, CaretRight } from '@phosphor-icons/react';
 import { geocode } from '../api.js';
 import { MIGRATED_FORMS, MIGRATED_DEFS } from '../widgets/_registry.js';
+import {
+  renderWidget, typographyCss, cellClasses, scaleWrap
+} from '../widget-render.js';
+
+// Context the modal uses to seed PresetCards thumbnails with the same
+// dashboard payload the live preview is rendering from. Lets each card
+// render a faithful miniature of what the preset will produce on the
+// real tile rather than a generic placeholder.
+const PresetContext = React.createContext({ widgetId: null, item: null, previewData: null });
+
+// Sections opened by default in the accordion. Data + Layout are the
+// load-bearing tabs for first-time editors; the rest only get expanded
+// when the user explicitly hunts for them. Persisted overrides in
+// localStorage win over this fallback.
+const DEFAULT_OPEN_SECTIONS = ['Data', 'Layout', 'Content'];
+const SECTION_STORAGE_PREFIX = 'wsm-accordion-open:';
 
 // Per-tile widget-data forms. Each form reads/writes a flat `values`
 // object that lives at `layoutItem.settings` — the canonical (and
@@ -402,11 +418,10 @@ function LocationFields({ values, onChange }) {
 // users don't see a flat 30-field column. Mirrors the
 // TRMNL plugin editor + mushroom-card grouping pattern.
 //
-// The actual layout — stacked sections vs Radix tabs — is decided
+// The actual layout — stacked sections vs Radix accordion — is decided
 // by `TabbedForm` below. FormSection itself just renders a titled
-// block; TabbedForm walks the rendered tree, splits the sections
-// into tabs, and re-uses the original DOM structure inside each
-// Tabs.Content.
+// block; TabbedForm walks the rendered tree, splits the sections out,
+// and remounts each one inside an Accordion.Item.
 function FormSection({ title, children }) {
   return (
     <div className="wsm-subsection" data-section-title={title}>
@@ -469,14 +484,16 @@ function SegmentedField({ label, value, options, onChange, help, defaultValue })
 }
 
 // Render the migrated widget Form and split its FormSection children
-// into a Radix Tabs surface. Every migrated Form is a pure render
+// into a Radix Accordion surface. Every migrated Form is a pure render
 // function (no hooks, no state, no side effects), so calling it
 // directly to introspect its children is safe — the constraint is
 // documented at the top of each `<id>.form.jsx`.
-function TabbedForm({ MigratedForm, formProps }) {
-  // Pure-component call. Equivalent to JSX `<MigratedForm {...props} />`
-  // but without going through React's renderer, so we can walk the
-  // resulting element tree before mounting.
+//
+// Accordion (vs the previous Tabs surface) lets users keep multiple
+// sections visible at once. Data + Layout open by default; per-widget
+// open/closed state persists in localStorage so the user's preference
+// sticks across modal opens.
+function TabbedForm({ widgetId, MigratedForm, formProps }) {
   const tree = MigratedForm(formProps);
   const flat = React.Children.toArray(
     React.isValidElement(tree) && tree.type === React.Fragment
@@ -487,15 +504,28 @@ function TabbedForm({ MigratedForm, formProps }) {
   const extras   = flat.filter(c => !React.isValidElement(c) || c.type !== FormSection);
 
   const titles = sections.map(s => s.props.title);
-  const [active, setActive] = useState(titles[0] || '');
+  const storageKey = `${SECTION_STORAGE_PREFIX}${widgetId}`;
 
-  // Snap active back to the first valid tab if the form's section
-  // list changes (e.g. preset adds a new section). Avoids leaving
-  // the user on a tab that no longer exists.
-  if (titles.length && !titles.includes(active)) {
-    setActive(titles[0]);
-    return null; // re-render with the corrected active
-  }
+  // Initial open set: persisted preference if present, else
+  // DEFAULT_OPEN_SECTIONS ∩ available titles, else the first section.
+  const [open, setOpen] = useState(() => {
+    try {
+      const raw = typeof localStorage !== 'undefined' && localStorage.getItem(storageKey);
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) return arr.filter(t => titles.includes(t));
+      }
+    } catch { /* ignore */ }
+    const defaults = DEFAULT_OPEN_SECTIONS.filter(t => titles.includes(t));
+    return defaults.length ? defaults : (titles[0] ? [titles[0]] : []);
+  });
+
+  // Persist on every change so toggling the same section twice in a row
+  // doesn't lose state across modal close + reopen.
+  useEffect(() => {
+    try { localStorage.setItem(storageKey, JSON.stringify(open)); }
+    catch { /* ignore */ }
+  }, [open, storageKey]);
 
   if (!sections.length) {
     return <>{tree}</>;
@@ -504,57 +534,156 @@ function TabbedForm({ MigratedForm, formProps }) {
   return (
     <>
       {extras}
-      <Tabs.Root value={active} onValueChange={setActive} className="wsm-tabs">
-        <Tabs.List className="wsm-tabs-list" aria-label="Widget settings sections">
-          {sections.map(s => (
-            <Tabs.Trigger
-              key={s.props.title}
-              value={s.props.title}
-              className="wsm-tabs-trigger"
-            >
-              {s.props.title}
-            </Tabs.Trigger>
-          ))}
-        </Tabs.List>
+      <Accordion.Root
+        type="multiple"
+        value={open}
+        onValueChange={setOpen}
+        className="wsm-accordion"
+      >
         {sections.map(s => (
-          <Tabs.Content
+          <Accordion.Item
             key={s.props.title}
             value={s.props.title}
-            className="wsm-tabs-content"
+            className="wsm-accordion-item"
           >
-            {s.props.children}
-          </Tabs.Content>
+            <Accordion.Header asChild>
+              <h3 className="wsm-accordion-header">
+                <Accordion.Trigger className="wsm-accordion-trigger">
+                  <CaretRight size={11} weight="bold" className="wsm-accordion-caret" />
+                  <span className="wsm-accordion-title">{s.props.title}</span>
+                </Accordion.Trigger>
+              </h3>
+            </Accordion.Header>
+            <Accordion.Content className="wsm-accordion-content">
+              <div className="wsm-accordion-content-inner">
+                {s.props.children}
+              </div>
+            </Accordion.Content>
+          </Accordion.Item>
         ))}
-      </Tabs.Root>
+      </Accordion.Root>
     </>
   );
 }
 
 // Preset picker. Each preset is `{ id, label, values }`. Picking one
 // merges `values` into the current draft via the provided onApply.
-// The picker stays unselected ("Custom") so users can tweak after
-// applying without the dropdown lying about which preset is active.
-function PresetField({ presets, onApply }) {
+//
+// Renders as a row of visual cards — each card runs the widget's own
+// `render(...)` with the preset values + the modal's real preview
+// payload, then scales the resulting HTML down into a thumbnail. So
+// users see "what does Editorial vs Minimal actually look like on
+// MY data" instead of having to read preset names.
+//
+// TRMNL plugin editor + WordPress Block Styles use the same idiom.
+function PresetField({ presets, onApply, currentValues }) {
   if (!Array.isArray(presets) || !presets.length) return null;
+  const ctx = useContext(PresetContext);
+  // Migrated forms currently call <PresetField presets onApply /> without
+  // passing currentValues; fall through to the context-provided draft
+  // so active-preset detection still works without touching every form.
+  const effectiveValues = currentValues || ctx.values || null;
+
+  // Detect which preset (if any) the current draft already matches so
+  // we can mark it selected. Match = every key the preset sets equals
+  // the current draft value (preset is a partial; the draft may have
+  // user-edited fields beyond it).
+  const activeId = useMemo(() => {
+    if (!effectiveValues) return null;
+    for (const p of presets) {
+      const vals = p.values || {};
+      let hit = true;
+      for (const k of Object.keys(vals)) {
+        if (!sameFieldValue(effectiveValues[k], vals[k])) { hit = false; break; }
+      }
+      if (hit) return p.id;
+    }
+    return null;
+  }, [presets, effectiveValues]);
+
   return (
-    <div className="wsm-row">
-      <label className="wsm-field-label">Preset</label>
-      <select
-        className="wsm-field-input"
-        value=""
-        onChange={(e) => {
-          const id = e.target.value;
-          const hit = presets.find(p => p.id === id);
-          if (hit) onApply(hit.values);
-          e.target.value = '';
-        }}
-      >
-        <option value="" disabled>Pick a preset…</option>
+    <div className="wsm-field wsm-preset-cards-wrap">
+      <span className="wsm-field-label">
+        <span className="wsm-field-label-text">Preset</span>
+      </span>
+      <div className="wsm-preset-cards" role="radiogroup" aria-label="Preset">
         {presets.map(p => (
-          <option key={p.id} value={p.id}>{p.label}</option>
+          <PresetCard
+            key={p.id}
+            preset={p}
+            isActive={p.id === activeId}
+            ctx={ctx}
+            currentValues={effectiveValues}
+            onPick={() => onApply(p.values)}
+          />
         ))}
-      </select>
+      </div>
     </div>
+  );
+}
+
+// Single preset card. Renders the widget HTML at the real cell
+// dimensions, then CSS-scales the result down into a small thumbnail
+// so the user sees what each preset produces on their own data.
+function PresetCard({ preset, isActive, ctx, currentValues, onPick }) {
+  const { widgetId, item, previewData } = ctx;
+  const THUMB_W = 160;
+  const THUMB_H = 90;
+  const cellW = (item && item.w) || 8;
+  const cellH = (item && item.h) || 4;
+  // Approx pixel size matching the dashboard body — 24 cols × ~33px,
+  // 12 rows × ~33px. Close enough that the preset's tier resolves the
+  // same way it will on the actual tile.
+  const cellPxW = cellW * 33;
+  const cellPxH = cellH * 33;
+
+  const html = useMemo(() => {
+    if (!widgetId) return '';
+    try {
+      const merged = { ...(currentValues || {}), ...(preset.values || {}) };
+      const itemSlot = (previewData && previewData.perItem && item && previewData.perItem[item.id]) || {};
+      const inner = renderWidget(widgetId, {
+        ...(previewData || {}),
+        ...itemSlot,
+        cellW, cellH,
+        density: item && item.density,
+        settings: merged
+      }) || '';
+      const sw = scaleWrap(merged);
+      const classes = ['cell', `cell-${widgetId}`];
+      classes.push(...cellClasses(merged));
+      const typoStyle = typographyCss(merged);
+      return `<div class="${classes.join(' ')}" style="width:${cellPxW}px;height:${cellPxH}px;${typoStyle}">${sw.open}${inner}${sw.close}</div>`;
+    } catch {
+      return '';
+    }
+  }, [widgetId, item, previewData, preset, currentValues, cellPxW, cellPxH, cellW, cellH]);
+
+  const scale = Math.min(THUMB_W / cellPxW, THUMB_H / cellPxH);
+
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={isActive}
+      className={`wsm-preset-card ${isActive ? 'is-active' : ''}`}
+      onClick={onPick}
+      title={preset.label}
+    >
+      <div className="wsm-preset-card-thumb" style={{ width: THUMB_W, height: THUMB_H }}>
+        <div
+          className="wsm-preset-card-scale"
+          style={{
+            width: cellPxW,
+            height: cellPxH,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left'
+          }}
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      </div>
+      <span className="wsm-preset-card-label">{preset.label}</span>
+    </button>
   );
 }
 
@@ -568,7 +697,7 @@ const FIELD_PRIMITIVES = {
   FormSection, AdvancedGroup, PresetField
 };
 
-export default function WidgetForm({ widgetId, values, onChange }) {
+export default function WidgetForm({ widgetId, values, onChange, item, previewData }) {
   const v = values || {};
   const patch = (p) => onChange({ ...v, ...p });
 
@@ -584,13 +713,16 @@ export default function WidgetForm({ widgetId, values, onChange }) {
     const defaults = (def && typeof def.defaults === 'function')
       ? def.defaults() : {};
     return (
-      <TabbedForm
-        MigratedForm={MigratedForm}
-        formProps={{
-          values: v, patch, onChange,
-          fields: { ...FIELD_PRIMITIVES, defaults }
-        }}
-      />
+      <PresetContext.Provider value={{ widgetId, item, previewData, values: v }}>
+        <TabbedForm
+          widgetId={widgetId}
+          MigratedForm={MigratedForm}
+          formProps={{
+            values: v, patch, onChange,
+            fields: { ...FIELD_PRIMITIVES, defaults }
+          }}
+        />
+      </PresetContext.Provider>
     );
   }
 

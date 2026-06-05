@@ -31,7 +31,7 @@ const PREVIEW_MAX_SCALE = 3;
 // Also surfaces a "Copy from →" picker listing every other tile in the
 // layout that uses the same widget id, so users can clone a tile's
 // settings into this one without re-typing.
-function PerInstanceDataBlock({ widgetId, itemId, layout, settings, onSettingsChange }) {
+function PerInstanceDataBlock({ widgetId, itemId, layout, settings, onSettingsChange, item, previewData }) {
   // Other tiles of the same widget type whose settings we can clone in
   // one click — saves re-typing a stock list / iCal URL / location.
   const siblings = (layout || []).filter(it =>
@@ -71,6 +71,8 @@ function PerInstanceDataBlock({ widgetId, itemId, layout, settings, onSettingsCh
           widgetId={widgetId}
           values={effective}
           onChange={onSettingsChange}
+          item={item}
+          previewData={previewData}
         />
       </div>
     </>
@@ -303,7 +305,7 @@ export default function WidgetSettingsModal({
   return (
     <AnimatePresence>
       <motion.div
-        className="wsm-backdrop"
+        className="wsm-backdrop wsm-backdrop-sheet"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -313,14 +315,14 @@ export default function WidgetSettingsModal({
         }}
       >
         <motion.div
-          className="wsm-panel"
+          className="wsm-panel wsm-panel-sheet"
           role="dialog"
           aria-modal="true"
           aria-label={`${def.label} settings`}
-          initial={{ y: 12, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 12, opacity: 0 }}
-          transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+          initial={{ x: 32, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: 32, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 380, damping: 34 }}
         >
           <div className="wsm-header">
             <div className="wsm-title">{def.label}</div>
@@ -336,6 +338,8 @@ export default function WidgetSettingsModal({
                   layout={layout}
                   settings={draft.settings}
                   onSettingsChange={(next) => setDraft(prev => ({ ...prev, settings: next }))}
+                  item={draft}
+                  previewData={previewData}
                 />
               </section>
             </div>
