@@ -473,14 +473,14 @@ function newScreenId() {
 // exist.
 const DEFAULT_CHROME = {
   header: {
-    enabled: true,
+    enabled: false,
     left: '{city}',
     leftSub: '{date}',
     right: '{time}',
     rightSub: 'EDITION No. {edition}'
   },
   footer: {
-    enabled: true,
+    enabled: false,
     text: 'UPDATED {time} · REFRESH {refresh}MIN · THE DAILY {city}'
   }
 };

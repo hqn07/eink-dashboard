@@ -1,8 +1,8 @@
 import React from 'react';
 
 const DEFAULT_CHROME = {
-  header: { enabled: true, left: '{city}', leftSub: '{date}', right: '{time}', rightSub: 'EDITION No. {edition}' },
-  footer: { enabled: true, text: 'UPDATED {time} · REFRESH {refresh}MIN · THE DAILY {city}' }
+  header: { enabled: false, left: '{city}', leftSub: '{date}', right: '{time}', rightSub: 'EDITION No. {edition}' },
+  footer: { enabled: false, text: 'UPDATED {time} · REFRESH {refresh}MIN · THE DAILY {city}' }
 };
 
 // Header + footer chrome editor. Lives inside the Edit Layout card so the
