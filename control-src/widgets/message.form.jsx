@@ -49,10 +49,18 @@ export function Form({ values, patch, onChange, fields }) {
                 <input type="time" value={it.to || ''} onChange={e => set({ to: e.target.value })}
                   style={{ width: 110 }} />
               </div>
-              <input type="text" value={it.text || ''} placeholder="Headline (this slot)"
-                onChange={e => set({ text: e.target.value })} />
-              <input type="text" value={it.subtitle || ''} placeholder="Subtitle (optional)"
-                onChange={e => set({ subtitle: e.target.value })} />
+              <div style={{ display: 'flex', gap: 4 }}>
+                <input type="text" value={it.text || ''} placeholder="Headline (this slot)"
+                  onChange={e => set({ text: e.target.value })}
+                  style={{ flex: 1 }} />
+                <TokenPicker onInsert={(tok) => set({ text: (it.text || '') + tok })} />
+              </div>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <input type="text" value={it.subtitle || ''} placeholder="Subtitle (optional)"
+                  onChange={e => set({ subtitle: e.target.value })}
+                  style={{ flex: 1 }} />
+                <TokenPicker onInsert={(tok) => set({ subtitle: (it.subtitle || '') + tok })} />
+              </div>
             </div>
           )}
         />

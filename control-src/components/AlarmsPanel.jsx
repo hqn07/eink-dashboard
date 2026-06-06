@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { fetchAlarms, saveAlarms } from '../api.js';
 import { Plus, Trash } from '@phosphor-icons/react';
+import { TokenPicker } from './TokenPicker';
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 const DAY_LABEL = {
@@ -126,8 +127,12 @@ export default function AlarmsPanel() {
               type="text"
               value={a.label || ''}
               onChange={e => patch(idx, { label: e.target.value })}
-              placeholder="Label (optional)"
+              placeholder="Label (optional) — supports {{day}}, {{date|short}}…"
               className="alarm-label"
+            />
+            <TokenPicker
+              onInsert={(tok) => patch(idx, { label: (a.label || '') + tok })}
+              title="Insert dynamic token"
             />
             <button
               type="button"

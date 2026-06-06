@@ -1865,6 +1865,17 @@ app.post('/api/alarms', checkDeviceAuth, async (req, res) => {
 app.get('/api/alarm/next', checkDeviceAuth, async (req, res) => {
   const cfg = await loadConfig();
   const next = computeNextAlarm(cfg.alarms || []);
+  if (next && next.label) {
+    const { renderTokens } = require('./widgets/_tokens');
+    const battery = await loadBatteryState();
+    const ctx = {
+      now: Date.now(),
+      timezone: cfg.timezone || 'UTC',
+      cfg, weather: null, battery, units: cfg.units || 'F',
+      lastRefresh: Date.now(),
+    };
+    next.label = renderTokens(next.label, ctx);
+  }
   res.json({
     now: Date.now(),
     next: next || null
