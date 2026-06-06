@@ -1,6 +1,15 @@
 // Logic-less {{token}} interpolation for user-facing text widgets.
 // Fixed registry — no arbitrary code execution, no nested paths.
-// Unknown tokens pass through raw so typos are visible to the user.
+//
+// Missing/empty values render as the universal placeholder "—" (em dash)
+// matching dashboard convention (Grafana "N/A", HA "unavailable"). Authors
+// can override per-spot with the `default:` pipe filter:
+//   {{weather}}                     → "—" if no data
+//   {{weather|default:Sunny}}       → "Sunny" if no data
+//   {{temp|unit|default:N/A}}       → "N/A" if no temp; "72°F" if present
+//
+// Unknown tokens (typos like {{wether}}) pass through raw so they stay
+// visible to the user — they don't honor `default`.
 
 function fmtDate(d, tz, opts) {
   try {
@@ -11,7 +20,7 @@ function fmtDate(d, tz, opts) {
 }
 
 function relTime(then, now) {
-  if (!then) return '—';
+  if (!then) return '';
   const diffMs = now - then;
   const m = Math.round(diffMs / 60000);
   if (m < 1) return 'just now';
@@ -28,6 +37,7 @@ function batteryBar(pct) {
 
 const TOKENS = {
   date(ctx, fmt) {
+    if (!ctx.now) return '';
     const d = new Date(ctx.now);
     const tz = ctx.timezone;
     const tables = {
@@ -57,7 +67,7 @@ const TOKENS = {
   temp(ctx, fmt) {
     const w = ctx.weather;
     const t = w && (w.tempF != null ? w.tempF : w.temp);
-    if (t == null) return '—';
+    if (t == null) return '';
     const r = Math.round(t);
     return fmt === 'unit' ? `${r}°${ctx.units === 'C' ? 'C' : 'F'}` : `${r}°`;
   },
@@ -67,31 +77,50 @@ const TOKENS = {
   },
   lastRefresh(ctx, fmt) {
     const t = ctx.lastRefresh || ctx.now;
-    if (fmt === 'relative') return relTime(t, ctx.now);
+    if (!t) return '';
+    if (fmt === 'relative') return relTime(t, ctx.now || Date.now());
     return fmtDate(new Date(t), ctx.timezone, { hour: 'numeric', minute: '2-digit' });
   },
   battery(ctx, fmt) {
     const b = ctx.battery;
     const p = b && (b.pct != null ? b.pct : b.percent);
-    if (p == null) return '—';
+    if (p == null) return '';
     return fmt === 'bar' ? batteryBar(p) : `${Math.round(p)}%`;
   },
 };
 
-const RE = /\{\{\s*(\w+)(?:\s*\|\s*(\w+))?\s*\}\}/g;
+// Pipe segments allow word format keywords OR `default:VALUE` where
+// VALUE can be any chars except `|` or `}`. Multiple pipes parsed
+// independently — e.g. `{{temp|unit|default:N/A}}`.
+const RE = /\{\{\s*(\w+)((?:\s*\|\s*[^|}]+)*)\s*\}\}/g;
+const DEFAULT_FALLBACK = '—';
+
+function parsePipes(raw) {
+  if (!raw) return { fmt: null, def: null };
+  const parts = raw.split('|').map(s => s.trim()).filter(Boolean);
+  let fmt = null, def = null;
+  for (const p of parts) {
+    if (p.startsWith('default:')) def = p.slice('default:'.length);
+    else fmt = p;
+  }
+  return { fmt, def };
+}
 
 function renderTokens(str, ctx) {
   if (!str) return '';
   const safeCtx = ctx || { now: Date.now() };
-  return String(str).replace(RE, (raw, name, fmt) => {
+  return String(str).replace(RE, (raw, name, pipesStr) => {
     const fn = TOKENS[name];
     if (!fn) return raw;
+    const { fmt, def } = parsePipes(pipesStr);
+    let out;
     try {
-      const out = fn(safeCtx, fmt);
-      return out == null ? raw : String(out);
+      out = fn(safeCtx, fmt);
     } catch {
-      return raw;
+      out = null;
     }
+    if (out == null || out === '') return def != null ? def : DEFAULT_FALLBACK;
+    return String(out);
   });
 }
 
@@ -105,4 +134,4 @@ const TOKEN_META = [
   { name: 'battery',     formats: ['bar'],                         example: '84%' },
 ];
 
-module.exports = { renderTokens, TOKEN_META, TOKENS };
+module.exports = { renderTokens, TOKEN_META, TOKENS, DEFAULT_FALLBACK };

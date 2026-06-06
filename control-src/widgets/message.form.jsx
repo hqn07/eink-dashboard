@@ -15,7 +15,7 @@ export function Form({ values, patch, onChange, fields }) {
               value={v.text}
               onChange={(x) => patch({ text: x })}
               placeholder="Today's message…"
-              help="Markdown: **bold**, *italic*. Tokens: {{date}}, {{city}}, {{temp|unit}}…"
+              help="Markdown: **bold**, *italic*. Tokens: {{date}}, {{city}}, {{temp|unit}}. Fallback: {{temp|default:N/A}}"
             />
           </div>
           <TokenPicker onInsert={appendToken('text')} />
