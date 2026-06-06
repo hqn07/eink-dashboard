@@ -730,7 +730,18 @@ async function buildWidgetData(cfg, units, layout) {
       ? fetchAlerts({ lat: cfg.lat, lon: cfg.lon }) : []
   ]);
 
-  const resolvedMessage = ids.has('message') ? resolveMessage(cfg) : null;
+  // Context for {{token}} interpolation in user-facing text widgets.
+  // Loaded once here so per-tile message rendering doesn't re-read battery
+  // or duplicate Date.now() per tile.
+  const battery = await loadBatteryState();
+  const tokenCtx = {
+    now: Date.now(),
+    timezone: cfg.timezone || 'UTC',
+    cfg, weather, battery, units,
+    lastRefresh: Date.now(),
+  };
+
+  const resolvedMessage = ids.has('message') ? resolveMessage(cfg, tokenCtx) : null;
 
   // Attach alerts onto weather so the renderer can show a banner without
   // a separate top-level lookup.
@@ -830,9 +841,10 @@ async function buildWidgetData(cfg, units, layout) {
           // New contract: pass only the per-item message + cfg.timezone
           // (needed for schedule-window resolution). No other global cfg
           // bleeds through.
-          slot.resolvedMessage = resolveMessage({
-            timezone: cfg.timezone, message: eff
-          });
+          slot.resolvedMessage = resolveMessage(
+            { timezone: cfg.timezone, message: eff },
+            tokenCtx
+          );
           break;
 
         // --- Mac-only widgets — return null off-mac, renderer shows

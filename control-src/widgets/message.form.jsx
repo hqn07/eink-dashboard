@@ -1,24 +1,36 @@
 import React from 'react';
+import { TokenPicker } from '../components/TokenPicker';
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
   const { TextField, ListEditor, TypographyFields, FormSection } = fields;
+  const appendToken = (key) => (tok) => patch({ [key]: (v[key] || '') + tok });
   return (
     <>
       <FormSection title="Content">
-        <TextField
-          label="Default headline"
-          value={v.text}
-          onChange={(x) => patch({ text: x })}
-          placeholder="Today's message…"
-          help="Markdown supported: **bold**, *italic*."
-        />
-        <TextField
-          label="Default subtitle"
-          value={v.subtitle}
-          onChange={(x) => patch({ subtitle: x })}
-          placeholder="Optional second line"
-        />
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+          <div style={{ flex: 1 }}>
+            <TextField
+              label="Default headline"
+              value={v.text}
+              onChange={(x) => patch({ text: x })}
+              placeholder="Today's message…"
+              help="Markdown: **bold**, *italic*. Tokens: {{date}}, {{city}}, {{temp|unit}}…"
+            />
+          </div>
+          <TokenPicker onInsert={appendToken('text')} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+          <div style={{ flex: 1 }}>
+            <TextField
+              label="Default subtitle"
+              value={v.subtitle}
+              onChange={(x) => patch({ subtitle: x })}
+              placeholder="Optional second line"
+            />
+          </div>
+          <TokenPicker onInsert={appendToken('subtitle')} />
+        </div>
       </FormSection>
       <FormSection title="Data">
         <ListEditor

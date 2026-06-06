@@ -1,5 +1,7 @@
 // Pick the active message based on cfg.message.schedule, with simple
 // inline markdown (bold + italic) for the rendered text.
+const { renderTokens } = require('./_tokens');
+
 function nowMinsTZ(tz) {
   try {
     const parts = new Intl.DateTimeFormat('en-US', {
@@ -26,15 +28,19 @@ function inWindow(slot, nowM) {
   return nowM >= a || nowM < b;
 }
 
-function resolveMessage(cfg) {
+function resolveMessage(cfg, ctx) {
   const m = (cfg && cfg.message) || {};
   const schedule = Array.isArray(m.schedule) ? m.schedule : [];
+  let picked = { text: m.text || '', subtitle: m.subtitle || '' };
   if (schedule.length) {
     const nowM = nowMinsTZ(cfg.timezone || 'UTC');
     const active = schedule.find(slot => inWindow(slot, nowM));
-    if (active) return { text: active.text || '', subtitle: active.subtitle || '' };
+    if (active) picked = { text: active.text || '', subtitle: active.subtitle || '' };
   }
-  return { text: m.text || '', subtitle: m.subtitle || '' };
+  return {
+    text:     renderTokens(picked.text, ctx),
+    subtitle: renderTokens(picked.subtitle, ctx),
+  };
 }
 
 // Minimal inline markdown: **bold**, *italic*, `code`. Returns HTML.
