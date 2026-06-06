@@ -125,7 +125,9 @@ async function loadBatteryState() {
 async function saveBatteryState(state) {
   _batteryState = state;
   try {
-    await fsp.writeFile(BATTERY_PATH, JSON.stringify(state));
+    // Atomic write (tmp + rename) — same pattern as config — so a
+    // crash mid-write or a concurrent reader never sees half a file.
+    await atomicWriteFile(BATTERY_PATH, JSON.stringify(state));
   } catch (err) {
     console.warn('Battery persist failed:', err.message);
   }
@@ -1584,9 +1586,21 @@ app.get('/control-classic', (req, res) => {
 
 const geocodeCache = new Map(); // key: q-lower → { at, data }
 const GEO_CACHE_MS = 24 * 60 * 60 * 1000;
+const GEO_CACHE_MAX = 500;
+
+function trimGeoCache() {
+  while (geocodeCache.size > GEO_CACHE_MAX) {
+    // Map preserves insertion order — oldest key is first.
+    const oldest = geocodeCache.keys().next().value;
+    geocodeCache.delete(oldest);
+  }
+}
 
 async function jsonFetch(url, opts = {}) {
-  const r = await fetch(url, opts);
+  // Node fetch has no built-in timeout — a slow upstream (Open-Meteo,
+  // Nominatim) would hang the request indefinitely. 10s covers normal
+  // latency with generous headroom.
+  const r = await fetch(url, { signal: AbortSignal.timeout(10000), ...opts });
   if (!r.ok) throw new Error(`${url.split('?')[0]} → ${r.status}`);
   return r.json();
 }
@@ -1611,6 +1625,7 @@ app.get('/api/geocode', checkDeviceAuth, async (req, res) => {
       lon: d.longitude
     }));
     geocodeCache.set(cacheKey, { at: Date.now(), data: shaped });
+    trimGeoCache();
     res.json(shaped);
   } catch (err) {
     res.status(500).json(safeError(err));
@@ -2087,6 +2102,22 @@ app.get('/health/widgets', (req, res) => {
 <div class="note">Auto-refreshes every 15s. <a href="/api/health/widgets">JSON</a></div>
 <script>setTimeout(() => location.reload(), 15000);</script>
 </body></html>`);
+});
+
+// Node 15+ exits on unhandled rejections by default. Log first so we
+// can see what went wrong, then let the platform restart us (Railway,
+// systemd, launchd). Without this hook the trace can get clipped and
+// debugging a production crash means re-running it locally.
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('UNHANDLED REJECTION:', reason);
+  if (reason && reason.stack) console.error(reason.stack);
+});
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err && err.stack || err);
+  // Exit so the supervisor restarts a clean process. In-memory state
+  // (weather cache, in-flight Puppeteer pages) is invalid after a
+  // bug-level throw — better to start fresh than limp on.
+  process.exit(1);
 });
 
 app.listen(PORT, () => {
