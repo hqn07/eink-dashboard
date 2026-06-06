@@ -898,6 +898,17 @@ async function buildWidgetData(cfg, units, layout) {
             tokenCtx
           );
           break;
+        case 'text_bar': {
+          // Generic token text widget — the replacement for chrome.
+          // Tokens are resolved here so the SSR render fn stays a pure
+          // string template with no widget data access.
+          const { renderTokens } = require('./widgets/_tokens');
+          slot.resolvedText = {
+            text:     renderTokens(eff.text || '',     tokenCtx),
+            subtitle: renderTokens(eff.subtitle || '', tokenCtx),
+          };
+          break;
+        }
 
         // --- Mac-only widgets — return null off-mac, renderer shows
         // "MAC OFFLINE" placeholder. Reading happens on whichever

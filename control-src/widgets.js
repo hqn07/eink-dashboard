@@ -29,6 +29,7 @@ export const WIDGET_REGISTRY = [
   { ...migratedDef('weather_hero') },
   { ...migratedDef('weather_forecast') },
   { ...migratedDef('message') },
+  { ...migratedDef('text_bar') },
   { ...migratedDef('calendar') },
   { ...migratedDef('stocks') },
   // Mac-only widgets — only render data when the server is running on
@@ -166,14 +167,14 @@ export function newScreenId() {
 
 export const DEFAULT_CHROME = {
   header: {
-    enabled: true,
+    enabled: false,
     left: '{city}',
     leftSub: '{date}',
     right: '{time}',
     rightSub: 'EDITION No. {edition}'
   },
   footer: {
-    enabled: true,
+    enabled: false,
     text: 'UPDATED {time} · REFRESH {refresh}MIN · THE DAILY {city}'
   }
 };
