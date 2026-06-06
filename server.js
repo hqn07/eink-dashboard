@@ -103,6 +103,19 @@ async function saveConfig(cfg) {
   _configCache = null;
 }
 
+// Serialize all read-merge-write transactions on config.json. Two
+// concurrent POSTs (e.g. control panel saving alarms while another tab
+// saves message text) would otherwise both load the same baseline,
+// merge their own patches, and the second write would silently
+// clobber the first. Each caller runs inside fn(); the next caller
+// awaits until the previous resolves.
+let _configWriteChain = Promise.resolve();
+function withConfigLock(fn) {
+  const run = _configWriteChain.then(fn, fn);
+  _configWriteChain = run.catch(() => {}); // swallow rejections in the chain so one error doesn't permanently break the lock
+  return run;
+}
+
 // Battery state from the ESP32. ESP32 POSTs once per wake; we persist to
 // disk so the value survives server restart (panel only POSTs every
 // ~30min so an in-memory-only value would be stale after every redeploy).
@@ -234,7 +247,43 @@ async function killBrowser() {
   browserPromise = null;
 }
 
+// Shared page semaphore. Puppeteer pages each hold ~200-300 MB of
+// Chromium memory — under request spikes (multiple devices, retry
+// storms, editor scrubbing the preview) unbounded page creation would
+// OOM. Dashboard renders queue; preview renders fail fast so the
+// editor UI gets instant feedback instead of stacking work.
+const MAX_PAGES = 2;
+let _pagesInflight = 0;
+const _pageWaiters = [];
+function acquirePage() {
+  return new Promise(resolve => {
+    if (_pagesInflight < MAX_PAGES) {
+      _pagesInflight++;
+      resolve();
+    } else {
+      _pageWaiters.push(resolve);
+    }
+  });
+}
+function tryAcquirePage() {
+  if (_pagesInflight < MAX_PAGES) {
+    _pagesInflight++;
+    return true;
+  }
+  return false;
+}
+function releasePage() {
+  if (_pageWaiters.length) {
+    // Hand the slot directly to a waiter — slot stays "occupied".
+    const next = _pageWaiters.shift();
+    next();
+  } else {
+    _pagesInflight--;
+  }
+}
+
 async function renderDashboardPng({ units, screen }) {
+  await acquirePage();
   const browser = await getBrowser();
   const page = await browser.newPage();
   page.setDefaultTimeout(15000);
@@ -275,6 +324,7 @@ async function renderDashboardPng({ units, screen }) {
     throw err;
   } finally {
     try { await page.close(); } catch (_) {}
+    releasePage();
   }
 }
 
@@ -1136,11 +1186,13 @@ app.get('/dashboard', checkDeviceAuth, async (req, res) => {
 // client side confirms before calling.
 app.post('/api/config/reset', checkDeviceAuth, async (req, res) => {
   try {
-    const raw = await fsp.readFile(DEFAULT_CONFIG_PATH, 'utf8');
-    await atomicWriteFile(CONFIG_PATH, raw);
-    _configCache = null;
-    invalidateImage();
-    const cfg = migrateConfigToScreens(JSON.parse(raw));
+    const cfg = await withConfigLock(async () => {
+      const raw = await fsp.readFile(DEFAULT_CONFIG_PATH, 'utf8');
+      await atomicWriteFile(CONFIG_PATH, raw);
+      _configCache = null;
+      invalidateImage();
+      return migrateConfigToScreens(JSON.parse(raw));
+    });
     res.json(cfg);
   } catch (err) {
     res.status(500).json(safeError(err));
@@ -1326,16 +1378,13 @@ app.get('/preview/widget', checkDeviceAuth, async (req, res) => {
   }
 });
 
-// Cap concurrent Puppeteer screenshots so a sliding-input spam can't
-// stack 50 simultaneous renders.
-let _previewInflight = 0;
-const PREVIEW_MAX_INFLIGHT = 2;
-
 async function renderPreviewPng({ widgetId, w, h, settings, units, density }) {
-  if (_previewInflight >= PREVIEW_MAX_INFLIGHT) {
+  // Non-blocking acquire: editor scrubbing a slider could fire dozens
+  // of preview requests; better to "busy" them fast than to queue and
+  // starve the dashboard render path (which devices depend on).
+  if (!tryAcquirePage()) {
     throw new Error('preview busy');
   }
-  _previewInflight++;
   try {
     const browser = await getBrowser();
     const page = await browser.newPage();
@@ -1385,7 +1434,7 @@ async function renderPreviewPng({ widgetId, w, h, settings, units, density }) {
       try { await page.close(); } catch (_) {}
     }
   } finally {
-    _previewInflight--;
+    releasePage();
   }
 }
 
@@ -1711,27 +1760,30 @@ app.get('/api/config', checkDeviceAuth, async (req, res) => {
 
 app.post('/api/config', checkDeviceAuth, async (req, res) => {
   try {
-    const current = await loadConfig();
-    // Top-level fields the client may send. `screens` is treated as
-    // canonical — whatever the editor sends wins. Other nested
-    // settings are shallow-merged so the editor can patch a single
-    // section (e.g. just `message`) without clobbering siblings.
-    const merged = { ...current, ...req.body,
-      widgets:  { ...(current.widgets  || {}), ...(req.body.widgets  || {}) },
-      message:  { ...(current.message  || {}), ...(req.body.message  || {}) },
-      calendar: { ...(current.calendar || {}), ...(req.body.calendar || {}) },
-      stocks:   { ...(current.stocks   || {}), ...(req.body.stocks   || {}) },
-      weather:  { ...(current.weather  || {}), ...(req.body.weather  || {}) },
-    };
-    if (Array.isArray(req.body.screens)) {
-      merged.screens = req.body.screens;
-      // Drop the legacy single-layout array when the new schema is
-      // explicit; keeps config.json tidy.
-      if (!('layout' in req.body))  delete merged.layout;
-      if (!('layouts' in req.body)) delete merged.layouts;
-    }
-    await saveConfig(merged);
-    invalidateImage();
+    const merged = await withConfigLock(async () => {
+      const current = await loadConfig();
+      // Top-level fields the client may send. `screens` is treated as
+      // canonical — whatever the editor sends wins. Other nested
+      // settings are shallow-merged so the editor can patch a single
+      // section (e.g. just `message`) without clobbering siblings.
+      const next = { ...current, ...req.body,
+        widgets:  { ...(current.widgets  || {}), ...(req.body.widgets  || {}) },
+        message:  { ...(current.message  || {}), ...(req.body.message  || {}) },
+        calendar: { ...(current.calendar || {}), ...(req.body.calendar || {}) },
+        stocks:   { ...(current.stocks   || {}), ...(req.body.stocks   || {}) },
+        weather:  { ...(current.weather  || {}), ...(req.body.weather  || {}) },
+      };
+      if (Array.isArray(req.body.screens)) {
+        next.screens = req.body.screens;
+        // Drop the legacy single-layout array when the new schema is
+        // explicit; keeps config.json tidy.
+        if (!('layout' in req.body))  delete next.layout;
+        if (!('layouts' in req.body)) delete next.layouts;
+      }
+      await saveConfig(next);
+      invalidateImage();
+      return next;
+    });
     res.json({ ok: true, config: merged });
   } catch (err) {
     res.status(500).json({ ok: false, ...safeError(err) });
@@ -1863,11 +1915,14 @@ app.get('/api/alarms', checkDeviceAuth, async (req, res) => {
 
 app.post('/api/alarms', checkDeviceAuth, async (req, res) => {
   try {
-    const cfg = await loadConfig();
-    cfg.alarms = normalizeAlarmList(req.body && req.body.alarms);
-    await saveConfig(cfg);
-    invalidateImage();
-    res.json({ ok: true, alarms: cfg.alarms });
+    const alarms = await withConfigLock(async () => {
+      const cfg = await loadConfig();
+      cfg.alarms = normalizeAlarmList(req.body && req.body.alarms);
+      await saveConfig(cfg);
+      invalidateImage();
+      return cfg.alarms;
+    });
+    res.json({ ok: true, alarms });
   } catch (err) {
     console.error('alarms POST error:', err);
     res.status(500).json({ ok: false, ...safeError(err) });
