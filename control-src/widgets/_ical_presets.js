@@ -9,29 +9,36 @@
 
 export const ICAL_PRESETS = [
   {
-    group: 'Holidays',
+    group: 'Countries',
     items: [
-      { name: 'US Holidays',          url: 'https://calendar.google.com/calendar/ical/en.usa%23holiday%40group.v.calendar.google.com/public/basic.ics' },
-      { name: 'UK Holidays',          url: 'https://calendar.google.com/calendar/ical/en.uk%23holiday%40group.v.calendar.google.com/public/basic.ics' },
-      { name: 'Canada Holidays',      url: 'https://calendar.google.com/calendar/ical/en.canadian%23holiday%40group.v.calendar.google.com/public/basic.ics' },
-      { name: 'Australia Holidays',   url: 'https://calendar.google.com/calendar/ical/en.australian%23holiday%40group.v.calendar.google.com/public/basic.ics' },
-      { name: 'Germany Holidays',     url: 'https://calendar.google.com/calendar/ical/en.german%23holiday%40group.v.calendar.google.com/public/basic.ics' },
-      { name: 'France Holidays',      url: 'https://calendar.google.com/calendar/ical/en.french%23holiday%40group.v.calendar.google.com/public/basic.ics' },
-      { name: 'Japan Holidays',       url: 'https://calendar.google.com/calendar/ical/en.japanese%23holiday%40group.v.calendar.google.com/public/basic.ics' },
-      { name: 'Spain Holidays',       url: 'https://calendar.google.com/calendar/ical/en.spain%23holiday%40group.v.calendar.google.com/public/basic.ics' },
-      { name: 'Italy Holidays',       url: 'https://calendar.google.com/calendar/ical/en.italian%23holiday%40group.v.calendar.google.com/public/basic.ics' },
-      { name: 'Brazil Holidays',      url: 'https://calendar.google.com/calendar/ical/en.brazilian%23holiday%40group.v.calendar.google.com/public/basic.ics' },
-      { name: 'Mexico Holidays',      url: 'https://calendar.google.com/calendar/ical/en.mexican%23holiday%40group.v.calendar.google.com/public/basic.ics' },
-      { name: 'India Holidays',       url: 'https://calendar.google.com/calendar/ical/en.indian%23holiday%40group.v.calendar.google.com/public/basic.ics' },
-      { name: 'Christian Holidays',   url: 'https://calendar.google.com/calendar/ical/en.christian%23holiday%40group.v.calendar.google.com/public/basic.ics' },
-      { name: 'Jewish Holidays',      url: 'https://calendar.google.com/calendar/ical/en.judaism%23holiday%40group.v.calendar.google.com/public/basic.ics' },
-      { name: 'Islamic Holidays',     url: 'https://calendar.google.com/calendar/ical/en.islamic%23holiday%40group.v.calendar.google.com/public/basic.ics' },
+      { name: 'United States',   url: 'https://calendar.google.com/calendar/ical/en.usa%23holiday%40group.v.calendar.google.com/public/basic.ics' },
+      { name: 'United Kingdom',  url: 'https://calendar.google.com/calendar/ical/en.uk%23holiday%40group.v.calendar.google.com/public/basic.ics' },
+      { name: 'Canada',          url: 'https://calendar.google.com/calendar/ical/en.canadian%23holiday%40group.v.calendar.google.com/public/basic.ics' },
+      { name: 'Australia',       url: 'https://calendar.google.com/calendar/ical/en.australian%23holiday%40group.v.calendar.google.com/public/basic.ics' },
+      { name: 'Germany',         url: 'https://calendar.google.com/calendar/ical/en.german%23holiday%40group.v.calendar.google.com/public/basic.ics' },
+      { name: 'France',          url: 'https://calendar.google.com/calendar/ical/en.french%23holiday%40group.v.calendar.google.com/public/basic.ics' },
+      { name: 'Japan',           url: 'https://calendar.google.com/calendar/ical/en.japanese%23holiday%40group.v.calendar.google.com/public/basic.ics' },
+      { name: 'Spain',           url: 'https://calendar.google.com/calendar/ical/en.spain%23holiday%40group.v.calendar.google.com/public/basic.ics' },
+      { name: 'Italy',           url: 'https://calendar.google.com/calendar/ical/en.italian%23holiday%40group.v.calendar.google.com/public/basic.ics' },
+      { name: 'Brazil',          url: 'https://calendar.google.com/calendar/ical/en.brazilian%23holiday%40group.v.calendar.google.com/public/basic.ics' },
+      { name: 'Mexico',          url: 'https://calendar.google.com/calendar/ical/en.mexican%23holiday%40group.v.calendar.google.com/public/basic.ics' },
+      { name: 'India',           url: 'https://calendar.google.com/calendar/ical/en.indian%23holiday%40group.v.calendar.google.com/public/basic.ics' },
+      { name: 'Vietnam',         url: 'https://calendar.google.com/calendar/ical/en.vietnamese%23holiday%40group.v.calendar.google.com/public/basic.ics' },
+    ]
+  },
+  {
+    group: 'Religions',
+    items: [
+      { name: 'Christianity',    url: 'https://calendar.google.com/calendar/ical/en.christian%23holiday%40group.v.calendar.google.com/public/basic.ics' },
+      { name: 'Judaism',         url: 'https://calendar.google.com/calendar/ical/en.judaism%23holiday%40group.v.calendar.google.com/public/basic.ics' },
+      { name: 'Islam',           url: 'https://calendar.google.com/calendar/ical/en.islamic%23holiday%40group.v.calendar.google.com/public/basic.ics' },
+      { name: 'Buddhism',        url: 'https://calendar.google.com/calendar/ical/en.buddhist%23holiday%40group.v.calendar.google.com/public/basic.ics' },
     ]
   },
   {
     group: 'Sky',
     items: [
-      { name: 'Moon Phases',          url: 'https://www.calendarlabs.com/ical-calendar/ics/27/Phases_of_the_Moon.ics' },
+      { name: 'Moon Phases',     url: 'https://www.calendarlabs.com/ical-calendar/ics/27/Phases_of_the_Moon.ics' },
     ]
   }
 ];
