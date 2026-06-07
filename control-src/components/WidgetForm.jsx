@@ -1,7 +1,6 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
-import * as Accordion from '@radix-ui/react-accordion';
 import * as Switch from '@radix-ui/react-switch';
-import { CaretUp, CaretDown, CaretRight } from '@phosphor-icons/react';
+import { CaretUp, CaretDown } from '@phosphor-icons/react';
 import { geocode } from '../api.js';
 import { MIGRATED_FORMS, MIGRATED_DEFS } from '../widgets/_registry.js';
 import {
@@ -418,10 +417,10 @@ function LocationFields({ values, onChange }) {
 // users don't see a flat 30-field column. Mirrors the
 // TRMNL plugin editor + mushroom-card grouping pattern.
 //
-// The actual layout — stacked sections vs Radix accordion — is decided
+// The actual layout — stacked sections vs pill tabs — is decided
 // by `TabbedForm` below. FormSection itself just renders a titled
 // block; TabbedForm walks the rendered tree, splits the sections out,
-// and remounts each one inside an Accordion.Item.
+// and renders only the active tab's children at any one time.
 function FormSection({ title, children }) {
   return (
     <div className="wsm-subsection" data-section-title={title}>
@@ -484,15 +483,16 @@ function SegmentedField({ label, value, options, onChange, help, defaultValue })
 }
 
 // Render the migrated widget Form and split its FormSection children
-// into a Radix Accordion surface. Every migrated Form is a pure render
-// function (no hooks, no state, no side effects), so calling it
-// directly to introspect its children is safe — the constraint is
+// into a horizontal pill-tab surface. Every migrated Form is a pure
+// render function (no hooks, no state, no side effects), so calling
+// it directly to introspect its children is safe — the constraint is
 // documented at the top of each `<id>.form.jsx`.
 //
-// Accordion (vs the previous Tabs surface) lets users keep multiple
-// sections visible at once. Data + Layout open by default; per-widget
-// open/closed state persists in localStorage so the user's preference
-// sticks across modal opens.
+// Pill tabs (vs the previous Accordion) keep the modal compact —
+// only one section's body is mounted at a time, so the right-hand
+// column doesn't grow tall when every section is expanded. Active
+// tab persists per-widget in localStorage so reopening the modal
+// lands you back where you left off.
 function TabbedForm({ widgetId, MigratedForm, formProps }) {
   const tree = MigratedForm(formProps);
   const flat = React.Children.toArray(
@@ -506,62 +506,61 @@ function TabbedForm({ widgetId, MigratedForm, formProps }) {
   const titles = sections.map(s => s.props.title);
   const storageKey = `${SECTION_STORAGE_PREFIX}${widgetId}`;
 
-  // Initial open set: persisted preference if present, else
-  // DEFAULT_OPEN_SECTIONS ∩ available titles, else the first section.
-  const [open, setOpen] = useState(() => {
+  // Active tab: persisted preference if present and still valid, else
+  // first available section title.
+  const [active, setActive] = useState(() => {
     try {
       const raw = typeof localStorage !== 'undefined' && localStorage.getItem(storageKey);
       if (raw) {
-        const arr = JSON.parse(raw);
-        if (Array.isArray(arr)) return arr.filter(t => titles.includes(t));
+        const parsed = JSON.parse(raw);
+        // Back-compat: legacy schema was an array of open titles. Treat
+        // the first valid entry as the new single active tab.
+        if (Array.isArray(parsed)) {
+          const m = parsed.find(t => titles.includes(t));
+          if (m) return m;
+        } else if (typeof parsed === 'string' && titles.includes(parsed)) {
+          return parsed;
+        }
       }
     } catch { /* ignore */ }
-    const defaults = DEFAULT_OPEN_SECTIONS.filter(t => titles.includes(t));
-    return defaults.length ? defaults : (titles[0] ? [titles[0]] : []);
+    return titles[0] || '';
   });
 
-  // Persist on every change so toggling the same section twice in a row
-  // doesn't lose state across modal close + reopen.
   useEffect(() => {
-    try { localStorage.setItem(storageKey, JSON.stringify(open)); }
+    try { localStorage.setItem(storageKey, JSON.stringify(active)); }
     catch { /* ignore */ }
-  }, [open, storageKey]);
+  }, [active, storageKey]);
 
   if (!sections.length) {
     return <>{tree}</>;
   }
 
+  const activeSection = sections.find(s => s.props.title === active) || sections[0];
+
   return (
     <>
       {extras}
-      <Accordion.Root
-        type="multiple"
-        value={open}
-        onValueChange={setOpen}
-        className="wsm-accordion"
-      >
-        {sections.map(s => (
-          <Accordion.Item
-            key={s.props.title}
-            value={s.props.title}
-            className="wsm-accordion-item"
-          >
-            <Accordion.Header asChild>
-              <h3 className="wsm-accordion-header">
-                <Accordion.Trigger className="wsm-accordion-trigger">
-                  <CaretRight size={11} weight="bold" className="wsm-accordion-caret" />
-                  <span className="wsm-accordion-title">{s.props.title}</span>
-                </Accordion.Trigger>
-              </h3>
-            </Accordion.Header>
-            <Accordion.Content className="wsm-accordion-content">
-              <div className="wsm-accordion-content-inner">
-                {s.props.children}
-              </div>
-            </Accordion.Content>
-          </Accordion.Item>
-        ))}
-      </Accordion.Root>
+      <div className="wsm-tabs" role="tablist">
+        {sections.map(s => {
+          const t = s.props.title;
+          const isActive = t === activeSection.props.title;
+          return (
+            <button
+              key={t}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              className={`wsm-tab ${isActive ? 'wsm-tab-active' : ''}`}
+              onClick={() => setActive(t)}
+            >
+              {t}
+            </button>
+          );
+        })}
+      </div>
+      <div className="wsm-tab-panel" role="tabpanel">
+        {activeSection.props.children}
+      </div>
     </>
   );
 }

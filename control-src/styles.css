@@ -1365,8 +1365,8 @@ input[type="text"], input[type="url"], textarea {
  * (the accordion trigger already labels it). When the form is NOT
  * accordion-wrapped (forms with a single section), the title shows
  * normally. */
-.wsm-accordion-content .wsm-subsection { margin-bottom: 0; }
-.wsm-accordion-content .wsm-subsection > .wsm-subsection-title { display: none; }
+.wsm-tab-panel .wsm-subsection { margin-bottom: 0; }
+.wsm-tab-panel .wsm-subsection > .wsm-subsection-title { display: none; }
 .wsm-subsection-title {
   font-family: 'Oswald', 'Arial Narrow', sans-serif;
   text-transform: uppercase;
@@ -1432,69 +1432,45 @@ input[type="text"], input[type="url"], textarea {
   padding: 2px 0;
 }
 
-/* Accordion surface for the widget settings form. Editorial palette:
- * each section gets a hairline rule + uppercase header. Caret rotates
- * 90° on expand. Multiple sections can be open at once so users can
- * cross-reference fields. */
-.wsm-accordion {
+/* Pill-tab surface for the widget settings form. One row of compact
+ * uppercase tabs at the top; active tab is inverted (black pill, white
+ * ink). Only the active section's body is mounted in .wsm-tab-panel
+ * so the modal column doesn't grow tall — replaces the previous
+ * accordion surface where every expanded section stacked vertically. */
+.wsm-tabs {
   display: flex;
-  flex-direction: column;
-  border-top: 1.5px solid var(--ink);
-}
-.wsm-accordion-item {
+  gap: 4px;
+  flex-wrap: wrap;
   border-bottom: 1.5px solid var(--ink);
+  padding: 4px 0 8px;
+  margin-bottom: 12px;
 }
-.wsm-accordion-header { margin: 0; }
-.wsm-accordion-trigger {
+.wsm-tab {
   font-family: 'Oswald', 'Arial Narrow', sans-serif;
   text-transform: uppercase;
   letter-spacing: 2px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--ink);
-  background: none;
-  border: 0;
-  padding: 12px 6px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
+  background: transparent;
+  border: 1.5px solid transparent;
+  padding: 5px 12px;
+  border-radius: 999px;
   cursor: pointer;
-  text-align: left;
+  line-height: 1;
+  transition: background 120ms ease-out, color 120ms ease-out;
 }
-.wsm-accordion-trigger:hover { background: rgba(0, 0, 0, 0.04); }
-.wsm-accordion-trigger:focus-visible {
+.wsm-tab:hover { background: rgba(0, 0, 0, 0.06); }
+.wsm-tab:focus-visible {
   outline: 2px dashed var(--ink);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
-.wsm-accordion-caret {
-  transition: transform 160ms ease-out;
-  flex: 0 0 auto;
+.wsm-tab-active {
+  background: var(--ink);
+  color: #fff;
 }
-.wsm-accordion-trigger[data-state="open"] .wsm-accordion-caret {
-  transform: rotate(90deg);
-}
-.wsm-accordion-title { flex: 1 1 auto; }
-.wsm-accordion-content {
-  overflow: hidden;
-}
-.wsm-accordion-content[data-state="open"] {
-  animation: wsmAccDown 180ms ease-out;
-}
-.wsm-accordion-content[data-state="closed"] {
-  animation: wsmAccUp 140ms ease-out;
-}
-.wsm-accordion-content-inner {
-  padding: 4px 6px 16px;
-}
-@keyframes wsmAccDown {
-  from { height: 0; opacity: 0; }
-  to   { height: var(--radix-accordion-content-height); opacity: 1; }
-}
-@keyframes wsmAccUp {
-  from { height: var(--radix-accordion-content-height); opacity: 1; }
-  to   { height: 0; opacity: 0; }
-}
+.wsm-tab-active:hover { background: var(--ink); }
+.wsm-tab-panel { padding: 0 2px 4px; }
 .wsm-row {
   display: flex;
   align-items: center;
