@@ -192,18 +192,78 @@ export const SCREEN_PRESETS = [
     layout: [
       { widgetId: 'weather_hero', x: 0, y: 0, w: 24, h: 12 }
     ]
+  },
+  {
+    id: 'now_playing',
+    name: 'Now Playing',
+    description: 'Mac · Now Playing dominant on the right, weather + clock left.',
+    layout: [
+      { widgetId: 'text_bar',       x: 0,  y: 0,  w: 12, h: 1,
+        settings: { text: '{{city}} · {{date|long}}', align: 'left', upper: true, fontFamily: 'sans' } },
+      { widgetId: 'weather_hero',   x: 0,  y: 1,  w: 12, h: 7 },
+      { widgetId: 'clock',          x: 0,  y: 8,  w: 12, h: 4 },
+      { widgetId: 'mac_nowplaying', x: 12, y: 0,  w: 12, h: 12 }
+    ]
+  },
+  {
+    id: 'daily_briefing',
+    name: 'Daily Briefing',
+    description: 'Info-dense: header strip + weather + forecast + calendar + clock.',
+    layout: [
+      { widgetId: 'text_bar',         x: 0,  y: 0,  w: 24, h: 1,
+        settings: { text: '{{date|long}} · {{city}}', align: 'center', upper: true, fontFamily: 'serif' } },
+      { widgetId: 'weather_hero',     x: 0,  y: 1,  w: 8,  h: 8 },
+      { widgetId: 'weather_forecast', x: 8,  y: 1,  w: 6,  h: 8 },
+      { widgetId: 'calendar',         x: 14, y: 1,  w: 10, h: 11 },
+      { widgetId: 'clock',            x: 0,  y: 9,  w: 14, h: 3 }
+    ]
+  },
+  {
+    id: 'markets',
+    name: 'Markets',
+    description: 'Stocks-focused: hero + watchlist taking the left, weather + clock right.',
+    layout: [
+      { widgetId: 'text_bar',     x: 0,  y: 0,  w: 24, h: 1,
+        settings: { text: 'MARKETS · {{date|short}}', align: 'left', upper: true, fontFamily: 'sans' } },
+      { widgetId: 'stocks',       x: 0,  y: 1,  w: 14, h: 11 },
+      { widgetId: 'weather_hero', x: 14, y: 1,  w: 10, h: 8 },
+      { widgetId: 'clock',        x: 14, y: 9,  w: 10, h: 3 }
+    ]
+  },
+  {
+    id: 'focus_message',
+    name: 'Focus',
+    description: 'Big custom message centered with a thin date header + weather strip.',
+    layout: [
+      { widgetId: 'text_bar',         x: 0, y: 0,  w: 24, h: 1,
+        settings: { text: '{{day}} · {{date|short}}', align: 'center', upper: true, fontFamily: 'sans' } },
+      { widgetId: 'message',          x: 0, y: 2,  w: 24, h: 7 },
+      { widgetId: 'weather_forecast', x: 0, y: 10, w: 18, h: 2 },
+      { widgetId: 'clock',            x: 18, y: 9, w: 6,  h: 3 }
+    ]
+  },
+  {
+    id: 'just_clock',
+    name: 'Just Clock',
+    description: 'Full-bleed clock — wall-clock mode.',
+    layout: [
+      { widgetId: 'clock', x: 0, y: 0, w: 24, h: 12 }
+    ]
   }
 ];
 
 // Inflate a preset's layout into real instances (each item gets its own
-// instance id + a sizeKey hint based on its w/h).
+// instance id + a sizeKey hint based on its w/h). Preserves per-item
+// `settings` from the preset so curated tiles (e.g. a text_bar with a
+// preset token string) land already configured.
 export function inflatePresetLayout(preset) {
   if (!preset || !Array.isArray(preset.layout)) return [];
   return preset.layout.map(item => ({
     id: newInstanceId(item.widgetId),
     widgetId: item.widgetId,
     x: item.x, y: item.y, w: item.w, h: item.h,
-    flush: false
+    flush: false,
+    ...(item.settings ? { settings: { ...item.settings } } : {})
   }));
 }
 
