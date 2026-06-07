@@ -414,37 +414,82 @@ html, body {
   text-decoration-thickness: 2px;
 }
 
-/* Calendar */
-.cal-row {
+/* ============ ITEM PRIMITIVE ============
+ * TRMNL-inspired list-item shape. A standardized three-slot row used
+ * by calendar (and any future list widget — stocks watch, alarms,
+ * todos). Replaces per-widget .cal-row / .stock-watch-row / etc.
+ *
+ *   <div class="item [item--emphasis-1] [item--allday]">
+ *     <div class="meta">MON 3</div>          ← left fixed slot
+ *     <div class="content">
+ *       <span class="title">…</span>         ← main line
+ *       <span class="description">…</span>   ← secondary line
+ *     </div>
+ *     <div class="trailing">…</div>          ← optional right value
+ *   </div>
+ *
+ * Emphasis modifiers use solid black/white inversion instead of
+ * opacity, so they survive the 1-bit threshold pass cleanly.
+ */
+.item {
   display: grid;
-  grid-template-columns: 50px 1fr;
+  grid-template-columns: 50px 1fr auto;
   gap: 8px;
   align-items: baseline;
   padding: 4px 0;
   border-bottom: 1.5px dashed #000;
 }
-.cal-row:last-child { border-bottom: none; }
+.item:last-child { border-bottom: none; }
 
-.cal-day {
+.item > .meta {
   font-family: 'Oswald', sans-serif;
   font-weight: 700;
   font-size: 14px;
   letter-spacing: 1px;
 }
 
-.cal-title {
+.item > .content { min-width: 0; }
+.item > .content > .title {
+  display: block;
   font-family: 'Oswald', sans-serif;
   font-weight: 500;
   font-size: 13px;
   line-height: 1.1;
 }
-
-.cal-time {
+.item > .content > .description {
+  display: block;
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 1px;
   margin-top: 2px;
+}
+
+.item > .trailing {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 1px;
+}
+
+/* Emphasis modifiers — progressively heavier meta slot. */
+.item--emphasis-1 > .meta { font-weight: 700; }
+.item--emphasis-2 > .meta { background: #000; color: #fff; padding: 1px 4px; }
+.item--emphasis-3 > .meta {
+  background: #000; color: #fff; padding: 2px 6px;
+  text-transform: uppercase; letter-spacing: 2px;
+}
+
+/* Calendar all-day badge — repurpose the existing inverted-pill look
+ * for the description slot. Other widgets can opt in by adding the
+ * modifier; nothing widget-specific here. */
+.item--allday > .content > .description {
+  background: #000; color: #fff;
+  padding: 1px 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  display: inline-block;
 }
 
 .empty {
@@ -1502,15 +1547,6 @@ img.icon { object-fit: contain; }
   color: #000;
   padding-bottom: 1px;
   border-bottom: 1.5px solid #000;
-}
-.cal-row.allday .cal-time {
-  background: #000;
-  color: #fff;
-  padding: 1px 4px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  letter-spacing: 2px;
-  display: inline-block;
 }
 
 /* ============ TODO EXTRAS ============ */

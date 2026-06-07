@@ -53,14 +53,21 @@ export function render({ events, cfg, settings, cellW, cellH, density }) {
   const list = all.slice(0, t.events);
   const showDayLabel = !settings || settings.showDayLabel !== false;
   const showTime     = !settings || settings.showTime     !== false;
-  const row = ev => `
-    <div class="cal-row ${ev.isAllDay ? 'allday' : ''}">
-      ${showDayLabel ? `<div class="cal-day">${escapeHtml(ev.dayLabel || '')}</div>` : ''}
-      <div class="cal-info">
-        <div class="cal-title">${escapeHtml(ev.title || '')}</div>
-        ${showTime ? `<div class="cal-time">${escapeHtml(ev.startLabel || '')}</div>` : ''}
+  // Uses the shared `.item` primitive (TRMNL-inspired) so list-shaped
+  // widgets stay visually consistent. Day label fills the `meta` slot;
+  // title + time fill `content`. All-day events get the `--allday`
+  // modifier which renders the time slot as an inverted pill.
+  const row = ev => {
+    const desc = showTime && ev.startLabel ? escapeHtml(ev.startLabel) : '';
+    return `
+    <div class="item ${ev.isAllDay ? 'item--allday' : ''}">
+      <div class="meta">${showDayLabel ? escapeHtml(ev.dayLabel || '') : ''}</div>
+      <div class="content">
+        <span class="title">${escapeHtml(ev.title || '')}</span>
+        ${desc ? `<span class="description">${desc}</span>` : ''}
       </div>
     </div>`;
+  };
   if (!t.sections) {
     return `
       <div class="widget widget-cal">
