@@ -1,4 +1,4 @@
-import { escapeHtml, md, FONT_STACKS, placeholder } from './_shared.js';
+import { escapeHtml, md } from './_shared.js';
 
 export const def = {
   id: 'text_bar',
@@ -12,7 +12,7 @@ export const def = {
     L:  { w: 24, h: 2 },
     XL: { w: 24, h: 3 }
   },
-  defaultSize: 'M',
+  defaultSize: 'S',
   defaults: () => ({
     text: '',
     subtitle: '',
@@ -27,18 +27,30 @@ export const def = {
 const ALIGN = { left: 'flex-start', center: 'center', right: 'flex-end' };
 const TEXT_ALIGN = { left: 'left', center: 'center', right: 'right' };
 
+// Inline empty state — fits any aspect ratio. The shared placeholder()
+// helper is a tall card with icon + title + hint + tag, which collapses
+// into an unreadable smudge on a 24×1 strip. Render a flat dashed
+// outline + label centered in the tile so a 1-row bar still reads as
+// "set me up" without overflowing.
+function emptyState(isTall) {
+  const fz = isTall ? 14 : 11;
+  return `
+    <div class="widget widget-textbar tb-empty" style="display:flex;align-items:center;justify-content:center;height:100%;width:100%;border:1.5px dashed #999;color:#666;font-family:'JetBrains Mono',monospace;font-size:${fz}px;letter-spacing:2px;text-transform:uppercase;">
+      <span>Text · click to set up</span>
+    </div>
+  `;
+}
+
 export function render({ resolvedText, settings, cellH }) {
   const s = settings || {};
   const r = resolvedText || { text: '', subtitle: '' };
-  if (!r.text && !r.subtitle) {
-    return placeholder('TEXT', 'Add text in settings — supports tokens', 'msg');
-  }
-  const justify = ALIGN[s.align] || ALIGN.left;
-  const textAlign = TEXT_ALIGN[s.align] || TEXT_ALIGN.left;
   // Single-row tiles auto-shrink the headline; taller tiles keep room
   // for subtitle. Subtitle hidden under 2 grid rows so it doesn't
   // visually compete with the main line on a 40px-tall bar.
   const isTall = (cellH || 0) >= 2;
+  if (!r.text && !r.subtitle) return emptyState(isTall);
+  const justify = ALIGN[s.align] || ALIGN.left;
+  const textAlign = TEXT_ALIGN[s.align] || TEXT_ALIGN.left;
   const baseSize = isTall ? 26 : 18;
   const subSize  = isTall ? 13 : 11;
   const scale = Number.isFinite(s.fontScale) ? s.fontScale : 1;
