@@ -86,7 +86,7 @@ export function render({ weather, cfg, settings, cellW, cellH }) {
         ${showIcons   ? `<div class="fc-icon">${icon(f.main, iconPx)}</div>` : ''}
         ${hiloBlock(f)}
         ${showPrecip && Number.isFinite(f.precip) && f.precip > 0
-          ? `<div class="fc-precip">${f.precip}%</div>` : '<div class="fc-precip"></div>'}
+          ? `<div class="fc-precip">${f.precip}%</div>` : ''}
       </div>
     `).join('')}
   `;

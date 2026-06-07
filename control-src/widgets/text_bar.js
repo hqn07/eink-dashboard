@@ -61,7 +61,7 @@ export function render({ resolvedText, settings, cellH }) {
   return `
     <div class="widget widget-textbar" style="display:flex;flex-direction:column;justify-content:center;align-items:${justify};text-align:${textAlign};height:100%">
       ${txt ? `<div class="tb-text autofit" data-min-font="12" style="font-size:${txtPx}px;line-height:1.1">${md(escapeHtml(txt))}</div>` : ''}
-      ${isTall && sub ? `<div class="tb-sub" style="font-size:${subPx}px;line-height:1.2;margin-top:2px;opacity:0.85">${md(escapeHtml(sub))}</div>` : ''}
+      ${isTall && sub ? `<div class="tb-sub" style="font-size:${subPx}px;line-height:1.2;margin-top:2px;font-weight:400">${md(escapeHtml(sub))}</div>` : ''}
     </div>
   `;
 }

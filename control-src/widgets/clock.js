@@ -1,4 +1,4 @@
-import { escapeHtml } from './_shared.js';
+import { escapeHtml, pickTier, placeholder } from './_shared.js';
 
 export const def = {
   id: 'clock',
@@ -19,14 +19,18 @@ export const def = {
   })
 };
 
-export function render({ clockNow }) {
+export function render({ clockNow, cellW, cellH, density }) {
   if (!clockNow) {
-    return `<div class="empty" style="border:0;padding:14px 0">NO TIME</div>`;
+    return placeholder('CLOCK', 'Waiting for time', 'msg');
   }
   const c = clockNow;
+  const tier = pickTier(cellW, cellH, density);
+  // Date line is legible from `compact` up; tiny tiles drop it so the
+  // time can use the full cell.
+  const dateAllowed = tier !== 'tiny';
   const cls = c.style === 'thin' ? 'clock-thin' : 'clock-big';
   const ampm = c.ampm ? `<span class="clock-ampm">${c.ampm}</span>` : '';
-  const date = c.dateLine
+  const date = dateAllowed && c.dateLine
     ? `<div class="clock-date">${escapeHtml(c.dateLine)}</div>`
     : '';
   return `

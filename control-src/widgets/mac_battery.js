@@ -1,4 +1,4 @@
-import { escapeHtml, placeholder } from './_shared.js';
+import { escapeHtml, pickTier, placeholder } from './_shared.js';
 
 export const def = {
   id: 'mac_battery',
@@ -14,7 +14,7 @@ export const def = {
   defaults: () => ({ title: '', fontScale: 1, padding: 14 })
 };
 
-export function render({ macBattery, settings }) {
+export function render({ macBattery, settings, cellW, cellH, density }) {
   const titleLabel = (settings && typeof settings.title === 'string' && settings.title.trim())
     ? settings.title.trim()
     : 'MAC BATTERY';
@@ -28,11 +28,17 @@ export function render({ macBattery, settings }) {
   const arrow = charging
     ? '<svg class="mac-batt-bolt" viewBox="0 0 24 24" width="0.7em" height="0.7em" aria-hidden="true"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" fill="#000"/></svg>'
     : '';
+  // Tier picks font + label visibility — a 3×2 tile and an 8×3 tile no
+  // longer render the same. Title hides on tiny since "MAC BATTERY"
+  // crowds out the percent.
+  const tier = pickTier(cellW || 0, cellH || 0, density);
+  const showTitle = tier !== 'tiny';
+  const showState = tier !== 'tiny';
   return `
-    <div class="mac-batt">
-      <div class="col-title">${escapeHtml(titleLabel)}</div>
+    <div class="mac-batt mac-batt-tier-${tier}">
+      ${showTitle ? `<div class="col-title">${escapeHtml(titleLabel)}</div>` : ''}
       <div class="mac-batt-pct autofit" data-min-font="22">${macBattery.percent}%${arrow}</div>
-      <div class="mac-batt-state">${escapeHtml(macBattery.state.toUpperCase())}</div>
+      ${showState ? `<div class="mac-batt-state">${escapeHtml(macBattery.state.toUpperCase())}</div>` : ''}
     </div>
   `;
 }

@@ -54,9 +54,12 @@ export function render({ battery, settings }) {
   // Battery bar — 100 px wide, 18 px tall, single rectangle clipped by
   // an inner fill width = pct%. Threshold-safe at 1-bit; the outline
   // stays crisp because it's a solid stroke at >= 1.5 px.
+  // Floor the fill at 3% so 0-2% still renders a visible sliver — a
+  // truly empty bar reads as "no data" rather than "empty battery".
+  const fillPct = pct > 0 && pct < 3 ? 3 : pct;
   const bar = (s.showBar !== false) ? `
     <div class="eink-batt-bar">
-      <div class="eink-batt-bar-fill" style="width:${pct}%"></div>
+      <div class="eink-batt-bar-fill" style="width:${fillPct}%"></div>
       <div class="eink-batt-bar-tip"></div>
     </div>` : '';
 
