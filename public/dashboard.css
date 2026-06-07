@@ -265,20 +265,21 @@ html, body {
   margin-top: 4px;
 }
 
+/* Stats stack vertically — single 2-col grid (label · value). Each row
+ * shares the label column width and the value column right-aligns, so
+ * any value (even a long "SE 4 (G10) mph") sits in a consistent column
+ * without crashing into a neighbour the way the previous side-by-side
+ * grid did at narrow tile widths. */
 .weather-stats {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px 18px;
+  grid-template-columns: auto 1fr;
+  column-gap: 14px;
+  row-gap: 6px;
+  align-items: baseline;
   padding-top: 12px;
   margin-top: 8px;
   margin-bottom: 6px;
   border-top: 2px solid #000;
-}
-
-.stat {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
   font-family: 'Oswald', sans-serif;
 }
 
@@ -292,6 +293,7 @@ html, body {
   font-size: 18px;
   font-weight: 700;
   letter-spacing: 0.5px;
+  text-align: right;
 }
 
 /* ============ FORECAST COLUMN ============ */

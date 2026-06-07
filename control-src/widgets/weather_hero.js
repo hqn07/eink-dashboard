@@ -100,8 +100,13 @@ export function render({ weather, units, cfg, settings, cellW, cellH, density })
     if (s.showStats === false) return '';
     const cells = statsKeys.map(k => statForKey(k, w)).filter(Boolean).slice(0, 4);
     if (!cells.length) return '';
+    // Flat grid items (no per-stat wrapper) so the CSS grid can size
+    // each column to its widest content. With the old `.stat` wrapper +
+    // flex-between, a long value like "SE 4 (G10) mph" only pushed
+    // within its own cell, breaking visual alignment with neighbouring
+    // labels in the adjacent column.
     return `<div class="weather-stats">
-      ${cells.map(c => `<div class="stat"><span class="stat-k">${c.k}</span><span class="stat-v">${c.v}</span></div>`).join('')}
+      ${cells.map(c => `<span class="stat-k">${c.k}</span><span class="stat-v">${c.v}</span>`).join('')}
     </div>`;
   };
   const alerts = s.showAlerts !== false ? alertBanner(w) : '';
