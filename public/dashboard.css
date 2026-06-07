@@ -1351,47 +1351,40 @@ img.icon { object-fit: contain; }
   flex: 1;
   min-height: 0;
 }
-.stocks-list-mode .stock-watch-row {
-  padding: 5px 0;
-}
+/* `list_only` layout adds a little vertical breathing room to the rows. */
+.stocks-list-mode .item.stock-row { padding: 5px 0; }
+
 /* `hero_only` layout: lone hero block fills the tile; spark stretches
  * to use the unused watchlist space. */
-.stocks-hero-only .stock-hero {
-  flex: 1;
-}
-.stocks-hero-only .hero-spark {
-  min-height: 80px;
-}
-.stock-watch-row {
-  display: grid;
-  grid-template-columns: 70px 1fr auto auto;
-  gap: 8px;
-  align-items: center;
-  padding: 3px 0;
-  border-bottom: 1.5px dashed #000;
-}
-.stock-watch-row:last-child { border-bottom: 0; }
-.watch-sym {
+.stocks-hero-only .stock-hero { flex: 1; }
+.stocks-hero-only .hero-spark { min-height: 80px; }
+
+/* Stocks-specific overrides on the shared .item shape. Symbol slot uses
+ * a tighter Oswald than the default Oswald-700 in .meta (financial rows
+ * read better when the ticker is sturdier but not full-blown bold).
+ * Sparkline element keeps its own width control. */
+.item.stock-row > .meta.stock-sym {
   font-family: 'Oswald', sans-serif;
   font-weight: 600;
   font-size: 12px;
   letter-spacing: 1px;
 }
-.watch-spark {
-  display: block;
-  width: 100%;
-  min-width: 0;
+.watch-spark { display: block; width: 100%; min-width: 0; }
+.stock-trailing {
+  display: flex; flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.1;
+  text-align: right;
 }
-.watch-price {
+.stock-price {
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
 }
-.watch-chg {
+.stock-chg {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
   letter-spacing: 1px;
   min-width: 56px;
-  text-align: right;
 }
 
 /* ============ PHOTO ============ */

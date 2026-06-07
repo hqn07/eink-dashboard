@@ -83,13 +83,24 @@ function heroBlock(hero, t) {
     </div>`;
 }
 
+// Watchlist row — adopts the shared .item primitive. Symbol fills the
+// meta slot, sparkline takes the content slot, price + change stack
+// in trailing. Drops the old .stock-watch-row 4-column grid.
 function watchRow(s, t) {
+  const sparkHtml = t.watchSpark
+    ? spark(s.spark, { cls: 'watch-spark', stroke: 2, style: 'height:18px;width:100%', variant: t.sparkVariant })
+    : '';
+  const chgHtml = t.watchChg
+    ? `<div class="stock-chg ${dirCls(s.change)}">${dirArrow(s.change)} ${Math.abs(s.changePct).toFixed(2)}%</div>`
+    : '';
   return `
-    <div class="stock-watch-row">
-      <span class="watch-sym">${escapeHtml(s.symbol)}</span>
-      ${t.watchSpark ? spark(s.spark, { cls: 'watch-spark', stroke: 2, style: 'height:18px;width:100%', variant: t.sparkVariant }) : '<span></span>'}
-      <span class="watch-price">${s.price}</span>
-      ${t.watchChg ? `<span class="watch-chg ${dirCls(s.change)}">${dirArrow(s.change)} ${Math.abs(s.changePct).toFixed(2)}%</span>` : ''}
+    <div class="item stock-row">
+      <div class="meta stock-sym">${escapeHtml(s.symbol)}</div>
+      <div class="content">${sparkHtml}</div>
+      <div class="trailing stock-trailing">
+        <div class="stock-price">${s.price}</div>
+        ${chgHtml}
+      </div>
     </div>`;
 }
 
