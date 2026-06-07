@@ -46,6 +46,13 @@ function floydSteinberg(data, w, h) {
 // `size` controls the output edge length in pixels (square). `fit`
 // follows sharp's resize options ('cover', 'contain', 'inside').
 //
+// Dark or low-contrast album art (most music covers) hits Floyd-
+// Steinberg as a single mid-grey wash, which the algorithm renders as
+// a uniform dot pattern with no recognizable subject. Stretching the
+// histogram first via `.normalize()` and a mild gamma+linear pass
+// spreads luminance across the full 0-255 range, so the FS pass has
+// real contrast to work with — recognizable shapes instead of static.
+//
 // Returns the base64 string ready to drop into a `data:image/png;base64,...`
 // URI, or null on failure.
 async function ditherImageToBase64(rawBuf, { size = 320, fit = 'cover' } = {}) {
@@ -53,6 +60,9 @@ async function ditherImageToBase64(rawBuf, { size = 320, fit = 'cover' } = {}) {
     const { data, info } = await sharp(rawBuf)
       .resize(size, size, { fit })
       .greyscale()
+      .normalize()              // stretch 1st/99th percentile to 0-255
+      .gamma(1.2)               // gentle midtone lift — darker covers gain detail
+      .linear(1.15, -20)        // contrast boost: out = 1.15*in − 20
       .raw()
       .toBuffer({ resolveWithObject: true });
     const w = info.width;

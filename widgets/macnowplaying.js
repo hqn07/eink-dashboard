@@ -62,11 +62,14 @@ async function readField(key, opts) {
   }
 }
 
-// Album art: dither at 320x320 to match the largest art slot the
-// widget renders. Shared FS implementation lives in widgets/_dither.js
-// so other widgets can reuse it.
+// Album art: dither at 240px — matches the `extended` tier art slot
+// exactly (the most commonly-rendered size), so pixels map 1:1 without
+// resampling, and the `full` tier 320px upscale stays nearest-neighbour
+// via `image-rendering: pixelated`. Dithering at the original 320px
+// caused a 320→240 downscale on the most common tier, which Chrome's
+// pixelated path still introduces aliasing artifacts on.
 async function ditherArtwork(rawBuf) {
-  return ditherImageToBase64(rawBuf, { size: 320, fit: 'cover' });
+  return ditherImageToBase64(rawBuf, { size: 240, fit: 'cover' });
 }
 
 async function fetchArtwork() {
