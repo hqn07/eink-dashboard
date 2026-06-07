@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Star, GridFour, ArrowCounterClockwise, Wrench } from '@phosphor-icons/react';
+import { Star, GridFour, ArrowCounterClockwise, Wrench, Trash } from '@phosphor-icons/react';
 import { fetchConfig, saveConfig, fetchPreviewData } from './api.js';
 import {
   WIDGET_REGISTRY,
@@ -450,6 +450,14 @@ export default function App() {
                   onClick={() => updateScreenLayout(editScreen.id, [])}>
                   <ArrowCounterClockwise size={12} weight="bold" /> CLEAR
                 </button>
+                {editScreen && screens.length > 1 && (
+                  <button className="btn btn-danger btn-iconed"
+                    style={{ padding: '4px 10px', fontSize: 11 }}
+                    title="Delete this screen"
+                    onClick={() => deleteScreen(editScreen.id)}>
+                    <Trash size={12} weight="bold" /> DELETE
+                  </button>
+                )}
               </div>
             </div>
             <EditorGrid
@@ -475,8 +483,6 @@ export default function App() {
               screen={editScreen}
               isOverlap={overlapIds.has(editScreen.id)}
               onUpdate={(patch) => updateScreen(editScreen.id, patch)}
-              onDelete={() => deleteScreen(editScreen.id)}
-              canDelete={screens.length > 1}
             />
           )}
         </div>
