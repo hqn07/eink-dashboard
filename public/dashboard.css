@@ -1569,6 +1569,115 @@ img.icon { object-fit: contain; }
   border-bottom: 1.5px solid #000;
 }
 
+/* ============ CAL · STRIP VIEW (7-day horizontal) ============ */
+.widget-cal-strip { display: flex; flex-direction: column; height: 100%; }
+.cal-strip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  flex: 1; min-height: 0;
+}
+.strip-day {
+  display: flex; flex-direction: column;
+  border: 1.5px solid #000;
+  padding: 4px;
+  min-width: 0; min-height: 0;
+  font-family: 'Oswald', sans-serif;
+  background: #fff;
+}
+.strip-day.strip-today { background: #000; color: #fff; }
+.strip-day-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 4px;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 2px;
+  margin-bottom: 3px;
+}
+.strip-day-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  font-weight: 700;
+}
+.strip-day-num { font-size: 16px; font-weight: 700; line-height: 1; }
+.strip-day-events {
+  display: flex; flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow: hidden;
+}
+.strip-event {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.strip-allday { font-weight: 700; }
+.strip-more {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  margin-top: 2px;
+  opacity: 1;
+}
+
+/* ============ CAL · MONTH GRID VIEW ============ */
+.widget-cal-month { display: flex; flex-direction: column; height: 100%; }
+.month-head {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  font-weight: 700;
+  text-align: center;
+  padding-bottom: 4px;
+  border-bottom: 1.5px solid #000;
+  margin-bottom: 4px;
+}
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  gap: 2px;
+  flex: 1; min-height: 0;
+}
+.month-cell {
+  border: 1px solid #000;
+  padding: 2px 3px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  font-family: 'Oswald', sans-serif;
+  min-width: 0;
+  min-height: 0;
+}
+.month-cell-empty {
+  border: 1px dashed #999;
+  background: transparent;
+}
+.month-cell-today {
+  background: #000;
+  color: #fff;
+  border-color: #000;
+}
+.month-num {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+.month-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: currentColor;
+  border-radius: 50%;
+  margin-top: 3px;
+}
+
 /* ============ TODO EXTRAS ============ */
 .todo-list li .todo-due {
   margin-left: auto;

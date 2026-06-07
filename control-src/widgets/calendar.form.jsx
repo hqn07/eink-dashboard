@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { ICAL_PRESETS } from './_ical_presets.js';
 
 const PRESETS = [
   { id: 'today',   label: 'Today — compact, today only',
@@ -14,15 +15,46 @@ export function Form({ values, patch, onChange, fields }) {
   const { TextField, ListEditor, SelectField, ToggleField, TypographyFields, FormSection, PresetField, defaults = {} } = fields;
   const urls = Array.isArray(v.icalUrls) ? v.icalUrls.filter(Boolean) : [];
   const disabled = Array.isArray(v.disabledFeeds) ? v.disabledFeeds : [];
+  const [presetPick, setPresetPick] = useState('');
   const toggleFeed = (url, on) => {
     const next = on
       ? disabled.filter(u => u !== url)
       : disabled.includes(url) ? disabled : [...disabled, url];
     patch({ disabledFeeds: next });
   };
+  const addPreset = (url) => {
+    if (!url) return;
+    const existing = Array.isArray(v.icalUrls) ? v.icalUrls : [];
+    if (existing.includes(url)) {
+      setPresetPick('');
+      return;
+    }
+    patch({ icalUrls: [...existing, url] });
+    setPresetPick('');
+  };
   return (
     <>
       <FormSection title="Data">
+        <div style={{ marginBottom: 10 }}>
+          <div className="wsm-field-label">Add from preset</div>
+          <div className="wsm-field-help" style={{ marginBottom: 4 }}>
+            Public iCal feeds — pick one to append to the list below.
+          </div>
+          <select
+            value={presetPick}
+            onChange={e => { setPresetPick(e.target.value); addPreset(e.target.value); }}
+            style={{ width: '100%' }}
+          >
+            <option value="">— Pick a preset —</option>
+            {ICAL_PRESETS.map(g => (
+              <optgroup key={g.group} label={g.group}>
+                {g.items.map(p => (
+                  <option key={p.url} value={p.url}>{p.name}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </div>
         <ListEditor
           label="iCal feed URLs"
           items={v.icalUrls}
@@ -67,6 +99,17 @@ export function Form({ values, patch, onChange, fields }) {
       </FormSection>
       <FormSection title="Layout">
         <PresetField presets={PRESETS} onApply={(vals) => onChange({ ...v, ...vals })} />
+        <SelectField
+          label="View"
+          value={v.viewMode || 'list'}
+          defaultValue={defaults.viewMode}
+          options={[
+            { value: 'list',  label: 'List — agenda (works at any size)' },
+            { value: 'strip', label: 'Strip — 7-day horizontal (needs ≥14 wide)' },
+            { value: 'month', label: 'Month — full grid (needs ≥12×6)' }
+          ]}
+          onChange={(x) => patch({ viewMode: x })}
+        />
         <TextField
           label="Tile heading"
           value={v.title || ''}
@@ -76,7 +119,7 @@ export function Form({ values, patch, onChange, fields }) {
           help="Leave blank to keep the default heading."
         />
         <SelectField
-          label="Density"
+          label="Density (list view only)"
           value={v.density || 'auto'}
           defaultValue={defaults.density}
           options={[
