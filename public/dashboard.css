@@ -122,6 +122,9 @@ html, body {
   min-width: 0;
   min-height: 0;
   background: #fff;
+  /* Positioned so widgets that need to fill the cell exactly (mac-np-card
+   * absolute inset:0, stale-pill in weather, etc.) anchor here. */
+  position: relative;
 }
 
 /* Cells touching the page's right edge or footer don't need a duplicate line. */
@@ -526,8 +529,16 @@ html, body {
 /* ---------- Mac · Now Playing ---------- */
 .mac-np-card {
   display: flex; flex-direction: column; gap: 6px;
-  width: 100%; height: 100%;
   font-family: 'JetBrains Mono', monospace;
+  /* Absolute fill of the nearest positioned ancestor (.cell when the
+   * tile has no fontScale, .cell-scale when it does). Without this,
+   * percentage heights inside the flex-column .cell or the scaled
+   * .cell-scale wrapper don't always resolve to a definite size in
+   * Chromium, so the card's children flex correctly but the card
+   * itself collapses to content height — leaving a big dead band of
+   * whitespace below the song info. */
+  position: absolute;
+  inset: 0;
 }
 .mac-np-head { display: flex; align-items: center; gap: 8px; }
 /* Per-tile header alignment knob — moves the "NOW PLAYING" heading
@@ -571,8 +582,15 @@ html, body {
  * cell content box exactly — replaces the old `zoom:N` approach so
  * the user can pick an anchor (transform-origin). */
 .cell-scale {
+  /* Absolute so the inline `width: 142.857%; height: 142.857%`
+   * resolves against the cell's box (which is now position: relative).
+   * As a flex column child the % height was collapsing to content
+   * height in Chromium, so widgets that filled the wrapper via
+   * `height: 100%` ended up content-sized instead of filling. */
+  position: absolute;
+  top: 0;
+  left: 0;
   display: block;
-  position: relative;
 }
 
 /* E-ink panel battery widget. Big percent + voltage + visual bar +
@@ -731,7 +749,14 @@ html, body {
   font-weight: 700;
   font-size: 42px;
   line-height: 1;
-  margin: 10px 0;
+  /* Pin state-big + everything below (text, progress) to the bottom of
+   * the card. Without this, when the song has no progress data the text
+   * block floats just below the art and the bottom of the cell is dead
+   * whitespace. `margin-top: auto` inside the flex-column card eats
+   * remaining space above this element so it (and its trailing
+   * siblings) hug the bottom edge. */
+  margin: 10px 0 0 0;
+  margin-top: auto;
 }
 .mac-np-stacked .mac-np-stacked-text {
   display: flex; flex-direction: column; align-items: stretch; gap: 4px;
