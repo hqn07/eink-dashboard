@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Gear, X } from '@phosphor-icons/react';
 import * as HoverCard from '@radix-ui/react-hover-card';
 import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById, makeInstance } from '../widgets.js';
-import { renderWidget, renderHeader, renderFooter, isHeaderOn, isFooterOn, headerVariant, footerVariant, typographyCss, scaleWrap, cellClasses } from '../widget-render.js';
+import { renderWidget, typographyCss, scaleWrap, cellClasses } from '../widget-render.js';
 import { demoCtxForWidget } from '../widgets/_pool_demo.js';
 import WidgetSettingsModal from './WidgetSettingsModal.jsx';
 
@@ -167,15 +167,12 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
         d.id.toLowerCase().includes(poolFilter.toLowerCase()))
     : WIDGET_REGISTRY;
 
-  // Editor canvas is sized to the full dashboard aspect; the body
-  // section we hand to RGL is BODY_H/DASH_H of that height. Row
-  // height inside the body matches the dashboard's body row height.
-  // Chrome rows collapse when disabled, which gives the body more room.
-  const headerOn = isHeaderOn(previewData);
-  const footerOn = isFooterOn(previewData);
-  const HEADER_H = headerOn ? HEADER_H_BASE : 0;
-  const FOOTER_H = footerOn ? FOOTER_H_BASE : 0;
-  const BODY_H = DASH_H - HEADER_H - FOOTER_H;
+  // Editor canvas is sized to the full dashboard aspect. Header + footer
+  // chrome was removed in favor of the text_bar widget; widgets now own
+  // the full 800×480 panel.
+  const HEADER_H = 0;
+  const FOOTER_H = 0;
+  const BODY_H = DASH_H;
   const scale = size.w > 0 ? size.w / DASH_W : 1;
   const bodyHeight = size.h * (BODY_H / DASH_H);
   const rowHeight = bodyHeight / GRID_ROWS;
@@ -368,19 +365,6 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
           if (e.target === e.currentTarget) setSelectedId(null);
         }}
       >
-        {/* Header chrome — purely visual; matches dashboard.css `.hdr`. */}
-        {headerOn && (
-          <div
-            className={`editor-chrome hdr hdr-${headerVariant(previewData)}`}
-            style={{
-              position: 'absolute', top: 0, left: 0,
-              width: DASH_W, height: HEADER_H,
-              transform: `scale(${scale})`, transformOrigin: 'top left',
-              pointerEvents: 'none'
-            }}
-            dangerouslySetInnerHTML={{ __html: renderHeader(previewData) }}
-          />
-        )}
         <div
           className="editor-grid-inset"
           style={{
@@ -501,19 +485,6 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
           </div>
         )}
 
-        {/* Footer chrome */}
-        {footerOn && (
-          <div
-            className={`editor-chrome ftr ftr-${footerVariant(previewData)}`}
-            style={{
-              position: 'absolute', bottom: 0, left: 0,
-              width: DASH_W, height: FOOTER_H,
-              transform: `scale(${scale})`, transformOrigin: 'bottom left',
-              pointerEvents: 'none'
-            }}
-            dangerouslySetInnerHTML={{ __html: renderFooter(previewData) }}
-          />
-        )}
       </motion.div>
 
       <div

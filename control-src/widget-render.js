@@ -1,7 +1,7 @@
 // Client-side dispatcher used by the React editor (EditorGrid /
-// LiveDashboard / Preview). Re-exports the chrome helpers from
+// LiveDashboard / Preview). Re-exports the typography helpers from
 // widgets/_chrome.js so both the editor and server SSR share the same
-// header/footer/typography code.
+// per-tile style code.
 //
 // Widget renderers live in their own modules under widgets/<id>.js and
 // are aggregated by widgets/_registry.js. This file is just the
@@ -10,13 +10,9 @@
 import { MIGRATED_RENDERERS } from './widgets/_registry.js';
 
 export {
-  renderHeader, renderFooter,
-  isHeaderOn, isFooterOn,
-  headerVariant, footerVariant,
   typographyCss,
   scaleWrap,
-  cellClasses,
-  DEFAULT_CHROME
+  cellClasses
 } from './widgets/_chrome.js';
 
 export function renderWidget(id, data) {

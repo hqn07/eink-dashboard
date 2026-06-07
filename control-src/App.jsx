@@ -22,7 +22,6 @@ import SaveBar from './components/SaveBar.jsx';
 import ScreenTabs from './components/ScreenTabs.jsx';
 import ScreenPresetPicker from './components/ScreenPresetPicker.jsx';
 import ScreenPanel from './components/ScreenPanel.jsx';
-import ChromePanel from './components/ChromePanel.jsx';
 import MacAgentBadge from './components/MacAgentBadge.jsx';
 import ScheduleTimeline from './components/ScheduleTimeline.jsx';
 import SetupWizard from './components/SetupWizard.jsx';
@@ -469,12 +468,6 @@ export default function App() {
             <div className="editor-help">
               DRAG TILE TO MOVE · CORNER TO RESIZE · × OR DRAG TO TRASH · DRAG POOL CARD ONTO CANVAS
             </div>
-            {editScreen && (
-              <ChromePanel
-                screen={editScreen}
-                onUpdate={(patch) => updateScreen(editScreen.id, patch)}
-              />
-            )}
           </section>
 
           {editScreen && (

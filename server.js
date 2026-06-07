@@ -471,19 +471,6 @@ function newScreenId() {
 // Migrate legacy cfg.layouts/cfg.schedule into the new cfg.screens
 // array. Idempotent — returns cfg unchanged when screens already
 // exist.
-const DEFAULT_CHROME = {
-  header: {
-    enabled: false,
-    left: '{city}',
-    leftSub: '{date}',
-    right: '{time}',
-    rightSub: 'EDITION No. {edition}'
-  },
-  footer: {
-    enabled: false,
-    text: 'UPDATED {time} · REFRESH {refresh}MIN · THE DAILY {city}'
-  }
-};
 
 const GRID_VERSION = 4;
 
@@ -577,9 +564,6 @@ function migrateConfigToScreens(cfg) {
     // edit, not a migration side-effect.
     if (v < 4) screens = screens.map(s =>
       s.layoutKind ? s : { ...s, layoutKind: 'free' });
-    screens = screens.map(s => s.chrome
-      ? s
-      : { ...s, chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)) });
     // Seed an empty default screen with the Editorial preset (one-time).
     if (!cfg.firstRunSeeded) {
       const def = screens.find(s => s.isDefault) || screens[0];
@@ -606,7 +590,6 @@ function migrateConfigToScreens(cfg) {
       : { enabled: false, from: '07:00', to: '22:00' },
     units: cfg.units || 'F',
     refreshMinutes: sActive.refreshMinutes || cfg.refreshMinutes || 30,
-    chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)),
     layout: oldLayout.length ? oldLayout : seedLayoutFromEditorial()
   });
   if (oldLayouts[2] && oldLayouts[2].length) {
@@ -619,7 +602,6 @@ function migrateConfigToScreens(cfg) {
         : { enabled: false, from: '22:00', to: '07:00' },
       units: cfg.units || 'F',
       refreshMinutes: sQuiet.refreshMinutes || 120,
-      chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)),
       layout: migrateOld(oldLayouts[2])
     });
   }
@@ -1017,20 +999,20 @@ function htmlAttr(s) {
   return String(s == null ? '' : s).replace(/"/g, '&quot;');
 }
 
-// Build the inner page HTML — header + body grid + footer. Per-tile
+// Build the inner page HTML — body grid only (no chrome). Per-tile
 // rendering pulls the per-item slot data via `perItem[item.id]` so each
 // tile gets its own context (overrides global where set).
 function buildPageBodyHtml({ payload, ssr, mode }) {
   const { cfg, weather, events, units, stocks, resolvedMessage,
-          perItem, chrome, battery, layout: rawLayout, devWidgetId } = payload;
+          perItem, battery, layout: rawLayout, devWidgetId } = payload;
 
   const defs = ssr.DEFS;
   const layout = expandLayout(rawLayout, defs);
   const ctxBase = {
     cfg, weather, events, units,
-    stocks, resolvedMessage, chrome, battery
+    stocks, resolvedMessage, battery
   };
-  const data = { ...ctxBase, chrome };
+  const data = { ...ctxBase };
 
   // Matrix mode: every widget at every preset, stacked top-to-bottom.
   if (mode === 'matrix') {
@@ -1090,18 +1072,8 @@ function buildPageBodyHtml({ payload, ssr, mode }) {
     return `<div class="page" id="page" style="grid-template-rows:0px minmax(0,1fr) 0px"><div class="hdr-stub"></div><main class="body body-grid" style="grid-template-columns:repeat(${cols},minmax(0,1fr));grid-template-rows:repeat(${rows},minmax(0,1fr))"><div class="cell cell-${escapeHtmlServer(item.widgetId)} ${extraClasses}" style="grid-column:1 / span ${cols};grid-row:1 / span ${rows};${typo}">${inner}</div></main><div class="ftr-stub"></div></div>`;
   }
 
-  // Normal dashboard mode.
-  const headerOn = ssr.isHeaderOn(data);
-  const footerOn = ssr.isFooterOn(data);
-  const headerRow = headerOn ? '60px' : '0px';
-  const footerRow = footerOn ? '28px' : '0px';
-  const headerHtml = headerOn
-    ? `<header class="hdr hdr-${ssr.headerVariant(data)}">${ssr.renderHeader(data)}</header>`
-    : `<div class="hdr-stub"></div>`;
-  const footerHtml = footerOn
-    ? `<footer class="ftr ftr-${ssr.footerVariant(data)}">${ssr.renderFooter(data)}</footer>`
-    : `<div class="ftr-stub"></div>`;
-
+  // Normal dashboard mode. Header/footer chrome was removed in favor of
+  // the text_bar widget; widgets now own the full 800×480 panel.
   const nowM = localMinutesNow((cfg && cfg.timezone) || 'UTC');
   const cells = [];
   for (const item of layout) {
@@ -1132,7 +1104,7 @@ function buildPageBodyHtml({ payload, ssr, mode }) {
     ? cells.join('')
     : `<div class="empty terminal-empty" style="grid-column:1 / span ${GRID_COLS};grid-row:1 / span ${GRID_ROWS}">&gt; NO_WIDGETS_ENABLED</div>`;
 
-  return `<div class="page" id="page" style="grid-template-rows:${headerRow} minmax(0, 1fr) ${footerRow}">${headerHtml}<main class="body body-grid" style="grid-template-columns:repeat(${GRID_COLS}, minmax(0, 1fr));grid-template-rows:repeat(${GRID_ROWS}, minmax(0, 1fr))">${bodyInner}</main>${footerHtml}</div>`;
+  return `<div class="page" id="page" style="grid-template-rows:0px minmax(0, 1fr) 0px"><div class="hdr-stub"></div><main class="body body-grid" style="grid-template-columns:repeat(${GRID_COLS}, minmax(0, 1fr));grid-template-rows:repeat(${GRID_ROWS}, minmax(0, 1fr))">${bodyInner}</main><div class="ftr-stub"></div></div>`;
 }
 
 function escapeHtmlServer(s) {
@@ -1177,10 +1149,9 @@ app.get('/dashboard', checkDeviceAuth, async (req, res) => {
     const data = await buildWidgetData(cfg, units, layout);
 
     const [shell, ssr] = await Promise.all([loadDashboardHtml(), loadSsr()]);
-    const chrome = (activeScreen && activeScreen.chrome) || DEFAULT_CHROME;
     const battery = await loadBatteryState();
     const payload = {
-      cfg, units, screen, layout, chrome, battery,
+      cfg, units, screen, layout, battery,
       ...data,
       generatedAt: new Date().toISOString()
     };
@@ -1280,7 +1251,6 @@ app.get('/dev/widget/:id', checkDeviceAuth, async (req, res) => {
     const [shell, ssr] = await Promise.all([loadDashboardHtml(), loadSsr()]);
     const payload = {
       cfg, units, screen: 0, layout,
-      chrome: { header: { enabled: false }, footer: { enabled: false } },
       ...data,
       devWidgetId: id,
       generatedAt: new Date().toISOString()
@@ -1357,7 +1327,6 @@ async function buildPreviewPayload({ widgetId, w, h, settings, units, density })
   const data = await buildWidgetData(cfg, effUnits, layout);
   return {
     cfg, units: effUnits, screen: 0, layout,
-    chrome: { header: { enabled: false }, footer: { enabled: false } },
     ...data,
     devWidgetId: widgetId,
     generatedAt: new Date().toISOString()
@@ -1489,7 +1458,6 @@ app.get('/widgets-matrix', checkDeviceAuth, async (req, res) => {
     const [shell, ssr] = await Promise.all([loadDashboardHtml(), loadSsr()]);
     const payload = {
       cfg, units, screen: 1, layout: [],
-      chrome: { header: { enabled: false }, footer: { enabled: false } },
       ...data,
       generatedAt: new Date().toISOString()
     };
@@ -1752,10 +1720,9 @@ app.get('/api/preview-data', checkDeviceAuth, async (req, res) => {
     const { units, screen, activeScreen } = resolveVariant(req, cfg);
     const layout = resolveScreenLayout(activeScreen);
     const data = await buildWidgetData(cfg, units, layout);
-    const chrome = (activeScreen && activeScreen.chrome) || DEFAULT_CHROME;
     const battery = await loadBatteryState();
     res.json({
-      cfg, units, screen, layout, chrome, battery,
+      cfg, units, screen, layout, battery,
       ...data,
       generatedAt: new Date().toISOString()
     });

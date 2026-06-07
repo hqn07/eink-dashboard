@@ -165,20 +165,6 @@ export function newScreenId() {
   return `scr-${Date.now().toString(36)}-${_screenCounter}`;
 }
 
-export const DEFAULT_CHROME = {
-  header: {
-    enabled: false,
-    left: '{city}',
-    leftSub: '{date}',
-    right: '{time}',
-    rightSub: 'EDITION No. {edition}'
-  },
-  footer: {
-    enabled: false,
-    text: 'UPDATED {time} · REFRESH {refresh}MIN · THE DAILY {city}'
-  }
-};
-
 // Curated starter layouts. User picks one when they click "+ Add Screen".
 // All coords are in the live 24x12 grid.
 export const SCREEN_PRESETS = [
@@ -229,7 +215,6 @@ export function makeDefaultScreen(template = {}) {
     schedule: { enabled: false, from: '07:00', to: '22:00' },
     units: template.units || 'F',
     refreshMinutes: Number.isFinite(template.refreshMinutes) ? template.refreshMinutes : 30,
-    chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)),
     layout: template.layout ? template.layout.map(l => ({ ...l })) : []
   };
 }
@@ -260,9 +245,6 @@ export function migrateConfigToScreens(cfg) {
     const v = cfg.gridVersion || 1;
     if (v < 2) screens = screens.map(s => ({ ...s, layout: migrateLayoutV1ToV2(s.layout) }));
     if (v < 3) screens = screens.map(s => ({ ...s, layout: migrateLayoutV2ToV3(s.layout) }));
-    screens = screens.map(s => s.chrome
-      ? s
-      : { ...s, chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)) });
     // If the default screen still has zero widgets (legacy empty install),
     // seed it with the Editorial preset so the user sees something.
     if (!cfg.firstRunSeeded) {
@@ -300,7 +282,6 @@ export function migrateConfigToScreens(cfg) {
       : { enabled: false, from: '07:00', to: '22:00' },
     units: cfg.units || 'F',
     refreshMinutes: sActive.refreshMinutes || cfg.refreshMinutes || 30,
-    chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)),
     layout: dayLayout
   });
   if (oldLayouts[2] && oldLayouts[2].length) {
@@ -313,12 +294,10 @@ export function migrateConfigToScreens(cfg) {
         : { enabled: false, from: '22:00', to: '07:00' },
       units: cfg.units || 'F',
       refreshMinutes: sQuiet.refreshMinutes || 120,
-      chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)),
       layout: migrateOld(oldLayouts[2])
     });
   }
-  const ensured = screens.map(s => s.chrome ? s : { ...s, chrome: JSON.parse(JSON.stringify(DEFAULT_CHROME)) });
-  return { ...cfg, screens: ensured, gridVersion: GRID_VERSION };
+  return { ...cfg, screens, gridVersion: GRID_VERSION };
 }
 
 // ============ TIME / SCHEDULE HELPERS ============

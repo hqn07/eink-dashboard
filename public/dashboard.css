@@ -95,98 +95,6 @@ html, body {
   overflow: hidden;
 }
 
-/* ============ HEADER ============ */
-
-.hdr {
-  background: #000;
-  color: #fff;
-  padding: 0 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 4px solid #000;
-}
-
-.hdr-city {
-  font-family: 'Oswald', sans-serif;
-  font-weight: 700;
-  font-size: 26px;
-  letter-spacing: 4px;
-  line-height: 1;
-}
-
-.hdr-date {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 500;
-  font-size: 11px;
-  letter-spacing: 2px;
-  margin-top: 4px;
-  opacity: 1;
-}
-
-.hdr-right { text-align: right; }
-
-.hdr-time {
-  font-family: 'Oswald', sans-serif;
-  font-weight: 700;
-  font-size: 28px;
-  line-height: 1;
-  letter-spacing: 1px;
-}
-
-.hdr-meta {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 500;
-  font-size: 12px;
-  letter-spacing: 2px;
-  margin-top: 4px;
-}
-
-/* Header variants — pick one per screen via cfg.screens[i].chrome.header.variant.
- * Default is .hdr-masthead (matches the base .hdr above). */
-.hdr.hdr-minimal {
-  background: #fff;
-  color: #000;
-  border-bottom: 2px solid #000;
-  padding: 0 16px;
-}
-.hdr.hdr-minimal .hdr-city {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-}
-.hdr.hdr-minimal .hdr-time {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 2px;
-}
-.hdr.hdr-minimal .hdr-date,
-.hdr.hdr-minimal .hdr-meta {
-  font-size: 9px;
-  letter-spacing: 1.5px;
-  margin-top: 2px;
-}
-.hdr.hdr-band {
-  background: #000;
-  color: #fff;
-  border-bottom: 4px solid #000;
-  border-top: 4px solid #000;
-  padding: 0 20px;
-  letter-spacing: 6px;
-}
-.hdr.hdr-band .hdr-city,
-.hdr.hdr-band .hdr-time {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 16px;
-  letter-spacing: 6px;
-  text-transform: uppercase;
-}
-.hdr.hdr-band .hdr-date,
-.hdr.hdr-band .hdr-meta { display: none; }
-
 /* ============ BODY (grid system) ============ */
 
 .body {
@@ -568,38 +476,6 @@ html, body {
   font-weight: 700;
 }
 
-/* ============ FOOTER ============ */
-
-.ftr {
-  background: #000;
-  color: #fff;
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 500;
-  font-size: 11px;
-  letter-spacing: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-}
-
-.ftr-sep { opacity: 1; }
-.ftr-bullet { font-size: 12px; }
-
-/* Battery badge — opt-in via chrome.footer.showBattery. Anchored right
- * so the centered footer text reads naturally; the badge is a separate
- * slot, not part of the user's tokenized text. */
-.ftr { position: relative; }
-.ftr-battery {
-  position: absolute;
-  right: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 700;
-  font-size: 11px;
-  letter-spacing: 2px;
-}
 /* ---------- Mac · Now Playing ---------- */
 .mac-np-card {
   display: flex; flex-direction: column; gap: 6px;
@@ -906,35 +782,6 @@ html, body {
   font-weight: 700; letter-spacing: 4px; font-size: 13px;
 }
 
-/* sevesalm battery glyph is black-on-transparent; the default footer is
- * black so the icon would render as outline-against-black. Invert by
- * default so it reads as a clean white silhouette against the dark
- * footer. The light-footer variants (dotted / compact) undo the invert
- * so the icon stays black on white. */
-.ftr-battery .batt-icon { filter: invert(1); }
-.ftr.ftr-dotted .ftr-battery,
-.ftr.ftr-compact .ftr-battery { color: #000; }
-.ftr.ftr-dotted .ftr-battery .batt-icon,
-.ftr.ftr-compact .ftr-battery .batt-icon { filter: none; }
-
-/* Footer variants — pick one per screen via cfg.screens[i].chrome.footer.variant.
- * Default is .ftr-editorial (matches base .ftr above). */
-.ftr.ftr-dotted {
-  background: #fff;
-  color: #000;
-  border-top: 1.5px dashed #000;
-  letter-spacing: 2px;
-}
-.ftr.ftr-dotted .ftr-bullet { display: none; }
-.ftr.ftr-compact {
-  background: #fff;
-  color: #000;
-  font-size: 10px;
-  letter-spacing: 4px;
-  border-top: 2px solid #000;
-}
-.ftr.ftr-compact .ftr-bullet { font-size: 10px; }
-
 /* ============ SPACER ============ */
 .widget-spacer {
   background: #000 !important;
@@ -994,12 +841,6 @@ html, body {
 .icon { display: inline-block; line-height: 0; vertical-align: middle; }
 .icon svg { width: 100%; height: 100%; display: block; }
 img.icon { object-fit: contain; }
-
-/* Footer battery glyph + percent label sit together on the right side
- * of the footer. Keep the gap tight so the badge reads as one unit. */
-.ftr-battery { display: inline-flex; align-items: center; gap: 4px; }
-.ftr-battery .batt-icon { display: block; }
-.ftr-battery .batt-pct { line-height: 1; }
 
 /* ============ SCREEN 2 — MINIMAL ============ */
 .page-minimal {

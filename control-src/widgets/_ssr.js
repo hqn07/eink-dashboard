@@ -29,10 +29,6 @@ export function renderWidget(id, data) {
 }
 
 export {
-  DEFAULT_CHROME,
-  renderHeader, renderFooter,
-  isHeaderOn, isFooterOn,
-  headerVariant, footerVariant,
   typographyCss,
   scaleWrap,
   cellClasses

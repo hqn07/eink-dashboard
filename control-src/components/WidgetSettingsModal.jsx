@@ -5,10 +5,7 @@ import Skeleton, { SkeletonTheme } from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import { GRID_COLS, GRID_ROWS, widgetById } from '../widgets.js';
 import {
-  renderWidget, typographyCss, cellClasses, scaleWrap,
-  renderHeader, renderFooter,
-  isHeaderOn, isFooterOn,
-  headerVariant, footerVariant
+  renderWidget, typographyCss, cellClasses, scaleWrap
 } from '../widget-render.js';
 import WidgetForm from './WidgetForm.jsx';
 
@@ -245,16 +242,14 @@ export default function WidgetSettingsModal({
     setDraft(prev => ({ ...prev, ...patch }));
   }
 
-  // Preview renders the FULL 800×480 page DOM (same chrome + grid the
-  // live dashboard uses) then translate+clip+scale to surface only the
+  // Preview renders the FULL 800×480 page DOM (same grid the live
+  // dashboard uses) then translate+clip+scale to surface only the
   // draft cell. CSS grid `1fr` rounding is identical to live, so there
   // is no drift between modal preview and the on-device render.
   const data = previewData || {};
-  const headerOn = isHeaderOn(data);
-  const footerOn = isFooterOn(data);
-  const headerH = headerOn ? HEADER_H_BASE : 0;
-  const footerH = footerOn ? FOOTER_H_BASE : 0;
-  const bodyH = DASH_H - headerH - footerH;
+  const headerH = 0;
+  const footerH = 0;
+  const bodyH = DASH_H;
 
   const cellPxW = (draft.w / GRID_COLS) * DASH_W;
   const cellPxH = (draft.h / GRID_ROWS) * bodyH;
@@ -291,13 +286,7 @@ export default function WidgetSettingsModal({
     `grid-column:${draft.x + 1} / span ${draft.w};grid-row:${draft.y + 1} / span ${draft.h};${typoStyle}`;
   const cellHtml = `<div class="${classes.join(' ')}" style="${cellStyle}">${previewHtml}</div>`;
 
-  const headerHtml = headerOn
-    ? `<header class="hdr hdr-${headerVariant(data)}">${renderHeader(data)}</header>`
-    : '<div class="hdr-stub"></div>';
-  const footerHtml = footerOn
-    ? `<footer class="ftr ftr-${footerVariant(data)}">${renderFooter(data)}</footer>`
-    : '<div class="ftr-stub"></div>';
-  const pageHtml = `<div class="page" style="grid-template-rows:${headerH}px minmax(0,1fr) ${footerH}px;width:${DASH_W}px;height:${DASH_H}px">${headerHtml}<main class="body body-grid" style="grid-template-columns:repeat(${GRID_COLS},minmax(0,1fr));grid-template-rows:repeat(${GRID_ROWS},minmax(0,1fr))">${cellHtml}</main>${footerHtml}</div>`;
+  const pageHtml = `<div class="page" style="grid-template-rows:0px minmax(0,1fr) 0px;width:${DASH_W}px;height:${DASH_H}px"><div class="hdr-stub"></div><main class="body body-grid" style="grid-template-columns:repeat(${GRID_COLS},minmax(0,1fr));grid-template-rows:repeat(${GRID_ROWS},minmax(0,1fr))">${cellHtml}</main><div class="ftr-stub"></div></div>`;
 
   const density = draft.density || '';
   const previewLoading = !previewData;

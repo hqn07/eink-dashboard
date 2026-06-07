@@ -1,13 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import {
-  renderWidget,
-  renderHeader,
-  renderFooter,
-  isHeaderOn,
-  isFooterOn,
-  headerVariant,
-  footerVariant
-} from '../widget-render.js';
+import { renderWidget } from '../widget-render.js';
 import { widgetById } from '../widgets.js';
 
 // Binary-search a font-size that lets the element's content fit its
@@ -97,12 +89,10 @@ export default function LiveDashboard({
   });
   const cfg = (data && data.cfg) || {};
   const layout = (data && data.layout) || [];
-  const headerOn = isHeaderOn(data);
-  const footerOn = isFooterOn(data);
   const nowM = nowMinsTZ(cfg.timezone || 'UTC');
 
   const pageStyle = {
-    gridTemplateRows: `${headerOn ? HEADER_H : 0}px minmax(0, 1fr) ${footerOn ? FOOTER_H : 0}px`
+    gridTemplateRows: `0px minmax(0, 1fr) 0px`
   };
   const bodyStyle = {
     gridTemplateColumns: `repeat(${GRID_COLS}, minmax(0, 1fr))`,
@@ -158,11 +148,7 @@ export default function LiveDashboard({
 
   return (
     <div className="page" style={pageStyle} ref={rootRef}>
-      {headerOn ? (
-        <header className={`hdr hdr-${headerVariant(data)}`} dangerouslySetInnerHTML={{ __html: renderHeader(data) }} />
-      ) : (
-        <div className="hdr-stub" />
-      )}
+      <div className="hdr-stub" />
       <main className="body body-grid" style={bodyStyle}>
         {tiles.length > 0 ? tiles : (
           <div className="empty terminal-empty" style={{ gridColumn: `1 / span ${GRID_COLS}`, gridRow: `1 / span ${GRID_ROWS}` }}>
@@ -170,11 +156,7 @@ export default function LiveDashboard({
           </div>
         )}
       </main>
-      {footerOn ? (
-        <footer className={`ftr ftr-${footerVariant(data)}`} dangerouslySetInnerHTML={{ __html: renderFooter(data) }} />
-      ) : (
-        <div className="ftr-stub" />
-      )}
+      <div className="ftr-stub" />
     </div>
   );
 }

@@ -519,12 +519,8 @@ input[type="text"], input[type="url"], textarea {
   overflow: hidden;
 }
 .editor-wrap .react-grid-layout {
-  /* Sits inside .editor-grid-inset which provides the chrome-aware
-   * absolute positioning. RGL handles its own height from rowHeight. */
   width: 100% !important;
 }
-.editor-chrome.hdr, .editor-chrome.ftr { z-index: 2; }
-.editor-chrome.hdr { background: #000; color: #fff; }
 .editor-wrap.show-grid {
   background-image:
     linear-gradient(to right, var(--grid) 1px, transparent 1px),
@@ -711,8 +707,7 @@ input[type="text"], input[type="url"], textarea {
  * .threshold(128) pipeline). Plain CSS grayscale+contrast can't replicate
  * the discrete cutoff; this can. Only widget render + chrome get the
  * filter so tile-action buttons stay clickable. */
-.editor-wrap.editor-1bit .live-tile-body,
-.editor-wrap.editor-1bit .editor-chrome {
+.editor-wrap.editor-1bit .live-tile-body {
   filter: url(#eink-threshold);
 }
 .editor-wrap.editor-1bit {
