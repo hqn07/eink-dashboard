@@ -34,10 +34,13 @@ export function render({ events, cfg, settings, cellW, cellH, density }) {
   const all = events || [];
   if (!all.length) return placeholder(titleLabel, 'No events in the next 14 days', 'calendar');
   const mode = (settings && settings.viewMode) || 'list';
-  // Strip + month views need real horizontal room. Fall back to list
-  // when the user picked them but the tile is too small to read.
-  if (mode === 'month' && cellW >= 12 && cellH >= 6) return renderMonth(all, titleLabel);
-  if (mode === 'strip' && cellW >= 14)               return renderStrip(all, titleLabel, cellH);
+  // Both alternative views auto-size a 7-column grid, so the only
+  // hard floor is "enough rows to read". Thresholds kept low so a
+  // tile the user explicitly picked Month / Strip for still renders
+  // that view, just compact. List remains the universal fallback
+  // when the tile is too short to fit any grid row at all.
+  if (mode === 'month' && cellW >= 7 && cellH >= 4) return renderMonth(all, titleLabel);
+  if (mode === 'strip' && cellW >= 7 && cellH >= 2) return renderStrip(all, titleLabel, cellH);
   return renderList(all, settings, titleLabel, cellW, cellH, density);
 }
 

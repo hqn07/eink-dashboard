@@ -126,8 +126,8 @@ export function Form({ values, patch, onChange, fields }) {
           defaultValue={defaults.viewMode}
           options={[
             { value: 'list',  label: 'List — agenda (works at any size)' },
-            { value: 'strip', label: 'Strip — 7-day horizontal (needs ≥14 wide)' },
-            { value: 'month', label: 'Month — full grid (needs ≥12×6)' }
+            { value: 'strip', label: 'Strip — 7-day horizontal (needs ≥7 wide)' },
+            { value: 'month', label: 'Month — full grid (needs ≥7×4)' }
           ]}
           onChange={(x) => patch({ viewMode: x })}
         />
