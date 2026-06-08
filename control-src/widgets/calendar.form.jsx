@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ICAL_PRESETS } from './_ical_presets.js';
 import SearchableSelect from '../components/SearchableSelect.jsx';
+import UrlBadge from '../components/UrlBadge.jsx';
 
 // Presets cover the three view modes so the thumbnails actually differ
 // from each other. Each preset commits a full look (view + density +
@@ -75,11 +76,14 @@ export function Form({ values, patch, onChange, fields }) {
             </>
           }
           renderRow={(it, set) => (
-            <input type="url"
-              value={typeof it === 'string' ? it : ''}
-              placeholder="https://calendar.google.com/calendar/ical/..."
-              onChange={e => set(e.target.value)}
-              style={{ flex: 1 }} />
+            <>
+              <input type="url"
+                value={typeof it === 'string' ? it : ''}
+                placeholder="https://calendar.google.com/calendar/ical/..."
+                onChange={e => set(e.target.value)}
+                style={{ flex: 1 }} />
+              <UrlBadge url={typeof it === 'string' ? it : ''} />
+            </>
           )}
         />
         {urls.length > 1 && (

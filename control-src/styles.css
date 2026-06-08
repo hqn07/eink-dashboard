@@ -2065,6 +2065,34 @@ input[type="text"], input[type="url"], textarea {
   color: #888;
 }
 
+/* URL validator dot — sits next to a URL field. Three states drive
+ * the colour: valid (black bg, white check), invalid (white bg, black
+ * X with red ring), empty (grey ring, light Warning glyph). */
+.url-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1.5px solid var(--ink);
+}
+.url-badge-valid {
+  background: var(--ink);
+  color: #fff;
+}
+.url-badge-invalid {
+  background: #fff;
+  color: var(--ink);
+  border-color: #c00;
+}
+.url-badge-empty {
+  background: #fff;
+  color: #999;
+  border-color: #bbb;
+}
+
 .wsm-field-autocomplete { position: relative; }
 .wsm-autocomplete-menu {
   position: absolute;
