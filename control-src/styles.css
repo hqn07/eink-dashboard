@@ -2093,6 +2093,23 @@ input[type="text"], input[type="url"], textarea {
   border-color: #bbb;
 }
 
+/* Consistent HH:MM input — replaces native <input type="time"> which
+ * renders OS-themed on mac and a chunky picker on Windows. Pure text
+ * input with format-as-you-type + invalid-state red border. */
+.time-field {
+  width: 70px;
+  background: #fff;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  padding: 4px 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-align: center;
+  box-sizing: border-box;
+}
+.time-field-invalid { border-color: #c00; }
+
 .wsm-field-autocomplete { position: relative; }
 .wsm-autocomplete-menu {
   position: absolute;

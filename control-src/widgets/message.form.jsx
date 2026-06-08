@@ -1,5 +1,6 @@
 import React from 'react';
 import { TokenPicker } from '../components/TokenPicker';
+import TimeField from '../components/TimeField.jsx';
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
@@ -41,11 +42,9 @@ export function Form({ values, patch, onChange, fields }) {
           renderRow={(it, set) => (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <input type="time" value={it.from || ''} onChange={e => set({ from: e.target.value })}
-                  style={{ width: 110 }} />
+                <TimeField value={it.from || ''} onChange={(x) => set({ from: x })} />
                 <span style={{ fontSize: 11 }}>→</span>
-                <input type="time" value={it.to || ''} onChange={e => set({ to: e.target.value })}
-                  style={{ width: 110 }} />
+                <TimeField value={it.to || ''} onChange={(x) => set({ to: x })} />
               </div>
               <div style={{ display: 'flex', gap: 4 }}>
                 <input type="text" value={it.text || ''} placeholder="Headline (this slot)"
