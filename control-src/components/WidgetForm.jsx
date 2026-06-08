@@ -77,7 +77,19 @@ function FieldLabel({ label, suffix, value, defaultValue, onReset }) {
     <span className="wsm-field-label">
       <span className="wsm-field-label-text">{label}</span>
       {suffix ? <span className="wsm-field-help" style={{ marginLeft: 6 }}>{suffix}</span> : null}
-      {dirty && <ResetButton onReset={onReset} />}
+      {dirty && (
+        <button
+          type="button"
+          className="wsm-edited-pill"
+          title="Reset to default"
+          aria-label="Reset to default"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReset(); }}
+        >
+          <span className="wsm-edited-dot" aria-hidden="true" />
+          <span className="wsm-edited-text">Edited</span>
+          <span className="wsm-edited-revert" aria-hidden="true">↻</span>
+        </button>
+      )}
     </span>
   );
 }

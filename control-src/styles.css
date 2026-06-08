@@ -2143,6 +2143,45 @@ input[type="text"], input[type="url"], textarea {
   border-top-color: var(--ink);
 }
 
+/* "Edited" pill — always-visible badge next to a label when the
+ * field differs from its widget-registry default. Click reverts.
+ * Replaces the older hover-only ↻ icon so dirty fields are
+ * discoverable at a glance. */
+.wsm-edited-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--ink);
+  color: #fff;
+  border: 0;
+  border-radius: 999px;
+  padding: 1px 8px 1px 6px;
+  margin-left: 8px;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  line-height: 1.5;
+  transition: background 120ms ease;
+}
+.wsm-edited-pill:hover { background: #c00; }
+.wsm-edited-pill:focus-visible {
+  outline: 2px dashed var(--ink);
+  outline-offset: 2px;
+}
+.wsm-edited-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: #fff;
+  border-radius: 50%;
+}
+.wsm-edited-revert {
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+}
+
 .wsm-field-autocomplete { position: relative; }
 .wsm-autocomplete-menu {
   position: absolute;
