@@ -139,20 +139,32 @@ function ToggleField({ label, value, onChange, help, defaultValue }) {
 
 // Numeric slider with a live readout. `step`, `min`, `max` are passed
 // straight to the input; `format` lets a widget print a unit suffix
-// (e.g. px, ×) without changing the underlying number.
+// (e.g. px, ×) without changing the underlying number. A bubble sits
+// above the thumb showing the formatted value as the user drags, so
+// they don't have to glance up at the label suffix.
 function SliderField({ label, value, min, max, step = 1, onChange, format, help, defaultValue }) {
   const display = format ? format(value) : value;
+  const pct = max > min ? ((value - min) / (max - min)) * 100 : 0;
   return (
     <label className="wsm-field">
       <FieldLabel label={label} suffix={display} value={value} defaultValue={defaultValue}
         onReset={() => onChange(defaultValue)} />
-      <input
-        type="range"
-        min={min} max={max} step={step}
-        value={value}
-        onChange={e => onChange(Number(e.target.value))}
-        style={{ width: '100%' }}
-      />
+      <div className="wsm-slider-wrap">
+        <input
+          type="range"
+          min={min} max={max} step={step}
+          value={value}
+          onChange={e => onChange(Number(e.target.value))}
+          className="wsm-slider-input"
+        />
+        <span
+          className="wsm-slider-bubble"
+          style={{ left: `${pct}%` }}
+          aria-hidden="true"
+        >
+          {display}
+        </span>
+      </div>
       {help && <span className="wsm-field-help">{help}</span>}
     </label>
   );
