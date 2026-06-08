@@ -171,7 +171,8 @@ function renderMonth(events, titleLabel) {
   const firstOfMonth = new Date(year, month, 1);
   const firstDow = firstOfMonth.getDay(); // 0 = Sun
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  // 6-week grid covers any month.
+  // 6-week grid covers any month — trim trailing fully-empty rows after
+  // filling so we don't render a dashed wasteland past month end.
   const cells = [];
   for (let i = 0; i < 42; i++) {
     const dayNum = i - firstDow + 1;
@@ -181,26 +182,38 @@ function renderMonth(events, titleLabel) {
       cells.push(new Date(year, month, dayNum));
     }
   }
-  // Bucket events per day in this month.
+  let lastFilled = -1;
+  for (let i = cells.length - 1; i >= 0; i--) {
+    if (cells[i]) { lastFilled = i; break; }
+  }
+  const rowCount = Math.max(1, Math.ceil((lastFilled + 1) / 7));
+  const trimmed = cells.slice(0, rowCount * 7);
+  // Bucket events per day, keeping titles so the cell can actually
+  // show what's happening instead of a bare dot.
   const byDay = {};
   for (const ev of events) {
     const d = eventDate(ev);
     if (d.getFullYear() === year && d.getMonth() === month) {
       const k = d.getDate();
-      if (!byDay[k]) byDay[k] = 0;
-      byDay[k]++;
+      if (!byDay[k]) byDay[k] = [];
+      byDay[k].push(ev);
     }
   }
   const todayNum = today.getDate();
-  const cellHtml = cells.map(d => {
+  const cellHtml = trimmed.map(d => {
     if (!d) return `<div class="month-cell month-cell-empty"></div>`;
     const num = d.getDate();
     const isToday = num === todayNum;
-    const count = byDay[num] || 0;
+    const evs = byDay[num] || [];
+    const firstTitle = evs[0] ? escapeHtml(evs[0].title || '') : '';
+    const moreCount = evs.length - 1;
     return `
       <div class="month-cell ${isToday ? 'month-cell-today' : ''}">
-        <span class="month-num">${num}</span>
-        ${count > 0 ? `<span class="month-dot" aria-label="${count} events"></span>` : ''}
+        <div class="month-cell-top">
+          <span class="month-num">${num}</span>
+          ${moreCount > 0 ? `<span class="month-more">+${moreCount}</span>` : ''}
+        </div>
+        ${firstTitle ? `<span class="month-event">${firstTitle}</span>` : ''}
       </div>`;
   }).join('');
   const titleStr = `${MONTH_NAMES[month]} ${year}`;
@@ -213,7 +226,7 @@ function renderMonth(events, titleLabel) {
       <div class="month-head">
         ${DAY_INITIALS.map(d => `<span>${d[0]}</span>`).join('')}
       </div>
-      <div class="month-grid">${cellHtml}</div>
+      <div class="month-grid" style="grid-template-rows:repeat(${rowCount}, 1fr)">${cellHtml}</div>
     </div>
   `;
 }
