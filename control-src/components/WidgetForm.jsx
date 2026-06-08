@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as Switch from '@radix-ui/react-switch';
-import { CaretUp, CaretDown } from '@phosphor-icons/react';
+import { CaretUp, CaretDown, DotsSixVertical } from '@phosphor-icons/react';
 import { geocode } from '../api.js';
 import { MIGRATED_FORMS, MIGRATED_DEFS } from '../widgets/_registry.js';
 import {
@@ -279,11 +279,14 @@ function CsvField({ label, value, onCommit, placeholder, help, defaultValue }) {
 
 // Reusable list editor. `renderRow(item, patch)` lays out the per-row
 // controls. `blank` is the shape of a freshly-added item. Optional
-// `reorder` adds up/down buttons that move the row in the list.
+// `reorder` enables HTML5 drag-to-reorder via a left-side grip handle
+// (with keyboard up/down buttons retained for accessibility).
 // Optional `replaceRow` lets callers swap the whole item (used when the
 // row holds a bare string, not an object).
 function ListEditor({ label, items, onChange, blank, renderRow, addLabel, help, reorder = true, replaceRow = false }) {
   const rows = items || [];
+  const [dragIdx, setDragIdx] = useState(null);
+  const [overIdx, setOverIdx] = useState(null);
   const patch = (idx, p) => {
     const next = rows.slice();
     next[idx] = replaceRow ? p : { ...next[idx], ...p };
@@ -297,30 +300,69 @@ function ListEditor({ label, items, onChange, blank, renderRow, addLabel, help, 
     [next[idx], next[j]] = [next[j], next[idx]];
     onChange(next);
   };
+  const reorderTo = (from, to) => {
+    if (from === to || from < 0 || to < 0 || from >= rows.length || to >= rows.length) return;
+    const next = rows.slice();
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    onChange(next);
+  };
   const add = () => onChange([...rows, typeof blank === 'object' && blank !== null ? { ...blank } : blank]);
   return (
     <div className="wsm-field">
       <span className="wsm-field-label">{label}</span>
       <div className="wsm-list">
-        {rows.map((it, idx) => (
-          <div key={idx} className="wsm-list-row">
-            {reorder && rows.length > 1 && (
-              <div className="wsm-list-reorder">
-                <button type="button" className="wsm-list-arrow" title="Move up"
-                  disabled={idx === 0} onClick={() => move(idx, -1)}>
-                  <CaretUp size={10} weight="bold" />
-                </button>
-                <button type="button" className="wsm-list-arrow" title="Move down"
-                  disabled={idx === rows.length - 1} onClick={() => move(idx, 1)}>
-                  <CaretDown size={10} weight="bold" />
-                </button>
-              </div>
-            )}
-            {renderRow(it, (p) => patch(idx, p))}
-            <button type="button" className="btn btn-danger wsm-list-remove"
-              onClick={() => remove(idx)}>×</button>
-          </div>
-        ))}
+        {rows.map((it, idx) => {
+          const isDragging = dragIdx === idx;
+          const isOver = overIdx === idx && dragIdx !== null && dragIdx !== idx;
+          return (
+            <div
+              key={idx}
+              className={`wsm-list-row ${isDragging ? 'is-dragging' : ''} ${isOver ? 'is-over' : ''}`}
+              onDragOver={(e) => { if (dragIdx !== null) { e.preventDefault(); setOverIdx(idx); } }}
+              onDrop={(e) => {
+                if (dragIdx === null) return;
+                e.preventDefault();
+                reorderTo(dragIdx, idx);
+                setDragIdx(null);
+                setOverIdx(null);
+              }}
+            >
+              {reorder && rows.length > 1 && (
+                <div
+                  className="wsm-list-grip"
+                  draggable
+                  onDragStart={(e) => {
+                    setDragIdx(idx);
+                    e.dataTransfer.effectAllowed = 'move';
+                    // Some browsers require data to be set or the drag
+                    // event never starts. Empty string is fine.
+                    try { e.dataTransfer.setData('text/plain', String(idx)); } catch {}
+                  }}
+                  onDragEnd={() => { setDragIdx(null); setOverIdx(null); }}
+                  title="Drag to reorder"
+                >
+                  <DotsSixVertical size={14} weight="bold" />
+                </div>
+              )}
+              {reorder && rows.length > 1 && (
+                <div className="wsm-list-reorder">
+                  <button type="button" className="wsm-list-arrow" title="Move up"
+                    disabled={idx === 0} onClick={() => move(idx, -1)}>
+                    <CaretUp size={10} weight="bold" />
+                  </button>
+                  <button type="button" className="wsm-list-arrow" title="Move down"
+                    disabled={idx === rows.length - 1} onClick={() => move(idx, 1)}>
+                    <CaretDown size={10} weight="bold" />
+                  </button>
+                </div>
+              )}
+              {renderRow(it, (p) => patch(idx, p))}
+              <button type="button" className="btn btn-danger wsm-list-remove"
+                onClick={() => remove(idx)}>×</button>
+            </div>
+          );
+        })}
         {!rows.length && <div className="wsm-field-help">No items yet.</div>}
       </div>
       <button type="button" className="btn wsm-list-add" onClick={add}>

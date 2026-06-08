@@ -1989,6 +1989,26 @@ input[type="text"], input[type="url"], textarea {
 .wsm-list-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
 .wsm-list-arrow:not(:disabled):hover { background: var(--ink); color: #fff; }
 
+/* Drag-to-reorder grip handle. Sits to the left of the keyboard-only
+ * up/down arrow buttons so power users get the fast drag UI and a11y
+ * users still have a button to operate. is-dragging dims the source
+ * row; is-over shows a top-edge marker on the hover target so the
+ * user can see where the row will land before releasing. */
+.wsm-list-grip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  align-self: stretch;
+  color: #888;
+  cursor: grab;
+  user-select: none;
+}
+.wsm-list-grip:hover { color: var(--ink); }
+.wsm-list-grip:active { cursor: grabbing; }
+.wsm-list-row.is-dragging { opacity: 0.4; }
+.wsm-list-row.is-over { box-shadow: inset 0 2px 0 0 var(--ink); }
+
 .wsm-field-autocomplete { position: relative; }
 .wsm-autocomplete-menu {
   position: absolute;
