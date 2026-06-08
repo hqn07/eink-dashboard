@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { fetchAlarms, saveAlarms } from '../api.js';
 import { Plus, Trash } from '@phosphor-icons/react';
 import { TokenPicker } from './TokenPicker';
+import TimeField from './TimeField.jsx';
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 const DAY_LABEL = {
@@ -117,11 +118,10 @@ export default function AlarmsPanel() {
               />
               <span>ON</span>
             </label>
-            <input
-              type="time"
+            <TimeField
               value={a.time || '07:00'}
-              onChange={e => patch(idx, { time: e.target.value })}
-              className="alarm-time"
+              onChange={(x) => patch(idx, { time: x })}
+              ariaLabel="Alarm time"
             />
             <input
               type="text"
