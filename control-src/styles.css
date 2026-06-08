@@ -1543,6 +1543,11 @@ input[type="text"], input[type="url"], textarea {
  * 2-4 short labels (alignment, position, side). */
 .wsm-segmented {
   display: inline-flex;
+  /* Parent .wsm-field is flex-direction: column with default
+   * align-items: stretch, which stretched this row to full width and
+   * left a long empty border bar past the last button. Anchor to the
+   * start so the segmented control sizes to its own content. */
+  align-self: flex-start;
   border: 1.5px solid var(--ink);
   border-radius: 4px;
   overflow: hidden;
