@@ -13,11 +13,21 @@ import {
 // real tile rather than a generic placeholder.
 const PresetContext = React.createContext({ widgetId: null, item: null, previewData: null });
 
-// Sections opened by default in the accordion. Data + Layout are the
-// load-bearing tabs for first-time editors; the rest only get expanded
-// when the user explicitly hunts for them. Persisted overrides in
-// localStorage win over this fallback.
-const DEFAULT_OPEN_SECTIONS = ['Data', 'Layout', 'Content'];
+// Canonical tab taxonomy — every <id>.form.jsx should use these four
+// section titles in this order. Tabs without applicable fields are
+// just omitted by the widget; nothing else is allowed.
+//
+//   Data    — sources of info (feeds, location, API symbols).
+//   Content — what gets shown (heading text, content toggles,
+//             user-typed strings, schedules).
+//   Layout  — physical arrangement (view mode, density, alignment,
+//             positioning, layout variants).
+//   Style   — appearance (typography, theme, padding, scale).
+//
+// Single-tab list = preferred default when the persisted active tab is
+// missing or invalid. First match wins → Data is the most common
+// landing tab; Content is the fallback for widgets without a Data tab.
+const DEFAULT_OPEN_SECTIONS = ['Data', 'Content', 'Layout', 'Style'];
 const SECTION_STORAGE_PREFIX = 'wsm-accordion-open:';
 
 // Per-tile widget-data forms. Each form reads/writes a flat `values`

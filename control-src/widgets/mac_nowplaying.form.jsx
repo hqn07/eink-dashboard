@@ -20,7 +20,7 @@ export function Form({ values, patch, onChange, fields }) {
   const variant = v.variant || 'time_bookends';
   return (
     <>
-      <FormSection title="Layout">
+      <FormSection title="Content">
         <PresetField presets={PRESETS} onApply={(vals) => onChange({ ...v, ...vals })} />
         <TextField
           label="Tile heading"
@@ -30,27 +30,6 @@ export function Form({ values, patch, onChange, fields }) {
           placeholder="NOW PLAYING"
           help="Leave blank to keep the default heading."
         />
-        <div className="wsm-field-help" style={{ marginBottom: 6 }}>
-          Variants apply on tiles big enough to stack the art above the
-          title (extended/full tiers). Smaller tiles fall back to the
-          standard inline layout.
-        </div>
-        <SelectField
-          label="Side-space variant"
-          value={variant}
-          defaultValue={defaults.variant}
-          options={[
-            { value: 'time_bookends', label: 'Time bookends (elapsed · remaining)' },
-            { value: 'centered',      label: 'Centered (no bookends)' },
-            { value: 'vertical_text', label: 'Vertical "NOW PLAYING" text' },
-            { value: 'play_state',    label: 'Big play/pause glyph' },
-            { value: 'bars',          label: 'Decorative bars' },
-            { value: 'metadata',      label: 'Artist · album / source labels' }
-          ]}
-          onChange={(x) => patch({ variant: x })}
-        />
-      </FormSection>
-      <FormSection title="Show">
         <ToggleField
           label='"NOW PLAYING" heading'
           value={v.showColTitle !== false}
@@ -94,9 +73,28 @@ export function Form({ values, patch, onChange, fields }) {
           onChange={(x) => patch({ showStateIcon: x })}
         />
       </FormSection>
-      <FormSection title="Position">
+      <FormSection title="Layout">
+        <div className="wsm-field-help" style={{ marginBottom: 6 }}>
+          Variants apply on tiles big enough to stack the art above the
+          title (extended/full tiers). Smaller tiles fall back to the
+          standard inline layout.
+        </div>
+        <SelectField
+          label="Side-space variant"
+          value={variant}
+          defaultValue={defaults.variant}
+          options={[
+            { value: 'time_bookends', label: 'Time bookends (elapsed · remaining)' },
+            { value: 'centered',      label: 'Centered (no bookends)' },
+            { value: 'vertical_text', label: 'Vertical "NOW PLAYING" text' },
+            { value: 'play_state',    label: 'Big play/pause glyph' },
+            { value: 'bars',          label: 'Decorative bars' },
+            { value: 'metadata',      label: 'Artist · album / source labels' }
+          ]}
+          onChange={(x) => patch({ variant: x })}
+        />
         <SegmentedField
-          label='"NOW PLAYING" heading'
+          label='Heading alignment'
           value={v.headerAlign || 'left'}
           defaultValue={defaults.headerAlign}
           options={[

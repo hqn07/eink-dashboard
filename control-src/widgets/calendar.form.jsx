@@ -97,8 +97,24 @@ export function Form({ values, patch, onChange, fields }) {
           </div>
         )}
       </FormSection>
-      <FormSection title="Layout">
+      <FormSection title="Content">
         <PresetField presets={PRESETS} onApply={(vals) => onChange({ ...v, ...vals })} />
+        <TextField
+          label="Tile heading"
+          value={v.title || ''}
+          defaultValue={defaults.title}
+          onChange={(x) => patch({ title: x })}
+          placeholder="UPCOMING"
+          help="Leave blank to keep the default heading."
+        />
+        <ToggleField label="Day label (column with date)"
+          value={v.showDayLabel !== false} defaultValue={defaults.showDayLabel}
+          onChange={(x) => patch({ showDayLabel: x })} />
+        <ToggleField label="Event time"
+          value={v.showTime     !== false} defaultValue={defaults.showTime}
+          onChange={(x) => patch({ showTime:     x })} />
+      </FormSection>
+      <FormSection title="Layout">
         <SelectField
           label="View"
           value={v.viewMode || 'list'}
@@ -109,14 +125,6 @@ export function Form({ values, patch, onChange, fields }) {
             { value: 'month', label: 'Month — full grid (needs ≥12×6)' }
           ]}
           onChange={(x) => patch({ viewMode: x })}
-        />
-        <TextField
-          label="Tile heading"
-          value={v.title || ''}
-          defaultValue={defaults.title}
-          onChange={(x) => patch({ title: x })}
-          placeholder="UPCOMING"
-          help="Leave blank to keep the default heading."
         />
         <SelectField
           label="Density (list view only)"
@@ -130,14 +138,6 @@ export function Form({ values, patch, onChange, fields }) {
           ]}
           onChange={(x) => patch({ density: x })}
         />
-      </FormSection>
-      <FormSection title="Show">
-        <ToggleField label="Day label (column with date)"
-          value={v.showDayLabel !== false} defaultValue={defaults.showDayLabel}
-          onChange={(x) => patch({ showDayLabel: x })} />
-        <ToggleField label="Event time"
-          value={v.showTime     !== false} defaultValue={defaults.showTime}
-          onChange={(x) => patch({ showTime:     x })} />
       </FormSection>
       <FormSection title="Style">
         <TypographyFields values={v} onChange={onChange} />

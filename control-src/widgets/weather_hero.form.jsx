@@ -49,21 +49,6 @@ export function Form({ values, patch, onChange, fields }) {
       </FormSection>
       <FormSection title="Content">
         <PresetField presets={PRESETS} onApply={(vals) => onChange({ ...v, ...vals })} />
-        <div className="wsm-field-help" style={{ marginBottom: 6 }}>
-          Stats grid — pick what fills each of the four slots. Only shows
-          on standard tier and up.
-        </div>
-        {[0, 1, 2, 3].map((i) => (
-          <SelectField
-            key={i}
-            label={`Slot ${i + 1}`}
-            value={stats[i]}
-            options={STAT_OPTIONS}
-            onChange={(x) => setSlot(i, x)}
-          />
-        ))}
-      </FormSection>
-      <FormSection title="Show">
         <ToggleField label="Description (OVERCAST / CLEAR / …)"
           value={v.showDesc   !== false} defaultValue={defaults.showDesc}
           onChange={(x) => patch({ showDesc:   x })} />
@@ -79,6 +64,21 @@ export function Form({ values, patch, onChange, fields }) {
         <ToggleField label="Hourly forecast strip"
           value={v.showHourly !== false} defaultValue={defaults.showHourly}
           onChange={(x) => patch({ showHourly: x })} />
+      </FormSection>
+      <FormSection title="Layout">
+        <div className="wsm-field-help" style={{ marginBottom: 6 }}>
+          Stats grid — pick what fills each of the four slots. Only shows
+          on standard tier and up.
+        </div>
+        {[0, 1, 2, 3].map((i) => (
+          <SelectField
+            key={i}
+            label={`Slot ${i + 1}`}
+            value={stats[i]}
+            options={STAT_OPTIONS}
+            onChange={(x) => setSlot(i, x)}
+          />
+        ))}
       </FormSection>
       <FormSection title="Style">
         <TypographyFields values={v} onChange={onChange} />

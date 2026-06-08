@@ -54,6 +54,12 @@ export function Form({ values, patch, onChange, fields }) {
           })}
           help="Open-Meteo returns up to 7 days; larger tiles fit more."
         />
+        <ToggleField label="Day name (MON / TUE / …)"
+          value={v.showDayName !== false} defaultValue={defaults.showDayName}
+          onChange={(x) => patch({ showDayName: x })} />
+        <ToggleField label="Weather icons"
+          value={v.showIcons   !== false} defaultValue={defaults.showIcons}
+          onChange={(x) => patch({ showIcons:   x })} />
       </FormSection>
       <FormSection title="Layout">
         <SegmentedField
@@ -78,14 +84,6 @@ export function Form({ values, patch, onChange, fields }) {
           ]}
           onChange={(x) => patch({ hiloStyle: x })}
         />
-      </FormSection>
-      <FormSection title="Show">
-        <ToggleField label="Day name (MON / TUE / …)"
-          value={v.showDayName !== false} defaultValue={defaults.showDayName}
-          onChange={(x) => patch({ showDayName: x })} />
-        <ToggleField label="Weather icons"
-          value={v.showIcons   !== false} defaultValue={defaults.showIcons}
-          onChange={(x) => patch({ showIcons:   x })} />
       </FormSection>
       <FormSection title="Style">
         <TypographyFields values={v} onChange={onChange} />

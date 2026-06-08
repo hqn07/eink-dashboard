@@ -19,7 +19,7 @@ export function Form({ values, patch, onChange, fields }) {
   const showDate = v.showDate !== false;
   return (
     <>
-      <FormSection title="Layout">
+      <FormSection title="Content">
         <PresetField presets={PRESETS} onApply={(vals) => onChange({ ...v, ...vals })} />
         <SegmentedField
           label="Format"
@@ -31,8 +31,16 @@ export function Form({ values, patch, onChange, fields }) {
           ]}
           onChange={(x) => patch({ format: x })}
         />
+        <ToggleField
+          label="Show date below time"
+          value={showDate}
+          defaultValue={defaults.showDate}
+          onChange={(x) => patch({ showDate: x })}
+        />
+      </FormSection>
+      <FormSection title="Layout">
         <SegmentedField
-          label="Style"
+          label="Variant"
           value={style}
           defaultValue={defaults.style}
           options={[
@@ -40,12 +48,6 @@ export function Form({ values, patch, onChange, fields }) {
             { value: 'thin', short: 'Thin', label: 'Thin' }
           ]}
           onChange={(x) => patch({ style: x })}
-        />
-        <ToggleField
-          label="Show date below time"
-          value={showDate}
-          defaultValue={defaults.showDate}
-          onChange={(x) => patch({ showDate: x })}
         />
       </FormSection>
       <FormSection title="Style">

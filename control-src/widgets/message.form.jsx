@@ -31,8 +31,6 @@ export function Form({ values, patch, onChange, fields }) {
           </div>
           <TokenPicker onInsert={appendToken('subtitle')} />
         </div>
-      </FormSection>
-      <FormSection title="Data">
         <ListEditor
           label="Scheduled messages (override default in their window)"
           items={v.schedule}

@@ -15,8 +15,6 @@ export function Form({ values, onChange, fields }) {
           placeholder="E-INK BATTERY"
           help="Leave blank to keep the default heading."
         />
-      </FormSection>
-      <FormSection title="Show">
         <ToggleField
           label="Voltage readout (e.g. 4.03 V)"
           value={v.showVoltage !== false}

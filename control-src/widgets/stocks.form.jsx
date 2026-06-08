@@ -26,7 +26,7 @@ export function Form({ values, patch, onChange, fields }) {
           help="Yahoo Finance tickers. Crypto: e.g. BTC-USD."
         />
       </FormSection>
-      <FormSection title="Layout">
+      <FormSection title="Content">
         <PresetField presets={PRESETS} onApply={(vals) => onChange({ ...v, ...vals })} />
         <TextField
           label="Tile heading"
@@ -36,8 +36,16 @@ export function Form({ values, patch, onChange, fields }) {
           placeholder="MARKETS"
           help="Leave blank to keep the default heading."
         />
+        <ToggleField label="Sparkline charts"
+          value={v.showSpark  !== false} defaultValue={defaults.showSpark}
+          onChange={(x) => patch({ showSpark:  x })} />
+        <ToggleField label="Change %"
+          value={v.showChange !== false} defaultValue={defaults.showChange}
+          onChange={(x) => patch({ showChange: x })} />
+      </FormSection>
+      <FormSection title="Layout">
         <SelectField
-          label="Layout"
+          label="Arrangement"
           value={v.layout || 'hero_watch'}
           defaultValue={defaults.layout}
           options={[
@@ -58,14 +66,6 @@ export function Form({ values, patch, onChange, fields }) {
           ]}
           onChange={(x) => patch({ sparkStyle: x })}
         />
-      </FormSection>
-      <FormSection title="Show">
-        <ToggleField label="Sparkline charts"
-          value={v.showSpark  !== false} defaultValue={defaults.showSpark}
-          onChange={(x) => patch({ showSpark:  x })} />
-        <ToggleField label="Change %"
-          value={v.showChange !== false} defaultValue={defaults.showChange}
-          onChange={(x) => patch({ showChange: x })} />
       </FormSection>
       <FormSection title="Style">
         <TypographyFields values={v} onChange={onChange} />
