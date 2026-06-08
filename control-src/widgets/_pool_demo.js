@@ -120,6 +120,15 @@ export function demoCtxForWidget(id, cellW, cellH) {
       return { ...base, resolvedMessage: DEMO_MESSAGE, settings: {} };
     case 'clock':
       return { ...base, clockNow: DEMO_CLOCK, settings: {} };
+    case 'text_bar':
+      // Tokens are resolved server-side, so the palette can't run them
+      // here. Pre-resolve to a believable headline + subtitle so the
+      // pool card reads as a configured text widget rather than the
+      // empty "CLICK TO SET UP" outline.
+      return { ...base, resolvedText: {
+        text: 'Brooklyn · Saturday, June 6',
+        subtitle: 'refreshed 12m ago'
+      }, settings: { align: 'left', upper: true, fontFamily: 'sans' } };
     default:
       return { ...base, settings: {} };
   }
