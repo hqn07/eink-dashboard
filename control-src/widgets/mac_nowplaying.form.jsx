@@ -15,7 +15,7 @@ export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
   const {
     TextField, SelectField, SegmentedField, ToggleField, SliderField,
-    TypographyFields, FormSection, AdvancedGroup, PresetField, defaults = {}
+    TypographyFields, FormSection, Collapsible, PresetField, defaults = {}
   } = fields;
   const variant = v.variant || 'time_bookends';
   return (
@@ -116,7 +116,7 @@ export function Form({ values, patch, onChange, fields }) {
           ]}
           onChange={(x) => patch({ artShape: x })}
         />
-        <AdvancedGroup title="Advanced positioning">
+        <Collapsible title="Advanced positioning" storageScope="mac-np-adv" defaultOpen={false}>
           <SegmentedField
             label="Album art side"
             value={v.artPosition || 'right'}
@@ -146,7 +146,7 @@ export function Form({ values, patch, onChange, fields }) {
             onChange={(x) => patch({ textOffsetY: x })}
             format={(x) => x === 0 ? '0' : (x > 0 ? `+${x}px down` : `${x}px up`)}
           />
-        </AdvancedGroup>
+        </Collapsible>
       </FormSection>
       <FormSection title="Style">
         <TypographyFields values={v} onChange={onChange} />

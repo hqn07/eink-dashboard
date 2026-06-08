@@ -20,7 +20,7 @@ const PRESETS = [
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { LocationFields, SelectField, ToggleField, TypographyFields, FormSection, PresetField, defaults = {} } = fields;
+  const { LocationFields, SelectField, ToggleField, TypographyFields, FormSection, PresetField, Collapsible, defaults = {} } = fields;
   const stats = Array.isArray(v.stats) && v.stats.length === 4 ? v.stats : DEFAULT_STATS;
   const setSlot = (idx, val) => {
     const next = stats.slice();
@@ -66,19 +66,21 @@ export function Form({ values, patch, onChange, fields }) {
           onChange={(x) => patch({ showHourly: x })} />
       </FormSection>
       <FormSection title="Layout">
-        <div className="wsm-field-help" style={{ marginBottom: 6 }}>
-          Stats grid — pick what fills each of the four slots. Only shows
-          on standard tier and up.
-        </div>
-        {[0, 1, 2, 3].map((i) => (
-          <SelectField
-            key={i}
-            label={`Slot ${i + 1}`}
-            value={stats[i]}
-            options={STAT_OPTIONS}
-            onChange={(x) => setSlot(i, x)}
-          />
-        ))}
+        <Collapsible title="Stats grid slots" storageScope="weather-hero-stats" defaultOpen={false}>
+          <div className="wsm-field-help" style={{ marginBottom: 6 }}>
+            Pick what fills each of the four slots. Only shows on
+            standard tier and up.
+          </div>
+          {[0, 1, 2, 3].map((i) => (
+            <SelectField
+              key={i}
+              label={`Slot ${i + 1}`}
+              value={stats[i]}
+              options={STAT_OPTIONS}
+              onChange={(x) => setSlot(i, x)}
+            />
+          ))}
+        </Collapsible>
       </FormSection>
       <FormSection title="Style">
         <TypographyFields values={v} onChange={onChange} />
