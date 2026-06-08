@@ -28,7 +28,7 @@ const PREVIEW_MAX_SCALE = 3;
 // Also surfaces a "Copy from →" picker listing every other tile in the
 // layout that uses the same widget id, so users can clone a tile's
 // settings into this one without re-typing.
-function PerInstanceDataBlock({ widgetId, itemId, layout, settings, onSettingsChange, item, previewData }) {
+function PerInstanceDataBlock({ widgetId, itemId, layout, settings, onSettingsChange, item, previewData, onHoverPreset }) {
   // Other tiles of the same widget type whose settings we can clone in
   // one click — saves re-typing a stock list / iCal URL / location.
   const siblings = (layout || []).filter(it =>
@@ -70,6 +70,7 @@ function PerInstanceDataBlock({ widgetId, itemId, layout, settings, onSettingsCh
           onChange={onSettingsChange}
           item={item}
           previewData={previewData}
+          onHoverPreset={onHoverPreset}
         />
       </div>
     </>
@@ -168,6 +169,11 @@ export default function WidgetSettingsModal({
   // we'd rather under-scale briefly than render a clipped widget.
   const previewColRef = useRef(null);
   const [previewBox, setPreviewBox] = useState({ w: 300, h: 220 });
+  // Hover-preview state: when a preset card is hovered/focused, it
+  // broadcasts its values via PresetContext → the main preview merges
+  // them on top of the draft so the user sees the preset's effect
+  // before committing. null means "no hover", use draft as-is.
+  const [hoveredPresetValues, setHoveredPresetValues] = useState(null);
   useEffect(() => {
     if (!open) return;
     let raf = 0;
@@ -265,9 +271,16 @@ export default function WidgetSettingsModal({
   const frameW = cellPxW * previewScale;
   const frameH = cellPxH * previewScale;
 
+  // Effective settings drive the preview pass. When a preset card is
+  // hovered, its values overlay the draft so the preview reflects what
+  // applying the preset would produce — without actually mutating the
+  // draft until the user clicks.
+  const effectiveSettings = hoveredPresetValues
+    ? { ...draft.settings, ...hoveredPresetValues }
+    : draft.settings;
   const classes = ['cell', `cell-${draft.widgetId}`];
   if (draft.flush) classes.push('cell-flush');
-  classes.push(...cellClasses(draft.settings));
+  classes.push(...cellClasses(effectiveSettings));
   if (draft.x + draft.w >= GRID_COLS) classes.push('cell-edge-right');
   if (draft.y + draft.h >= GRID_ROWS) classes.push('cell-edge-bottom');
   const itemSlot = (previewData && previewData.perItem && previewData.perItem[draft.id]) || {};
@@ -277,11 +290,11 @@ export default function WidgetSettingsModal({
     cellW: draft.w,
     cellH: draft.h,
     density: draft.density,
-    settings: draft.settings
+    settings: effectiveSettings
   }) || '';
-  const sw = scaleWrap(draft.settings);
+  const sw = scaleWrap(effectiveSettings);
   const previewHtml = `${sw.open}${previewInner}${sw.close}`;
-  const typoStyle = typographyCss(draft.settings);
+  const typoStyle = typographyCss(effectiveSettings);
   const cellStyle =
     `grid-column:${draft.x + 1} / span ${draft.w};grid-row:${draft.y + 1} / span ${draft.h};${typoStyle}`;
   const cellHtml = `<div class="${classes.join(' ')}" style="${cellStyle}">${previewHtml}</div>`;
@@ -329,6 +342,7 @@ export default function WidgetSettingsModal({
                   onSettingsChange={(next) => setDraft(prev => ({ ...prev, settings: next }))}
                   item={draft}
                   previewData={previewData}
+                  onHoverPreset={setHoveredPresetValues}
                 />
               </section>
             </div>

@@ -11,7 +11,7 @@ import {
 // dashboard payload the live preview is rendering from. Lets each card
 // render a faithful miniature of what the preset will produce on the
 // real tile rather than a generic placeholder.
-const PresetContext = React.createContext({ widgetId: null, item: null, previewData: null });
+const PresetContext = React.createContext({ widgetId: null, item: null, previewData: null, onHoverPreset: null });
 
 // Canonical tab taxonomy — every <id>.form.jsx should use these four
 // section titles in this order. Tabs without applicable fields are
@@ -670,6 +670,13 @@ function PresetCard({ preset, isActive, ctx, currentValues, onPick }) {
 
   const scale = Math.min(THUMB_W / cellPxW, THUMB_H / cellPxH);
 
+  // Hover broadcasts this preset's values to the modal so the main
+  // preview switches as the user moves between cards — no click needed
+  // to "see what this preset would do". onMouseLeave resets to null
+  // so the preview falls back to the user's actual draft.
+  const onEnter = () => { if (ctx && typeof ctx.onHoverPreset === 'function') ctx.onHoverPreset(preset.values); };
+  const onLeave = () => { if (ctx && typeof ctx.onHoverPreset === 'function') ctx.onHoverPreset(null); };
+
   return (
     <button
       type="button"
@@ -677,6 +684,10 @@ function PresetCard({ preset, isActive, ctx, currentValues, onPick }) {
       aria-checked={isActive}
       className={`wsm-preset-card ${isActive ? 'is-active' : ''}`}
       onClick={onPick}
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
+      onFocus={onEnter}
+      onBlur={onLeave}
       title={preset.label}
     >
       <div className="wsm-preset-card-thumb" style={{ width: THUMB_W, height: THUMB_H }}>
@@ -706,7 +717,7 @@ const FIELD_PRIMITIVES = {
   FormSection, AdvancedGroup, PresetField
 };
 
-export default function WidgetForm({ widgetId, values, onChange, item, previewData }) {
+export default function WidgetForm({ widgetId, values, onChange, item, previewData, onHoverPreset }) {
   const v = values || {};
   const patch = (p) => onChange({ ...v, ...p });
 
@@ -722,7 +733,7 @@ export default function WidgetForm({ widgetId, values, onChange, item, previewDa
     const defaults = (def && typeof def.defaults === 'function')
       ? def.defaults() : {};
     return (
-      <PresetContext.Provider value={{ widgetId, item, previewData, values: v }}>
+      <PresetContext.Provider value={{ widgetId, item, previewData, values: v, onHoverPreset }}>
         <TabbedForm
           widgetId={widgetId}
           MigratedForm={MigratedForm}
