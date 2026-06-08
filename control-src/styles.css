@@ -1552,6 +1552,128 @@ input[type="text"], input[type="url"], textarea {
   border-radius: 4px;
   overflow: hidden;
 }
+
+/* Searchable select — command-palette style replacement for native
+ * <select> on long lists. Trigger looks like a regular field; click
+ * opens a popover with search input + filterable grouped option list. */
+.ss-wrap {
+  position: relative;
+  width: 100%;
+}
+.ss-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #fff;
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+.ss-trigger:hover { background: #f4f3ed; }
+.ss-trigger:focus-visible {
+  outline: 2px dashed var(--ink);
+  outline-offset: 2px;
+}
+.ss-trigger-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ss-trigger-placeholder { color: #888; }
+.ss-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: #fff;
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  max-height: 320px;
+  display: flex;
+  flex-direction: column;
+}
+.ss-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1.5px solid var(--ink);
+}
+.ss-search input {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  padding: 0;
+}
+.ss-search input::placeholder { color: #888; }
+.ss-list {
+  overflow-y: auto;
+  padding: 4px 0;
+}
+.ss-empty {
+  padding: 12px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #888;
+}
+.ss-group {
+  font-family: 'Oswald', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #666;
+  padding: 8px 10px 2px;
+}
+.ss-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 0;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+.ss-item-high { background: #f0eee8; }
+.ss-item-sel { font-weight: 700; }
+.ss-item-sel::before {
+  content: '✓ ';
+  margin-right: 4px;
+}
+.ss-item-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ss-item-hint {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: #888;
+}
 .wsm-seg-btn {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 11px;

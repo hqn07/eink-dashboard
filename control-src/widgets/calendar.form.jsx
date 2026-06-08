@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ICAL_PRESETS } from './_ical_presets.js';
+import SearchableSelect from '../components/SearchableSelect.jsx';
 
 // Presets cover the three view modes so the thumbnails actually differ
 // from each other. Each preset commits a full look (view + density +
@@ -43,22 +44,18 @@ export function Form({ values, patch, onChange, fields }) {
         <div style={{ marginBottom: 10 }}>
           <div className="wsm-field-label">Add from preset</div>
           <div className="wsm-field-help" style={{ marginBottom: 4 }}>
-            Public iCal feeds — pick one to append to the list below.
+            Public iCal feeds — search or pick one to append below.
           </div>
-          <select
+          <SearchableSelect
             value={presetPick}
-            onChange={e => { setPresetPick(e.target.value); addPreset(e.target.value); }}
-            style={{ width: '100%' }}
-          >
-            <option value="">— Pick a preset —</option>
-            {ICAL_PRESETS.map(g => (
-              <optgroup key={g.group} label={g.group}>
-                {g.items.map(p => (
-                  <option key={p.url} value={p.url}>{p.name}</option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+            onChange={(url) => addPreset(url)}
+            groups={ICAL_PRESETS.map(g => ({
+              label: g.group,
+              items: g.items.map(it => ({ value: it.url, label: it.name, hint: g.group }))
+            }))}
+            placeholder="— Pick a preset —"
+            ariaLabel="Add iCal preset"
+          />
         </div>
         <ListEditor
           label="iCal feed URLs"
