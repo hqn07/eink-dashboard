@@ -31,25 +31,58 @@ html, body {
   margin: 0 auto;
 }
 
+/* Three-zone top bar — left (brand + view-display link), center (sync
+ * pill), right (mac agent + tools). Wraps on narrow viewports so the
+ * sync pill drops below the brand instead of crashing into the
+ * right-side action cluster. */
 .app-header {
   border-bottom: 3px solid var(--line);
   padding-bottom: 14px;
   margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+}
+.app-header-left {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 14px;
+  min-width: 0;
+}
+.app-header-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.app-header-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
-
 .app-header h1 {
   font-family: 'DM Serif Display', Georgia, serif;
-  font-size: 34px;
+  font-size: 30px;
   font-weight: 400;
   letter-spacing: -1px;
   line-height: 1;
+  margin: 0;
 }
-
+.app-header-link {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--mute);
+  text-decoration: none;
+  border-bottom: 1.5px solid transparent;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+.app-header-link:hover {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
 .app-header .tagline {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
@@ -58,11 +91,60 @@ html, body {
   margin-top: 6px;
   color: var(--mute);
 }
+@media (max-width: 760px) {
+  .app-header {
+    grid-template-columns: 1fr auto;
+  }
+  .app-header-center {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
 
-.app-header .actions {
-  display: flex;
+/* SyncPill — Figma/Notion idiom: small status capsule with a coloured
+ * dot, the verb (SAVED / SAVING / UNSAVED / ERROR), and a freshness
+ * readout when relevant. Stays compact at all times; never grows tall
+ * enough to push the header. */
+.sync-pill {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  background: #f4f3ed;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--ink);
+  border: 1.5px solid transparent;
+}
+.sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ink);
+  flex-shrink: 0;
+}
+.sync-pill-saving .sync-dot { background: #888; animation: syncPulse 1s ease-in-out infinite; }
+.sync-pill-saved  .sync-dot { background: #2a8c3a; }
+.sync-pill-dirty  .sync-dot { background: #c00; }
+.sync-pill-error  .sync-dot { background: #c00; }
+.sync-pill-dirty,
+.sync-pill-error  { border-color: #c00; color: #c00; }
+.sync-label { font-weight: 700; }
+.sync-sep   { opacity: 0.5; }
+.sync-ago   {
+  text-transform: none;
+  letter-spacing: 1px;
+  color: var(--mute);
+  font-weight: 500;
+}
+.sync-pill-dirty .sync-ago,
+.sync-pill-error .sync-ago { color: inherit; }
+@keyframes syncPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
 }
 
 /* Mac-agent freshness pill — shows how recently launchd's

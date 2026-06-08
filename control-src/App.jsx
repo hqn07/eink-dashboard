@@ -38,6 +38,47 @@ const STATUS = {
 
 const MAX_SCREENS = 20;
 
+// Header sync indicator — Figma/Notion style. Persistent, quiet,
+// surfaces only state + freshness. Caller passes the same `status`
+// state the SaveBar reads from, plus the last successful save's
+// timestamp so the pill can show "2m ago".
+function relTime(then, now) {
+  if (!then) return '';
+  const diff = Math.max(0, now - then);
+  const m = Math.round(diff / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.round(h / 24)}d ago`;
+}
+function SyncPill({ status, lastSavedAt, statusMsg }) {
+  const label = STATUS[status]?.label || 'SYNCED';
+  const cls = STATUS[status]?.cls || 'saved';
+  const ago = lastSavedAt ? relTime(lastSavedAt, Date.now()) : '';
+  // The pill shows the verb (SAVED / SAVING / UNSAVED) and, when
+  // available, when the last sync happened. On error, show the message
+  // instead of an "ago" timestamp so the user knows what broke.
+  return (
+    <div className={`sync-pill sync-pill-${cls}`} role="status" aria-live="polite">
+      <span className="sync-dot" aria-hidden="true" />
+      <span className="sync-label">{label}</span>
+      {ago && status !== 'error' && status !== 'dirty' && (
+        <span className="sync-sep">·</span>
+      )}
+      {ago && status !== 'error' && status !== 'dirty' && (
+        <span className="sync-ago">{ago}</span>
+      )}
+      {status === 'error' && statusMsg && (
+        <>
+          <span className="sync-sep">·</span>
+          <span className="sync-ago">{statusMsg}</span>
+        </>
+      )}
+    </div>
+  );
+}
+
 function nowMinutesLocal(tz) {
   try {
     const parts = new Intl.DateTimeFormat('en-US', {
@@ -67,6 +108,15 @@ export default function App() {
   const [previewData, setPreviewData] = useState(null);
   const [toast, setToast] = useState(null);
   const [undoCfg, setUndoCfg] = useState(null);
+  // Timestamp of the last successful sync — drives the header SyncPill's
+  // "N min ago" readout. Re-rendered on the same minute interval so the
+  // pill ages without an explicit poll.
+  const [lastSavedAt, setLastSavedAt] = useState(null);
+  const [, setNowTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setNowTick(n => n + 1), 30 * 1000);
+    return () => clearInterval(t);
+  }, []);
 
   useEffect(() => {
     fetchConfig()
@@ -80,6 +130,7 @@ export default function App() {
           return active ? active.id : (migrated.screens[0] && migrated.screens[0].id);
         });
         setStatus('synced');
+        setLastSavedAt(Date.now());
       })
       .catch(err => {
         setStatus('error');
@@ -254,6 +305,7 @@ export default function App() {
       const saved = await saveConfig({ ...cfg, screens: cfg.screens });
       setCfg(migrateConfigToScreens(saved));
       setStatus('saved');
+      setLastSavedAt(Date.now());
       setPreviewKey(Date.now());
       showToast('Saved ✓');
     } catch (err) {
@@ -282,6 +334,7 @@ export default function App() {
       const saved = await saveConfig({ ...nextCfg, screens: nextCfg.screens });
       setCfg(migrateConfigToScreens(saved));
       setStatus('saved');
+      setLastSavedAt(Date.now());
       setPreviewKey(Date.now());
     } catch (err) {
       setStatus('error');
@@ -382,10 +435,22 @@ export default function App() {
         </filter>
       </svg>
       <header className="app-header">
-        <div>
+        <div className="app-header-left">
           <h1>Dashboard Control</h1>
+          <a
+            className="app-header-link"
+            href="/dashboard"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Open the live dashboard render in a new tab"
+          >
+            View display →
+          </a>
         </div>
-        <div className="actions">
+        <div className="app-header-center">
+          <SyncPill status={status} lastSavedAt={lastSavedAt} statusMsg={statusMsg} />
+        </div>
+        <div className="app-header-right">
           <MacAgentBadge />
           {cfg && (
             <ToolsButton
