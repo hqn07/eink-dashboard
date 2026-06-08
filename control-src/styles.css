@@ -2009,6 +2009,62 @@ input[type="text"], input[type="url"], textarea {
 .wsm-list-row.is-dragging { opacity: 0.4; }
 .wsm-list-row.is-over { box-shadow: inset 0 2px 0 0 var(--ink); }
 
+/* Inline {{token}} autocomplete — anchored to its input. The popover
+ * appears under the input when the cursor is in an open `{{...` and
+ * filters TOKEN_META as the user types. Arrow keys / enter / tab to
+ * accept, esc to dismiss without changing the text. */
+.ti-wrap {
+  position: relative;
+}
+.ti-wrap > input {
+  width: 100%;
+  background: #fff;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+.ti-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: #fff;
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+.ti-item {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 10px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.ti-item-high { background: #f0eee8; }
+.ti-item-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: #06f;
+}
+.ti-item-example {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: #888;
+}
+
 .wsm-field-autocomplete { position: relative; }
 .wsm-autocomplete-menu {
   position: absolute;
