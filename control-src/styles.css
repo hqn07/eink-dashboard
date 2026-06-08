@@ -2182,6 +2182,41 @@ input[type="text"], input[type="url"], textarea {
   font-weight: 700;
 }
 
+/* Generic collapsible sub-section. Used by PresetField + any heavy
+ * sub-group that grows tall (advanced positioning, stat slots, etc.).
+ * State persists per (widgetId · scope) in localStorage. */
+.wsm-collapsible { margin-bottom: 8px; }
+.wsm-collapsible-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  cursor: pointer;
+  font-family: 'Oswald', 'Arial Narrow', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: left;
+}
+.wsm-collapsible-trigger:hover .wsm-collapsible-title { color: #444; }
+.wsm-collapsible-trigger:focus-visible {
+  outline: 2px dashed var(--ink);
+  outline-offset: 2px;
+}
+.wsm-collapsible-caret {
+  width: 12px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1;
+}
+.wsm-collapsible-title { flex: 1; }
+.wsm-collapsible-body { padding: 4px 0 0; }
+
 .wsm-field-autocomplete { position: relative; }
 .wsm-autocomplete-menu {
   position: absolute;

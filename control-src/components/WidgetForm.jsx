@@ -641,6 +641,41 @@ function TabbedForm({ widgetId, MigratedForm, formProps }) {
   );
 }
 
+// Show/hide wrapper used by sub-sections inside the tab panel — preset
+// card grid, advanced positioning, etc. Defaults to open; the state
+// persists per (widgetId · title) in localStorage so a collapsed
+// section stays collapsed when the modal reopens.
+//
+// Matches the widget pool toggle (▾ HIDE / ▸ SHOW) so the editor reads
+// consistently across surfaces.
+function Collapsible({ title, storageScope, defaultOpen = true, children }) {
+  const key = `wsm-collapse:${storageScope || title}`;
+  const [open, setOpen] = useState(() => {
+    try {
+      if (typeof localStorage === 'undefined') return defaultOpen;
+      const v = localStorage.getItem(key);
+      return v === null ? defaultOpen : v === '1';
+    } catch { return defaultOpen; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(key, open ? '1' : '0'); } catch { /* ignore */ }
+  }, [open, key]);
+  return (
+    <div className={`wsm-collapsible ${open ? 'is-open' : 'is-closed'}`}>
+      <button
+        type="button"
+        className="wsm-collapsible-trigger"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+      >
+        <span className="wsm-collapsible-caret">{open ? '▾' : '▸'}</span>
+        <span className="wsm-collapsible-title">{title}</span>
+      </button>
+      {open && <div className="wsm-collapsible-body">{children}</div>}
+    </div>
+  );
+}
+
 // Preset picker. Each preset is `{ id, label, values }`. Picking one
 // merges `values` into the current draft via the provided onApply.
 //
@@ -678,21 +713,20 @@ function PresetField({ presets, onApply, currentValues }) {
 
   return (
     <div className="wsm-field wsm-preset-cards-wrap">
-      <span className="wsm-field-label">
-        <span className="wsm-field-label-text">Preset</span>
-      </span>
-      <div className="wsm-preset-cards" role="radiogroup" aria-label="Preset">
-        {presets.map(p => (
-          <PresetCard
-            key={p.id}
-            preset={p}
-            isActive={p.id === activeId}
-            ctx={ctx}
-            currentValues={effectiveValues}
-            onPick={() => onApply(p.values)}
-          />
-        ))}
-      </div>
+      <Collapsible title="Preset" storageScope={`preset:${ctx.widgetId || 'na'}`} defaultOpen>
+        <div className="wsm-preset-cards" role="radiogroup" aria-label="Preset">
+          {presets.map(p => (
+            <PresetCard
+              key={p.id}
+              preset={p}
+              isActive={p.id === activeId}
+              ctx={ctx}
+              currentValues={effectiveValues}
+              onPick={() => onApply(p.values)}
+            />
+          ))}
+        </div>
+      </Collapsible>
     </div>
   );
 }
@@ -780,7 +814,7 @@ const FIELD_PRIMITIVES = {
   TextField, SelectField, ToggleField, SliderField, CsvField,
   SegmentedField,
   ListEditor, LocationFields, TypographyFields,
-  FormSection, AdvancedGroup, PresetField
+  FormSection, AdvancedGroup, PresetField, Collapsible
 };
 
 export default function WidgetForm({ widgetId, values, onChange, item, previewData, onHoverPreset }) {
