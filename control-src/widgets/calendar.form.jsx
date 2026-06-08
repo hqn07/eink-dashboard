@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
 import { ICAL_PRESETS } from './_ical_presets.js';
 
+// Presets cover the three view modes so the thumbnails actually differ
+// from each other. Each preset commits a full look (view + density +
+// show toggles) so a single click switches everything in one go.
 const PRESETS = [
-  { id: 'today',   label: 'Today — compact, today only',
-    values: { density: 'compact',  showDayLabel: false, showTime: true  } },
-  { id: 'week',    label: 'Week — rich list with sections',
-    values: { density: 'rich',     showDayLabel: true,  showTime: true  } },
-  { id: 'minimal', label: 'Minimal — titles only',
-    values: { density: 'standard', showDayLabel: false, showTime: false } }
+  { id: 'agenda', label: 'Agenda — list with sections',
+    values: { viewMode: 'list',  density: 'rich',     showDayLabel: true,  showTime: true } },
+  { id: 'today',  label: 'Today — compact list',
+    values: { viewMode: 'list',  density: 'compact',  showDayLabel: false, showTime: true } },
+  { id: 'strip',  label: 'Strip — 7-day horizontal',
+    values: { viewMode: 'strip', density: 'auto',     showDayLabel: true,  showTime: true } },
+  { id: 'month',  label: 'Month — full grid',
+    values: { viewMode: 'month', density: 'auto',     showDayLabel: true,  showTime: true } }
 ];
 
 export function Form({ values, patch, onChange, fields }) {
