@@ -109,14 +109,10 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [undoCfg, setUndoCfg] = useState(null);
   // Timestamp of the last successful sync — drives the header SyncPill's
-  // "N min ago" readout. Re-rendered on the same minute interval so the
-  // pill ages without an explicit poll.
+  // "N min ago" readout. The existing 60s nowTick (further down) gives
+  // us a re-render every minute so the pill ages without an explicit
+  // poll here.
   const [lastSavedAt, setLastSavedAt] = useState(null);
-  const [, setNowTick] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => setNowTick(n => n + 1), 30 * 1000);
-    return () => clearInterval(t);
-  }, []);
 
   useEffect(() => {
     fetchConfig()
