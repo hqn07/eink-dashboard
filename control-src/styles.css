@@ -523,39 +523,74 @@ input[type="text"], input[type="url"], textarea {
 .btn-danger { color: var(--accent); }
 .btn-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
 
-/* ============ SAVE BAR ============ */
+/* ============ SAVE BAR ============
+ * Fixed-bottom strip that slides in only when there's something to
+ * commit (dirty / saving / saved / error). Stays hidden during the
+ * quiet states (synced / syncing) so the editor surface doesn't
+ * carry a permanent footer. Figma + Notion DB use the same idiom. */
 .save-bar {
-  position: sticky;
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
   bottom: 16px;
   background: var(--ink);
   color: #fff;
-  padding: 14px 20px;
+  padding: 10px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 24px;
-  border: 3px solid var(--line);
-  z-index: 50;
+  gap: 24px;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  z-index: 60;
+  min-width: 380px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
 }
-.save-bar.dirty  { background: var(--accent); }
-.save-bar.saving { background: #444; }
-.save-bar.saved  { background: var(--ink); }
-.save-bar.error  { background: var(--accent); }
-.save-bar .status {
+.save-bar-dirty  { background: var(--accent); }
+.save-bar-saving { background: #444; }
+.save-bar-saved  { background: #2a8c3a; }
+.save-bar-error  { background: var(--accent); }
+.save-bar-status {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 700;
 }
-.save-bar button {
+.save-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.save-bar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: #fff;
   color: var(--ink);
   border: 2px solid #fff;
-  padding: 8px 16px;
+  padding: 6px 12px;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
-  font-size: 14px;
-  letter-spacing: 1px;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  transition: background 120ms ease, color 120ms ease;
+}
+.save-bar-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.save-bar-btn-ghost {
+  background: transparent;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+.save-bar-btn-ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #fff;
+}
+.save-bar-btn-primary:hover:not(:disabled) {
+  background: #f4f3ed;
 }
 .save-bar button:disabled { opacity: 0.5; }
 

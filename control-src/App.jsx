@@ -557,6 +557,7 @@ export default function App() {
             : `BLOCKED · ${validationErrors[0]}`
         }
         onSave={handleSave}
+        onDiscard={undoCfg ? undo : null}
         disabled={!canSave}
       />
 
