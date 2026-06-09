@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Star, GridFour, ArrowCounterClockwise, Wrench, Trash } from '@phosphor-icons/react';
 import { fetchConfig, saveConfig, fetchPreviewData } from './api.js';
 import {
@@ -600,9 +600,20 @@ export default function App() {
         disabled={!canSave}
       />
 
-      {toast && (
-        <div className="toast">{toast}</div>
-      )}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            key={toast}
+            className="toast"
+            initial={{ y: 24, opacity: 0, scale: 0.96 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: 8, opacity: 0, scale: 0.96 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+          >
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* First-run setup wizard: shows until user picks a location or
        *  explicitly skips. cfg.firstRun is set to false once dismissed. */}

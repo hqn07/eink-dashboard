@@ -139,6 +139,14 @@ html, body {
 .sync-pill-error  .sync-dot { background: #c00; }
 .sync-pill-dirty,
 .sync-pill-error  { border-color: #c00; color: #c00; }
+.sync-pill { transition: background 200ms ease, border-color 200ms ease, color 200ms ease; }
+.sync-pill-saved {
+  animation: syncSavedFlash 600ms ease-out;
+}
+@keyframes syncSavedFlash {
+  0%   { background: var(--accent-warm-soft); transform: scale(1.03); }
+  100% { background: #f4f3ed;                 transform: scale(1); }
+}
 .sync-label { font-weight: 700; }
 .sync-sep   { opacity: 0.5; }
 .sync-ago   {
@@ -661,10 +669,10 @@ input[type="text"], input[type="url"], textarea {
   font-weight: 600;
   cursor: pointer;
   letter-spacing: 0.5px;
-  transition: transform 0.08s ease, background 0.15s ease;
+  transition: transform 120ms cubic-bezier(0.2, 0.7, 0.3, 1), background 160ms ease, box-shadow 160ms ease;
 }
-.btn:hover { background: #f0ece2; }
-.btn:active { transform: translateY(1px); }
+.btn:hover { background: #f0ece2; transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06); }
+.btn:active { transform: translateY(1px); box-shadow: none; }
 .btn.btn-active { background: var(--ink); color: #fff; }
 .btn-primary { background: var(--ink); color: #fff; }
 .btn-primary:hover { background: #222; }
@@ -2431,7 +2439,8 @@ input[type="text"], input[type="url"], textarea {
   line-height: 1.5;
   transition: background 120ms ease;
 }
-.wsm-edited-pill:hover { background: #c00; }
+.wsm-edited-pill:hover { background: #c00; transform: translateY(-1px); }
+.wsm-edited-pill { transition: background 120ms ease, transform 120ms cubic-bezier(0.2, 0.7, 0.3, 1); }
 .wsm-edited-pill:focus-visible {
   outline: 2px dashed var(--ink);
   outline-offset: 2px;
