@@ -366,8 +366,42 @@ export default function App() {
     showToast('Undone');
   };
 
+  // Pre-save validation pass — DOM-scoped, no per-field registry. We
+  // walk the page for invalid TimeField / URL inputs (each marks
+  // itself with .time-field-invalid / .url-badge-invalid), grab the
+  // first, scroll it into view + flash, and abort the save. The
+  // server-side reject still runs for anything we miss here.
+  const findFirstInvalidField = () => {
+    const el = document.querySelector(
+      '.time-field-invalid, .url-badge-invalid'
+    );
+    if (!el) return null;
+    // For UrlBadge the input sits before the badge — focus the input
+    // instead of the badge so the caret lands where the user types.
+    const target = el.classList.contains('url-badge-invalid')
+      ? (el.previousElementSibling || el)
+      : el;
+    return target;
+  };
+
+  const flashInvalid = (el) => {
+    if (!el) return;
+    try {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (typeof el.focus === 'function') el.focus({ preventScroll: true });
+    } catch { /* ignore */ }
+    el.classList.add('field-flash');
+    setTimeout(() => el.classList.remove('field-flash'), 1200);
+  };
+
   const handleSave = async () => {
     if (!cfg || !canSave) return;
+    const bad = findFirstInvalidField();
+    if (bad) {
+      flashInvalid(bad);
+      showToast('Fix the highlighted field first');
+      return;
+    }
     setStatus('saving');
     try {
       const saved = await saveConfig({ ...cfg, screens: cfg.screens });

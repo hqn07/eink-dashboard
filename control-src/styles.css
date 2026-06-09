@@ -553,6 +553,18 @@ main.layout {
   border-color: var(--ink);
 }
 
+/* Field flash on pre-save validation fail. App.jsx scrolls the first
+ * invalid field into view + adds .field-flash for 1.2s so the user
+ * can see exactly which input blocked the save. */
+.field-flash {
+  animation: fieldFlash 1.2s ease-out;
+}
+@keyframes fieldFlash {
+  0%   { box-shadow: 0 0 0 0 rgba(204, 0, 0, 0.5); background-color: rgba(204, 0, 0, 0.18); }
+  60%  { box-shadow: 0 0 0 8px rgba(204, 0, 0, 0);   background-color: rgba(204, 0, 0, 0.04); }
+  100% { box-shadow: 0 0 0 0 rgba(204, 0, 0, 0);     background-color: transparent; }
+}
+
 /* ============ LOCATION PANEL ============ */
 .autocomplete {
   position: absolute;
