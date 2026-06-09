@@ -1,8 +1,37 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Check } from '@phosphor-icons/react';
 import { geocode, reverseGeocode, flagEmoji } from '../api.js';
 import { SCREEN_PRESETS, inflatePresetLayout } from '../widgets.js';
 import LiveDashboard from './LiveDashboard.jsx';
+
+// Step indicator strip — Stripe / Vercel onboarding idiom: numbered
+// circles connected by lines, current highlighted, completed steps
+// get a check mark. Caller passes 1-based currentStep + the list of
+// human-readable step labels.
+function StepIndicator({ currentStep, steps }) {
+  return (
+    <div className="wizard-stepper" aria-label={`Step ${currentStep} of ${steps.length}`}>
+      {steps.map((label, i) => {
+        const stepNum = i + 1;
+        const done = stepNum < currentStep;
+        const current = stepNum === currentStep;
+        const cls = done ? 'is-done' : current ? 'is-current' : 'is-pending';
+        return (
+          <React.Fragment key={label}>
+            <div className={`wizard-step ${cls}`}>
+              <div className="wizard-step-dot">
+                {done ? <Check size={11} weight="bold" /> : stepNum}
+              </div>
+              <span className="wizard-step-label">{label}</span>
+            </div>
+            {i < steps.length - 1 && <div className="wizard-step-line" aria-hidden="true" />}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
 
 // First-time setup. Two steps:
 //   1. Location + timezone
@@ -74,8 +103,9 @@ export default function SetupWizard({ cfg, onPatch, onApplyPreset, onClose }) {
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
         <motion.div className="wizard-modal"
           initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}>
+          <StepIndicator currentStep={1} steps={['Location', 'Layout']} />
           <header>
-            <h2>WELCOME — STEP 1 / 2</h2>
+            <h2>Welcome — let's pick your spot</h2>
             <div className="terminal-line">&gt; SET YOUR LOCATION AND TIMEZONE TO GET STARTED</div>
           </header>
 
@@ -144,8 +174,9 @@ export default function SetupWizard({ cfg, onPatch, onApplyPreset, onClose }) {
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <motion.div className="wizard-modal preset-modal"
         initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}>
+        <StepIndicator currentStep={2} steps={['Location', 'Layout']} />
         <header>
-          <h2>STEP 2 / 2 — PICK A LAYOUT</h2>
+          <h2>Pick a starting layout</h2>
           <div className="terminal-line">&gt; START FROM A PRESET · YOU CAN EDIT EVERYTHING AFTER</div>
         </header>
 

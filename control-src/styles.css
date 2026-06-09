@@ -262,6 +262,65 @@ main.layout {
 .screen-tab.is-dragging { opacity: 0.4; }
 .screen-tab.is-over { box-shadow: inset 2px 0 0 0 var(--ink); }
 
+/* ============ WIZARD STEPPER ============
+ * Stripe / Vercel-style numbered step indicator. Pending steps are
+ * grey, current is filled black, completed shows a check. A thin
+ * line connects each pair so the progression reads at a glance. */
+.wizard-stepper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1.5px solid var(--line);
+}
+.wizard-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Oswald', 'Arial Narrow', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.wizard-step-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  background: #fff;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+.wizard-step.is-current .wizard-step-dot {
+  background: var(--ink);
+  color: #fff;
+}
+.wizard-step.is-done .wizard-step-dot {
+  background: #2a8c3a;
+  color: #fff;
+  border-color: #2a8c3a;
+}
+.wizard-step.is-pending .wizard-step-dot {
+  border-color: #bbb;
+  color: #bbb;
+}
+.wizard-step.is-pending .wizard-step-label { color: #bbb; }
+.wizard-step-label { white-space: nowrap; }
+.wizard-step-line {
+  flex: 1;
+  height: 1.5px;
+  background: #ddd;
+  min-width: 24px;
+}
+
 /* ============ LOCATION PANEL ============ */
 .autocomplete {
   position: absolute;
