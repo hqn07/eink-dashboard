@@ -183,13 +183,13 @@ html, body {
   color: #000 !important;
 }
 
-/* Flush mode: widget bleeds to the tile's edges — no padding, no
- * grid borders. Useful for full-width hero widgets (message bar,
- * black bar, big quote). */
+/* Flush mode: widget bleeds to the tile's edges — strips padding so a
+ * hero widget can paint to all four sides. Borders are kept so multi-
+ * widget screens still get visible tile divisions (a single hairline
+ * border is invisible underneath the widget's own content but reads
+ * as a clear edge against the neighbouring cell). */
 .cell.cell-flush {
   padding: 0;
-  border-right: 0;
-  border-bottom: 0;
 }
 
 /* Spacer is meant to be a pure black block — strip the cell's padding
