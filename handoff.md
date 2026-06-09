@@ -132,6 +132,28 @@ button hover-lift, slider bubble, edited pill, mobile drawer, FAB,
 preview pane, field-flash keyframe, shortcuts modal, the 760 px /
 980 px / 1200 px breakpoints.
 
+### Post-stage polish (commits `91fd5d3`, `193b74b`)
+
+- **Rounded corners pass** (`91fd5d3`). User flagged sharp edges
+  on main-page cards. Added `border-radius: 6px` to: `section.card`,
+  `.screen-tabs`, `.timeline-wrap`, `.editor-wrap`, `.preview-stage`,
+  `.trash-zone`, `.palette`, `.palette-toggle`. Matches the existing
+  `.preview-pane` radius. Roundness scale is now consistent across
+  the main page.
+- **Preview-pane parity bug** (`193b74b`). `<LiveDashboard>` was
+  building each widget's render ctx as
+  `{ ...data, cellW, cellH, density }` — missing the per-item slot
+  + `item.settings`, and skipping `scaleWrap` / `typographyCss` /
+  `cellClasses`. Editor canvas (`EditorGrid.jsx:398`) and SSR
+  (`server.js:1086`) both include all four, so widgets in the
+  preview pane fell back to defaults (clock → SETUP NEEDED,
+  weather_hero → extended-tier FEELS panel) while the canvas
+  rendered correctly. Mirror the ctx + chrome wrap so
+  **preview pane = editor canvas = server render**. Added a small
+  `cssDeclToStyleObj()` helper so `typographyCss`'s declaration
+  string (which carries the `--w-font` custom property) survives
+  the bridge into a React `style` object.
+
 ### Verified
 
 - `npx vite build` — clean across every commit in the session.
@@ -139,6 +161,26 @@ preview pane, field-flash keyframe, shortcuts modal, the 760 px /
 - `import('./control-src/widgets/calendar.js')` smoke-tested per
   view mode.
 - `/display.png` re-rendered at each visual milestone.
+
+### Open / next-session candidates
+
+- **Visual regression** — preview-pane bug was caught only by the
+  user spotting the FEELS panel. A small playwright snapshot of
+  `/control-app/` after a known config would have caught it
+  pre-push. Still un-built.
+- **Bundle size** — vite warns the JS chunk is > 500 kB. Likely
+  candidates for `manualChunks`: framer-motion, phosphor icons,
+  the react-grid-layout cluster, and the `_pool_demo` PNG strings.
+- **Editor canvas + preview-pane drift risk** — two places now
+  build the same widget render ctx. Worth extracting a single
+  `buildTileCtx(item, data)` helper used by both `EditorGrid` and
+  `LiveDashboard`. Memorialised here so the next drift bug doesn't
+  require another user catch.
+- **Hardware reality check** — 2026-06-08 was Stage 0 (validate on
+  physical e-ink). Several of the visual polish items in this
+  session were tuned against the PNG preview; re-run on the
+  e-ink panel to catch dither / contrast issues that the LCD
+  hides (memory: `project_eink_hardware_delay.md`).
 
 ---
 
