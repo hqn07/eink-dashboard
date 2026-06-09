@@ -27,6 +27,7 @@ import ScheduleTimeline from './components/ScheduleTimeline.jsx';
 import SetupWizard from './components/SetupWizard.jsx';
 import ToolsButton from './components/ToolsButton.jsx';
 import ShortcutsHelp from './components/ShortcutsHelp.jsx';
+import LiveDashboard from './components/LiveDashboard.jsx';
 
 const STATUS = {
   syncing: { label: 'SYNCING...', cls: 'saving' },
@@ -38,6 +39,54 @@ const STATUS = {
 };
 
 const MAX_SCREENS = 20;
+
+// Right-side always-on Live preview pane. The dashboard renders at
+// the real 800×480 size and is then CSS-scaled down to fit the
+// pane's actual width via a ResizeObserver, so the preview stays
+// crisp at any pane width.
+function PreviewPane({ data, label, onHide }) {
+  const wrapRef = React.useRef(null);
+  const [scale, setScale] = useState(0.4);
+  useEffect(() => {
+    if (!wrapRef.current) return;
+    const ro = new ResizeObserver(entries => {
+      for (const e of entries) {
+        const w = e.contentRect.width;
+        if (w > 0) setScale(w / 800);
+      }
+    });
+    ro.observe(wrapRef.current);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <aside className="preview-pane">
+      <div className="preview-pane-head">
+        <span className="preview-pane-title">Live preview</span>
+        <button
+          type="button"
+          className="preview-pane-toggle"
+          onClick={onHide}
+          title="Hide preview pane"
+          aria-label="Hide preview pane"
+        >×</button>
+      </div>
+      <div className="preview-pane-frame" ref={wrapRef} style={{ height: 800 * scale * (480 / 800) }}>
+        <div
+          className="preview-pane-scale"
+          style={{
+            width: 800,
+            height: 480,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left'
+          }}
+        >
+          <LiveDashboard data={data} />
+        </div>
+      </div>
+      <div className="preview-pane-meta">{label}</div>
+    </aside>
+  );
+}
 
 // Header sync indicator — Figma/Notion style. Persistent, quiet,
 // surfaces only state + freshness. Caller passes the same `status`
@@ -117,6 +166,16 @@ export default function App() {
     catch { /* ignore */ }
   }, [timelineOpen]);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  // Right-side live preview pane. Defaults to open since it's the main
+  // win of the 3-col layout; user can dismiss and the state sticks.
+  const [previewPaneOpen, setPreviewPaneOpen] = useState(() => {
+    try { return localStorage.getItem('ctrl.previewPaneOpen') !== '0'; }
+    catch { return true; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('ctrl.previewPaneOpen', previewPaneOpen ? '1' : '0'); }
+    catch { /* ignore */ }
+  }, [previewPaneOpen]);
   const [previewKey, setPreviewKey] = useState(Date.now());
   const [previewData, setPreviewData] = useState(null);
   const [toast, setToast] = useState(null);
@@ -577,7 +636,7 @@ export default function App() {
         )}
       </div>
 
-      <main className="layout edit-mode">
+      <main className={`layout edit-mode ${previewPaneOpen ? 'preview-on' : 'preview-off'}`}>
         <aside className="settings-sidebar">
           {editScreen && (
             <ScreenPanel
@@ -643,6 +702,23 @@ export default function App() {
             </div>
           </section>
         </div>
+        {previewPaneOpen && (
+          <PreviewPane
+            data={livePreviewData}
+            label={`${editScreen?.name || 'Screen'} · ${GRID_COLS}×${GRID_ROWS}`}
+            onHide={() => setPreviewPaneOpen(false)}
+          />
+        )}
+        {!previewPaneOpen && (
+          <button
+            type="button"
+            className="preview-pane-show"
+            onClick={() => setPreviewPaneOpen(true)}
+            title="Show live preview"
+          >
+            ◧ Show preview
+          </button>
+        )}
       </main>
 
       <SaveBar

@@ -464,6 +464,95 @@ main.layout {
   font-size: 10px;
 }
 
+/* Live preview pane (right column on ≥1200px). 800×480 dashboard
+ * rendered into a fixed-width frame, scaled to fit the pane width
+ * so it stays readable without scroll. */
+.preview-pane {
+  background: #fff;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.preview-pane-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1.5px solid var(--line);
+  padding-bottom: 8px;
+}
+.preview-pane-title {
+  font-family: 'Oswald', 'Arial Narrow', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.preview-pane-toggle {
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--mute);
+  background: transparent;
+  color: var(--mute);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.preview-pane-toggle:hover {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+.preview-pane-frame {
+  width: 100%;
+  background: #fff;
+  border: 1px solid var(--mute);
+  overflow: hidden;
+  position: relative;
+}
+.preview-pane-scale {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.preview-pane-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--mute);
+  text-align: center;
+}
+
+/* Compact "Show preview" pill that takes the place of the pane when
+ * collapsed (still in the grid flow so the layout stays 3-col). */
+.preview-pane-show {
+  align-self: start;
+  position: sticky;
+  top: 16px;
+  background: transparent;
+  border: 1.5px dashed var(--mute);
+  color: var(--mute);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+.preview-pane-show:hover {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+
 /* ============ LOCATION PANEL ============ */
 .autocomplete {
   position: absolute;
@@ -614,6 +703,22 @@ main.layout {
     align-self: start;
     max-height: calc(100vh - 32px);
     overflow-y: auto;
+  }
+}
+
+/* Wide viewports get a third column for the always-on Live preview
+ * pane. Below 1200px the pane stays available via a toggle but the
+ * canvas doesn't shrink. Webflow / Figma Make use the same
+ * "canvas-narrow-only-when-preview-fits" rule. */
+@media (min-width: 1200px) {
+  main.layout.edit-mode.preview-on {
+    grid-template-columns: 280px 1fr 340px;
+  }
+  .preview-pane {
+    position: sticky;
+    top: 16px;
+    align-self: start;
+    max-height: calc(100vh - 32px);
   }
 }
 
