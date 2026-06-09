@@ -767,7 +767,7 @@ export default function App() {
       </main>
 
       <SaveBar
-        status={canSave ? statusDef.cls : 'error'}
+        status={canSave ? status : 'error'}
         label={
           canSave
             ? (statusDef.label + (statusMsg && status === 'error' ? ` · ${statusMsg}` : ''))

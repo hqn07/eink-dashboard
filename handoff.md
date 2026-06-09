@@ -1,6 +1,146 @@
 # E-Ink Dashboard — Handoff
 
-State as of 2026-06-02. Read this + `CLAUDE.md` + memory pointers below before touching anything.
+State as of 2026-06-09. Read this + `CLAUDE.md` + memory pointers below before touching anything.
+
+## What shipped in the 2026-06-09 session (HEAD on `origin/main`)
+
+One long CAVEMAN-ULTRA pass spanning four big areas:
+**token system**, **chrome removal**, **calendar overhaul +
+settings-component upgrades**, and **main-page UI rebuild** (8
+sub-stages G/H/J/I/F/#3/K + a SaveBar/+ button fix). Plus a
+reliability sweep on the server. Every change rebuilt + verified
+locally; `/display.png` re-checked at the visual milestones.
+
+### Reliability sweep (server.js)
+
+- Process-level `unhandledRejection` + `uncaughtException` handlers
+  log instead of crashing the dashboard renderer.
+- `atomicWriteFile` for battery state file (write to `*.tmp` →
+  rename) — partial writes can't corrupt the snapshot.
+- `jsonFetch` wraps every outbound fetch with
+  `AbortSignal.timeout(10000)` — no hangs against dead upstream APIs.
+- LRU trim on `geocodeCache` at 500 entries.
+- Puppeteer page semaphore (`MAX_PAGES = 2`) — concurrent dashboard
+  renders queue instead of OOMing Chrome.
+- `withConfigLock()` serializes the read-merge-write cycle on
+  `data/config.json` — concurrent PATCHes can no longer drop fields.
+
+### Token system + chrome retirement
+
+New `widgets/_tokens.js` exposes a logic-less TOKENS registry
+(`date`, `day`, `city`, `temp`, `weather`, `lastRefresh`, `battery`)
+and a `renderTokens()` parser for `{{token|format|default:VALUE}}`.
+Multi-pipe parsing; missing values fall back to `—` em dash.
+
+`server.js#buildWidgetData` now assembles a `tokenCtx` per render
+and exposes it to all widgets. `/api/alarm/next` runs labels
+through `renderTokens()` so alarm labels can interpolate.
+
+The hard-coded dashboard **header + footer were removed**. The
+replacement is a new user-controlled `text_bar` widget
+(`control-src/widgets/text_bar.js`) with full token support and
+view-tier awareness (subtitle drops below 2 rows; dashed
+empty-state). `_chrome.js` collapsed to just `typographyCss` +
+`scaleWrap` + `cellClasses`.
+
+`public/dashboard.css` got a new TRMNL-inspired `.item` primitive
+(meta / content / trailing slots + emphasis + `--allday` modifier)
+and all `.hdr*` / `.ftr*` rules deleted. `.cell-flush` now strips
+padding only — borders preserved (commit `aa42f5f`).
+
+### Album-art dither polish
+
+`widgets/_dither.js` runs `.normalize().gamma(1.2).linear(1.15,
+-20)` before Floyd–Steinberg. Output dropped to 240 px to match
+the extended-tier render 1:1 — fixes the visible noise band on
+mac_nowplaying.
+
+### Calendar — 3 view modes + presets
+
+`control-src/widgets/calendar.js` now supports three view modes:
+- `renderList` — agenda list (existing).
+- `renderStrip` — 7-day horizontal strip (auto when ≥ 7×2).
+- `renderMonth` — full month grid w/ event titles + dynamic row
+  trim (auto when ≥ 7×4).
+
+`control-src/widgets/_ical_presets.js` ships 18 iCal feeds grouped
+**Countries / Religions / Sky** (Vietnam + Buddhism included on
+user request). The form picks them via the new SearchableSelect,
+and each preset card declares its own `viewMode` so the four
+presets actually look different in the preview.
+
+### Settings-component upgrades
+
+Seven additions land under `control-src/components/`:
+
+- `SearchableSelect.jsx` — cmdk-style grouped picker, keyboard
+  nav, no external dep.
+- `TokenInput.jsx` — typing `{{` opens a floating completion
+  popover; arrow / enter / tab to accept.
+- `UrlBadge.jsx` — dot indicator on URL rows (valid / invalid /
+  empty).
+- `TimeField.jsx` — HH:MM input mask, auto-colon, red-border on
+  invalid (used in alarm + message schedules).
+- `WidgetForm.jsx` — accordion swapped for **pill tabs**
+  (`TabbedForm`); canonical 4-tab taxonomy
+  `['Data', 'Content', 'Layout', 'Style']`. Always-visible
+  "Edited" pill in `FieldLabel`. Slider thumb bubble. Drag-grip
+  on `ListEditor` rows. `onHoverPreset` wired through
+  `PresetContext` for live hover-preview.
+- `WidgetSettingsModal.jsx` — `hoveredPresetValues` overlay so
+  hovering a preset card live-applies its values to the preview
+  pane.
+
+### Main-page rebuild — stages G H J I F #3 K
+
+(Sub-stage letters were the chat shorthand; commit order ≈ same.)
+
+| Stage | Commit | What |
+|-------|--------|------|
+| G | `8172419` | Schedule timeline collapses by default; state in localStorage. |
+| H | `8b927aa` | New `--accent-warm` ochre `#b68a3c` replaces the saturated web-app green. |
+| J | `7ef38de` | Micro-interactions: button hover-lift, field-flash, slider bubble, framer-motion presence transitions. |
+| I | `6074cf8` | Global keyboard shortcuts + `?` help overlay (`ShortcutsHelp.jsx`). |
+| F | `7eaa424` | Always-on **Live preview** pane at ≥ 1200 px; ResizeObserver-driven CSS scale. |
+| #3 | `f5d338c` | Pre-save validation scrolls to + flashes the first invalid field. |
+| K | `e232460` | Mobile / tablet responsive: `@media (max-width: 760px)` collapses sidebar to a bottom-sheet drawer behind a FAB. |
+
+Header rebuilt as a 3-zone layout with an inline `SyncPill` status
+indicator + `?` shortcut button. `ScreenTabs.jsx` switched to pill
+style with HTML5 drag-reorder + grip handle (no `dnd-kit` dep).
+`SetupWizard.jsx` got a Stripe/Vercel-style numbered
+`StepIndicator`. `SaveBar.jsx` rewritten as a floating pill with
+slide-in `AnimatePresence`; hidden when `synced` / `syncing`.
+
+### Final two fixes (commit `baa5bcb` + follow-up)
+
+- `+ ADD SCREEN` glyph re-centered: `font-size: 18px;
+  min-height: 30px; display: inline-flex; align-items: center;
+  justify-content: center`.
+- SaveBar lingered after a successful save → first attempt added
+  an auto-fade timer (`saved` → `synced` after 1.5 s).
+- Second pass found the *real* bug: `App.jsx` was passing
+  `statusDef.cls` (not raw `status`) into `<SaveBar>`. Both
+  `synced` and `saved` mapped to `cls: 'saved'`, so the bar's
+  visibility check `VISIBLE_STATES.has(status)` was permanently
+  true. Fix: pass raw `status`.
+
+### Cross-cutting CSS additions (`control-src/styles.css`)
+
+`SyncPill`, save-bar pill, schedule-collapsible, `--accent-warm`,
+button hover-lift, slider bubble, edited pill, mobile drawer, FAB,
+preview pane, field-flash keyframe, shortcuts modal, the 760 px /
+980 px / 1200 px breakpoints.
+
+### Verified
+
+- `npx vite build` — clean across every commit in the session.
+- `/api/preview-data` curl confirms tokens resolve end-to-end.
+- `import('./control-src/widgets/calendar.js')` smoke-tested per
+  view mode.
+- `/display.png` re-rendered at each visual milestone.
+
+---
 
 ## What shipped in the 2026-05-31 → 2026-06-02 session (`92bd733` → `4942c1b`)
 
