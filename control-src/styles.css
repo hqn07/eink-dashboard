@@ -177,27 +177,34 @@ main.layout {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 12px;
+  padding: 10px 12px;
   margin-bottom: 16px;
   background: #fff;
   border: 2px solid var(--ink);
+  border-radius: 4px;
 }
 .screen-tab {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
-  border: 2px solid var(--ink);
-  background: #fff;
+  padding: 7px 14px;
+  border: 1.5px solid transparent;
+  background: transparent;
   color: var(--ink);
   cursor: pointer;
   font-family: inherit;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   letter-spacing: 0.5px;
+  border-radius: 999px;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
 }
-.screen-tab:hover { background: #faf8f3; }
-.screen-tab.active { background: var(--ink); color: #fff; }
+.screen-tab:hover { background: #f4f3ed; }
+.screen-tab.active {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
 .screen-tab.overlap {
   border-color: var(--accent);
   background: var(--accent);
@@ -225,10 +232,35 @@ main.layout {
 .screen-tab-add {
   font-size: 22px;
   line-height: 1;
-  padding: 4px 14px;
-  background: var(--bg);
+  padding: 2px 14px;
+  background: transparent;
+  color: var(--mute);
+  border: 1.5px dashed var(--mute);
+}
+.screen-tab-add:hover:not(:disabled) {
+  background: #f4f3ed;
+  color: var(--ink);
+  border-style: solid;
+  border-color: var(--ink);
 }
 .screen-tab-add:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Drag grip + drag states. Grip is hidden by default and only fades
+ * in on row hover so a clean tab bar isn't dotted with handles. */
+.screen-tab-grip {
+  display: inline-flex;
+  align-items: center;
+  color: currentColor;
+  opacity: 0;
+  cursor: grab;
+  margin-right: -2px;
+  transition: opacity 120ms ease;
+}
+.screen-tab:hover .screen-tab-grip,
+.screen-tab.active .screen-tab-grip { opacity: 0.6; }
+.screen-tab-grip:active { cursor: grabbing; }
+.screen-tab.is-dragging { opacity: 0.4; }
+.screen-tab.is-over { box-shadow: inset 2px 0 0 0 var(--ink); }
 
 /* ============ LOCATION PANEL ============ */
 .autocomplete {

@@ -468,6 +468,17 @@ export default function App() {
         liveScreen={liveScreen}
         onSelect={setEditScreenId}
         onAdd={addScreen}
+        onReorder={(fromId, toId) => {
+          const arr = screens.slice();
+          const fromIdx = arr.findIndex(s => s.id === fromId);
+          const toIdx   = arr.findIndex(s => s.id === toId);
+          if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
+          const [moved] = arr.splice(fromIdx, 1);
+          arr.splice(toIdx, 0, moved);
+          setUndoCfg(cfg);
+          setCfg({ ...cfg, screens: arr });
+          markDirty();
+        }}
         canAdd={screens.length < MAX_SCREENS}
       />
 
