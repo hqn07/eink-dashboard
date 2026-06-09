@@ -483,7 +483,16 @@ export default function App() {
       />
 
       <main className="layout edit-mode">
-        <div className="settings">
+        <aside className="settings-sidebar">
+          {editScreen && (
+            <ScreenPanel
+              screen={editScreen}
+              isOverlap={overlapIds.has(editScreen.id)}
+              onUpdate={(patch) => updateScreen(editScreen.id, patch)}
+            />
+          )}
+        </aside>
+        <div className="canvas-column">
           <section className="card">
             <div className="section-title">
               <span>{editScreen?.name || 'Screen'}</span>
@@ -538,14 +547,6 @@ export default function App() {
               DRAG TILE TO MOVE · CORNER TO RESIZE · × OR DRAG TO TRASH · DRAG POOL CARD ONTO CANVAS
             </div>
           </section>
-
-          {editScreen && (
-            <ScreenPanel
-              screen={editScreen}
-              isOverlap={overlapIds.has(editScreen.id)}
-              onUpdate={(patch) => updateScreen(editScreen.id, patch)}
-            />
-          )}
         </div>
       </main>
 

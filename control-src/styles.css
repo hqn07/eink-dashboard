@@ -366,9 +366,26 @@ main.layout {
   main.layout {
     grid-template-columns: minmax(440px, 1.1fr) 1fr;
   }
-  main.layout.edit-mode { grid-template-columns: 1fr; }
+  /* Edit mode: settings sidebar on the LEFT (industry pattern —
+   * Wix/VS Code/Customer's Canvas), canvas fills the rest. Sidebar
+   * is sticky so screen settings stay reachable while scrolling
+   * the canvas + pool. */
+  main.layout.edit-mode {
+    grid-template-columns: 300px 1fr;
+  }
   .preview-stage { position: sticky; top: 24px; }
+  .settings-sidebar {
+    position: sticky;
+    top: 16px;
+    align-self: start;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
 }
+
+/* Below the breakpoint, sidebar stacks above the canvas. */
+.settings-sidebar { display: flex; flex-direction: column; gap: 16px; }
+.canvas-column    { min-width: 0; }
 
 /* ============ PREVIEW ============ */
 .preview-stage {
