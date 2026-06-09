@@ -321,6 +321,40 @@ main.layout {
   min-width: 24px;
 }
 
+/* Schedule-timeline collapse — collapsed by default since the strip
+ * is only useful when multiple screens have scheduling enabled. */
+.schedule-collapsible { margin-bottom: 16px; }
+.schedule-collapsible-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  padding: 6px 0;
+  cursor: pointer;
+  font-family: 'Oswald', 'Arial Narrow', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: left;
+}
+.schedule-collapsible-trigger:hover { color: #444; }
+.schedule-collapsible-caret {
+  width: 12px;
+  text-align: center;
+  font-size: 12px;
+}
+.schedule-collapsible-summary {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: var(--mute);
+}
+
 /* ============ LOCATION PANEL ============ */
 .autocomplete {
   position: absolute;

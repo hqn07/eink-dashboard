@@ -104,6 +104,17 @@ export default function App() {
     try { return localStorage.getItem('ctrl.editScreenId') || null; } catch { return null; }
   });
   const [showGrid, setShowGrid] = useState(true);
+  // Schedule timeline starts collapsed unless the user has opened it
+  // before; the strip is only relevant when the user has > 1 screen
+  // with scheduling enabled, which is the minority case.
+  const [timelineOpen, setTimelineOpen] = useState(() => {
+    try { return localStorage.getItem('ctrl.timelineOpen') === '1'; }
+    catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('ctrl.timelineOpen', timelineOpen ? '1' : '0'); }
+    catch { /* ignore */ }
+  }, [timelineOpen]);
   const [previewKey, setPreviewKey] = useState(Date.now());
   const [previewData, setPreviewData] = useState(null);
   const [toast, setToast] = useState(null);
@@ -482,16 +493,32 @@ export default function App() {
         canAdd={screens.length < MAX_SCREENS}
       />
 
-      <ScheduleTimeline
-        screens={screens}
-        activeId={editScreenId}
-        overlapIds={overlapIds}
-        timezone={cfg.timezone || 'UTC'}
-        onSelect={setEditScreenId}
-        onUpdateSchedule={(id, patch) => updateScreen(id, {
-          schedule: { ...(screens.find(s => s.id === id)?.schedule || { enabled: false }), ...patch, enabled: true }
-        })}
-      />
+      <div className="schedule-collapsible">
+        <button
+          type="button"
+          className="schedule-collapsible-trigger"
+          onClick={() => setTimelineOpen(o => !o)}
+          aria-expanded={timelineOpen}
+        >
+          <span className="schedule-collapsible-caret">{timelineOpen ? '▾' : '▸'}</span>
+          <span>Schedule timeline</span>
+          <span className="schedule-collapsible-summary">
+            {screens.filter(s => s.schedule?.enabled).length} of {screens.length} scheduled
+          </span>
+        </button>
+        {timelineOpen && (
+          <ScheduleTimeline
+            screens={screens}
+            activeId={editScreenId}
+            overlapIds={overlapIds}
+            timezone={cfg.timezone || 'UTC'}
+            onSelect={setEditScreenId}
+            onUpdateSchedule={(id, patch) => updateScreen(id, {
+              schedule: { ...(screens.find(s => s.id === id)?.schedule || { enabled: false }), ...patch, enabled: true }
+            })}
+          />
+        )}
+      </div>
 
       <main className="layout edit-mode">
         <aside className="settings-sidebar">
