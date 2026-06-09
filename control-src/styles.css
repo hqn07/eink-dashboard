@@ -8,6 +8,13 @@
   --ink: #111;
   --line: #111;
   --accent: #c8302a;
+  /* Editorial ochre — secondary warm accent for live / success / info
+   * cues. Chosen over a saturated green (var(--accent-warm)) so the palette stays
+   * coherent with the newspaper / e-ink aesthetic instead of leaning
+   * web-app. Used on save-bar-saved, wizard step-done, screen-tab
+   * LIVE flag, and any future "this is fresh" indicators. */
+  --accent-warm: #b68a3c;
+  --accent-warm-soft: #f0e3c0;
   --mute: #6b6960;
   --grid: rgba(17, 17, 17, 0.08);
 }
@@ -127,7 +134,7 @@ html, body {
   flex-shrink: 0;
 }
 .sync-pill-saving .sync-dot { background: #888; animation: syncPulse 1s ease-in-out infinite; }
-.sync-pill-saved  .sync-dot { background: #2a8c3a; }
+.sync-pill-saved  .sync-dot { background: var(--accent-warm); }
 .sync-pill-dirty  .sync-dot { background: #c00; }
 .sync-pill-error  .sync-dot { background: #c00; }
 .sync-pill-dirty,
@@ -222,7 +229,7 @@ main.layout {
   border-radius: 2px;
 }
 .screen-tab.active .screen-tab-flag { background: #fff; color: var(--ink); }
-.screen-tab-flag.live { background: var(--accent); color: #fff !important; }
+.screen-tab-flag.live { background: var(--accent-warm); color: #fff !important; }
 .screen-tab-time {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
@@ -304,9 +311,9 @@ main.layout {
   color: #fff;
 }
 .wizard-step.is-done .wizard-step-dot {
-  background: #2a8c3a;
+  background: var(--accent-warm);
   color: #fff;
-  border-color: #2a8c3a;
+  border-color: var(--accent-warm);
 }
 .wizard-step.is-pending .wizard-step-dot {
   border-color: #bbb;
@@ -690,7 +697,7 @@ input[type="text"], input[type="url"], textarea {
 }
 .save-bar-dirty  { background: var(--accent); }
 .save-bar-saving { background: #444; }
-.save-bar-saved  { background: #2a8c3a; }
+.save-bar-saved  { background: var(--accent-warm); }
 .save-bar-error  { background: var(--accent); }
 .save-bar-status {
   font-family: 'JetBrains Mono', monospace;
