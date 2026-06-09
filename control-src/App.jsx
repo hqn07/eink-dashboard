@@ -176,6 +176,9 @@ export default function App() {
     try { localStorage.setItem('ctrl.previewPaneOpen', previewPaneOpen ? '1' : '0'); }
     catch { /* ignore */ }
   }, [previewPaneOpen]);
+  // Mobile bottom-sheet drawer holding the sidebar contents. Driven
+  // by a FAB shown only below the sidebar's narrow breakpoint.
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [previewKey, setPreviewKey] = useState(Date.now());
   const [previewData, setPreviewData] = useState(null);
   const [toast, setToast] = useState(null);
@@ -766,6 +769,60 @@ export default function App() {
         onDiscard={undoCfg ? undo : null}
         disabled={!canSave}
       />
+
+      {/* Mobile FAB — only shown by CSS below the breakpoint where
+       *  the sidebar collapses out of the layout. */}
+      <button
+        type="button"
+        className="mobile-settings-fab"
+        onClick={() => setMobileDrawerOpen(true)}
+        aria-label="Open screen settings"
+      >
+        ☰
+      </button>
+
+      {/* Mobile bottom-sheet drawer. Hand-rolled (no Radix Dialog dep);
+       *  overlay + bottom-sliding sheet animated via framer. */}
+      <AnimatePresence>
+        {mobileDrawerOpen && (
+          <motion.div
+            className="mobile-drawer-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setMobileDrawerOpen(false)}
+          >
+            <motion.div
+              className="mobile-drawer"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 380, damping: 34 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mobile-drawer-handle" aria-hidden="true" />
+              <div className="mobile-drawer-head">
+                <span>Screen settings</span>
+                <button
+                  type="button"
+                  className="wsm-close"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  aria-label="Close"
+                >×</button>
+              </div>
+              <div className="mobile-drawer-body">
+                {editScreen && (
+                  <ScreenPanel
+                    screen={editScreen}
+                    isOverlap={overlapIds.has(editScreen.id)}
+                    onUpdate={(patch) => updateScreen(editScreen.id, patch)}
+                  />
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <ShortcutsHelp open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 

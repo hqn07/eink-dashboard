@@ -559,6 +559,105 @@ main.layout {
 .field-flash {
   animation: fieldFlash 1.2s ease-out;
 }
+
+/* ============ MOBILE / TABLET RESPONSIVE ============
+ * Below 760px the editor compresses for one-handed use: ScreenTabs
+ * scroll horizontally instead of wrapping, the sidebar disappears
+ * from flow, and a floating action button (FAB) opens the screen
+ * settings as a bottom-sheet drawer. Linear / Notion mobile use
+ * the same drawer pattern. */
+.mobile-settings-fab { display: none; }
+.mobile-drawer-overlay,
+.mobile-drawer { display: none; }
+
+@media (max-width: 760px) {
+  /* Sidebar drops out of the grid; canvas + preview take full
+   * width. Save bar already centers on its own. */
+  main.layout.edit-mode,
+  main.layout.edit-mode.preview-on {
+    grid-template-columns: 1fr !important;
+  }
+  .settings-sidebar { display: none; }
+  /* ScreenTabs become a horizontal scroller so the tabs don't wrap
+   * to 3 rows on a narrow viewport. */
+  .screen-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+  }
+  .screen-tab { flex-shrink: 0; }
+
+  /* FAB — bottom-right corner, fixed to viewport so it's reachable
+   * from anywhere on the page. */
+  .mobile-settings-fab {
+    display: inline-flex;
+    position: fixed;
+    right: 16px;
+    bottom: 80px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: #fff;
+    border: 0;
+    font-size: 22px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    z-index: 70;
+  }
+  .mobile-settings-fab:hover { background: #333; }
+
+  /* Bottom-sheet drawer. Overlay dims the page; sheet slides up
+   * from the bottom and stops at 80vh so the user can still see the
+   * canvas behind through the gap. */
+  .mobile-drawer-overlay {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 80;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .mobile-drawer {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-height: 80vh;
+    background: var(--bg);
+    border-top: 2px solid var(--ink);
+    border-radius: 16px 16px 0 0;
+    overflow: hidden;
+  }
+  .mobile-drawer-handle {
+    width: 44px;
+    height: 4px;
+    background: var(--mute);
+    border-radius: 2px;
+    margin: 8px auto;
+    opacity: 0.5;
+  }
+  .mobile-drawer-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 16px 12px;
+    border-bottom: 1.5px solid var(--line);
+    font-family: 'Oswald', 'Arial Narrow', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .mobile-drawer-body {
+    overflow-y: auto;
+    padding: 14px 16px 24px;
+    -webkit-overflow-scrolling: touch;
+  }
+}
 @keyframes fieldFlash {
   0%   { box-shadow: 0 0 0 0 rgba(204, 0, 0, 0.5); background-color: rgba(204, 0, 0, 0.18); }
   60%  { box-shadow: 0 0 0 8px rgba(204, 0, 0, 0);   background-color: rgba(204, 0, 0, 0.04); }
