@@ -370,6 +370,100 @@ main.layout {
   color: var(--mute);
 }
 
+/* Keyboard shortcuts discoverability button — sits in app-header-right
+ * next to MacAgentBadge so users can find the overlay without knowing
+ * the "?" trigger. */
+.app-header-shortcut-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid var(--mute);
+  background: transparent;
+  color: var(--mute);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.app-header-shortcut-btn:hover {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+
+/* Shortcuts overlay modal — list of key chip + description rows. */
+.shortcuts-modal {
+  background: #fff;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  padding: 20px 24px;
+  width: min(520px, 90vw);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
+}
+.shortcuts-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1.5px solid var(--line);
+}
+.shortcuts-header h2 {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 400;
+  margin: 0;
+}
+.shortcuts-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.shortcuts-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.shortcuts-keys {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 110px;
+}
+.shortcuts-row kbd {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--bg);
+  border: 1.5px solid var(--ink);
+  border-bottom-width: 2.5px;
+  border-radius: 4px;
+  padding: 2px 7px;
+  color: var(--ink);
+  min-width: 18px;
+  text-align: center;
+}
+.shortcuts-plus {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--mute);
+}
+.shortcuts-desc {
+  font-size: 13px;
+  color: var(--ink);
+}
+.shortcuts-footer {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1.5px solid var(--line);
+  font-size: 10px;
+}
+
 /* ============ LOCATION PANEL ============ */
 .autocomplete {
   position: absolute;

@@ -26,6 +26,7 @@ import MacAgentBadge from './components/MacAgentBadge.jsx';
 import ScheduleTimeline from './components/ScheduleTimeline.jsx';
 import SetupWizard from './components/SetupWizard.jsx';
 import ToolsButton from './components/ToolsButton.jsx';
+import ShortcutsHelp from './components/ShortcutsHelp.jsx';
 
 const STATUS = {
   syncing: { label: 'SYNCING...', cls: 'saving' },
@@ -115,6 +116,7 @@ export default function App() {
     try { localStorage.setItem('ctrl.timelineOpen', timelineOpen ? '1' : '0'); }
     catch { /* ignore */ }
   }, [timelineOpen]);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [previewKey, setPreviewKey] = useState(Date.now());
   const [previewData, setPreviewData] = useState(null);
   const [toast, setToast] = useState(null);
@@ -352,6 +354,52 @@ export default function App() {
 
   const refreshPreview = () => setPreviewKey(Date.now());
 
+  // Global keyboard shortcuts. We bail when the focus is inside an
+  // editable element so a `g` in the middle of a city name doesn't
+  // toggle the grid. ⌘/Ctrl + S still wins inside inputs because the
+  // user expects "save" to work regardless of focus.
+  useEffect(() => {
+    const onKey = (e) => {
+      const tag = (e.target && e.target.tagName) || '';
+      const editable = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' ||
+        (e.target && e.target.isContentEditable);
+      const metaOrCtrl = e.metaKey || e.ctrlKey;
+      // ⌘/Ctrl + S — save & push
+      if (metaOrCtrl && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        if (canSave && status === 'dirty') handleSave();
+        return;
+      }
+      // ⌘/Ctrl + Z — undo
+      if (metaOrCtrl && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
+        e.preventDefault();
+        if (undoCfg) undo();
+        return;
+      }
+      if (editable) return;
+      // ? — open shortcuts help
+      if (e.key === '?') { e.preventDefault(); setShortcutsOpen(true); return; }
+      // [ / ] — previous / next screen tab
+      if (e.key === '[' || e.key === ']') {
+        if (!screens.length) return;
+        e.preventDefault();
+        const idx = Math.max(0, screens.findIndex(s => s.id === editScreenId));
+        const next = e.key === '[' ? (idx - 1 + screens.length) % screens.length
+                                   : (idx + 1) % screens.length;
+        setEditScreenId(screens[next].id);
+        return;
+      }
+      // g — toggle canvas grid overlay
+      if (e.key === 'g' || e.key === 'G') {
+        e.preventDefault();
+        setShowGrid(g => !g);
+        return;
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [canSave, status, undoCfg, screens, editScreenId]);
+
   // Auto-save: 2s after the last edit if config is valid.
   useEffect(() => {
     if (status !== 'dirty' || !canSave) return;
@@ -458,6 +506,15 @@ export default function App() {
           <SyncPill status={status} lastSavedAt={lastSavedAt} statusMsg={statusMsg} />
         </div>
         <div className="app-header-right">
+          <button
+            type="button"
+            className="app-header-shortcut-btn"
+            onClick={() => setShortcutsOpen(true)}
+            title="Show keyboard shortcuts (?)"
+            aria-label="Keyboard shortcuts"
+          >
+            ?
+          </button>
           <MacAgentBadge />
           {cfg && (
             <ToolsButton
@@ -599,6 +656,8 @@ export default function App() {
         onDiscard={undoCfg ? undo : null}
         disabled={!canSave}
       />
+
+      <ShortcutsHelp open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
       <AnimatePresence>
         {toast && (
