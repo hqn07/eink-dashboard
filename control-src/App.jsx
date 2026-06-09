@@ -166,6 +166,14 @@ export default function App() {
     catch { /* ignore */ }
   }, [timelineOpen]);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  // Auto-fade the SaveBar after a brief success window. The 'saved'
+  // state stays long enough for the SyncPill flash to confirm the
+  // write, then transitions to 'synced' so SaveBar slides out.
+  useEffect(() => {
+    if (status !== 'saved') return;
+    const t = setTimeout(() => setStatus(s => (s === 'saved' ? 'synced' : s)), 1500);
+    return () => clearTimeout(t);
+  }, [status]);
   // Right-side live preview pane. Defaults to open since it's the main
   // win of the 3-col layout; user can dismiss and the state sticks.
   const [previewPaneOpen, setPreviewPaneOpen] = useState(() => {

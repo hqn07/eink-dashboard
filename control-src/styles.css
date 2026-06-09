@@ -245,9 +245,17 @@ main.layout {
   opacity: 0.7;
 }
 .screen-tab-add {
-  font-size: 22px;
+  /* Match the base .screen-tab height so the "+" sits on the same
+   * vertical center as text on neighbouring tabs. The base tab's
+   * 7px vertical padding + 13px font-size gives ~30px total — match
+   * that with min-height + flex centering. */
+  font-size: 18px;
   line-height: 1;
-  padding: 2px 14px;
+  padding: 0 14px;
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   color: var(--mute);
   border: 1.5px dashed var(--mute);
