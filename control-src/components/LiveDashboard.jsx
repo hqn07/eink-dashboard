@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { renderWidget } from '../widget-render.js';
+import { renderWidget, typographyCss, scaleWrap, cellClasses } from '../widget-render.js';
 import { widgetById } from '../widgets.js';
 
 // Binary-search a font-size that lets the element's content fit its
@@ -18,6 +18,26 @@ function autofitText(el) {
     else hi = mid - 1;
   }
   el.style.fontSize = lo + 'px';
+}
+
+// Parse a CSS declaration string ("--w-font:serif;padding:8px;") into a
+// React-style object. Camel-cases standard props; leaves --var keys as-is.
+function cssDeclToStyleObj(decl) {
+  const out = {};
+  if (!decl) return out;
+  for (const part of String(decl).split(';')) {
+    const i = part.indexOf(':');
+    if (i < 0) continue;
+    const k = part.slice(0, i).trim();
+    const v = part.slice(i + 1).trim();
+    if (!k || !v) continue;
+    if (k.startsWith('--')) out[k] = v;
+    else {
+      const camel = k.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+      out[camel] = v;
+    }
+  }
+  return out;
 }
 
 const DASH_W = 800;
@@ -104,20 +124,32 @@ export default function LiveDashboard({
     const def = widgetById(item.widgetId || item.id);
     if (!def) continue;
     if (!withinVisibility(item.visibility, nowM)) continue;
-    const inner = renderWidget(item.widgetId || item.id, { ...data, cellW: item.w, cellH: item.h, density: item.density }) || '';
-    if (!inner) continue;
+    const itemSlot = (data && data.perItem && data.perItem[item.id]) || {};
+    const innerRaw = renderWidget(item.widgetId || item.id, {
+      ...data,
+      ...itemSlot,
+      cellW: item.w,
+      cellH: item.h,
+      density: item.density,
+      settings: item.settings
+    }) || '';
+    if (!innerRaw) continue;
+    const sw = scaleWrap(item.settings);
+    const inner = `${sw.open}${innerRaw}${sw.close}`;
     const classes = ['cell', `cell-${def.id}`];
     if (item.x + item.w >= GRID_COLS) classes.push('cell-edge-right');
     if (item.y + item.h >= GRID_ROWS) classes.push('cell-edge-bottom');
     if (item.flush) classes.push('cell-flush');
     if (item.border === 'dashed') classes.push('cell-border-dashed');
     if (item.border === 'none')   classes.push('cell-border-none');
+    classes.push(...cellClasses(item.settings));
     if (selectedTileId === item.id) classes.push('cell-selected');
     if (editingTileId === item.id)  classes.push('cell-editing');
     const tileStyle = {
       gridColumn: `${item.x + 1} / span ${item.w}`,
       gridRow:    `${item.y + 1} / span ${item.h}`,
-      position: 'relative'
+      position: 'relative',
+      ...cssDeclToStyleObj(typographyCss(item.settings))
     };
     if (renderTileOverlay) {
       tiles.push(
