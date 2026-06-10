@@ -126,6 +126,14 @@ export async function fetchMacState() {
   return r.json();
 }
 
+// Last battery push from the ESP32 — { v, pct, at } (nulls until the
+// device has reported once).
+export async function fetchBattery() {
+  const r = await authFetch('/api/battery');
+  if (!r.ok) throw new Error(`battery ${r.status}`);
+  return r.json();
+}
+
 // Single-widget PNG render — used by the settings modal preview to
 // show the bit-identical e-ink output of the current draft settings
 // after a debounce. Returns a Blob or throws on non-200.

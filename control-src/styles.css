@@ -99,13 +99,24 @@ html, body {
   color: var(--mute);
 }
 @media (max-width: 760px) {
+  /* Two rows max: brand + action cluster share row 1, sync pill gets
+   * row 2. Without explicit placement the right cluster auto-flows to
+   * a third row below the full-width center. */
   .app-header {
     grid-template-columns: 1fr auto;
+    gap: 10px 12px;
   }
+  .app-header h1 { font-size: 19px; white-space: nowrap; }
+  .app-header-left  { grid-row: 1; grid-column: 1; flex-wrap: wrap; gap: 4px 14px; }
+  .app-header-right { grid-row: 1; grid-column: 2; }
   .app-header-center {
+    grid-row: 2;
     grid-column: 1 / -1;
     justify-content: flex-start;
   }
+  /* Badge collapses to dot + age ("5s ago") — full label needs too
+   * much width next to ? and TOOLS. */
+  .mac-agent-badge-label { display: none; }
 }
 
 /* SyncPill — Figma/Notion idiom: small status capsule with a coloured
@@ -537,6 +548,39 @@ main.layout {
   color: var(--mute);
   text-align: center;
 }
+
+/* Device status card — fills the dead space under the preview with the
+ * telemetry otherwise buried in header pills. */
+.device-status-card {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.device-status-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.device-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 5px 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.device-status-row + .device-status-row {
+  border-top: 1px dashed var(--line);
+}
+.device-status-key { color: var(--mute); }
+.device-status-val { font-weight: 700; text-align: right; }
+.device-status-sub { font-weight: 400; color: var(--mute); }
 
 /* Compact "Show preview" pill that takes the place of the pane when
  * collapsed (still in the grid flow so the layout stays 3-col). */
@@ -1534,11 +1578,15 @@ input[type="text"], input[type="url"], textarea {
   color: var(--mute);
 }
 
-/* Trash drop zone between canvas and pool. */
+/* Trash drop zone between canvas and pool. Collapsed when idle —
+   only expands (.active) while a tile drag is in flight. */
 .trash-zone {
-  margin: 12px 0;
-  padding: 14px;
-  border: 2px dashed var(--mute);
+  margin: 0;
+  padding: 0 14px;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  border: 2px dashed transparent;
   border-radius: 6px;
   text-align: center;
   font-family: 'JetBrains Mono', monospace;
@@ -1546,7 +1594,16 @@ input[type="text"], input[type="url"], textarea {
   letter-spacing: 3px;
   color: var(--mute);
   text-transform: uppercase;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s,
+              max-height 0.2s ease, opacity 0.2s ease,
+              margin 0.2s ease, padding 0.2s ease;
+}
+.trash-zone.active {
+  margin: 12px 0;
+  padding: 14px;
+  max-height: 60px;
+  opacity: 1;
+  border-color: var(--mute);
 }
 .trash-zone.hover {
   background: var(--accent);
@@ -1807,6 +1864,11 @@ input[type="text"], input[type="url"], textarea {
   .btn { padding: 10px 12px; min-height: 40px; font-size: 12px; }
   .btn-row { flex-wrap: wrap; }
   .editor-toolbar .btn-row { flex-wrap: wrap; }
+  /* Canvas card header: screen name gets its own row, buttons flow
+   * below it. Squeezed flex otherwise wraps the btn-row around the
+   * name ("24×12 / DEFAULT / HIDE GRID" above, name floating mid). */
+  .canvas-column .section-title { flex-wrap: wrap; gap: 8px; }
+  .canvas-column .section-title > span:first-child { flex: 1 1 100%; }
   .preview-meta { font-size: 9px; }
   .screen-tabs { padding: 8px; gap: 4px; }
   .screen-tabs .tab { padding: 8px 10px; }

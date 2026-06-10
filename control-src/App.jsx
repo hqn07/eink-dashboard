@@ -28,6 +28,7 @@ import SetupWizard from './components/SetupWizard.jsx';
 import ToolsButton from './components/ToolsButton.jsx';
 import ShortcutsHelp from './components/ShortcutsHelp.jsx';
 import LiveDashboard from './components/LiveDashboard.jsx';
+import DeviceStatusCard from './components/DeviceStatusCard.jsx';
 
 const STATUS = {
   syncing: { label: 'SYNCING...', cls: 'saving' },
@@ -44,7 +45,7 @@ const MAX_SCREENS = 20;
 // the real 800×480 size and is then CSS-scaled down to fit the
 // pane's actual width via a ResizeObserver, so the preview stays
 // crisp at any pane width.
-function PreviewPane({ data, label, onHide }) {
+function PreviewPane({ data, label, onHide, refreshMinutes }) {
   const wrapRef = React.useRef(null);
   const [scale, setScale] = useState(0.4);
   useEffect(() => {
@@ -84,6 +85,7 @@ function PreviewPane({ data, label, onHide }) {
         </div>
       </div>
       <div className="preview-pane-meta">{label}</div>
+      <DeviceStatusCard refreshMinutes={refreshMinutes} />
     </aside>
   );
 }
@@ -664,7 +666,9 @@ export default function App() {
           <span className="schedule-collapsible-caret">{timelineOpen ? '▾' : '▸'}</span>
           <span>Schedule timeline</span>
           <span className="schedule-collapsible-summary">
-            {screens.filter(s => s.schedule?.enabled).length} of {screens.length} scheduled
+            {/* "none" instead of 0 — JetBrains Mono's dotted zero reads
+                as an 8 at this size. */}
+            {screens.filter(s => s.schedule?.enabled).length || 'none'} of {screens.length} scheduled
           </span>
         </button>
         {timelineOpen && (
@@ -752,6 +756,7 @@ export default function App() {
             data={livePreviewData}
             label={`${editScreen?.name || 'Screen'} · ${GRID_COLS}×${GRID_ROWS}`}
             onHide={() => setPreviewPaneOpen(false)}
+            refreshMinutes={editScreen?.refreshMinutes ?? 30}
           />
         )}
         {!previewPaneOpen && (

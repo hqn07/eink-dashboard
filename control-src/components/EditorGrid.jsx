@@ -211,6 +211,9 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
   // of committing the new position.
   const trashRef = useRef(null);
   const [trashHover, setTrashHover] = useState(false);
+  // Zone is only visible while a tile drag is in flight — it collapses
+  // (CSS max-height) when idle so it doesn't eat vertical space.
+  const [tileDragging, setTileDragging] = useState(false);
   const [snapGuides, setSnapGuides] = useState({ xCols: [], yRows: [] });
 
   // Compare the in-flight tile's four edges (in grid cells) against every
@@ -255,10 +258,13 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
     setSnapGuides(computeSnapGuides(newItem, rglItems));
   };
 
+  const onTileDragStart = () => setTileDragging(true);
+
   const onTileDragStop = (_, __, newItem, ___, event) => {
     if (pointerOverTrash(event)) {
       removeFromCanvas(newItem.i);
     }
+    setTileDragging(false);
     setTrashHover(false);
     setSnapGuides({ xCols: [], yRows: [] });
   };
@@ -388,6 +394,7 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
           containerPadding={[PAD, PAD]}
           layout={rglLayout}
           onLayoutChange={handleLayoutChange}
+          onDragStart={onTileDragStart}
           onDrag={onTileDrag}
           onDragStop={onTileDragStop}
           onResize={onTileResize}
@@ -489,7 +496,7 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
 
       <div
         ref={trashRef}
-        className={`trash-zone ${trashHover ? 'hover' : ''}`}
+        className={`trash-zone ${tileDragging ? 'active' : ''} ${trashHover ? 'hover' : ''}`}
       >
         <span>&gt; DRAG TILE HERE TO REMOVE</span>
       </div>

@@ -70,7 +70,7 @@ export default function MacAgentBadge() {
     : 'Agent push is fresh';
   return (
     <span className={cls} title={tip}>
-      MAC AGENT: {ageLabel(age)}
+      <span className="mac-agent-badge-label">MAC AGENT: </span>{ageLabel(age)}
     </span>
   );
 }

@@ -262,8 +262,10 @@ html, body {
 
 .weather-hilo {
   font-family: 'JetBrains Mono', monospace;
-  font-weight: 500;
-  font-size: 11px;
+  /* 700/12px — the ° glyph at 500/11px thresholds away to a faint tick
+     on the 1-bit e-ink render. */
+  font-weight: 700;
+  font-size: 12px;
   letter-spacing: 2px;
   margin-top: 4px;
 }
