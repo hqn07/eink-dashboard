@@ -28,16 +28,24 @@ async function fetchEvents(icalUrl, limit = 5) {
     const nowDate = new Date();
     const horizon = new Date(nowDate.getTime() + 14 * 24 * 3600 * 1000);
 
+    const startOfToday = new Date(nowDate);
+    startOfToday.setHours(0, 0, 0, 0);
+
     for (const k in data) {
       const ev = data[k];
       if (ev.type !== 'VEVENT') continue;
       const start = ev.start;
       if (!start) continue;
-      if (start < nowDate || start > horizon) continue;
 
       // iCal all-day events arrive with start.dateOnly === true or
       // datetype === 'date' depending on parser version.
       const isAllDay = !!(start.dateOnly || ev.datetype === 'date');
+
+      // All-day events start at midnight, so a plain `start < now`
+      // check would hide today's all-day events for the whole day.
+      // Keep them until the day rolls over.
+      const cutoff = isAllDay ? startOfToday : nowDate;
+      if (start < cutoff || start > horizon) continue;
 
       upcoming.push({
         title: (ev.summary || 'Untitled').toString(),

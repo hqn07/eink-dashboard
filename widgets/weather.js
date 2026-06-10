@@ -180,7 +180,9 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
     if (!r.ok) {
       console.warn('Open-Meteo fetch non-OK:', r.status);
       status.record('weather', { ok: false, ms: Date.now() - t0, err: `HTTP ${r.status}` });
-      return cached?.data || stubData(u);
+      // Same stale-marking as the catch path below — expired cache is
+      // better than NO DATA, but renderers should know it's old.
+      return cached?.data ? { ...cached.data, stale: true } : stubData(u);
     }
     const data = await r.json();
     const cur = data.current || {};

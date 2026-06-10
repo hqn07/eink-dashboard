@@ -79,7 +79,15 @@ async function loadConfig() {
     const cfg = migrateConfigToScreens(JSON.parse(raw));
     _configCache = { mtimeMs: st.mtimeMs, cfg };
     return cfg;
-  } catch {
+  } catch (err) {
+    // Seed from defaults ONLY when the file doesn't exist yet. Any
+    // other failure (corrupted JSON, transient fs error) must NOT
+    // clobber the user's config with defaults — surface the error
+    // instead so the bad file can be inspected/repaired.
+    if (err.code !== 'ENOENT') {
+      console.error('config.json unreadable (NOT overwriting):', err.message);
+      throw err;
+    }
     const raw = await fsp.readFile(DEFAULT_CONFIG_PATH, 'utf8');
     await atomicWriteFile(CONFIG_PATH, raw);
     const cfg = migrateConfigToScreens(JSON.parse(raw));
@@ -169,9 +177,7 @@ function loadDevicesSync() {
 async function saveDevices(d) {
   _devicesCache = d;
   try {
-    const tmp = DEVICES_PATH + '.tmp';
-    await fsp.writeFile(tmp, JSON.stringify(d, null, 2));
-    await fsp.rename(tmp, DEVICES_PATH);
+    await atomicWriteFile(DEVICES_PATH, JSON.stringify(d, null, 2));
   } catch (err) {
     console.warn('Devices persist failed:', err.message);
   }
@@ -183,8 +189,8 @@ function findDeviceByKey(apiKey) {
   }
   return null;
 }
-function genApiKey()     { return require('crypto').randomBytes(24).toString('hex'); }
-function genFriendlyId() { return require('crypto').randomBytes(3).toString('hex').toUpperCase(); }
+function genApiKey()     { return crypto.randomBytes(24).toString('hex'); }
+function genFriendlyId() { return crypto.randomBytes(3).toString('hex').toUpperCase(); }
 // Seed the cache so the first auth call doesn't hit a sync read.
 loadDevicesSync();
 
@@ -284,11 +290,16 @@ function releasePage() {
 
 async function renderDashboardPng({ units, screen }) {
   await acquirePage();
-  const browser = await getBrowser();
-  const page = await browser.newPage();
-  page.setDefaultTimeout(15000);
-  page.setDefaultNavigationTimeout(15000);
+  // Everything after the acquire lives inside try/finally — if
+  // getBrowser() or newPage() throws (e.g. Chromium fails to launch)
+  // the slot must still be released or the semaphore leaks and all
+  // future renders hang.
+  let page = null;
   try {
+    const browser = await getBrowser();
+    page = await browser.newPage();
+    page.setDefaultTimeout(15000);
+    page.setDefaultNavigationTimeout(15000);
     await page.setViewport({
       width: SCREEN_W,
       height: SCREEN_H,
@@ -323,7 +334,7 @@ async function renderDashboardPng({ units, screen }) {
     await killBrowser();
     throw err;
   } finally {
-    try { await page.close(); } catch (_) {}
+    if (page) { try { await page.close(); } catch (_) {} }
     releasePage();
   }
 }
@@ -698,6 +709,19 @@ function checkDeviceAuth(req, res, next) {
   next();
 }
 
+// Admin auth — fleet DEVICE_TOKEN only, per-device api_keys rejected.
+// /api/setup hands out api_keys to anyone who asks (it's the
+// unauthenticated bootstrap path), so a device key must NOT unlock
+// config writes or the device roster — otherwise enrolling a fake MAC
+// bypasses DEVICE_TOKEN entirely. The control panel and mac-agent
+// always send the fleet token; firmware never calls these endpoints.
+function checkAdminAuth(req, res, next) {
+  if (!DEVICE_TOKEN) return next();
+  const tok = req.query.token || req.headers['x-device-token'];
+  if (tok !== DEVICE_TOKEN) return res.status(401).send('Bad token');
+  next();
+}
+
 // Generic error body so we don't leak internals (e.g. file paths,
 // upstream API failure URLs) to anyone hitting the public endpoints.
 // Full error stays in the server log via the caller's console.error.
@@ -1012,7 +1036,6 @@ function buildPageBodyHtml({ payload, ssr, mode }) {
     cfg, weather, events, units,
     stocks, resolvedMessage, battery
   };
-  const data = { ...ctxBase };
 
   // Matrix mode: every widget at every preset, stacked top-to-bottom.
   if (mode === 'matrix') {
@@ -1166,7 +1189,7 @@ app.get('/dashboard', checkDeviceAuth, async (req, res) => {
 
 // Reset config back to data/config.default.json. Destructive — the
 // client side confirms before calling.
-app.post('/api/config/reset', checkDeviceAuth, async (req, res) => {
+app.post('/api/config/reset', checkAdminAuth, async (req, res) => {
   try {
     const cfg = await withConfigLock(async () => {
       const raw = await fsp.readFile(DEFAULT_CONFIG_PATH, 'utf8');
@@ -1231,7 +1254,7 @@ app.get('/dev/events', (req, res) => {
   req.on('close', () => devSSEClients.delete(res));
 });
 
-app.get('/dev/widget/:id', checkDeviceAuth, async (req, res) => {
+app.get('/dev/widget/:id', checkAdminAuth, async (req, res) => {
   if (IS_PROD) return res.status(404).end();
   try {
     const id = String(req.params.id);
@@ -1333,7 +1356,7 @@ async function buildPreviewPayload({ widgetId, w, h, settings, units, density })
   };
 }
 
-app.get('/preview/widget', checkDeviceAuth, async (req, res) => {
+app.get('/preview/widget', checkAdminAuth, async (req, res) => {
   try {
     const widgetId = String(req.query.widget || '').trim();
     if (!widgetId) return res.status(400).send('missing widget');
@@ -1418,7 +1441,7 @@ async function renderPreviewPng({ widgetId, w, h, settings, units, density }) {
   }
 }
 
-app.post('/api/preview-render', checkDeviceAuth, async (req, res) => {
+app.post('/api/preview-render', checkAdminAuth, async (req, res) => {
   try {
     const body = req.body || {};
     const widgetId = String(body.widgetId || '').trim();
@@ -1444,7 +1467,7 @@ app.post('/api/preview-render', checkDeviceAuth, async (req, res) => {
 
 // Visual matrix — every widget at every preset size, top-to-bottom.
 // Pure dev tooling for spotting layout bugs before they hit the panel.
-app.get('/widgets-matrix', checkDeviceAuth, async (req, res) => {
+app.get('/widgets-matrix', checkAdminAuth, async (req, res) => {
   try {
     const cfg = await loadConfig();
     const units = cfg.units || 'F';
@@ -1560,7 +1583,7 @@ app.get('/display-header.bin', checkDeviceAuth, async (req, res) => {
     const variant = resolveVariant(req, cfg);
     const { bin } = await getCurrentImage(variant);
     res.set('X-Image-Height', String(HEADER_H_ROWS));
-    sendBinSlice(req, res, bin.slice(0, HEADER_BYTES));
+    sendBinSlice(req, res, bin.subarray(0, HEADER_BYTES));
   } catch (err) {
     console.error('BIN header error:', err);
     res.status(500).send(safeError(err).error);
@@ -1573,7 +1596,7 @@ app.get('/display-body.bin', checkDeviceAuth, async (req, res) => {
     const variant = resolveVariant(req, cfg);
     const { bin } = await getCurrentImage(variant);
     res.set('X-Image-Height', String(BODY_H_ROWS));
-    sendBinSlice(req, res, bin.slice(HEADER_BYTES, HEADER_BYTES + BODY_BYTES));
+    sendBinSlice(req, res, bin.subarray(HEADER_BYTES, HEADER_BYTES + BODY_BYTES));
   } catch (err) {
     console.error('BIN body error:', err);
     res.status(500).send(safeError(err).error);
@@ -1633,7 +1656,7 @@ async function jsonFetch(url, opts = {}) {
   return r.json();
 }
 
-app.get('/api/geocode', checkDeviceAuth, async (req, res) => {
+app.get('/api/geocode', checkAdminAuth, async (req, res) => {
   const q = (req.query.q || '').trim();
   if (!q || q.length < 2) return res.json([]);
   const cacheKey = q.toLowerCase();
@@ -1660,7 +1683,7 @@ app.get('/api/geocode', checkDeviceAuth, async (req, res) => {
   }
 });
 
-app.get('/api/reverse-geocode', checkDeviceAuth, async (req, res) => {
+app.get('/api/reverse-geocode', checkAdminAuth, async (req, res) => {
   const lat = parseFloat(req.query.lat);
   const lon = parseFloat(req.query.lon);
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
@@ -1687,7 +1710,7 @@ app.get('/api/reverse-geocode', checkDeviceAuth, async (req, res) => {
   }
 });
 
-app.get('/api/weather-check', checkDeviceAuth, async (req, res) => {
+app.get('/api/weather-check', checkAdminAuth, async (req, res) => {
   const city = (req.query.city || '').trim();
   const lat = parseFloat(req.query.lat);
   const lon = parseFloat(req.query.lon);
@@ -1714,7 +1737,7 @@ app.get('/api/weather-check', checkDeviceAuth, async (req, res) => {
 
 // Returns the full payload the dashboard would render — minus the
 // HTML. The React editor uses this to render live widget tiles locally.
-app.get('/api/preview-data', checkDeviceAuth, async (req, res) => {
+app.get('/api/preview-data', checkAdminAuth, async (req, res) => {
   try {
     const cfg = await loadConfig();
     const { units, screen, activeScreen } = resolveVariant(req, cfg);
@@ -1732,11 +1755,11 @@ app.get('/api/preview-data', checkDeviceAuth, async (req, res) => {
 });
 
 // Config API
-app.get('/api/config', checkDeviceAuth, async (req, res) => {
+app.get('/api/config', checkAdminAuth, async (req, res) => {
   res.json(await loadConfig());
 });
 
-app.post('/api/config', checkDeviceAuth, async (req, res) => {
+app.post('/api/config', checkAdminAuth, async (req, res) => {
   try {
     const merged = await withConfigLock(async () => {
       const current = await loadConfig();
@@ -1812,7 +1835,7 @@ const macStateMod = require('./widgets/_mac_state');
 // song actually changed.
 let _macStateChain = Promise.resolve();
 let _lastTrackKey = null;
-app.post('/api/mac-state', checkDeviceAuth, async (req, res) => {
+app.post('/api/mac-state', checkAdminAuth, async (req, res) => {
   try {
     const body = req.body || {};
     const np = body.nowplaying || null;
@@ -1874,7 +1897,7 @@ function sameMacState(a, b) {
   return true;
 }
 
-app.get('/api/mac-state', checkDeviceAuth, async (req, res) => {
+app.get('/api/mac-state', checkAdminAuth, async (req, res) => {
   const s = await macStateMod.read();
   res.json(s || { nowplaying: null, battery: null, at: null });
 });
@@ -1886,12 +1909,12 @@ app.get('/api/mac-state', checkDeviceAuth, async (req, res) => {
 // Railway to match your real timezone or alarms will misfire by the
 // offset.
 
-app.get('/api/alarms', checkDeviceAuth, async (req, res) => {
+app.get('/api/alarms', checkAdminAuth, async (req, res) => {
   const cfg = await loadConfig();
   res.json({ alarms: Array.isArray(cfg.alarms) ? cfg.alarms : [] });
 });
 
-app.post('/api/alarms', checkDeviceAuth, async (req, res) => {
+app.post('/api/alarms', checkAdminAuth, async (req, res) => {
   try {
     const alarms = await withConfigLock(async () => {
       const cfg = await loadConfig();
@@ -2047,7 +2070,7 @@ app.post('/api/setup', async (req, res) => {
 // Admin: list every enrolled device + its last-seen telemetry. Auth'd
 // behind the fleet-wide DEVICE_TOKEN so per-device keys don't expose
 // the whole roster.
-app.get('/api/devices', checkDeviceAuth, (req, res) => {
+app.get('/api/devices', checkAdminAuth, (req, res) => {
   const all = loadDevicesSync();
   // Strip api_key from the response — UI doesn't need it and it's
   // sensitive. friendly_id is the per-device handle.
