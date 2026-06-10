@@ -1,5 +1,8 @@
 // widgets/calendar.js
-// Fetches an iCal feed (Google Calendar, iCloud, etc.) and returns upcoming events.
+// Fetches an iCal feed (Google Calendar, iCloud, etc.) and returns upcoming
+// events. Recurring events (RRULE) are expanded into individual occurrences
+// within the 14-day window, honoring EXDATE exclusions and RECURRENCE-ID
+// overrides (moved/renamed instances).
 
 const ical = require('node-ical');
 const { fetchWithTimeout } = require('./_fetch');
@@ -7,6 +10,75 @@ const status = require('./_status');
 
 const CACHE_MS = 10 * 60 * 1000;
 const cache = new Map(); // url → { at, events }
+
+// Safety cap per recurring event. The window is only 14 days, but a
+// pathological FREQ=MINUTELY rule could still explode into thousands of
+// occurrences and stall the render.
+const MAX_OCCURRENCES = 100;
+
+// node-ical keys `exdate` and `recurrences` by local calendar date
+// ("YYYY-MM-DD") in the event's own timezone. Format an occurrence the
+// same way so lookups match even when the event's local date differs
+// from the UTC date (e.g. a 10 PM New York event is already "tomorrow"
+// in UTC).
+const _dayKeyFormatters = new Map();
+function occurrenceDayKey(date, tzid) {
+  if (tzid) {
+    let f = _dayKeyFormatters.get(tzid);
+    if (f === undefined) {
+      try {
+        // en-CA formats as YYYY-MM-DD directly.
+        f = new Intl.DateTimeFormat('en-CA', {
+          timeZone: tzid, year: 'numeric', month: '2-digit', day: '2-digit'
+        });
+      } catch {
+        f = null; // unknown tz string in the feed — fall through to UTC
+      }
+      _dayKeyFormatters.set(tzid, f);
+    }
+    if (f) return f.format(date);
+  }
+  return date.toISOString().slice(0, 10);
+}
+
+// Expand one VEVENT into its occurrence list within [windowStart, horizon].
+// Non-recurring events yield themselves; recurring events yield each
+// rrule hit, swapped for the override instance when one exists for that
+// date. Returns [{ start, summary }].
+function expandEvent(ev, windowStart, horizon) {
+  if (!ev.rrule) {
+    return ev.start ? [{ start: ev.start, summary: ev.summary }] : [];
+  }
+  const tzid = (ev.rrule.origOptions && ev.rrule.origOptions.tzid)
+    || (ev.start && ev.start.tz) || null;
+  const out = [];
+  const seenKeys = new Set();
+  const dates = ev.rrule.between(windowStart, horizon, true).slice(0, MAX_OCCURRENCES);
+  for (const d of dates) {
+    const key = occurrenceDayKey(d, tzid);
+    seenKeys.add(key);
+    if (ev.exdate && ev.exdate[key]) continue;
+    const override = ev.recurrences && ev.recurrences[key];
+    if (override) {
+      if (override.start) out.push({ start: override.start, summary: override.summary || ev.summary });
+    } else {
+      out.push({ start: d, summary: ev.summary });
+    }
+  }
+  // Overrides can move an occurrence INTO the window from a source date
+  // outside it (e.g. last week's session rescheduled to tomorrow). Those
+  // keys never come back from rrule.between above, so sweep them too.
+  if (ev.recurrences) {
+    for (const key of Object.keys(ev.recurrences)) {
+      if (seenKeys.has(key)) continue;
+      const o = ev.recurrences[key];
+      if (o && o.start && o.start >= windowStart && o.start <= horizon) {
+        out.push({ start: o.start, summary: o.summary || ev.summary });
+      }
+    }
+  }
+  return out;
+}
 
 async function fetchEvents(icalUrl, limit = 5) {
   if (!icalUrl) return [];
@@ -34,28 +106,31 @@ async function fetchEvents(icalUrl, limit = 5) {
     for (const k in data) {
       const ev = data[k];
       if (ev.type !== 'VEVENT') continue;
-      const start = ev.start;
-      if (!start) continue;
+      if (!ev.start) continue;
 
       // iCal all-day events arrive with start.dateOnly === true or
-      // datetype === 'date' depending on parser version.
-      const isAllDay = !!(start.dateOnly || ev.datetype === 'date');
+      // datetype === 'date' depending on parser version. The flag lives
+      // on the parent event; occurrences inherit it.
+      const isAllDay = !!(ev.start.dateOnly || ev.datetype === 'date');
 
       // All-day events start at midnight, so a plain `start < now`
       // check would hide today's all-day events for the whole day.
       // Keep them until the day rolls over.
       const cutoff = isAllDay ? startOfToday : nowDate;
-      if (start < cutoff || start > horizon) continue;
 
-      upcoming.push({
-        title: (ev.summary || 'Untitled').toString(),
-        start,
-        startISO: start.toISOString ? start.toISOString() : new Date(start).toISOString(),
-        startLabel: isAllDay ? 'ALL DAY' : formatEventTime(start),
-        dayLabel: formatEventDay(start),
-        section: sectionFor(start),
-        isAllDay
-      });
+      for (const occ of expandEvent(ev, startOfToday, horizon)) {
+        const start = occ.start;
+        if (start < cutoff || start > horizon) continue;
+        upcoming.push({
+          title: (occ.summary || 'Untitled').toString(),
+          start,
+          startISO: start.toISOString ? start.toISOString() : new Date(start).toISOString(),
+          startLabel: isAllDay ? 'ALL DAY' : formatEventTime(start),
+          dayLabel: formatEventDay(start),
+          section: sectionFor(start),
+          isAllDay
+        });
+      }
     }
 
     upcoming.sort((a, b) => a.start - b.start);
