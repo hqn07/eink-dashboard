@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Star, GridFour, ArrowCounterClockwise, Wrench, Trash } from '@phosphor-icons/react';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
+import { Star, GridFour, ArrowCounterClockwise, Gear, Trash } from '@phosphor-icons/react';
 import { fetchConfig, saveConfig, fetchPreviewData } from './api.js';
 import {
   WIDGET_REGISTRY,
@@ -286,9 +286,17 @@ export default function App() {
     : { cfg, weather: null, events: [], units: (editScreen && editScreen.units) || 'F', layout: editScreen ? editScreen.layout : [], chrome: editScreen ? editScreen.chrome : null };
 
 
-  const showToast = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 1800);
+  // Toast supports an optional action button ({ label, onClick }) for
+  // the "destructive action + undo" pattern. The timer ref prevents an
+  // earlier toast's timeout from dismissing a newer toast early.
+  const toastTimerRef = useRef(null);
+  const showToast = (msg, action = null) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast({ msg, action });
+    toastTimerRef.current = setTimeout(
+      () => setToast(null),
+      action ? 5000 : 1800
+    );
   };
 
   const markDirty = () => setStatus(s => s === 'dirty' ? s : 'dirty');
@@ -460,51 +468,23 @@ export default function App() {
 
   const refreshPreview = () => setPreviewKey(Date.now());
 
-  // Global keyboard shortcuts. We bail when the focus is inside an
-  // editable element so a `g` in the middle of a city name doesn't
-  // toggle the grid. ⌘/Ctrl + S still wins inside inputs because the
-  // user expects "save" to work regardless of focus.
-  useEffect(() => {
-    const onKey = (e) => {
-      const tag = (e.target && e.target.tagName) || '';
-      const editable = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' ||
-        (e.target && e.target.isContentEditable);
-      const metaOrCtrl = e.metaKey || e.ctrlKey;
-      // ⌘/Ctrl + S — save & push
-      if (metaOrCtrl && (e.key === 's' || e.key === 'S')) {
-        e.preventDefault();
-        if (canSave && status === 'dirty') handleSave();
-        return;
+  // Clear is destructive (wipes the whole layout) and sits next to
+  // benign buttons — instead of a blocking confirm, clear immediately
+  // and offer UNDO on the toast (direct manipulation + undo).
+  const clearLayout = (screenId) => {
+    const snapshot = cfg;
+    const count = (screens.find(s => s.id === screenId)?.layout || []).length;
+    if (!count) return;
+    updateScreenLayout(screenId, []);
+    showToast(`Cleared ${count} widget${count > 1 ? 's' : ''}`, {
+      label: 'UNDO',
+      onClick: () => {
+        setCfg(snapshot);
+        markDirty();
+        setToast(null);
       }
-      // ⌘/Ctrl + Z — undo
-      if (metaOrCtrl && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
-        e.preventDefault();
-        if (undoCfg) undo();
-        return;
-      }
-      if (editable) return;
-      // ? — open shortcuts help
-      if (e.key === '?') { e.preventDefault(); setShortcutsOpen(true); return; }
-      // [ / ] — previous / next screen tab
-      if (e.key === '[' || e.key === ']') {
-        if (!screens.length) return;
-        e.preventDefault();
-        const idx = Math.max(0, screens.findIndex(s => s.id === editScreenId));
-        const next = e.key === '[' ? (idx - 1 + screens.length) % screens.length
-                                   : (idx + 1) % screens.length;
-        setEditScreenId(screens[next].id);
-        return;
-      }
-      // g — toggle canvas grid overlay
-      if (e.key === 'g' || e.key === 'G') {
-        e.preventDefault();
-        setShowGrid(g => !g);
-        return;
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [canSave, status, undoCfg, screens, editScreenId]);
+    });
+  };
 
   // Auto-save: 2s after the last edit if config is valid.
   useEffect(() => {
@@ -513,20 +493,24 @@ export default function App() {
     return () => clearTimeout(t);
   }, [status, canSave, cfg]);
 
-  // Keyboard shortcuts:
+  // Keyboard shortcuts (single listener — a duplicate effect used to
+  // register a second handler, making ]/[ jump two screens and cmd+z
+  // undo twice):
   //   cmd+s        — save now
   //   cmd+z        — undo last change
   //   1..9         — jump to screen N
   //   [ / ]        — prev / next screen
+  //   g            — toggle canvas grid overlay
+  //   ?            — keyboard shortcuts help
   //   shift+a      — open the Add Screen preset picker
   useEffect(() => {
     function onKey(e) {
       const t = e.target;
-      const inField = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+      const inField = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        if (canSave) handleSave();
+        if (canSave && status === 'dirty') handleSave();
         return;
       }
       if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey) {
@@ -535,6 +519,14 @@ export default function App() {
         return;
       }
       if (inField || mod) return;
+      // ? — open shortcuts help
+      if (e.key === '?') { e.preventDefault(); setShortcutsOpen(true); return; }
+      // g — toggle canvas grid overlay
+      if (e.key === 'g' || e.key === 'G') {
+        e.preventDefault();
+        setShowGrid(g => !g);
+        return;
+      }
       // Number key to switch screens
       if (/^[1-9]$/.test(e.key)) {
         const idx = parseInt(e.key, 10) - 1;
@@ -576,6 +568,7 @@ export default function App() {
   const layout = editScreen ? editScreen.layout : [];
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="shell">
       {/* SVG filter used by the 1-BIT preview toggle. feComponentTransfer
        * with discrete tableValues "0 1" thresholds each channel at 0.5,
@@ -720,7 +713,8 @@ export default function App() {
                 </button>
                 <button className="btn btn-ghost btn-iconed"
                   style={{ padding: '4px 10px', fontSize: 11 }}
-                  onClick={() => updateScreenLayout(editScreen.id, [])}>
+                  title="Remove every widget from this screen (undoable)"
+                  onClick={() => clearLayout(editScreen.id)}>
                   <ArrowCounterClockwise size={12} weight="bold" /> CLEAR
                 </button>
                 {editScreen && screens.length > 1 && (
@@ -791,7 +785,7 @@ export default function App() {
         onClick={() => setMobileDrawerOpen(true)}
         aria-label="Open screen settings"
       >
-        ☰
+        <Gear size={22} weight="bold" />
       </button>
 
       {/* Mobile bottom-sheet drawer. Hand-rolled (no Radix Dialog dep);
@@ -842,14 +836,23 @@ export default function App() {
       <AnimatePresence>
         {toast && (
           <motion.div
-            key={toast}
-            className="toast"
+            key={toast.msg}
+            className={`toast ${toast.action ? 'toast-actionable' : ''}`}
             initial={{ y: 24, opacity: 0, scale: 0.96 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 8, opacity: 0, scale: 0.96 }}
             transition={{ type: 'spring', stiffness: 380, damping: 30 }}
           >
-            {toast}
+            <span>{toast.msg}</span>
+            {toast.action && (
+              <button
+                type="button"
+                className="toast-action"
+                onClick={toast.action.onClick}
+              >
+                {toast.action.label}
+              </button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -879,5 +882,6 @@ export default function App() {
         />
       )}
     </div>
+    </MotionConfig>
   );
 }

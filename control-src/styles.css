@@ -629,7 +629,12 @@ main.layout {
   main.layout.edit-mode.preview-on {
     grid-template-columns: 1fr !important;
   }
-  .settings-sidebar { display: none; }
+  /* `aside.` qualifier is load-bearing: the base rule
+   * `.settings-sidebar { display:flex }` lives AFTER this media query
+   * in the file, so an equal-specificity `display:none` here loses the
+   * cascade and the sidebar renders twice on phones (inline + drawer),
+   * pushing the canvas below the fold. */
+  aside.settings-sidebar { display: none; }
   /* ScreenTabs become a horizontal scroller so the tabs don't wrap
    * to 3 rows on a narrow viewport. */
   .screen-tabs {
@@ -709,6 +714,14 @@ main.layout {
     padding: 14px 16px 24px;
     -webkit-overflow-scrolling: touch;
   }
+  /* The drawer header already says "Screen settings" — strip the
+   * panel's own card chrome + duplicate title inside the sheet. */
+  .mobile-drawer-body .screen-panel {
+    border: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+  .mobile-drawer-body .screen-panel > .section-title { display: none; }
 }
 @keyframes fieldFlash {
   0%   { box-shadow: 0 0 0 0 rgba(204, 0, 0, 0.5); background-color: rgba(204, 0, 0, 0.18); }
@@ -1697,10 +1710,42 @@ input[type="text"], input[type="url"], textarea {
 }
 @keyframes toast-in { from { transform: translate(-50%, 12px); opacity: 0; } }
 
+/* Actionable toast — destructive action + UNDO (Gmail idiom). Must
+ * re-enable pointer events or the UNDO button is unclickable. */
+.toast-actionable {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.toast-action {
+  background: #fff;
+  color: var(--ink);
+  border: 0;
+  padding: 5px 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.1s ease-out, opacity 0.1s ease-out;
+}
+.toast-action:hover { opacity: 0.85; }
+.toast-action:active { transform: scale(0.97); }
+
 .editor-empty {
   padding: 30px 0;
   text-align: center;
   font-family: 'JetBrains Mono', monospace;
+}
+/* Empty canvas points at a hidden, collapsed pool — give it a real
+ * call-to-action that opens the pool instead of describing it. */
+.editor-empty-cta {
+  margin-top: 14px;
+  padding: 8px 18px;
+  font-size: 11px;
+  letter-spacing: 2px;
 }
 
 .editor-help {

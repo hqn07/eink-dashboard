@@ -52,6 +52,7 @@ function showcaseSizeKey(def) {
 
 export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onChange, onError, onCommitItemNow }) {
   const wrapRef = useRef(null);
+  const paletteRef = useRef(null);
   const [size, setSizeState] = useState({ w: 800, h: 480 });
   const [shake, setShake] = useState(false);
   const [dropHover, setDropHover] = useState(false);
@@ -316,7 +317,15 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
       const slot = findFreeSlot(c.w, c.h, enabled);
       if (slot) {
         const inst = makeInstance(widgetId, { x: slot.x, y: slot.y, w: c.w, h: c.h, sizeKey: c.key }, seedCtx);
-        if (inst) onChange([...layout, inst]);
+        if (inst) {
+          onChange([...layout, inst]);
+          // Select the new tile so it's visibly highlighted, and bring
+          // the canvas back into view — click-to-add from the pool
+          // otherwise drops the widget somewhere off-screen above.
+          setSelectedId(inst.id);
+          const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          wrapRef.current?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'nearest' });
+        }
         return;
       }
     }
@@ -488,7 +497,21 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
 
         {enabled.length === 0 && (
           <div className="editor-empty terminal-line">
-            &gt; CANVAS_EMPTY — DRAG A WIDGET FROM POOL BELOW
+            <div>&gt; CANVAS_EMPTY</div>
+            <button
+              type="button"
+              className="btn btn-primary editor-empty-cta"
+              onClick={() => {
+                setPoolOpen(true);
+                // Wait a frame so the pool exists before scrolling to it.
+                requestAnimationFrame(() => {
+                  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                  paletteRef.current?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'nearest' });
+                });
+              }}
+            >
+              + ADD YOUR FIRST WIDGET
+            </button>
           </div>
         )}
 
@@ -501,7 +524,7 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
         <span>&gt; DRAG TILE HERE TO REMOVE</span>
       </div>
 
-      <div className={`palette ${poolOpen ? 'open' : 'collapsed'}`}>
+      <div ref={paletteRef} className={`palette ${poolOpen ? 'open' : 'collapsed'}`}>
         <button
           className="palette-toggle"
           onClick={() => setPoolOpen(o => !o)}
