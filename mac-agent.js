@@ -42,6 +42,12 @@ if (process.platform !== 'darwin') {
 let lastTrackKey = null;
 let lastSig = null; // signature of the last payload we actually sent
 
+// launchd redirects stdout/stderr to flat files with no timestamps of
+// their own — prefix every line so an outage in the log can be dated.
+const ts = () => new Date().toISOString();
+const log  = (msg) => console.log(`${ts()} ${msg}`);
+const warn = (msg) => console.warn(`${ts()} ${msg}`);
+
 function trackKeyOf(np) {
   if (!np) return null;
   return [np.title || '', np.artist || '', np.album || ''].join('\0');
@@ -101,7 +107,7 @@ async function pushOnce() {
     });
     if (!res.ok) {
       const txt = await res.text().catch(() => '');
-      console.warn(`[mac-agent] push ${res.status}: ${txt.slice(0, 200)}`);
+      warn(`[mac-agent] push ${res.status}: ${txt.slice(0, 200)}`);
       return;
     }
     lastTrackKey = key;
@@ -109,12 +115,12 @@ async function pushOnce() {
     const dt = Date.now() - t0;
     const sentArt = !!(payload.nowplaying && payload.nowplaying.artworkBase64);
     const songLabel = np ? `${np.artist || '?'} — ${np.title || '?'}` : 'no song';
-    console.log(`[mac-agent] ok (${dt}ms) ${sentArt ? '+art' : '    '}  ${songLabel}`);
+    log(`[mac-agent] ok (${dt}ms) ${sentArt ? '+art' : '    '}  ${songLabel}`);
   } catch (err) {
-    console.warn(`[mac-agent] push failed: ${err.message}`);
+    warn(`[mac-agent] push failed: ${err.message}`);
   }
 }
 
-console.log(`[mac-agent] pushing ${CLOUD_URL}/api/mac-state every ${INTERVAL_MS}ms`);
+log(`[mac-agent] pushing ${CLOUD_URL}/api/mac-state every ${INTERVAL_MS}ms`);
 pushOnce();
 setInterval(pushOnce, INTERVAL_MS);

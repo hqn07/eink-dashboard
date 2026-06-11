@@ -44,6 +44,13 @@ async function write(payload) {
     battery: payload && 'battery' in payload
       ? payload.battery
       : (mem && mem.battery) || null,
+    // Persisted so the artwork-dedup contract survives a server
+    // restart: the agent keeps skipping the artwork payload while the
+    // track is unchanged, and a freshly-booted server needs the last
+    // track key to know its stored artwork still applies.
+    trackKey: payload && 'trackKey' in payload
+      ? payload.trackKey
+      : (mem && mem.trackKey) || null,
     at: Date.now()
   };
   mem = merged;

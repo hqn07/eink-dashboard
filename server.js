@@ -1843,15 +1843,21 @@ app.post('/api/mac-state', checkAdminAuth, async (req, res) => {
     const trackKey = typeof body.trackKey === 'string' ? body.trackKey : null;
 
     const result = await (_macStateChain = _macStateChain.then(async () => {
+      const prev = await macStateMod.read();
       let mergedNp = np;
-      if (np && !('artworkBase64' in np) && trackKey && trackKey === _lastTrackKey) {
-        const prev = await macStateMod.read();
+      // Artwork-less push for an unchanged track: keep the stored art.
+      // The known key comes from memory OR the persisted state file —
+      // the on-disk fallback matters after a server restart, when the
+      // agent (mid-song) keeps omitting artwork but `_lastTrackKey` was
+      // wiped; without it the tile loses album art until the song
+      // changes.
+      const knownKey = _lastTrackKey || (prev && prev.trackKey) || null;
+      if (np && !('artworkBase64' in np) && trackKey && trackKey === knownKey) {
         const prevArt = prev && prev.nowplaying && prev.nowplaying.artworkBase64;
         mergedNp = { ...np, artworkBase64: prevArt || null };
       }
       if (trackKey) _lastTrackKey = trackKey;
-      const prev = await macStateMod.read();
-      await macStateMod.write({ nowplaying: mergedNp, battery: bt });
+      await macStateMod.write({ nowplaying: mergedNp, battery: bt, trackKey });
       // Only force a re-render when the rendered payload actually
       // changed. Battery percent ticking 87 → 86 is a real change; an
       // identical no-op push from the agent (same song, same battery)
