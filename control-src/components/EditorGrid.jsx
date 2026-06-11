@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Gear, X } from '@phosphor-icons/react';
 import * as HoverCard from '@radix-ui/react-hover-card';
 import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById, makeInstance } from '../widgets.js';
-import { renderWidget, typographyCss, scaleWrap, cellClasses } from '../widget-render.js';
+import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses } from '../widget-render.js';
 import { demoCtxForWidget } from '../widgets/_pool_demo.js';
 import WidgetSettingsModal from './WidgetSettingsModal.jsx';
 
@@ -410,8 +410,7 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
           onResizeStop={onTileResizeStop}
         >
           {enabled.map(l => {
-            const itemSlot = (previewData && previewData.perItem && previewData.perItem[l.id]) || {};
-            const innerRaw = renderWidget(l.widgetId, { ...previewData, ...itemSlot, cellW: l.w, cellH: l.h, density: l.density, settings: l.settings }) || '';
+            const innerRaw = renderWidget(l.widgetId, buildTileCtx(l, previewData)) || '';
             const swl = scaleWrap(l.settings);
             const inner = `${swl.open}${innerRaw}${swl.close}`;
             // Per-tile typography (font family + padding) lives on the
@@ -420,11 +419,7 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
             const typoStyle = typographyCss(l.settings);
             const dashW = l.w * (DASH_W / GRID_COLS);
             const dashH = l.h * (BODY_H / GRID_ROWS);
-            const classes = ['cell', `cell-${l.widgetId}`];
-            if (l.x + l.w >= GRID_COLS) classes.push('cell-edge-right');
-            if (l.y + l.h >= GRID_ROWS) classes.push('cell-edge-bottom');
-            if (l.flush) classes.push('cell-flush');
-            classes.push(...cellClasses(l.settings));
+            const classes = tileCellClasses(l, GRID_COLS, GRID_ROWS);
             const cellHtml = `<div class="${classes.join(' ')}" style="width:${dashW}px;height:${dashH}px;${typoStyle}">${inner}</div>`;
             const isSelected = selectedId === l.id;
             return (

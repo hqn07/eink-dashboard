@@ -1068,11 +1068,7 @@ function buildPageBodyHtml({ payload, ssr, mode }) {
   if ((mode === 'dev' || mode === 'preview') && devWidgetId) {
     const item = layout[0];
     if (!item) return '<div class="page" id="page"></div>';
-    const itemCtx = {
-      ...ctxBase,
-      ...(perItem && perItem[item.id] || {}),
-      cellW: item.w, cellH: item.h, density: item.density, settings: item.settings
-    };
+    const itemCtx = ssr.buildTileCtx(item, { ...ctxBase, perItem });
     const innerRaw = ssr.renderWidget(item.widgetId, itemCtx);
     const sw = ssr.scaleWrap(item.settings);
     const inner = `${sw.open}${innerRaw}${sw.close}`;
@@ -1101,20 +1097,12 @@ function buildPageBodyHtml({ payload, ssr, mode }) {
   const cells = [];
   for (const item of layout) {
     if (!withinVisibility(item.visibility, nowM)) continue;
-    const itemCtx = {
-      ...ctxBase,
-      ...(perItem && perItem[item.id] || {}),
-      cellW: item.w, cellH: item.h, density: item.density, settings: item.settings
-    };
+    const itemCtx = ssr.buildTileCtx(item, { ...ctxBase, perItem });
     const innerRaw = ssr.renderWidget(item.widgetId, itemCtx);
     if (!innerRaw) continue;
     const sw = ssr.scaleWrap(item.settings);
     const inner = `${sw.open}${innerRaw}${sw.close}`;
-    const classes = ['cell', `cell-${item.widgetId}`];
-    if (item.x + item.w >= GRID_COLS) classes.push('cell-edge-right');
-    if (item.y + item.h >= GRID_ROWS) classes.push('cell-edge-bottom');
-    if (item.flush) classes.push('cell-flush');
-    classes.push(...ssr.cellClasses(item.settings));
+    const classes = ssr.tileCellClasses(item, GRID_COLS, GRID_ROWS);
     const styleParts = [
       `grid-column:${item.x + 1} / span ${item.w}`,
       `grid-row:${item.y + 1} / span ${item.h}`

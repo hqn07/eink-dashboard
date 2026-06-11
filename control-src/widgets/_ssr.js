@@ -31,5 +31,7 @@ export function renderWidget(id, data) {
 export {
   typographyCss,
   scaleWrap,
-  cellClasses
+  cellClasses,
+  buildTileCtx,
+  tileCellClasses
 } from './_chrome.js';

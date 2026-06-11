@@ -12,7 +12,9 @@ import { MIGRATED_RENDERERS } from './widgets/_registry.js';
 export {
   typographyCss,
   scaleWrap,
-  cellClasses
+  cellClasses,
+  buildTileCtx,
+  tileCellClasses
 } from './widgets/_chrome.js';
 
 export function renderWidget(id, data) {

@@ -13,6 +13,44 @@ export function cellClasses(s) {
   return out;
 }
 
+// ---- Shared per-tile assembly --------------------------------------
+//
+// Three surfaces render the same tile: the server SSR (server.js
+// buildPageBodyHtml), the editor canvas (EditorGrid.jsx), and the
+// preview pane (LiveDashboard.jsx). Each used to hand-build the render
+// context and cell class list, and they drifted (commit 193b74b — the
+// preview lied because one copy stopped spreading perItem). These two
+// helpers are the single source of truth; the call sites may append
+// surface-specific extras (selection highlights, absolute positioning)
+// but must not re-derive what's here.
+
+// Per-tile render context: page-level data, overlaid with this tile's
+// per-item fetch slot, plus the tile's own geometry + settings.
+export function buildTileCtx(item, data) {
+  const slot = (data && data.perItem && data.perItem[item.id]) || {};
+  return {
+    ...data,
+    ...slot,
+    cellW: item.w,
+    cellH: item.h,
+    density: item.density,
+    settings: item.settings
+  };
+}
+
+// Cell wrapper class list shared by all three surfaces: widget id,
+// grid-edge border suppression, flush mode, and settings-derived
+// classes (inverted theme etc.).
+export function tileCellClasses(item, gridCols = 24, gridRows = 12) {
+  const widgetId = item.widgetId || item.id;
+  const classes = ['cell', `cell-${widgetId}`];
+  if (item.x + item.w >= gridCols) classes.push('cell-edge-right');
+  if (item.y + item.h >= gridRows) classes.push('cell-edge-bottom');
+  if (item.flush) classes.push('cell-flush');
+  classes.push(...cellClasses(item.settings));
+  return classes;
+}
+
 // Per-tile typography → `style` attribute fragment for the .cell wrapper.
 // Empty string when the user hasn't picked anything so the per-widget
 // defaults still win. fontScale is applied separately via the inner

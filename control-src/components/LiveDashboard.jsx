@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { renderWidget, typographyCss, scaleWrap, cellClasses } from '../widget-render.js';
+import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses } from '../widget-render.js';
 import { widgetById } from '../widgets.js';
 
 // Binary-search a font-size that lets the element's content fit its
@@ -124,25 +124,14 @@ export default function LiveDashboard({
     const def = widgetById(item.widgetId || item.id);
     if (!def) continue;
     if (!withinVisibility(item.visibility, nowM)) continue;
-    const itemSlot = (data && data.perItem && data.perItem[item.id]) || {};
-    const innerRaw = renderWidget(item.widgetId || item.id, {
-      ...data,
-      ...itemSlot,
-      cellW: item.w,
-      cellH: item.h,
-      density: item.density,
-      settings: item.settings
-    }) || '';
+    const innerRaw = renderWidget(item.widgetId || item.id, buildTileCtx(item, data)) || '';
     if (!innerRaw) continue;
     const sw = scaleWrap(item.settings);
     const inner = `${sw.open}${innerRaw}${sw.close}`;
-    const classes = ['cell', `cell-${def.id}`];
-    if (item.x + item.w >= GRID_COLS) classes.push('cell-edge-right');
-    if (item.y + item.h >= GRID_ROWS) classes.push('cell-edge-bottom');
-    if (item.flush) classes.push('cell-flush');
-    if (item.border === 'dashed') classes.push('cell-border-dashed');
-    if (item.border === 'none')   classes.push('cell-border-none');
-    classes.push(...cellClasses(item.settings));
+    // Shared class assembly; only editor-surface extras appended here.
+    // (The old `item.border` dashed/none classes were dead — no CSS
+    // rules and nothing in the UI ever set them.)
+    const classes = tileCellClasses(item, GRID_COLS, GRID_ROWS);
     if (selectedTileId === item.id) classes.push('cell-selected');
     if (editingTileId === item.id)  classes.push('cell-editing');
     const tileStyle = {
