@@ -21,7 +21,7 @@ export const def = {
 
 export function render({ clockNow, cellW, cellH, density }) {
   if (!clockNow) {
-    return placeholder('CLOCK', 'Waiting for time', 'msg');
+    return placeholder('CLOCK', 'Waiting for time', 'msg', { cellW, cellH });
   }
   const c = clockNow;
   const tier = pickTier(cellW, cellH, density);

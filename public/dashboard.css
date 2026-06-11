@@ -319,6 +319,16 @@ html, body {
 
 .fc-row:last-child { border-bottom: none; }
 
+/* When forecast rows are direct children of the flex-column .cell, let
+ * them share the leftover height instead of overflowing — without this
+ * the last row's temps clip at the bottom on tight tiles (e.g. 6×8
+ * showing 4 days). min-height:0 lets rows compress below content size. */
+.cell-weather_forecast .fc-row {
+  flex: 1 1 0;
+  min-height: 0;
+  padding: 4px 0;
+}
+
 .fc-day {
   font-family: 'Oswald', sans-serif;
   font-weight: 700;
@@ -1775,6 +1785,23 @@ img.icon { object-fit: contain; }
   color: #fff;
   padding: 2px 5px;
 }
+/* Compact tiers — small tiles drop the hint/badge (markup omits them);
+ * shrink the chrome so what's left doesn't collide with the border. */
+.widget-placeholder.ph-sm {
+  gap: 4px;
+  padding: 8px 10px;
+}
+.widget-placeholder.ph-sm .ph-icon { width: 30px; height: 30px; margin-bottom: 0; }
+.widget-placeholder.ph-sm .ph-title { font-size: 13px; letter-spacing: 1px; }
+.widget-placeholder.ph-xs {
+  justify-content: center;
+  align-items: center;
+  padding: 4px 6px;
+  gap: 0;
+  border-width: 2px;
+  margin: 2px;
+}
+.widget-placeholder.ph-xs .ph-title { font-size: 12px; letter-spacing: 1px; }
 
 /* ============ ISS TRACKER ============ */
 

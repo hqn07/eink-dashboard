@@ -38,7 +38,7 @@ export function render({ weather, cfg, settings, cellW, cellH }) {
     const hasLoc =
       (settings && Number.isFinite(settings.lat) && Number.isFinite(settings.lon)) ||
       (cfg && Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon));
-    return placeholder('FORECAST', hasLoc ? 'Data unavailable' : 'Set your location in settings', 'weather');
+    return placeholder('FORECAST', hasLoc ? 'Data unavailable' : 'Set your location in settings', 'weather', { cellW, cellH });
   }
   const s = settings || {};
   const ch = cellH || 0, cw = cellW || 0;

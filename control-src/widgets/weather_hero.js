@@ -81,7 +81,7 @@ export function render({ weather, units, cfg, settings, cellW, cellH, density })
     const hasLoc =
       (settings && Number.isFinite(settings.lat) && Number.isFinite(settings.lon)) ||
       (cfg && Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon));
-    return placeholder('WEATHER', hasLoc ? 'Data unavailable' : 'Set your location in settings', 'weather');
+    return placeholder('WEATHER', hasLoc ? 'Data unavailable' : 'Set your location in settings', 'weather', { cellW, cellH });
   }
   const w = weather;
   const s = settings || {};

@@ -109,7 +109,7 @@ export function render({ stocks, settings, cellW, cellH, density }) {
   const titleLabel = (settings && typeof settings.title === 'string' && settings.title.trim())
     ? settings.title.trim()
     : 'MARKETS';
-  if (!list.length) return placeholder(titleLabel, 'Add symbols (AAPL, BTC-USD) in settings', 'stocks');
+  if (!list.length) return placeholder(titleLabel, 'Add symbols (AAPL, BTC-USD) in settings', 'stocks', { cellW, cellH });
   const tier = pickTier(cellW, cellH, density);
   const matrix = {
     tiny:     { watch: 0, heroSpark: false, heroMeta: false, heroChg: false, watchSpark: false, watchChg: false },

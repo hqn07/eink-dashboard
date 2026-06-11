@@ -36,15 +36,23 @@ export const PLACEHOLDER_ICONS = {
 };
 
 // "Setup needed" placeholder shared by every widget that can render
-// in a not-yet-configured state.
-export function placeholder(title, hint, iconKey) {
-  const ic = iconKey && PLACEHOLDER_ICONS[iconKey];
+// in a not-yet-configured state. Pass the render ctx (cellW/cellH) so
+// tiny tiles degrade gracefully instead of colliding: a 4×2 battery
+// tile can't fit icon + hint + badge, so it gets title-only; small
+// tiles keep the icon but drop the hint/badge.
+export function placeholder(title, hint, iconKey, ctx) {
+  const w = (ctx && Number.isFinite(ctx.cellW)) ? ctx.cellW : 99;
+  const h = (ctx && Number.isFinite(ctx.cellH)) ? ctx.cellH : 99;
+  const xs = h <= 2 || w <= 4;          // title only
+  const sm = !xs && (h <= 3 || w <= 6); // icon + title, no hint/badge
+  const cls = xs ? ' ph-xs' : sm ? ' ph-sm' : '';
+  const ic = !xs && iconKey && PLACEHOLDER_ICONS[iconKey];
   return `
-    <div class="widget widget-placeholder">
+    <div class="widget widget-placeholder${cls}">
       ${ic ? `<div class="ph-icon">${ic}</div>` : ''}
       <div class="ph-title">${title}</div>
-      <div class="ph-hint">${hint}</div>
-      <div class="ph-tag">SETUP NEEDED</div>
+      ${xs || sm ? '' : `<div class="ph-hint">${hint}</div>
+      <div class="ph-tag">SETUP NEEDED</div>`}
     </div>
   `;
 }

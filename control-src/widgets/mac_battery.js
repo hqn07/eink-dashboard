@@ -18,7 +18,7 @@ export function render({ macBattery, settings, cellW, cellH, density }) {
   const titleLabel = (settings && typeof settings.title === 'string' && settings.title.trim())
     ? settings.title.trim()
     : 'MAC BATTERY';
-  if (!macBattery) return placeholder(titleLabel.split(/\s+/)[0] || 'MAC', 'OFFLINE', 'msg');
+  if (!macBattery) return placeholder(titleLabel.split(/\s+/)[0] || 'MAC', 'OFFLINE', 'msg', { cellW, cellH });
   const charging = /charg/i.test(macBattery.state);
   // Solid inline SVG lightning bolt instead of the U+26A1 emoji. The
   // emoji rendered as a yellow glyph in Chrome's color-emoji font

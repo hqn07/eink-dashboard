@@ -40,12 +40,12 @@ function ageLabel(at) {
   return `${days}d ago`;
 }
 
-export function render({ battery, settings }) {
+export function render({ battery, settings, cellW, cellH }) {
   const s = settings || {};
   const titleLabel = (typeof s.title === 'string' && s.title.trim())
     ? s.title.trim() : 'E-INK BATTERY';
   if (!battery || !Number.isFinite(battery.pct)) {
-    return placeholder(titleLabel.split(/\s+/)[0] || 'BATTERY', 'NO DATA', 'msg');
+    return placeholder(titleLabel.split(/\s+/)[0] || 'BATTERY', 'NO DATA', 'msg', { cellW, cellH });
   }
   const pct = Math.max(0, Math.min(100, battery.pct));
   const v = Number.isFinite(battery.v) ? battery.v.toFixed(2) : null;

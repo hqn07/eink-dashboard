@@ -22,7 +22,7 @@ export const def = {
 
 export function render({ cfg, resolvedMessage, cellW, cellH, density, settings }) {
   const m = resolvedMessage || (cfg && cfg.message) || {};
-  if (!m.text) return placeholder('MESSAGE', 'Set a headline in settings', 'msg');
+  if (!m.text) return placeholder('MESSAGE', 'Set a headline in settings', 'msg', { cellW, cellH });
   const s = settings || {};
   const tier = pickTier(cellW, cellH, density);
   const matrix = {

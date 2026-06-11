@@ -30,9 +30,9 @@ export function render({ events, cfg, settings, cellW, cellH, density }) {
   const titleLabel = (settings && typeof settings.title === 'string' && settings.title.trim())
     ? settings.title.trim()
     : 'UPCOMING';
-  if (!urls.length) return placeholder(titleLabel, 'Paste an iCal URL in settings', 'calendar');
+  if (!urls.length) return placeholder(titleLabel, 'Paste an iCal URL in settings', 'calendar', { cellW, cellH });
   const all = events || [];
-  if (!all.length) return placeholder(titleLabel, 'No events in the next 14 days', 'calendar');
+  if (!all.length) return placeholder(titleLabel, 'No events in the next 14 days', 'calendar', { cellW, cellH });
   const mode = (settings && settings.viewMode) || 'list';
   // Both alternative views auto-size a 7-column grid, so the only
   // hard floor is "enough rows to read". Thresholds kept low so a
