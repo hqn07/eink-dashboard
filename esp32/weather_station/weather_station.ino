@@ -44,7 +44,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.12.3"
+#define FW_VERSION "1.12.4"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -193,15 +193,15 @@ RTC_DATA_ATTR uint32_t g_cachedDns      = 0;
 RTC_DATA_ATTR bool     g_wifiCacheValid = false;
 
 
-// Pin-change ISR: mirror button state to buzzer AND latch a refresh
-// request on press. While awake, any press buzzes for the duration the
-// button is held; on release the buzzer goes silent. During deep sleep
-// the CPU is off and this ISR doesn't run — the ~200 ms boot + beep(50)
-// on buttonWake covers that case instead.
+// Pin-change ISR: latch a refresh request on press. Flag-only — the
+// previous version drove the buzzer via ledcWrite() here, but ledcWrite
+// is not IRAM-safe; a press landing during an NVS write or OTA flash
+// (flash cache disabled) could crash with "Cache disabled but cached
+// memory region accessed". Audible feedback now comes from the main
+// code paths instead: beep(50) on button wake, beep(30) when a
+// mid-cycle press is picked up.
 void IRAM_ATTR onButtonEdge() {
-  bool pressed = digitalRead(BTN_REFRESH) == LOW;
-  ledcWrite(BUZZER_PIN, pressed ? BUZZER_VOLUME : 0);
-  if (pressed) refreshRequested = true;
+  if (digitalRead(BTN_REFRESH) == LOW) refreshRequested = true;
 }
 
 // Two short beeps with a small gap — "OK / done" chime.
@@ -239,25 +239,9 @@ bool httpBegin(HTTPClient& http, WiFiClientSecure& tls, const String& url) {
   return http.begin(url);
 }
 
-// Quick reachability probe — 3 s timeout, single /health round-trip.
-// Used to decide between the LAN server (typically a Mac on the same
-// network) and the always-on cloud deployment.
-bool probeBase(const char* base) {
-  if (!base || !*base) return false;
-  HTTPClient http;
-  WiFiClientSecure tls;
-  http.setTimeout(3000);
-  String url = String(base) + "/health";
-  if (!httpBegin(http, tls, url)) return false;
-  int code = http.GET();
-  http.end();
-  return code == 200;
-}
-
 // Cloud-only: LAN base retired now that the Mac pushes its widget
-// state through the cloud agent. probeBase() is kept around for the
-// download retry chain (re-validates the cloud base after two failed
-// /display.bin calls).
+// state through the cloud agent. (The old probeBase() /health check
+// went with it — with a single fixed base there is nothing to probe.)
 void selectServerBase() {
   if (serverBaseCloud && *serverBaseCloud) {
     activeServerBase = serverBaseCloud;
@@ -704,6 +688,7 @@ uint8_t* downloadImage() {
 
   WiFiClient* stream = http.getStreamPtr();
   int read = 0;
+  bool streamTimedOut = false;
   unsigned long lastData = millis();
   while (read < IMG_BYTES) {
     size_t avail = stream->available();
@@ -714,6 +699,7 @@ uint8_t* downloadImage() {
     } else {
       if (millis() - lastData > 10000) {
         Serial.println("stream timeout");
+        streamTimedOut = true;
         break;
       }
       delay(5);
@@ -723,6 +709,12 @@ uint8_t* downloadImage() {
 
   if (read != IMG_BYTES) {
     Serial.printf("Short read: %d / %d\n", read, IMG_BYTES);
+    // Surface a code so drawFailScreen's hint line still fires on
+    // mid-stream failures (previously left 0 — no tip exactly when
+    // the failure is most confusing). Reuse HTTPClient's own
+    // constants: -11 read timeout, -3 connection lost.
+    g_lastHttpCode = streamTimedOut ? HTTPC_ERROR_READ_TIMEOUT
+                                    : HTTPC_ERROR_CONNECTION_LOST;
     free(buf);
     return nullptr;
   }
@@ -1244,10 +1236,14 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
 
   // Prefer the pre-WiFi idle reading captured in setup() — it's taken
   // before any TX bursts sag the rail, so it matches the LiPo-curve
-  // assumption of open-circuit voltage. Fall back to a fresh read only
-  // when setup didn't run (long-running USB-power active cycle).
+  // assumption of open-circuit voltage. Consumed once: USB-powered
+  // active sessions loop without re-running setup(), and re-using the
+  // boot-time snapshot forever froze the reported battery level for
+  // the whole session. Later cycles take a fresh (WiFi-idle) read.
   float battV   = isfinite(g_idleBattV)   ? g_idleBattV   : readBatteryVoltage();
   int   battPct = (g_idleBattPct >= 0)    ? g_idleBattPct : batteryPctFromVoltage(battV);
+  g_idleBattV   = NAN;
+  g_idleBattPct = -1;
   g_battV   = battV;
   g_battPct = battPct;
   Serial.printf("Battery: %.2fV (%d%%)\n", battV, battPct);
@@ -1307,15 +1303,14 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
       delay(2000);
       img = downloadImage();
     }
-    // Adaptive fallback: if the chosen base failed twice, re-probe to
-    // switch LAN ↔ cloud and try one more time. Catches "Mac went to
-    // sleep mid-day so LAN /display.bin times out" without waiting for
-    // the next periodic re-probe (10 cycles away).
+    // Last-chance attempt after a long backoff. The dominant remaining
+    // failure mode is a Railway cold start that outlasts the first two
+    // tries — 10 s of breathing room costs little and saves a 5-minute
+    // fail-screen cycle. (The old "re-probe LAN vs cloud" logic here
+    // was a no-op once the base became cloud-only.)
     if (!img) {
-      Serial.println("Both attempts failed — re-probing server base");
-      selectServerBase();
-      g_cyclesSinceProbe = 0;
-      delay(500);
+      Serial.println("Both attempts failed — backing off 10 s, final try");
+      delay(10000);
       img = downloadImage();
     }
     if (img) {
@@ -1329,7 +1324,10 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
       drawFailScreen("Could not fetch image");
       sleepMin = 5;
     }
-    if (refreshRequested) Serial.println("Press during cycle — re-refreshing");
+    if (refreshRequested) {
+      Serial.println("Press during cycle — re-refreshing");
+      beep(30);   // press ack (ISR no longer drives the buzzer)
+    }
   } while (refreshRequested);
 
   NextAlarm post;
@@ -1425,7 +1423,24 @@ void factoryReset() {
 }
 
 void loop() {
-  esp_sleep_wakeup_cause_t wakeCause = esp_sleep_get_wakeup_cause();
+  // esp_sleep_get_wakeup_cause() reports the cause of the LAST sleep —
+  // it never changes while we stay awake. USB-powered sessions loop
+  // here without sleeping, so only the FIRST iteration may trust it;
+  // re-reading it every pass made a button-initiated USB session beep
+  // on every cycle and skip OTA indefinitely (checkForUpdate skips on
+  // buttonWake). Later iterations are timer-equivalent, except when
+  // the previous pass ended on a button press (early-refresh break in
+  // the USB wait loop below).
+  static bool s_firstLoop = true;
+  static bool s_buttonCycle = false;
+  esp_sleep_wakeup_cause_t wakeCause;
+  if (s_firstLoop) {
+    s_firstLoop = false;
+    wakeCause = esp_sleep_get_wakeup_cause();
+  } else {
+    wakeCause = s_buttonCycle ? ESP_SLEEP_WAKEUP_EXT1 : ESP_SLEEP_WAKEUP_TIMER;
+  }
+  s_buttonCycle = false;
   bool buttonWake = (wakeCause == ESP_SLEEP_WAKEUP_EXT1);
 
   // runCycle runs FIRST so a button press refreshes the display as fast
@@ -1477,6 +1492,8 @@ void loop() {
     while ((long)(until - millis()) > 0) {
       if (refreshRequested) {
         Serial.println("Button pressed — early refresh");
+        s_buttonCycle = true;   // next loop() pass counts as a button cycle
+        beep(30);               // press ack (ISR no longer drives the buzzer)
         break;
       }
       delay(200);
