@@ -699,27 +699,23 @@ export default function App() {
                 )}
                 {editScreen && !editScreen.isDefault && (
                   <button
-                    className="btn btn-ghost btn-iconed"
-                    style={{ padding: '4px 10px', fontSize: 11 }}
+                    className="btn btn-ghost btn-iconed btn-compact"
                     title="Show this screen when no schedule matches"
                     onClick={() => setDefaultScreen(editScreen.id)}
                   >
                     <Star size={12} weight="bold" /> MAKE DEFAULT
                   </button>
                 )}
-                <button className="btn btn-iconed" onClick={() => setShowGrid(g => !g)}
-                  style={{ padding: '4px 10px', fontSize: 11 }}>
+                <button className="btn btn-iconed btn-compact" onClick={() => setShowGrid(g => !g)}>
                   <GridFour size={12} weight="bold" /> {showGrid ? 'HIDE GRID' : 'SHOW GRID'}
                 </button>
-                <button className="btn btn-ghost btn-iconed"
-                  style={{ padding: '4px 10px', fontSize: 11 }}
+                <button className="btn btn-ghost btn-iconed btn-compact"
                   title="Remove every widget from this screen (undoable)"
                   onClick={() => clearLayout(editScreen.id)}>
                   <ArrowCounterClockwise size={12} weight="bold" /> CLEAR
                 </button>
                 {editScreen && screens.length > 1 && (
-                  <button className="btn btn-danger btn-iconed"
-                    style={{ padding: '4px 10px', fontSize: 11 }}
+                  <button className="btn btn-danger btn-iconed btn-compact"
                     title="Delete this screen"
                     onClick={() => deleteScreen(editScreen.id)}>
                     <Trash size={12} weight="bold" /> DELETE
@@ -741,7 +737,7 @@ export default function App() {
               onCommitItemNow={(item) => commitLayoutItemNow(editScreen.id, item)}
             />
             <div className="editor-help">
-              DRAG TILE TO MOVE · CORNER TO RESIZE · × OR DRAG TO TRASH · DRAG POOL CARD ONTO CANVAS
+              drag to move · corner to resize · × or drag to trash · drag pool card onto canvas
             </div>
           </section>
         </div>

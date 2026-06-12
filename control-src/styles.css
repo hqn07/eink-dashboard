@@ -1151,14 +1151,22 @@ input[type="text"], input[type="url"], textarea {
   letter-spacing: 0.5px;
   transition: transform 120ms cubic-bezier(0.2, 0.7, 0.3, 1), background var(--dur-med) ease, box-shadow var(--dur-med) ease;
 }
-.btn:hover { background: #f0ece2; transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06); }
-.btn:active { transform: translateY(1px); box-shadow: none; }
+/* Calm hover — flat ink-wash, no lift/shadow theatrics. */
+.btn:hover { background: #f0ece2; }
+.btn:active { transform: translateY(1px); }
 .btn.btn-active { background: var(--ink); color: #fff; }
 .btn-primary { background: var(--ink); color: #fff; }
 .btn-primary:hover { background: #222; }
 .btn-ghost { background: transparent; border-color: var(--mute); color: var(--mute); }
 .btn-danger { color: var(--accent); }
 .btn-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+
+/* Toolbar-density button — replaces the ad-hoc inline
+ * `padding/fontSize` styles the canvas header buttons carried. */
+.btn-compact {
+  padding: 4px 10px;
+  font-size: var(--fs-sm);
+}
 
 /* ============ SAVE BAR ============
  * Fixed-bottom strip that slides in only when there's something to
@@ -1529,7 +1537,6 @@ input[type="text"], input[type="url"], textarea {
 .palette {
   margin-top: 16px;
   border: var(--bw-frame) solid var(--line);
-  border-radius: var(--r-md);
   background: #fff;
   padding: 12px 14px;
 }
@@ -1555,28 +1562,34 @@ input[type="text"], input[type="url"], textarea {
 }
 .palette.collapsed { padding: 0; border: none; background: transparent; }
 .palette-toggle {
+  /* Outline, not a permanent ink CTA bar — the widget pool is a
+   * drawer handle, not the page's headline action. */
   display: flex;
   width: 100%;
   align-items: center;
   justify-content: space-between;
-  background: var(--ink);
-  color: var(--bg);
+  background: transparent;
+  color: var(--ink);
   border: var(--bw-frame) solid var(--ink);
-  border-radius: var(--r-md);
   padding: 10px 14px;
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
   letter-spacing: 3px;
   font-weight: 700;
   cursor: pointer;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
 }
-.palette-toggle:hover { background: #000; }
+.palette-toggle:hover { background: var(--ink); color: var(--bg); }
 .palette-toggle .badge {
-  background: var(--bg);
-  color: var(--ink);
+  background: var(--ink);
+  color: var(--bg);
   font-size: var(--fs-2xs);
   padding: 2px 6px;
   letter-spacing: 2px;
+}
+.palette-toggle:hover .badge {
+  background: var(--bg);
+  color: var(--ink);
 }
 .palette.open .palette-toggle {
   margin-bottom: 12px;
@@ -1621,16 +1634,19 @@ input[type="text"], input[type="url"], textarea {
   gap: 10px;
 }
 .palette-card {
-  border: var(--bw-frame) solid var(--line);
+  /* Hairline rest state; the frame inks up on hover so the grid of
+   * cards doesn't read as 20 competing boxes. */
+  border: var(--bw-hair) solid var(--line-soft);
   background: #fff;
   cursor: grab;
   user-select: none;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  transition: border-color var(--dur-fast) ease;
 }
 .palette-card:active { cursor: grabbing; }
-.palette-card:hover { background: #faf8f3; }
+.palette-card:hover { border-color: var(--ink); background: #faf8f3; }
 
 /* HoverCard popover — Radix renders into a portal so this lives at
  * document root. Keep it bounded (max 480x320 incl. label/padding) so
@@ -1851,12 +1867,14 @@ input[type="text"], input[type="url"], textarea {
 }
 
 .editor-help {
+  /* Footnote, not a headline — lowercase, tight tracking, faint. */
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
-  letter-spacing: 2px;
+  letter-spacing: 0.5px;
   color: var(--mute);
+  opacity: 0.75;
   margin-top: 8px;
-  text-transform: uppercase;
+  text-transform: lowercase;
 }
 
 /* react-grid-layout overrides for our retro look */
