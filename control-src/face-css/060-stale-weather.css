@@ -16,10 +16,7 @@
   display: flex; align-items: center; gap: 8px;
 }
 .hero-tier-compact .weather-temp { margin: 0; line-height: 0.9; }
-.hero-tier-compact .weather-icon { height: 60px !important; }
-.hero-tier-compact .weather-icon .icon {
-  width: 60px !important; height: 60px !important;
-}
+/* Icon size is inline from the render (60px at compact) — no override. */
 
 .hero-tier-standard,
 .hero-tier-extended,

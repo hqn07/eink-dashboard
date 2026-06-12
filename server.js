@@ -1052,20 +1052,32 @@ function buildPageBodyHtml({ payload, ssr, mode }) {
     for (const id of Object.keys(defs)) {
       const def = defs[id];
       const sizes = def.sizes || {};
+      // Contract v2: widgets with named variants get one matrix row per
+      // variant per size so layout bugs in non-default variants surface
+      // here instead of on the panel.
+      const variantNames = def.variants ? Object.keys(def.variants) : [null];
       for (const key of Object.keys(sizes)) {
         const { w: cw, h: ch } = sizes[key];
         const cellWidth = cw * PX_W;
         const cellHeight = ch * PX_H;
-        const itemCtx = { ...ctxBase, cellW: cw, cellH: ch, settings: typeof def.defaults === 'function' ? def.defaults() : undefined };
-        const inner = ssr.renderWidget(id, itemCtx);
-        html += `
+        for (const vn of variantNames) {
+          const settings = typeof def.defaults === 'function' ? def.defaults() : undefined;
+          if (vn && settings) settings.variant = vn;
+          const itemCtx = {
+            ...ctxBase, cellW: cw, cellH: ch, settings,
+            variant: vn || def.defaultVariant || null
+          };
+          const inner = ssr.renderWidget(id, itemCtx);
+          const label = vn ? `${id} · ${key} · ${vn}` : `${id} · ${key}`;
+          html += `
           <div style="border:2px solid #000;background:#fff">
             <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#000;color:#fff;font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:2px;">
-              <span>${escapeHtmlServer(id)} · ${escapeHtmlServer(key)}</span>
+              <span>${escapeHtmlServer(label)}</span>
               <span>${cw}×${ch} · ${Math.round(cellWidth)}×${Math.round(cellHeight)}px</span>
             </div>
             <div class="cell cell-${escapeHtmlServer(id)}" style="width:${cellWidth}px;height:${cellHeight}px;margin:0">${inner}</div>
           </div>`;
+        }
       }
     }
     html += '</div>';

@@ -258,11 +258,10 @@ html, body {
   padding-top: 2px;
 }
 
-.weather-icon {
-  display: inline-block;
-  height: 90px;
-}
-.weather-icon .icon { width: 90px !important; height: 90px !important; }
+/* Icon size comes from the render's inline width/height (per tier) —
+ * the old fixed 90px !important override silently capped extended/full
+ * tiers that were already asking for 110/130px art. */
+.weather-icon { display: inline-block; line-height: 0; }
 
 .weather-temp {
   font-family: 'DM Serif Display', serif;
@@ -327,6 +326,38 @@ html, body {
   text-align: right;
 }
 
+/* ----- variant: split (icon left, readings right) ----- */
+.weather-hero.hero-split {
+  display: flex;
+  flex-direction: row; /* beats .hero-tier-compact's column */
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  text-align: left;
+  padding-top: 0;
+}
+.hero-split .hero-readings {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.hero-split .weather-temp { margin-top: 0; }
+.hero-split .weather-desc,
+.hero-split .weather-hilo { margin-top: 6px; }
+/* Split on a compact tier still centers vertically inside the cell */
+.hero-split.hero-tier-compact { height: 100%; }
+
+/* ----- variant: minimal (temp + hilo only) ----- */
+.weather-hero.hero-minimal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 8px;
+}
+.hero-minimal .weather-temp { margin-top: 0; }
+
 /* ============ FORECAST COLUMN ============ */
 
 .col-mid {
@@ -367,6 +398,30 @@ html, body {
 .fc-hilo { text-align: right; font-family: var(--face-mono); }
 .fc-hi { font-size: 18px; font-weight: 700; }
 .fc-lo { font-size: 13px; font-weight: 500; }
+
+/* ----- variant: columns (horizontal day strip) ----- */
+.fc-strip {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+  align-items: stretch;
+}
+.fc-col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-right: var(--face-rule) dashed #000;
+  padding: 4px 2px;
+}
+.fc-col:last-child { border-right: none; }
+.fc-col .fc-hilo { text-align: center; }
+.fc-col .fc-hilo-inline,
+.fc-col .fc-hilo-arrows { justify-content: center; align-items: center; }
+.fc-col .fc-precip { margin-top: 2px; text-align: center; min-width: 0; }
 
 /* Forecast hi/lo variants ----- */
 .fc-hilo-inline { display: flex; align-items: baseline; gap: 4px; justify-content: flex-end; }
@@ -884,10 +939,7 @@ img.icon { object-fit: contain; }
   display: flex; align-items: center; gap: 8px;
 }
 .hero-tier-compact .weather-temp { margin: 0; line-height: 0.9; }
-.hero-tier-compact .weather-icon { height: 60px !important; }
-.hero-tier-compact .weather-icon .icon {
-  width: 60px !important; height: 60px !important;
-}
+/* Icon size is inline from the render (60px at compact) — no override. */
 
 .hero-tier-standard,
 .hero-tier-extended,

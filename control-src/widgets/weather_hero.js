@@ -1,6 +1,13 @@
 // Weather · Current — hero tile with big temperature + icon. Larger
 // tiers add stats, alert banner, sun-bar, and hourly strip.
 //
+// Contract v2 (widgets-refresh W2): three layout variants —
+//   classic — centered stack (icon over temp), the original editorial look
+//   split   — icon left, readings right; uses the side space on wide tiles
+//   minimal — temperature + high/low only, no icon, no extras
+// Tier still decides which extras attach (stats/alerts/sunbar/hourly)
+// and the type/icon scale; variant only re-arranges the hero core.
+//
 // `settings.stats` (length-4 array) picks which fields fill the stats
 // grid on standard+ tiers. Each entry is one of: feels, humid, wind,
 // cloud, rise, set, gust, dew (dew falls back to humid if upstream
@@ -25,7 +32,24 @@ export const def = {
     XL: { w: 24, h: 12 }
   },
   defaultSize: 'M',
+  variants: {
+    classic: { label: 'Classic — centered stack' },
+    split:   { label: 'Split — icon left, readings right' },
+    minimal: { label: 'Minimal — temperature + high/low only' }
+  },
+  defaultVariant: 'classic',
+  // What each tier drops relative to `full` (advisory; the render below
+  // is the source of truth). Stats additionally need ≥8 grid rows of
+  // height even at standard+. `minimal` drops everything but temp +
+  // hilo at every tier by design.
+  degrade: {
+    extended: ['sunbar', 'hourly'],
+    standard: ['alerts', 'sunbar', 'hourly'],
+    compact:  ['desc', 'stats', 'alerts', 'sunbar', 'hourly'],
+    tiny:     ['icon', 'desc', 'hilo', 'stats', 'alerts', 'sunbar', 'hourly']
+  },
   defaults: (ctx) => ({
+    variant: 'classic',
     city: (ctx && ctx.city) || '',
     lat:  (ctx && Number.isFinite(ctx.lat)) ? ctx.lat : null,
     lon:  (ctx && Number.isFinite(ctx.lon)) ? ctx.lon : null,
@@ -39,6 +63,19 @@ export const def = {
     fontScale: 1,
     padding: 14
   })
+};
+
+// Per-tier scale for the hero core. Icon px is real now — the fixed
+// 90px !important CSS override is gone, so big tiles actually get the
+// bigger art these numbers always promised.
+const TIER_SIZE = {
+  tiny:     { icon: 0,   temp: 54 },
+  compact:  { icon: 60,  temp: 72 },
+  standard: { icon: 90,  temp: 86 },
+  extended: { icon: 110, temp: 96 },
+  // 130px full-tier art + every extra enabled overflows 480px — verified
+  // in /widgets-matrix; 110 keeps sunbar + hourly on-tile.
+  full:     { icon: 110, temp: 96 }
 };
 
 // Resolve a stat key to a { label, value } pair. Returns null when the
@@ -76,7 +113,8 @@ function statForKey(key, w) {
   }
 }
 
-export function render({ weather, units, cfg, settings, cellW, cellH, density }) {
+export function render(ctx) {
+  const { weather, units, cfg, settings, cellW, cellH, density } = ctx;
   if (!weather) {
     const hasLoc =
       (settings && Number.isFinite(settings.lat) && Number.isFinite(settings.lon)) ||
@@ -86,15 +124,22 @@ export function render({ weather, units, cfg, settings, cellW, cellH, density })
   const w = weather;
   const s = settings || {};
   const tier = pickTier(cellW, cellH, density);
+  const variant = ctx.variant
+    || (def.variants[s.variant] ? s.variant : 'classic');
+  const sz = TIER_SIZE[tier];
   const staleClass = w.stale ? ' weather-stale' : '';
   const staleBadge = w.stale ? '<div class="stale-pill">CACHED</div>' : '';
+
   const tempBlock = (size) => `
     <div class="weather-temp" style="font-size:${size}px">
       <span class="temp-num">${w.temp}</span><span class="temp-deg" style="font-size:${Math.round(size*0.6)}px">°${units}</span>
     </div>`;
-  const heroIcon = (px) => `<div class="weather-icon" style="height:${px}px">${icon(w, px)}</div>`;
+  const heroIcon = (px) => px > 0
+    ? `<div class="weather-icon" style="height:${px}px">${icon(w, px)}</div>`
+    : '';
   const descLine = () => (s.showDesc !== false) ? `<div class="weather-desc">${w.desc}</div>` : '';
   const hiloLine = () => `<div class="weather-hilo">HIGH ${w.tempMax}° &nbsp;·&nbsp; LOW ${w.tempMin}°</div>`;
+
   const statsKeys = Array.isArray(s.stats) && s.stats.length ? s.stats : DEFAULT_STATS;
   const statsBlock = () => {
     if (s.showStats === false) return '';
@@ -109,31 +154,57 @@ export function render({ weather, units, cfg, settings, cellW, cellH, density })
       ${cells.map(c => `<span class="stat-k">${c.k}</span><span class="stat-v">${c.v}</span>`).join('')}
     </div>`;
   };
-  const alerts = s.showAlerts !== false ? alertBanner(w) : '';
-  const sunBlock = s.showSunbar !== false ? sunBar(w) : '';
-  const hourly   = s.showHourly !== false ? hourlyStrip(w) : '';
+
+  // Tier gates for the extras — shared by classic and split so the two
+  // variants degrade identically; minimal opts out of all of them.
+  const tierRank = { tiny: 0, compact: 1, standard: 2, extended: 3, full: 4 }[tier];
+  const alerts = (tierRank >= 3 && s.showAlerts !== false) ? alertBanner(w) : '';
+  // Stats need ~120px under the hero — a standard-tier 8×6 tile (240px)
+  // half-clips the grid mid-row, so require 8 grid rows of height too.
+  const stats  = (tierRank >= 2 && (cellH || 0) >= 8) ? statsBlock() : '';
+  const sun    = (tierRank >= 4 && s.showSunbar !== false) ? sunBar(w) : '';
+  const hourly = (tierRank >= 4 && s.showHourly !== false) ? hourlyStrip(w) : '';
+  const extras = `${alerts}${stats}${sun}${hourly}`;
+
+  if (variant === 'minimal') {
+    // Temperature-dominant; no icon and no extras at any tier. The temp
+    // gets the icon's vacated room (one size class up vs classic).
+    const tempPx = { tiny: 54, compact: 80, standard: 104, extended: 120, full: 120 }[tier];
+    return `<div class="weather-hero hero-minimal hero-tier-${tier}${staleClass}">
+      ${staleBadge}${tempBlock(tempPx)}${tierRank >= 1 ? hiloLine() : ''}
+    </div>`;
+  }
+
+  if (variant === 'split') {
+    if (tier === 'tiny') {
+      // No room for two columns — same as classic tiny.
+      return `<div class="weather-hero hero-tier-tiny${staleClass}">${staleBadge}${tempBlock(sz.temp)}</div>`;
+    }
+    return `<div class="weather-hero hero-split hero-tier-${tier}${staleClass}">
+      ${staleBadge}
+      ${heroIcon(sz.icon)}
+      <div class="hero-readings">
+        ${tempBlock(sz.temp)}
+        ${tierRank >= 2 ? descLine() : ''}
+        ${hiloLine()}
+      </div>
+    </div>${extras}`;
+  }
+
+  // classic
   switch (tier) {
     case 'tiny':
-      return `<div class="weather-hero hero-tier-tiny${staleClass}">${staleBadge}${tempBlock(54)}</div>`;
+      return `<div class="weather-hero hero-tier-tiny${staleClass}">${staleBadge}${tempBlock(sz.temp)}</div>`;
     case 'compact':
       return `<div class="weather-hero hero-tier-compact${staleClass}">
         ${staleBadge}
-        <div class="hero-row">${heroIcon(60)}${tempBlock(72)}</div>
+        <div class="hero-row">${heroIcon(sz.icon)}${tempBlock(sz.temp)}</div>
         ${hiloLine()}
       </div>`;
-    case 'standard':
-      return `<div class="weather-hero hero-tier-standard${staleClass}">
-        ${staleBadge}${heroIcon(90)}${tempBlock(86)}${descLine()}${hiloLine()}
-      </div>${statsBlock()}`;
-    case 'extended':
-      return `<div class="weather-hero hero-tier-extended${staleClass}">
-        ${staleBadge}${heroIcon(110)}${tempBlock(96)}${descLine()}${hiloLine()}
-      </div>${alerts}${statsBlock()}`;
-    case 'full':
     default:
-      return `<div class="weather-hero hero-tier-full${staleClass}">
-        ${staleBadge}${heroIcon(130)}${tempBlock(96)}${descLine()}${hiloLine()}
-      </div>${alerts}${statsBlock()}${sunBlock}${hourly}`;
+      return `<div class="weather-hero hero-tier-${tier}${staleClass}">
+        ${staleBadge}${heroIcon(sz.icon)}${tempBlock(sz.temp)}${descLine()}${hiloLine()}
+      </div>${extras}`;
   }
 }
 
