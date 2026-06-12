@@ -331,14 +331,23 @@ Preferences wifiPrefs;
 DNSServer dnsServer;
 WebServer portal(80);
 
+// Styled to match the dashboard's editorial identity (newsprint bg,
+// serif masthead over an Oxford rule, mono caps labels). No webfonts —
+// the AP has no internet, so Georgia/monospace system stacks stand in
+// for DM Serif Display / JetBrains Mono.
 static const char PORTAL_HTML[] PROGMEM =
   "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>"
-  "<title>eink-setup</title>"
-  "<style>body{font-family:system-ui;max-width:420px;margin:24px auto;padding:0 16px;}"
-  "h1{font-size:20px}label{display:block;margin:14px 0 6px;font-weight:600}"
-  "input{width:100%;padding:10px;font-size:16px;border:2px solid #000;border-radius:0}"
-  "button{margin-top:18px;padding:12px 18px;font-size:16px;border:0;background:#000;color:#fff;width:100%}</style>"
-  "</head><body><h1>e-ink dashboard setup</h1>"
+  "<title>E-Ink Dashboard · Setup</title>"
+  "<style>body{font-family:Georgia,serif;background:#faf8f3;color:#111;max-width:420px;margin:24px auto;padding:0 16px}"
+  "h1{font-size:26px;font-weight:400;letter-spacing:-0.5px;margin:0 0 2px;border-bottom:3px solid #111;padding-bottom:10px;position:relative}"
+  "h1:after{content:'';position:absolute;left:0;right:0;bottom:-6px;height:1px;background:#111}"
+  ".sub{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#6b6960;margin:14px 0 6px}"
+  "label{display:block;font-family:ui-monospace,monospace;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#6b6960;margin:18px 0 6px}"
+  "input{width:100%;box-sizing:border-box;padding:10px 12px;font-size:16px;font-family:inherit;background:#fff;border:1.5px solid #111;border-radius:0;outline-offset:-1px}"
+  "input:focus{outline:2px solid #111}"
+  "button{margin-top:22px;padding:12px 18px;font-family:ui-monospace,monospace;font-size:13px;font-weight:700;letter-spacing:3px;text-transform:uppercase;border:2px solid #111;background:#111;color:#fff;width:100%;cursor:pointer}"
+  "</style></head><body><h1>E-Ink Dashboard</h1>"
+  "<div class='sub'>Device setup</div>"
   "<form action='/save' method='POST'>"
   "<label>WiFi network (SSID)</label><input name='ssid' required>"
   "<label>Password</label><input name='pass' type='password'>"

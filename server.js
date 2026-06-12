@@ -2128,22 +2128,30 @@ app.get('/health/widgets', (req, res) => {
   res.send(`<!doctype html>
 <html><head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Widget health</title>
+<link rel="stylesheet" href="/static/fonts/fonts.css">
 <style>
-  body { font-family: ui-monospace, 'JetBrains Mono', monospace; background: #faf8f3; color: #000; margin: 0; padding: 24px; }
-  h1 { font-family: 'DM Serif Display', Georgia, serif; font-weight: 400; letter-spacing: -1px; }
-  .muted { color: #999; }
-  table { border-collapse: collapse; width: 100%; max-width: 980px; }
-  th, td { padding: 8px 12px; text-align: left; border-bottom: 1.5px solid #000; font-size: 12px; }
-  th { background: #000; color: #fff; text-transform: uppercase; letter-spacing: 2px; font-size: 11px; }
+  /* Shares the control app's editorial system: newsprint bg, serif
+   * masthead on an Oxford rule, mono table marked by rules not boxes. */
+  body { font-family: 'JetBrains Mono', ui-monospace, monospace; background: #faf8f3; color: #111; margin: 0; padding: 24px; }
+  .masthead { max-width: 980px; border-bottom: 3px solid #111; padding-bottom: 12px; margin-bottom: 4px; position: relative; }
+  .masthead::after { content: ''; position: absolute; left: 0; right: 0; bottom: -6px; height: 1px; background: #111; }
+  h1 { font-family: 'DM Serif Display', Georgia, serif; font-weight: 400; font-size: 30px; letter-spacing: -1px; margin: 0; }
+  .muted { color: #6b6960; }
+  table { border-collapse: collapse; width: 100%; max-width: 980px; margin-top: 20px; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid rgba(17,17,17,0.18); font-size: 12px; }
+  tr:last-child td { border-bottom: 2px solid #111; }
+  th { border-bottom: 2px solid #111; text-transform: uppercase; letter-spacing: 2px; font-size: 11px; font-weight: 700; }
   td.err { color: #c8302a; max-width: 360px; overflow-wrap: anywhere; }
-  .ok { color: #000; font-weight: 700; }
+  .ok { color: #111; font-weight: 700; }
   .bad { color: #c8302a; font-weight: 700; }
-  .cached { color: #666; font-weight: 700; }
-  .note { font-size: 11px; color: #555; margin-top: 16px; max-width: 980px; line-height: 1.5; }
+  .cached { color: #b68a3c; font-weight: 700; }
+  .note { font-size: 11px; color: #6b6960; margin-top: 16px; max-width: 980px; line-height: 1.5; }
+  a { color: #111; text-transform: uppercase; letter-spacing: 1.5px; font-size: 11px; }
 </style>
 </head><body>
-<h1>Widget health</h1>
+<div class="masthead"><h1>Widget health</h1></div>
 <div class="note">Counts reset whenever the server process restarts. Cache hits don't increment call/ok/fail.</div>
 <table>
   <thead><tr><th>Widget</th><th>Status</th><th>Calls</th><th>OK%</th><th>Last call</th><th>Latency</th><th>Last error</th></tr></thead>
