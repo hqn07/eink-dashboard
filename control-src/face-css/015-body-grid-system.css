@@ -1,0 +1,123 @@
+/* ============ BODY (grid system) ============ */
+
+.body {
+  display: grid;
+  height: 100%;
+  background: #fff;
+}
+
+/* Default 12x6 grid is set inline by JS so resolution stays flexible. */
+.body-grid {
+  gap: 0;
+}
+
+/* Each placed widget is wrapped in a .cell which provides chrome.
+ * Border-right + border-bottom build the grid lines; last column / row
+ * suppress them so we don't bump into the page edge or footer. */
+.cell {
+  padding: 14px 16px;
+  overflow: hidden;
+  border-right: 2px solid #000;
+  border-bottom: 2px solid #000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  background: #fff;
+  /* Positioned so widgets that need to fill the cell exactly (mac-np-card
+   * absolute inset:0, stale-pill in weather, etc.) anchor here. */
+  position: relative;
+}
+
+/* Cells touching the page's right edge or footer don't need a duplicate line. */
+.cell.cell-edge-right  { border-right: none; }
+.cell.cell-edge-bottom { border-bottom: none; }
+
+/* Inverted theme — solid black tile with white ink. Filters cover SVG
+ * fills + bg images (album art, weather icons) so a play glyph that
+ * was solid black on white still reads as solid white on black. The
+ * filter pass burns CPU but at 1-bit it's the simplest way to invert
+ * everything inside without rewriting every widget's render. */
+.cell.cell-inverted {
+  background: #000;
+  color: #fff;
+}
+.cell.cell-inverted * {
+  border-color: #fff !important;
+  color: #fff;
+}
+.cell.cell-inverted svg path,
+.cell.cell-inverted svg rect,
+.cell.cell-inverted svg polyline,
+.cell.cell-inverted svg circle {
+  fill: #fff;
+  stroke: #fff;
+}
+/* Album-art empty fallback uses a white bg by default — invert the
+ * art container itself so the dark theme doesn't end up with a solid
+ * white square covering the whole space when the agent hasn't sent
+ * artwork yet (mostly: no song playing, or song just changed and art
+ * is still uploading). */
+.cell.cell-inverted .mac-np-art,
+.cell.cell-inverted .mac-np-art-empty {
+  background: #000;
+  border-color: #fff;
+  color: #fff;
+}
+
+/* Plain `invert(1)` on the sevesalm glyphs + photographic album art.
+ * The sevesalm SVGs ship with transparent backgrounds (the explicit
+ * `style="background-color: white"` was stripped in this commit), so
+ * invert flips just the painted strokes/fills: white fills become
+ * black (blend with the cell's black bg → invisible interior),
+ * black strokes become white (visible outline). Net: an outline
+ * version of the icon that reads cleanly on the inverted tile. */
+.cell.cell-inverted img.icon,
+.cell.cell-inverted img.batt-icon,
+.cell.cell-inverted img.mac-np-art,
+.cell.cell-inverted .ph-icon img,
+.cell.cell-inverted .ph-icon svg {
+  filter: invert(1);
+}
+.cell.cell-inverted .stale-pill,
+.cell.cell-inverted .ph-tag {
+  background: #fff !important;
+  color: #000 !important;
+}
+
+/* Flush mode: widget bleeds to the tile's edges — strips padding so a
+ * hero widget can paint to all four sides. Borders are kept so multi-
+ * widget screens still get visible tile divisions (a single hairline
+ * border is invisible underneath the widget's own content but reads
+ * as a clear edge against the neighbouring cell). */
+.cell.cell-flush {
+  padding: 0;
+}
+
+/* Spacer is meant to be a pure black block — strip the cell's padding
+ * + borders so the fill bleeds to the cell edges. */
+.cell.cell-spacer {
+  padding: 0;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+/* Legacy column classes kept so older deployments still render if used. */
+.col {
+  padding: 16px 18px;
+  border-right: 2px solid #000;
+  overflow: hidden;
+}
+
+.col:last-child { border-right: none; }
+
+.col-title {
+  font-family: var(--face-mono);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 3px;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  border-bottom: 2px solid #000;
+}

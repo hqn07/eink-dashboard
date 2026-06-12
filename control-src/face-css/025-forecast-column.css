@@ -1,0 +1,49 @@
+/* ============ FORECAST COLUMN ============ */
+
+.col-mid {
+  display: flex;
+  flex-direction: column;
+}
+
+.fc-row {
+  display: grid;
+  grid-template-columns: 50px 50px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: var(--face-rule) dashed #000;
+}
+
+.fc-row:last-child { border-bottom: none; }
+
+/* When forecast rows are direct children of the flex-column .cell, let
+ * them share the leftover height instead of overflowing — without this
+ * the last row's temps clip at the bottom on tight tiles (e.g. 6×8
+ * showing 4 days). min-height:0 lets rows compress below content size. */
+.cell-weather_forecast .fc-row {
+  flex: 1 1 0;
+  min-height: 0;
+  padding: 4px 0;
+}
+
+.fc-day {
+  font-family: var(--face-sans);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 1px;
+}
+
+.fc-icon .icon { width: 38px; height: 38px; }
+
+.fc-hilo { text-align: right; font-family: var(--face-mono); }
+.fc-hi { font-size: 18px; font-weight: 700; }
+.fc-lo { font-size: 13px; font-weight: 500; }
+
+/* Forecast hi/lo variants ----- */
+.fc-hilo-inline { display: flex; align-items: baseline; gap: 4px; justify-content: flex-end; }
+.fc-hilo-inline .fc-hi { font-size: 18px; }
+.fc-hilo-inline .fc-lo { font-size: 16px; }
+.fc-hilo-inline .fc-hilo-sep { font-size: 14px; font-weight: 300; }
+.fc-hilo-arrows { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
+.fc-hilo-arrows .fc-hi { font-size: 16px; }
+.fc-hilo-arrows .fc-lo { font-size: 14px; }

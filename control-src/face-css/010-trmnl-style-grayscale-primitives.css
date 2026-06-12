@@ -1,0 +1,76 @@
+/* ============ TRMNL-style grayscale primitives ============
+ *
+ * Bit-depth-aware grayscale classes patterned on TRMNL's framework
+ * (help.trmnl.com/en/articles/12386214). Widgets reference shades by
+ * semantic name (bg--gray-30 / bg--gray-55) instead of hex; the body's
+ * `.screen--1bit` scope picks the rendering strategy.
+ *
+ * On our 1-bit panel:
+ *   bg--black    = solid #000
+ *   bg--white    = solid #fff
+ *   bg--gray-30  = ~25% white pixels (darker mid-gray) via ordered dither
+ *   bg--gray-55  = ~56% white pixels (lighter mid-gray) via ordered dither
+ *
+ * The dither tiles are 4x4 SVG data URIs so they survive sharp's
+ * threshold(128) cleanly — every pixel is already pure black or pure
+ * white before the binary pack. Text classes intentionally stay
+ * solid; small dithered glyphs look like noise after threshold.
+ *
+ * If/when the device supports 2-bit, swap the four bg--* rules under
+ * a `.screen--2bit` scope for hardware gray planes — widget HTML
+ * doesn't change.
+ */
+
+.screen--1bit .bg--black,
+.bg--black { background: #000; color: #fff; }
+
+.screen--1bit .bg--white,
+.bg--white { background: #fff; color: #000; }
+
+.screen--1bit .bg--gray-30,
+.bg--gray-30 {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4' shape-rendering='crispEdges'><rect width='4' height='4' fill='black'/><rect x='0' y='0' width='1' height='1' fill='white'/><rect x='2' y='2' width='1' height='1' fill='white'/><rect x='1' y='3' width='1' height='1' fill='white'/><rect x='3' y='1' width='1' height='1' fill='white'/></svg>");
+  background-size: 4px 4px;
+  background-repeat: repeat;
+  color: #fff;
+}
+
+.screen--1bit .bg--gray-55,
+.bg--gray-55 {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4' shape-rendering='crispEdges'><rect width='4' height='4' fill='white'/><rect x='0' y='0' width='1' height='1' fill='black'/><rect x='2' y='2' width='1' height='1' fill='black'/><rect x='1' y='3' width='1' height='1' fill='black'/><rect x='3' y='1' width='1' height='1' fill='black'/><rect x='0' y='2' width='1' height='1' fill='black'/><rect x='2' y='0' width='1' height='1' fill='black'/></svg>");
+  background-size: 4px 4px;
+  background-repeat: repeat;
+  color: #000;
+}
+
+.text--black { color: #000; }
+.text--white { color: #fff; }
+/* Text never dithers — e-ink can't render mid-gray glyphs cleanly.
+ * gray-30 text falls back to black; gray-55 to white-on-dark contexts
+ * via the parent's color inheritance. Widgets needing actual gray
+ * tinted text should pair text--white with bg--gray-30, etc.
+ */
+.text--gray-30 { color: #000; }
+.text--gray-55 { color: #000; }
+
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 800px;
+  height: 480px;
+  background: #fff;
+  color: #000;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+  text-rendering: geometricPrecision;
+}
+
+.page {
+  width: 800px;
+  height: 480px;
+  display: grid;
+  grid-template-rows: 60px minmax(0, 1fr) 28px;
+  background: #fff;
+  overflow: hidden;
+}

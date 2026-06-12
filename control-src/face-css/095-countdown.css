@@ -1,0 +1,27 @@
+/* ============ COUNTDOWN ============ */
+.widget-countdown {
+  display: flex; flex-direction: column;
+  justify-content: space-around;
+  padding: 8px; height: 100%; gap: 4px;
+}
+.cd-row { display: flex; align-items: baseline; gap: 12px; }
+.cd-num {
+  font-family: 'DM Serif Display', serif;
+  font-size: 44px;
+  line-height: 1;
+  min-width: 90px;
+  text-align: right;
+}
+.cd-meta { display: flex; flex-direction: column; }
+.cd-unit {
+  font-family: var(--face-mono);
+  font-size: 12px;
+  letter-spacing: 3px;
+  color: #000;
+}
+.cd-label {
+  font-family: var(--face-sans);
+  font-size: 16px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}

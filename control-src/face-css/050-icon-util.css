@@ -1,0 +1,7 @@
+/* ============ ICON UTIL ============ */
+/* Icons are now <img src="/static/icons/sevesalm/*.svg"> (vendored
+ * sevesalm set). The legacy svg child rule is kept so any straggler
+ * inline <svg class="icon"> still sizes correctly. */
+.icon { display: inline-block; line-height: 0; vertical-align: middle; }
+.icon svg { width: 100%; height: 100%; display: block; }
+img.icon { object-fit: contain; }

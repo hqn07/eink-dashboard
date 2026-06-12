@@ -1,0 +1,53 @@
+/* ============ GITHUB GRID ============ */
+.widget-github {
+  padding: 8px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.widget-github .widget-title {
+  font-family: var(--face-mono);
+  font-size: 12px;
+  letter-spacing: 3px;
+  margin-bottom: 6px;
+  flex: 0 0 auto;
+}
+/* Columns flex horizontally; rows inside each column stretch to fill
+ * available height. Cells therefore fit the cell allotment in BOTH
+ * dimensions instead of computing from width alone (the previous
+ * aspect-ratio:1/1 caused overflow when the cell was short). */
+.gh-grid {
+  display: flex;
+  gap: 1.5px;
+  flex: 1 1 auto;
+  min-height: 0;
+  align-items: stretch;
+}
+.gh-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+.gh-cell {
+  flex: 1 1 0;
+  min-height: 0;
+  background: #fff;
+  border: var(--face-rule) solid #000;
+}
+/* 1-bit display: quantize 5 intensity levels to black/white at 50%.
+ * Level 0 = no contributions = white; level 1+ = solid black. */
+.gh-cell[data-l="1"],
+.gh-cell[data-l="2"],
+.gh-cell[data-l="3"],
+.gh-cell[data-l="4"] { background: #000; }
+.gh-footer {
+  font-family: var(--face-mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: var(--face-rule) solid #000;
+}

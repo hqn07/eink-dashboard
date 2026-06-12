@@ -1,0 +1,435 @@
+/* ============ ITEM PRIMITIVE ============
+ * TRMNL-inspired list-item shape. A standardized three-slot row used
+ * by calendar (and any future list widget — stocks watch, alarms,
+ * todos). Replaces per-widget .cal-row / .stock-watch-row / etc.
+ *
+ *   <div class="item [item--emphasis-1] [item--allday]">
+ *     <div class="meta">MON 3</div>          ← left fixed slot
+ *     <div class="content">
+ *       <span class="title">…</span>         ← main line
+ *       <span class="description">…</span>   ← secondary line
+ *     </div>
+ *     <div class="trailing">…</div>          ← optional right value
+ *   </div>
+ *
+ * Emphasis modifiers use solid black/white inversion instead of
+ * opacity, so they survive the 1-bit threshold pass cleanly.
+ */
+.item {
+  display: grid;
+  grid-template-columns: 50px 1fr auto;
+  gap: 8px;
+  align-items: baseline;
+  padding: 4px 0;
+  border-bottom: var(--face-rule) dashed #000;
+}
+.item:last-child { border-bottom: none; }
+
+.item > .meta {
+  font-family: var(--face-sans);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.item > .content { min-width: 0; }
+.item > .content > .title {
+  display: block;
+  font-family: var(--face-sans);
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1.1;
+}
+.item > .content > .description {
+  display: block;
+  font-family: var(--face-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+
+.item > .trailing {
+  font-family: var(--face-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 1px;
+}
+
+/* Emphasis modifiers — progressively heavier meta slot. */
+.item--emphasis-1 > .meta { font-weight: 700; }
+.item--emphasis-2 > .meta { background: #000; color: #fff; padding: 1px 4px; }
+.item--emphasis-3 > .meta {
+  background: #000; color: #fff; padding: 2px 6px;
+  text-transform: uppercase; letter-spacing: 2px;
+}
+
+/* Calendar all-day badge — repurpose the existing inverted-pill look
+ * for the description slot. Other widgets can opt in by adding the
+ * modifier; nothing widget-specific here. */
+.item--allday > .content > .description {
+  background: #000; color: #fff;
+  padding: 1px 4px;
+  font-weight: 700; /* reverse type at 1-bit needs bold */
+  font-family: var(--face-mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  display: inline-block;
+}
+
+.empty {
+  font-family: var(--face-sans);
+  font-size: 14px;
+  letter-spacing: 3px;
+  text-align: center;
+  padding: 40px 10px;
+  border: 2px dashed #000;
+}
+
+/* Terminal-flavored empty state for grid cells with no enabled widgets. */
+.terminal-empty {
+  font-family: var(--face-mono);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 6px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed #000;
+  padding: 24px;
+  background: #fff;
+}
+
+.terminal-empty::after {
+  content: ' _';
+  font-weight: 700;
+}
+
+/* ---------- Mac · Now Playing ---------- */
+.mac-np-card {
+  display: flex; flex-direction: column; gap: 6px;
+  font-family: var(--face-mono);
+  /* Absolute fill of the nearest positioned ancestor (.cell when the
+   * tile has no fontScale, .cell-scale when it does). Without this,
+   * percentage heights inside the flex-column .cell or the scaled
+   * .cell-scale wrapper don't always resolve to a definite size in
+   * Chromium, so the card's children flex correctly but the card
+   * itself collapses to content height — leaving a big dead band of
+   * whitespace below the song info. */
+  position: absolute;
+  inset: 0;
+}
+.mac-np-head { display: flex; align-items: center; gap: 8px; }
+/* Per-tile header alignment knob — moves the "NOW PLAYING" heading
+ * (plus its inline state glyph when present) inside the row. */
+.mac-np-head-left   { justify-content: flex-start; }
+.mac-np-head-center { justify-content: center; }
+.mac-np-head-right  { justify-content: flex-end; }
+
+/* Per-tile text alignment knob — applies to the artist / song /
+ * source block inside `.mac-np-text`. The stacked layout already
+ * centers; this rule overrides when the user picks something else. */
+.mac-np-text-left   .mac-np-text { text-align: left;   align-items: flex-start; }
+.mac-np-text-center .mac-np-text { text-align: center; align-items: center; }
+.mac-np-text-right  .mac-np-text { text-align: right;  align-items: flex-end; }
+.mac-np-stacked.mac-np-text-left   .mac-np-stacked-text { text-align: left;  align-items: flex-start; }
+.mac-np-stacked.mac-np-text-center .mac-np-stacked-text { text-align: center; align-items: center; }
+.mac-np-stacked.mac-np-text-right  .mac-np-stacked-text { text-align: right;  align-items: flex-end; }
+
+/* Art position knob (horizontal layout only). Flip the body's flex
+ * direction so the cover sits on the chosen side of the text block. */
+.mac-np-body-art-right { flex-direction: row; }
+.mac-np-body-art-left  { flex-direction: row-reverse; }
+.mac-np-state {
+  font-size: 18px; font-weight: 700;
+  font-family: var(--face-mono);
+}
+.mac-np-body {
+  display: flex; gap: 12px; flex: 1; min-height: 0;
+}
+.mac-np-art {
+  flex-shrink: 0;
+  border: var(--face-rule) solid #000;
+  image-rendering: pixelated;
+  background: #fff;
+}
+.mac-np-art-shape-rounded { border-radius: 10px; overflow: hidden; }
+.mac-np-art-shape-circle  { border-radius: 50%; overflow: hidden; }
+
+/* Inner wrapper that carries the user's fontScale transform. Sized
+ * inverse to the scale so the post-transform paint still fills the
+ * cell content box exactly — replaces the old `zoom:N` approach so
+ * the user can pick an anchor (transform-origin). */
+.cell-scale {
+  /* Absolute so the inline `width: 142.857%; height: 142.857%`
+   * resolves against the cell's box (which is now position: relative).
+   * As a flex column child the % height was collapsing to content
+   * height in Chromium, so widgets that filled the wrapper via
+   * `height: 100%` ended up content-sized instead of filling. */
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+}
+
+/* E-ink panel battery widget. Big percent + voltage + visual bar +
+ * staleness footer. Editorial palette (black on white); inversion
+ * relies on the same `filter: invert(1)` rule the rest of the cell
+ * uses for `cell-inverted`. */
+.eink-batt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  height: 100%;
+}
+.eink-batt-pct {
+  font-family: 'DM Serif Display', serif;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.eink-batt-bolt { vertical-align: -0.05em; }
+.eink-batt-volts {
+  font-family: var(--face-mono);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.eink-batt-bar {
+  position: relative;
+  width: 110px;
+  height: 18px;
+  border: 2px solid #000;
+  background: #fff;
+  margin-top: 2px;
+}
+.eink-batt-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: #000;
+}
+.eink-batt-bar-tip {
+  position: absolute;
+  right: -6px;
+  top: 4px;
+  width: 4px;
+  height: 10px;
+  background: #000;
+}
+.eink-batt-age {
+  font-family: var(--face-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #000;
+  margin-top: auto;
+}
+.cell.cell-inverted .eink-batt-bar { border-color: #fff; background: #000; }
+.cell.cell-inverted .eink-batt-bar-fill { background: #fff; }
+.cell.cell-inverted .eink-batt-bar-tip { background: #fff; }
+.cell.cell-inverted .eink-batt-age { color: #fff; } /* #aaa lied in the editor; device thresholds it to white */
+.mac-np-art-empty {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px;
+}
+.mac-np-text {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; justify-content: center; gap: 4px;
+}
+.mac-np-title {
+  /* Inherits font-family from .mac-np-card so the per-tile typography
+   * picker takes effect; the default still resolves to DM Serif via
+   * typographyCss's `serif` key in widget-render.js. */
+  font-family: inherit;
+  font-weight: 700;
+  line-height: 1.05;
+  overflow: hidden;
+  /* Wrap long titles to multiple lines instead of clipping at the
+   * widget edge. Cell height (via autofit's data-max-font) limits
+   * total vertical space; the actual line count adapts. */
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  display: block;
+}
+.mac-np-meta {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mac-np-source {
+  /* Was 10px / #555 / letter-spacing 3px — invisible at 1-bit
+   * threshold once Sharp rounds the gray pixels. Heavier weight,
+   * pure black, modest tracking so the words survive dithering. */
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #000;
+  text-transform: uppercase;
+}
+.mac-np-glyph {
+  /* Inline SVG play/pause glyph used by mac_nowplaying. Vertical-align
+   * so it lines up with adjacent text baselines rather than sitting
+   * on the baseline. */
+  vertical-align: -0.15em;
+}
+.mac-batt-bolt {
+  /* Solid SVG lightning bolt rendered inline next to the battery
+   * percentage. Inherits black on normal theme + flips to white on
+   * `.cell-inverted` via the global SVG fill rule. */
+  vertical-align: -0.1em;
+  margin-left: 0.15em;
+}
+.mac-np-progress {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.mac-np-bar {
+  height: 4px;
+  border: var(--face-rule) solid #000;
+  background: #fff;
+  position: relative;
+}
+.mac-np-bar-fill {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  background: #000;
+}
+.mac-np-time {
+  font-size: 11px;
+  letter-spacing: 2px;
+  font-weight: 700;
+}
+
+/* Stacked layout (extended / full tier) — art centered with time
+ * bookends, title block beneath. */
+.mac-np-stacked .mac-np-stacked-row {
+  display: flex; align-items: center; justify-content: center;
+  gap: 16px;
+  flex: 1; min-height: 0;
+}
+.mac-np-bookend {
+  font-family: var(--face-mono);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 1px;
+  min-width: 64px;
+  text-align: center;
+}
+.mac-np-stacked .mac-np-bookend-left  { text-align: right; }
+.mac-np-stacked .mac-np-bookend-right { text-align: left;  }
+.mac-np-state-big {
+  text-align: center;
+  font-family: var(--face-mono);
+  font-weight: 700;
+  font-size: 42px;
+  line-height: 1;
+  /* Pin state-big + everything below (text, progress) to the bottom of
+   * the card. Without this, when the song has no progress data the text
+   * block floats just below the art and the bottom of the cell is dead
+   * whitespace. `margin-top: auto` inside the flex-column card eats
+   * remaining space above this element so it (and its trailing
+   * siblings) hug the bottom edge. */
+  margin: 10px 0 0 0;
+  margin-top: auto;
+}
+.mac-np-stacked .mac-np-stacked-text {
+  display: flex; flex-direction: column; align-items: stretch; gap: 4px;
+  text-align: center;
+  width: 100%;
+}
+.mac-np-stacked .mac-np-title { text-align: center; width: 100%; }
+.mac-np-stacked .mac-np-meta  { text-align: center; width: 100%; }
+.mac-np-stacked .mac-np-source { text-align: center; width: 100%; }
+.mac-np-bar-only {
+  margin-top: 6px;
+}
+
+/* ---- Side-space variants (extended / full tier) ---- */
+/* vertical_text: rotate the "NOW PLAYING" label 90° on each side of the
+ * cover art. */
+.mac-np-bookend-vert {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  letter-spacing: 4px;
+  font-size: 18px;
+  font-weight: 700;
+  font-family: var(--face-mono);
+}
+.mac-np-bookend-vert.mac-np-bookend-left  { transform: rotate(180deg); }
+
+/* play_state: big play/pause glyph mirroring on both sides. */
+.mac-np-bookend-glyph {
+  font-size: 56px;
+  line-height: 1;
+  font-family: var(--face-mono);
+  font-weight: 700;
+}
+
+/* bars: stacked dither bars per side. Pure decoration. */
+.mac-np-bookend-bars {
+  display: flex; flex-direction: column; gap: 6px;
+  min-width: 36px;
+  align-items: stretch;
+}
+.mac-np-bookend-bars > span {
+  display: block;
+  height: 6px;
+  background: #000;
+}
+.mac-np-bookend-bars > span:nth-child(2),
+.mac-np-bookend-bars > span:nth-child(4),
+.mac-np-bookend-bars > span:nth-child(6) {
+  height: 3px;
+}
+
+/* metadata: artist on the left, album / source on the right. Two-line
+ * stack with a tiny label above the value. */
+.mac-np-bookend-meta {
+  display: flex; flex-direction: column; gap: 4px;
+  min-width: 110px;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+.mac-np-bookend-meta .bookend-label {
+  font-family: var(--face-mono);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #000;
+}
+.mac-np-bookend-meta .bookend-value {
+  font-family: var(--face-serif);
+  font-size: 16px;
+  line-height: 1.1;
+}
+
+/* ---------- Clock widget ---------- */
+.clock {
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  height: 100%; width: 100%;
+  text-align: center; gap: 4px;
+}
+.clock-time {
+  line-height: 0.95;
+  font-feature-settings: 'tnum' 1;
+}
+/* font-family inherits from .clock so the per-tile typography
+ * picker takes effect; style preset only controls weight + spacing. */
+.clock-big .clock-time  { font-family: inherit; font-weight: 700; }
+.clock-thin .clock-time { font-family: inherit; font-weight: 300; letter-spacing: 1px; }
+.clock-ampm {
+  font-family: var(--face-mono);
+  font-weight: 700; font-size: 0.35em; margin-left: 0.3em;
+  vertical-align: super; letter-spacing: 2px;
+}
+.clock-date {
+  font-family: var(--face-mono);
+  font-weight: 700; letter-spacing: 4px; font-size: 13px;
+}

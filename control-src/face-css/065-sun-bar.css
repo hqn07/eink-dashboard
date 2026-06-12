@@ -1,0 +1,36 @@
+/* ============ SUN BAR ============ */
+.sun-bar {
+  margin-top: 8px;
+  padding: 0 6px;
+}
+.sun-track {
+  position: relative;
+  height: 6px;
+  border: var(--face-rule) solid #000;
+  background: #fff;
+  margin-bottom: 6px;
+}
+.sun-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: #000;
+}
+.sun-dot {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  background: #000;
+  border-radius: 50%;
+}
+.sun-labels {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--face-mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-top: 2px;
+}

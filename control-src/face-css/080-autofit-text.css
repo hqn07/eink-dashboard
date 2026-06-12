@@ -1,0 +1,20 @@
+/* ============ AUTOFIT TEXT ============
+ * Elements with this class are sized by JS (autofitText) to the largest
+ * font size that fits their bounding box. They must have an explicit
+ * box via flex layout for measurement to work. */
+.autofit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  line-height: 1;
+  white-space: nowrap;
+  text-align: center;
+}
+.autofit.multiline {
+  white-space: normal;
+  line-height: 1.15;
+}

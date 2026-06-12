@@ -1,0 +1,28 @@
+/* ============ CLOCK WIDGET ============ */
+.widget-clock {
+  display: flex; flex-direction: column;
+  height: 100%;
+  padding: 8px;
+  gap: 4px;
+}
+.clock-time {
+  font-family: 'DM Serif Display', serif;
+  line-height: 1;
+  letter-spacing: -2px;
+  text-align: center;
+}
+.clock-ampm {
+  font-family: var(--face-mono);
+  font-size: 18px;
+  letter-spacing: 2px;
+  margin-left: 6px;
+  vertical-align: top;
+}
+.clock-date {
+  font-family: var(--face-mono);
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-align: center;
+  color: #000;
+  flex: 0 0 auto;
+}

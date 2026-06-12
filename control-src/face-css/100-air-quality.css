@@ -1,0 +1,36 @@
+/* ============ AIR QUALITY ============ */
+.widget-aqi {
+  display: flex; flex-direction: column;
+  padding: 10px; height: 100%;
+  justify-content: space-between;
+  gap: 4px;
+}
+.widget-aqi .widget-title {
+  font-family: var(--face-mono);
+  font-size: 12px;
+  letter-spacing: 3px;
+  margin-bottom: 4px;
+}
+.aqi-num {
+  font-family: 'DM Serif Display', serif;
+  font-size: 56px;
+  line-height: 1;
+}
+.aqi-cat {
+  font-family: var(--face-sans);
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.aqi-advice {
+  font-family: var(--face-mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  line-height: 1.3;
+  margin-top: 4px;
+  color: #000;
+}
+.aqi-stats { display: flex; gap: 12px; margin-top: 6px; flex-wrap: wrap; }
+.aqi-stats .stat-k { font-size: 11px; letter-spacing: 1px; }
+.aqi-stats .stat-v { font-size: 12px; }

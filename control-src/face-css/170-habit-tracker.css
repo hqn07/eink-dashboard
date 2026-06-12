@@ -1,0 +1,41 @@
+/* ============ HABIT TRACKER ============ */
+
+.widget-habit { display: flex; flex-direction: column; gap: 6px; }
+.habit-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: var(--face-rule) dashed #000;
+}
+.habit-row:last-child { border-bottom: 0; }
+.habit-label {
+  font-family: var(--face-sans);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.habit-cells { display: flex; gap: 3px; }
+.habit-cell {
+  width: 14px;
+  height: 14px;
+  border: var(--face-rule) solid #000;
+  background: #fff;
+  display: inline-block;
+}
+.habit-cell.done { background: #000; }
+.habit-streak {
+  font-family: var(--face-mono);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 2px;
+  padding: 2px 5px;
+  background: #000;
+  color: #fff;
+}

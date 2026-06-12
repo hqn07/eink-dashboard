@@ -1,0 +1,81 @@
+/* ============ WEATHER HERO ============ */
+
+.col-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.weather-hero {
+  text-align: center;
+  padding-top: 2px;
+}
+
+.weather-icon {
+  display: inline-block;
+  height: 90px;
+}
+.weather-icon .icon { width: 90px !important; height: 90px !important; }
+
+.weather-temp {
+  font-family: 'DM Serif Display', serif;
+  font-size: 96px;
+  line-height: 0.85;
+  letter-spacing: -4px;
+  margin-top: -8px;
+}
+
+.temp-deg {
+  font-size: 60px;
+  vertical-align: super;
+  margin-left: -8px;
+}
+
+.weather-desc {
+  font-family: var(--face-sans);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 3px;
+  margin-top: 4px;
+}
+
+.weather-hilo {
+  font-family: var(--face-mono);
+  /* 700/12px — the ° glyph at 500/11px thresholds away to a faint tick
+     on the 1-bit e-ink render. */
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 2px;
+  margin-top: 4px;
+}
+
+/* Stats stack vertically — single 2-col grid (label · value). Each row
+ * shares the label column width and the value column right-aligns, so
+ * any value (even a long "SE 4 (G10) mph") sits in a consistent column
+ * without crashing into a neighbour the way the previous side-by-side
+ * grid did at narrow tile widths. */
+.weather-stats {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 14px;
+  row-gap: 6px;
+  align-items: baseline;
+  padding-top: 12px;
+  margin-top: 8px;
+  margin-bottom: 6px;
+  border-top: 2px solid #000;
+  font-family: var(--face-sans);
+}
+
+.stat-k {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.stat-v {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-align: right;
+}

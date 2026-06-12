@@ -8,7 +8,11 @@
     "dev": "node --watch server.js",
     "mac-agent": "node mac-agent.js",
     "control-dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "build:css": "node scripts/build-face-css.mjs",
+    "prebuild": "npm run build:css",
+    "prestart": "npm run build:css",
+    "predev": "npm run build:css"
   },
   "engines": {
     "node": ">=20.0.0"

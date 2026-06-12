@@ -1,0 +1,6 @@
+/* Dashboard CSS — 800x480 e-ink, editorial newspaper aesthetic.
+ * Designed for 1-bit threshold: solid blacks, no thin antialiased lines.
+ * Font stack uses self-hostable serif + condensed sans for that print feel.
+ */
+
+@import url('/static/fonts/fonts.css');

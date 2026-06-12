@@ -1,0 +1,10 @@
+/* ============ FORECAST PRECIP COL ============ */
+.fc-row { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; }
+.fc-precip {
+  font-family: var(--face-mono);
+  font-size: 12px;
+  letter-spacing: 1px;
+  min-width: 32px;
+  text-align: right;
+  color: #000;
+}

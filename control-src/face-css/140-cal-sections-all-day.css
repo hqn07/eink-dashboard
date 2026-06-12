@@ -1,0 +1,10 @@
+/* ============ CAL SECTIONS + ALL-DAY ============ */
+.cal-section-title {
+  font-family: var(--face-mono);
+  font-size: 11px;
+  letter-spacing: 3px;
+  margin: 6px 0 2px;
+  color: #000;
+  padding-bottom: 1px;
+  border-bottom: var(--face-rule) solid #000;
+}

@@ -1,0 +1,30 @@
+/* ============ HOURLY STRIP ============ */
+.hourly-strip {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  margin-top: 10px;
+  margin-bottom: 8px;
+  padding: 6px 4px 2px;
+  border-top: var(--face-rule) solid #000;
+}
+.hr-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.hr-time {
+  font-family: var(--face-mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #000;
+}
+.hr-temp {
+  font-family: var(--face-sans);
+  font-size: 13px;
+  font-weight: 600;
+}
+.hr-cell .icon { display: inline-block; }
