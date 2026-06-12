@@ -99,6 +99,9 @@ function renderCard({ resolvedMessage, cellW, cellH, density, settings }) {
 }
 
 export function render(ctx) {
-  const variant = (ctx.settings && ctx.settings.variant) === 'card' ? 'card' : 'bar';
+  // ctx.variant is resolved by buildTileCtx (contract v2); the settings
+  // fallback covers surfaces that render without a def (pool demo).
+  const variant = ctx.variant
+    || ((ctx.settings && ctx.settings.variant) === 'card' ? 'card' : 'bar');
   return variant === 'card' ? renderCard(ctx) : renderBar(ctx);
 }

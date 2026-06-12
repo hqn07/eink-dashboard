@@ -19,8 +19,11 @@ export const GRID_ROWS = 12;
 // can be migrated.
 // v1 = 12x6  (Apr 2026 → May 2026, rectangular cells)
 // v2 = 12x12 (May 18 2026, finer h but rectangular cells)
-// v3 = 24x12 (this — square cells, fine in both axes)
-export const GRID_VERSION = 3;
+// v3 = 24x12 (square cells, fine in both axes)
+// v4 = screens gain layoutKind (server had this; client copy had
+//      drifted to v3 — the two migrateConfigToScreens implementations
+//      are hand-mirrored, keep them in sync)
+export const GRID_VERSION = 4;
 export const SCREENS = [1, 2];
 
 // Sizes are in 24x12 grid units. With body ≈ 800px × 392-452px, cells
@@ -40,30 +43,10 @@ export const WIDGET_REGISTRY = [
   }
 ];
 
-// Tier resolver — returns one of: tiny | compact | standard | extended | full.
-// Widgets use this to pick a layout that fits the cell. Width and height
-// are both considered; the lower-cap wins so a very wide but short cell
-// gets the shorter tier.
-export function pickTier(cellW, cellH, density) {
-  const w = cellW || 0, h = cellH || 0;
-  let byH = 'full';
-  if (h < 4)       byH = 'tiny';
-  else if (h < 6)  byH = 'compact';
-  else if (h < 8)  byH = 'standard';
-  else if (h < 12) byH = 'extended';
-  let byW = 'full';
-  if (w < 6)       byW = 'tiny';
-  else if (w < 8)  byW = 'compact';
-  else if (w < 12) byW = 'standard';
-  else if (w < 18) byW = 'extended';
-  const order = ['tiny', 'compact', 'standard', 'extended', 'full'];
-  let idx = Math.min(order.indexOf(byH), order.indexOf(byW));
-  // Per-tile density override — bumps the tier up or down one step
-  // without changing the actual cell size.
-  if (density === 'rich')   idx = Math.min(idx + 1, order.length - 1);
-  if (density === 'sparse') idx = Math.max(idx - 1, 0);
-  return order[idx];
-}
+// Tier resolver lives in widgets/_shared.js (the copy every widget
+// module imports). Re-exported here for back-compat — there used to be
+// two hand-matched implementations of this function; never again.
+export { pickTier } from './widgets/_shared.js';
 
 export function widgetById(id) {
   return WIDGET_REGISTRY.find(w => w.id === id);
@@ -311,6 +294,10 @@ export function migrateConfigToScreens(cfg) {
     const v = cfg.gridVersion || 1;
     if (v < 2) screens = screens.map(s => ({ ...s, layout: migrateLayoutV1ToV2(s.layout) }));
     if (v < 3) screens = screens.map(s => ({ ...s, layout: migrateLayoutV2ToV3(s.layout) }));
+    // v4: every screen gains a `layoutKind` field. Default `free` so
+    // existing freeform grids keep working.
+    if (v < 4) screens = screens.map(s =>
+      s.layoutKind ? s : { ...s, layoutKind: 'free' });
     screens = screens.map(s => ({ ...s, layout: migrateWidgetIds(s.layout) }));
     // If the default screen still has zero widgets (legacy empty install),
     // seed it with the Editorial preset so the user sees something.

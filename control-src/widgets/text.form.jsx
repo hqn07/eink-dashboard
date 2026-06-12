@@ -5,27 +5,16 @@ import TimeField from '../components/TimeField.jsx';
 
 // Merged form: `bar` shows the token-strip controls (align/upper),
 // `card` adds the scheduled-messages editor from the old message
-// widget. Variant select stays here until the W1 contract-v2 picker
-// generalizes it into modal chrome.
+// widget. The variant picker itself is modal chrome (WidgetForm renders
+// it automatically from def.variants) — not this form's job.
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, ListEditor, TypographyFields, FormSection } = fields;
+  const { ListEditor, TypographyFields, FormSection } = fields;
   const appendToken = (key) => (tok) => patch({ [key]: (v[key] || '') + tok });
   const variant = v.variant === 'card' ? 'card' : 'bar';
   return (
     <>
       <FormSection title="Layout">
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
-          Variant
-          <select
-            value={variant}
-            onChange={e => patch({ variant: e.target.value })}
-            style={{ width: 220 }}
-          >
-            <option value="bar">Bar — single strip</option>
-            <option value="card">Card — headline + schedule</option>
-          </select>
-        </label>
         {variant === 'bar' && (
           <>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>

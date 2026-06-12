@@ -686,7 +686,7 @@ function Collapsible({ title, storageScope, defaultOpen = true, children }) {
 // MY data" instead of having to read preset names.
 //
 // TRMNL plugin editor + WordPress Block Styles use the same idiom.
-function PresetField({ presets, onApply, currentValues }) {
+function PresetField({ presets, onApply, currentValues, title = 'Preset' }) {
   if (!Array.isArray(presets) || !presets.length) return null;
   const ctx = useContext(PresetContext);
   // Migrated forms currently call <PresetField presets onApply /> without
@@ -713,8 +713,8 @@ function PresetField({ presets, onApply, currentValues }) {
 
   return (
     <div className="wsm-field wsm-preset-cards-wrap">
-      <Collapsible title="Preset" storageScope={`preset:${ctx.widgetId || 'na'}`} defaultOpen>
-        <div className="wsm-preset-cards" role="radiogroup" aria-label="Preset">
+      <Collapsible title={title} storageScope={`preset:${title}:${ctx.widgetId || 'na'}`} defaultOpen>
+        <div className="wsm-preset-cards" role="radiogroup" aria-label={title}>
           {presets.map(p => (
             <PresetCard
               key={p.id}
@@ -832,8 +832,19 @@ export default function WidgetForm({ widgetId, values, onChange, item, previewDa
     const def = MIGRATED_DEFS[widgetId];
     const defaults = (def && typeof def.defaults === 'function')
       ? def.defaults() : {};
+    // Contract v2: widgets that declare def.variants get an automatic
+    // visual variant picker above their form — same live-thumbnail
+    // card UI as presets, applying { variant: <name> }.
+    const variantPresets = (def && def.variants)
+      ? Object.entries(def.variants).map(([id, val]) => ({
+          id, label: (val && val.label) || id, values: { variant: id }
+        }))
+      : null;
     return (
       <PresetContext.Provider value={{ widgetId, item, previewData, values: v, onHoverPreset }}>
+        {variantPresets && (
+          <PresetField presets={variantPresets} onApply={patch} title="Variant" />
+        )}
         <TabbedForm
           widgetId={widgetId}
           MigratedForm={MigratedForm}

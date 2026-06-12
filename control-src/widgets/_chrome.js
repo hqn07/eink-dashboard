@@ -26,15 +26,23 @@ export function cellClasses(s) {
 
 // Per-tile render context: page-level data, overlaid with this tile's
 // per-item fetch slot, plus the tile's own geometry + settings.
-export function buildTileCtx(item, data) {
+// `def` is optional (contract v2): when given, the resolved layout
+// variant rides on ctx.variant so render fns don't each re-derive
+// "settings.variant or the def's default".
+export function buildTileCtx(item, data, def) {
   const slot = (data && data.perItem && data.perItem[item.id]) || {};
+  const s = item.settings;
+  const variant = (s && s.variant && def && def.variants && def.variants[s.variant])
+    ? s.variant
+    : (def && def.defaultVariant) || null;
   return {
     ...data,
     ...slot,
     cellW: item.w,
     cellH: item.h,
     density: item.density,
-    settings: item.settings
+    settings: item.settings,
+    variant
   };
 }
 

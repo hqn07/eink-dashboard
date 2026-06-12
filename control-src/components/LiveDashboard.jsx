@@ -124,7 +124,7 @@ export default function LiveDashboard({
     const def = widgetById(item.widgetId || item.id);
     if (!def) continue;
     if (!withinVisibility(item.visibility, nowM)) continue;
-    const innerRaw = renderWidget(item.widgetId || item.id, buildTileCtx(item, data)) || '';
+    const innerRaw = renderWidget(item.widgetId || item.id, buildTileCtx(item, data, widgetById(item.widgetId || item.id))) || '';
     if (!innerRaw) continue;
     const sw = scaleWrap(item.settings);
     const inner = `${sw.open}${innerRaw}${sw.close}`;

@@ -1076,7 +1076,7 @@ function buildPageBodyHtml({ payload, ssr, mode }) {
   if ((mode === 'dev' || mode === 'preview') && devWidgetId) {
     const item = layout[0];
     if (!item) return '<div class="page" id="page"></div>';
-    const itemCtx = ssr.buildTileCtx(item, { ...ctxBase, perItem });
+    const itemCtx = ssr.buildTileCtx(item, { ...ctxBase, perItem }, defs[item.widgetId]);
     const innerRaw = ssr.renderWidget(item.widgetId, itemCtx);
     const sw = ssr.scaleWrap(item.settings);
     const inner = `${sw.open}${innerRaw}${sw.close}`;
@@ -1105,7 +1105,7 @@ function buildPageBodyHtml({ payload, ssr, mode }) {
   const cells = [];
   for (const item of layout) {
     if (!withinVisibility(item.visibility, nowM)) continue;
-    const itemCtx = ssr.buildTileCtx(item, { ...ctxBase, perItem });
+    const itemCtx = ssr.buildTileCtx(item, { ...ctxBase, perItem }, defs[item.widgetId]);
     const innerRaw = ssr.renderWidget(item.widgetId, itemCtx);
     if (!innerRaw) continue;
     const sw = ssr.scaleWrap(item.settings);

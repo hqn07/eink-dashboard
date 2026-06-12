@@ -409,7 +409,7 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
           onResizeStop={onTileResizeStop}
         >
           {enabled.map(l => {
-            const innerRaw = renderWidget(l.widgetId, buildTileCtx(l, previewData)) || '';
+            const innerRaw = renderWidget(l.widgetId, buildTileCtx(l, previewData, widgetById(l.widgetId))) || '';
             const swl = scaleWrap(l.settings);
             const inner = `${swl.open}${innerRaw}${swl.close}`;
             // Per-tile typography (font family + padding) lives on the

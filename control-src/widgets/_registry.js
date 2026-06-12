@@ -2,6 +2,16 @@
 //   <id>.js        — def + render (pure JS string templates, no React)
 //   <id>.form.jsx  — React Form component for the WidgetSettings modal
 //
+// Contract v2 (widgets-refresh W1) — def fields:
+//   id, label, requires, minSize, sizes, defaultSize, defaults()
+//   variants?       { <name>: { label } } — named layout variants; the
+//                   settings modal auto-renders a visual picker and the
+//                   chosen name rides on ctx.variant via buildTileCtx.
+//   defaultVariant? name used when the tile hasn't picked one.
+//   degrade?        { <tier>: [elements dropped] } — advisory map of
+//                   what the render drops at small tiers; W2 widget
+//                   passes fill these in as each widget is rebuilt.
+//
 // def + render are the server-importable half (server.js dynamically
 // imports the .js files for SSR); Form is React-only and only the
 // client bundle pulls it in.
