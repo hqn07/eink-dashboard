@@ -5,6 +5,32 @@
 
 @import url('/static/fonts/fonts.css');
 
+/* ============ Face design tokens (redesign Stage 0) ============
+ * Namespaced --face-* on purpose: this stylesheet is ALSO loaded
+ * inside the control app page (so the editor can reuse widget
+ * styles). Defining --ink/--bg here would collide with the editor's
+ * :root tokens in control-src/styles.css (#000 vs #111) and import
+ * order would silently pick the winner. Keep the namespaces apart.
+ *
+ * E-ink physics encoded here:
+ *  - pure 1-bit only — no grays, no opacity (dithers into noise)
+ *  - single-pixel strokes vanish on panel → min rule weight 2px
+ *  - min readable type ≈ 11px JetBrains Mono / 14px Oswald
+ */
+:root {
+  --face-ink: #000;
+  --face-paper: #fff;
+  --face-serif: 'DM Serif Display', Georgia, serif;
+  --face-sans: 'Oswald', 'Arial Narrow', sans-serif;
+  --face-mono: 'JetBrains Mono', monospace;
+  /* rule weights — never below 2px on the panel */
+  --face-rule: 2px;
+  --face-rule-heavy: 4px;
+  /* type floor — nothing on the face below these */
+  --face-fs-min-mono: 11px;
+  --face-fs-min-sans: 14px;
+}
+
 /* Per-tile typography override. The cell wrapper picks up --w-font
  * (set inline by the renderer from the layout item's settings) and
  * the universal child selector forces every nested element to inherit
