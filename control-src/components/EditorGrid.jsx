@@ -40,7 +40,6 @@ const SHOWCASE_SIZE_BY_ID = {
   message:          'M',
   calendar:         'M',
   weather_forecast: 'M',
-  stocks:           'M',
   weather_hero:     'L',
   mac_nowplaying:   'L'
 };

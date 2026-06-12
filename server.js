@@ -16,7 +16,6 @@ const sharp = require('sharp');
 
 const { fetchWeather, geocodeCity } = require('./widgets/weather');
 const { fetchEvents } = require('./widgets/calendar');
-const { fetchStocks } = require('./widgets/stocks');
 const { fetchAlerts } = require('./widgets/alerts');
 const widgetStatus = require('./widgets/_status');
 const { resolveMessage, renderInlineMarkdown } = require('./widgets/message');
@@ -563,12 +562,30 @@ function seedLayoutFromEditorial() {
   }));
 }
 
+// Widget-id migrations (widgets-refresh W0). Dead widgets drop out of
+// saved layouts; merged/renamed widgets map forward, optionally
+// rewriting their settings. Runs on every config load (idempotent).
+// Mirrored in control-src/widgets.js — keep both tables in sync.
+const WIDGET_ID_MIGRATIONS = {
+  stocks: null  // killed 2026-06-12
+};
+function migrateWidgetIds(layout) {
+  return (layout || []).flatMap(it => {
+    const wid = it.widgetId || it.id;
+    if (!(wid in WIDGET_ID_MIGRATIONS)) return [it];
+    const m = WIDGET_ID_MIGRATIONS[wid];
+    if (!m) return [];
+    return [{ ...it, widgetId: m.id, settings: m.settings ? m.settings(it.settings || {}) : it.settings }];
+  });
+}
+
 function migrateConfigToScreens(cfg) {
   if (Array.isArray(cfg.screens) && cfg.screens.length) {
     let screens = cfg.screens;
     const v = cfg.gridVersion || 1;
     if (v < 2) screens = screens.map(s => ({ ...s, layout: migrateLayoutV1ToV2(s.layout) }));
     if (v < 3) screens = screens.map(s => ({ ...s, layout: migrateLayoutV2ToV3(s.layout) }));
+    screens = screens.map(s => ({ ...s, layout: migrateWidgetIds(s.layout) }));
     // v4: every screen gains a `layoutKind` field. Default `free` so
     // existing freeform grids keep working — opt-in to a primitive
     // (full / half_horizontal / half_vertical / quadrant) is a deliberate
@@ -589,7 +606,7 @@ function migrateConfigToScreens(cfg) {
   const sched = cfg.schedule || {};
   const sActive = sched.active || {};
   const sQuiet  = sched.quiet  || {};
-  const migrateOld = (l) => migrateLayoutV2ToV3(migrateLayoutV1ToV2((l || []).map(it => ({ ...it }))));
+  const migrateOld = (l) => migrateWidgetIds(migrateLayoutV2ToV3(migrateLayoutV1ToV2((l || []).map(it => ({ ...it })))));
   const screens = [];
   const oldLayout = migrateOld(oldLayouts[1]);
   screens.push({
@@ -776,14 +793,12 @@ async function buildWidgetData(cfg, units, layout) {
     : (cfg.calendar && cfg.calendar.icalUrl ? [cfg.calendar.icalUrl] : []);
 
   const [
-    weather, events, stocks, alerts
+    weather, events, alerts
   ] = await Promise.all([
     wantWeather ? fetchWeather(loc, process.env.OPENWEATHER_API_KEY, units) : null,
     (ids.has('calendar') && icalUrls.length)
       ? Promise.all(icalUrls.map(u => fetchEvents(u))).then(lists => mergeEvents(lists.flat()))
       : [],
-    (ids.has('stocks') && cfg.stocks && Array.isArray(cfg.stocks.symbols) && cfg.stocks.symbols.length)
-      ? fetchStocks(cfg.stocks.symbols) : [],
     (wantWeather && cfg.alerts !== false && Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon))
       ? fetchAlerts({ lat: cfg.lat, lon: cfg.lon }) : []
   ]);
@@ -832,14 +847,6 @@ async function buildWidgetData(cfg, units, layout) {
     try {
       switch (wid) {
         // --- Data-fetched widgets ---
-        case 'stocks':
-          // New contract: always set slot.stocks so an empty-symbols
-          // tile shows the renderer's "NO DATA" path instead of falling
-          // back to global cfg.stocks.
-          slot.stocks = (Array.isArray(eff.symbols) && eff.symbols.length)
-            ? await fetchStocks(eff.symbols)
-            : [];
-          break;
         case 'calendar': {
           // New contract: always set slot.events. Empty URL list resolves
           // to [] so the renderer never reaches the global cfg.calendar.
@@ -940,7 +947,7 @@ async function buildWidgetData(cfg, units, layout) {
   }));
 
   return {
-    weather, events, stocks,
+    weather, events,
     resolvedMessage,
     perItem
   };
@@ -1027,14 +1034,14 @@ function htmlAttr(s) {
 // rendering pulls the per-item slot data via `perItem[item.id]` so each
 // tile gets its own context (overrides global where set).
 function buildPageBodyHtml({ payload, ssr, mode }) {
-  const { cfg, weather, events, units, stocks, resolvedMessage,
+  const { cfg, weather, events, units, resolvedMessage,
           perItem, battery, layout: rawLayout, devWidgetId } = payload;
 
   const defs = ssr.DEFS;
   const layout = expandLayout(rawLayout, defs);
   const ctxBase = {
     cfg, weather, events, units,
-    stocks, resolvedMessage, battery
+    resolvedMessage, battery
   };
 
   // Matrix mode: every widget at every preset, stacked top-to-bottom.
@@ -1462,8 +1469,7 @@ app.get('/widgets-matrix', checkAdminAuth, async (req, res) => {
     // Force-fetch every data widget so the matrix has real content.
     const fakeLayout = [
       { widgetId: 'weather_hero' }, { widgetId: 'weather_forecast' },
-      { widgetId: 'calendar' }, { widgetId: 'message' },
-      { widgetId: 'stocks' }
+      { widgetId: 'calendar' }, { widgetId: 'message' }
     ];
     const data = await buildWidgetData(cfg, units, fakeLayout);
     const [shell, ssr] = await Promise.all([loadDashboardHtml(), loadSsr()]);
@@ -1759,7 +1765,6 @@ app.post('/api/config', checkAdminAuth, async (req, res) => {
         widgets:  { ...(current.widgets  || {}), ...(req.body.widgets  || {}) },
         message:  { ...(current.message  || {}), ...(req.body.message  || {}) },
         calendar: { ...(current.calendar || {}), ...(req.body.calendar || {}) },
-        stocks:   { ...(current.stocks   || {}), ...(req.body.stocks   || {}) },
         weather:  { ...(current.weather  || {}), ...(req.body.weather  || {}) },
       };
       if (Array.isArray(req.body.screens)) {

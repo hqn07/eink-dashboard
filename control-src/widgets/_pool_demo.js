@@ -46,18 +46,6 @@ export const DEMO_EVENTS = [
   { title: 'Market run',            dayLabel: 'SUN', startLabel: '11:00 AM', section: 'LATER' }
 ];
 
-export const DEMO_STOCKS = [
-  { symbol: 'AAPL',    price: '189.84', change:  1.24, changePct:  0.66, dayHigh: '190.20', dayLow: '187.55',
-    spark: [186, 187, 188, 188.5, 189, 189.5, 189.84] },
-  { symbol: 'NVDA',    price: '124.32', change: -0.85, changePct: -0.68,
-    spark: [126, 125.5, 125, 124.7, 124.5, 124.4, 124.32] },
-  { symbol: 'BTC-USD', price: '67423',  change: 412,   changePct:  0.61,
-    spark: [67000, 67050, 67100, 67200, 67300, 67400, 67423] },
-  { symbol: 'TSLA',    price: '255.46', change:  3.21, changePct:  1.27,
-    spark: [251, 252, 253, 253.5, 254, 255, 255.46] },
-  { symbol: 'GOOG',    price: '174.12', change:  0.42, changePct:  0.24,
-    spark: [173, 173.4, 173.7, 174, 174.05, 174.1, 174.12] }
-];
 
 // Placeholder album art: 160×160 PNG, nested rotated-diamond pattern.
 // Survives the 1-bit threshold (pure black/white only, no gray) so it
@@ -105,9 +93,6 @@ export function demoCtxForWidget(id, cellW, cellH) {
     case 'calendar':
       return { ...base, events: DEMO_EVENTS,
         settings: { icalUrls: ['demo'] } };
-    case 'stocks':
-      return { ...base, stocks: DEMO_STOCKS,
-        settings: { symbols: ['AAPL'] } };
     case 'mac_nowplaying':
       return { ...base, macNowPlaying: DEMO_NOWPLAYING, settings: {} };
     case 'mac_battery':

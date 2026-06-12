@@ -12,7 +12,6 @@ import * as eink_battery     from './eink_battery.js';
 import * as mac_battery      from './mac_battery.js';
 import * as mac_nowplaying   from './mac_nowplaying.js';
 import * as message          from './message.js';
-import * as stocks           from './stocks.js';
 import * as text_bar         from './text_bar.js';
 import * as weather_forecast from './weather_forecast.js';
 import * as weather_hero     from './weather_hero.js';
@@ -23,14 +22,13 @@ import { Form as einkBatteryForm }     from './eink_battery.form.jsx';
 import { Form as macBatteryForm }      from './mac_battery.form.jsx';
 import { Form as macNowPlayingForm }   from './mac_nowplaying.form.jsx';
 import { Form as messageForm }         from './message.form.jsx';
-import { Form as stocksForm }          from './stocks.form.jsx';
 import { Form as textBarForm }         from './text_bar.form.jsx';
 import { Form as weatherForecastForm } from './weather_forecast.form.jsx';
 import { Form as weatherHeroForm }     from './weather_hero.form.jsx';
 
 const MODULES = [
   calendar, clock, eink_battery, mac_battery, mac_nowplaying,
-  message, stocks, text_bar, weather_forecast, weather_hero
+  message, text_bar, weather_forecast, weather_hero
 ];
 
 const FORMS = {
@@ -40,7 +38,6 @@ const FORMS = {
   mac_battery:      macBatteryForm,
   mac_nowplaying:   macNowPlayingForm,
   message:          messageForm,
-  stocks:           stocksForm,
   text_bar:         textBarForm,
   weather_forecast: weatherForecastForm,
   weather_hero:     weatherHeroForm

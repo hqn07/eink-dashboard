@@ -27,3 +27,4 @@ esp32/weather_station_b/secrets.h
 
 # Vite build output for the React control app (built on deploy)
 public/control-app/
+.claude/

@@ -853,7 +853,6 @@ export default function WidgetForm({ widgetId, values, onChange, item, previewDa
 
     // clock — migrated to control-src/widgets/clock.js
 
-    // stocks — migrated to control-src/widgets/stocks.jsx
 
     // message — migrated to control-src/widgets/message.jsx
     case '__message_legacy_removed':

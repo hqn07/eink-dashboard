@@ -31,7 +31,6 @@ export const WIDGET_REGISTRY = [
   { ...migratedDef('message') },
   { ...migratedDef('text_bar') },
   { ...migratedDef('calendar') },
-  { ...migratedDef('stocks') },
   // Mac-only widgets — only render data when the server is running on
   // the user's Mac (LAN path). On Railway/Linux they show MAC OFFLINE.
   { ...migratedDef('mac_nowplaying') },
@@ -219,18 +218,6 @@ export const SCREEN_PRESETS = [
     ]
   },
   {
-    id: 'markets',
-    name: 'Markets',
-    description: 'Stocks-focused: hero + watchlist taking the left, weather + clock right.',
-    layout: [
-      { widgetId: 'text_bar',     x: 0,  y: 0,  w: 24, h: 1,
-        settings: { text: 'MARKETS · {{date|short}}', align: 'left', upper: true, fontFamily: 'sans' } },
-      { widgetId: 'stocks',       x: 0,  y: 1,  w: 14, h: 11 },
-      { widgetId: 'weather_hero', x: 14, y: 1,  w: 10, h: 8 },
-      { widgetId: 'clock',        x: 14, y: 9,  w: 10, h: 3 }
-    ]
-  },
-  {
     id: 'focus_message',
     name: 'Focus',
     description: 'Big custom message centered with a thin date header + weather strip.',
@@ -299,12 +286,30 @@ function migrateLayoutV2ToV3(layout) {
   }));
 }
 
+// Widget-id migrations (widgets-refresh W0). Dead widgets drop out of
+// saved layouts; merged/renamed widgets map forward, optionally
+// rewriting their settings. Runs on every config load (idempotent).
+// Mirrored in server.js — keep both tables in sync.
+const WIDGET_ID_MIGRATIONS = {
+  stocks: null  // killed 2026-06-12
+};
+function migrateWidgetIds(layout) {
+  return (layout || []).flatMap(it => {
+    const wid = it.widgetId || it.id;
+    if (!(wid in WIDGET_ID_MIGRATIONS)) return [it];
+    const m = WIDGET_ID_MIGRATIONS[wid];
+    if (!m) return [];
+    return [{ ...it, widgetId: m.id, settings: m.settings ? m.settings(it.settings || {}) : it.settings }];
+  });
+}
+
 export function migrateConfigToScreens(cfg) {
   if (Array.isArray(cfg.screens) && cfg.screens.length) {
     let screens = cfg.screens;
     const v = cfg.gridVersion || 1;
     if (v < 2) screens = screens.map(s => ({ ...s, layout: migrateLayoutV1ToV2(s.layout) }));
     if (v < 3) screens = screens.map(s => ({ ...s, layout: migrateLayoutV2ToV3(s.layout) }));
+    screens = screens.map(s => ({ ...s, layout: migrateWidgetIds(s.layout) }));
     // If the default screen still has zero widgets (legacy empty install),
     // seed it with the Editorial preset so the user sees something.
     if (!cfg.firstRunSeeded) {
@@ -326,7 +331,7 @@ export function migrateConfigToScreens(cfg) {
   const sActive = sched.active || {};
   const sQuiet  = sched.quiet  || {};
   // Pre-screens configs were authored against the 12x6 grid → walk both migrations.
-  const migrateOld = (l) => migrateLayoutV2ToV3(migrateLayoutV1ToV2((l || []).map(it => ({ ...it }))));
+  const migrateOld = (l) => migrateWidgetIds(migrateLayoutV2ToV3(migrateLayoutV1ToV2((l || []).map(it => ({ ...it })))));
   // Brand-new installs (no legacy layout, no screens) get the Editorial
   // preset so they don't land on a blank canvas.
   const editorialPreset = SCREEN_PRESETS.find(p => p.id === 'editorial');
