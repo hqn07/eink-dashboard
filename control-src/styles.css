@@ -66,9 +66,14 @@
   --bw-frame: 2px;
   --bw-heavy: 3px;
 
-  /* --- radius --- */
-  --r-sm: 4px;
-  --r-md: 6px;
+  /* --- radius ---
+   * Stage 1 collapsed the corner language to print-sharp: cards,
+   * tabs, modals and frames all sit on --r-md = 0. --r-sm survives
+   * as a 2px "not quite knife-edge" for tiny chips; --r-pill only
+   * for dots and the toggle knob. Don't reintroduce per-component
+   * radii — change the token or nothing. */
+  --r-sm: 2px;
+  --r-md: 0;
   --r-pill: 999px;
 
   /* --- elevation: hard print offsets + soft overlays --- */
@@ -107,13 +112,25 @@ html, body {
  * sync pill drops below the brand instead of crashing into the
  * right-side action cluster. */
 .app-header {
+  /* Oxford rule — thick over thin, the classic newspaper masthead
+   * close. The thin line is the ::after below. */
   border-bottom: var(--bw-heavy) solid var(--line);
+  position: relative;
   padding-bottom: 14px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 16px;
+}
+.app-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -6px;
+  height: 1px;
+  background: var(--line);
 }
 .app-header-left {
   display: flex;
@@ -188,18 +205,19 @@ html, body {
  * readout when relevant. Stays compact at all times; never grows tall
  * enough to push the header. */
 .sync-pill {
+  /* Stage 1: de-pilled. Status reads as a quiet mono caption — no
+   * capsule background competing with the masthead. Color only when
+   * something needs attention (dirty / error). */
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 10px 4px 8px;
-  border-radius: var(--r-pill);
-  background: #f4f3ed;
+  padding: 4px 0;
+  background: transparent;
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: var(--ink);
-  border: var(--bw-rule) solid transparent;
+  color: var(--mute);
 }
 .sync-dot {
   width: 8px;
@@ -213,14 +231,14 @@ html, body {
 .sync-pill-dirty  .sync-dot { background: #c00; }
 .sync-pill-error  .sync-dot { background: #c00; }
 .sync-pill-dirty,
-.sync-pill-error  { border-color: #c00; color: #c00; }
-.sync-pill { transition: background 200ms ease, border-color 200ms ease, color 200ms ease; }
+.sync-pill-error  { color: #c00; }
+.sync-pill { transition: color 200ms ease; }
 .sync-pill-saved {
   animation: syncSavedFlash 600ms ease-out;
 }
 @keyframes syncSavedFlash {
-  0%   { background: var(--accent-warm-soft); transform: scale(1.03); }
-  100% { background: #f4f3ed;                 transform: scale(1); }
+  0%   { color: var(--accent-warm); transform: scale(1.03); }
+  100% { color: var(--mute);        transform: scale(1); }
 }
 .sync-label { font-weight: 700; }
 .sync-sep   { opacity: 0.5; }
@@ -241,18 +259,21 @@ html, body {
  * mac-agent.js pushed state to the cloud. Inline in the header
  * actions so dead pushes are obvious at a glance. */
 .mac-agent-badge {
+  /* Healthy agent stays quiet (hairline + mute); the chip only takes
+   * color when the push went stale or failed — error is the signal,
+   * not the steady state. */
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
   font-weight: 700;
   letter-spacing: 1.5px;
   padding: 4px 8px;
-  border: var(--bw-rule) solid currentColor;
-  border-radius: 2px;
+  border: var(--bw-hair) solid currentColor;
+  border-radius: var(--r-sm);
   white-space: nowrap;
 }
-.mac-agent-badge--ok    { color: #1a7f37; }
+.mac-agent-badge--ok    { color: var(--mute); }
 .mac-agent-badge--stale { color: #b35900; }
-.mac-agent-badge--off   { color: #555; }
+.mac-agent-badge--off   { color: var(--mute); opacity: 0.7; }
 .mac-agent-badge--err   { color: #b00020; }
 
 main.layout {
@@ -262,41 +283,44 @@ main.layout {
   align-items: start;
 }
 
-/* ============ SCREEN TABS ============ */
+/* ============ SCREEN TABS ============
+ * Stage 1: the white rounded frame is gone. Tabs sit directly on the
+ * page as a newspaper section nav — condensed caps on a hairline
+ * rule, active section = solid ink block, sharp corners. */
 .screen-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 10px 12px;
+  align-items: stretch;
+  gap: 2px;
+  padding: 0;
   margin-bottom: 16px;
-  background: #fff;
-  border: var(--bw-frame) solid var(--ink);
-  border-radius: var(--r-md);
+  background: transparent;
+  border: 0;
+  border-bottom: var(--bw-hair) solid var(--line);
 }
 .screen-tab {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 14px;
-  border: var(--bw-rule) solid transparent;
+  padding: 8px 14px;
+  border: 0;
   background: transparent;
   color: var(--ink);
   cursor: pointer;
-  font-family: inherit;
+  font-family: var(--font-sans-c);
+  text-transform: uppercase;
   font-weight: 600;
   font-size: var(--fs-lg);
-  letter-spacing: 0.5px;
-  border-radius: var(--r-pill);
-  transition: background var(--dur-fast) ease, color var(--dur-fast) ease, border-color var(--dur-fast) ease;
+  letter-spacing: 1.5px;
+  border-radius: 0;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease;
 }
-.screen-tab:hover { background: #f4f3ed; }
+.screen-tab:hover { background: #f0ece2; }
 .screen-tab.active {
   background: var(--ink);
   color: #fff;
-  border-color: var(--ink);
 }
 .screen-tab.overlap {
-  border-color: var(--accent);
   background: var(--accent);
   color: #fff;
 }
@@ -327,16 +351,18 @@ main.layout {
   font-size: var(--fs-2xl);
   line-height: 1;
   padding: 0 14px;
-  min-height: 30px;
+  min-height: 34px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: transparent;
   color: var(--mute);
-  border: var(--bw-rule) dashed var(--mute);
+  border: var(--bw-hair) dashed var(--mute);
+  align-self: center;
+  margin-bottom: 4px;
 }
 .screen-tab-add:hover:not(:disabled) {
-  background: #f4f3ed;
+  background: #f0ece2;
   color: var(--ink);
   border-style: solid;
   border-color: var(--ink);
@@ -459,8 +485,8 @@ main.layout {
 .app-header-shortcut-btn {
   width: 28px;
   height: 28px;
-  border-radius: 50%;
-  border: var(--bw-rule) solid var(--mute);
+  border-radius: var(--r-sm);
+  border: var(--bw-hair) solid var(--mute);
   background: transparent;
   color: var(--mute);
   font-family: var(--font-mono);
@@ -551,10 +577,11 @@ main.layout {
  * rendered into a fixed-width frame, scaled to fit the pane width
  * so it stays readable without scroll. */
 .preview-pane {
-  background: #fff;
-  border: var(--bw-frame) solid var(--ink);
-  border-radius: var(--r-md);
-  padding: 14px;
+  /* Flat like every other section; only the device frame inside
+   * carries a border. */
+  background: transparent;
+  border: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -593,9 +620,11 @@ main.layout {
   border-color: var(--ink);
 }
 .preview-pane-frame {
+  /* Device bezel — same frame language as .editor-wrap so both
+   * read as "this is the physical panel". */
   width: 100%;
   background: #fff;
-  border: var(--bw-hair) solid var(--mute);
+  border: var(--bw-frame) solid var(--ink);
   overflow: hidden;
   position: relative;
 }
@@ -659,7 +688,7 @@ main.layout {
   font-size: var(--fs-sm);
   letter-spacing: 1.5px;
   padding: 8px 12px;
-  border-radius: var(--r-pill);
+  border-radius: 0;
   cursor: pointer;
   text-transform: uppercase;
 }
@@ -726,7 +755,7 @@ main.layout {
     cursor: pointer;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
     z-index: 70;
   }
   .mobile-settings-fab:hover { background: #333; }
@@ -750,7 +779,7 @@ main.layout {
     max-height: 80vh;
     background: var(--bg);
     border-top: var(--bw-frame) solid var(--ink);
-    border-radius: 16px 16px 0 0;
+    border-radius: 12px 12px 0 0;
     overflow: hidden;
   }
   .mobile-drawer-handle {
@@ -871,16 +900,20 @@ main.layout {
   text-transform: uppercase;
 }
 
-/* Screen settings panel — flags an overlap with a red border. */
-.screen-panel.invalid { border-color: var(--accent); }
+/* Screen settings panel — flags an overlap with a red margin rule
+ * (cards are flat now, so there's no border to recolor). */
+.screen-panel.invalid {
+  border-left: var(--bw-heavy) solid var(--accent);
+  padding-left: 12px;
+}
 .terminal-line.invalid { color: var(--accent); }
 
 /* ============ SCHEDULE TIMELINE ============ */
 .timeline-wrap {
-  background: #fff;
-  border: var(--bw-frame) solid var(--ink);
-  border-radius: var(--r-md);
-  padding: 10px 12px 14px;
+  background: transparent;
+  border: 0;
+  border-bottom: var(--bw-hair) solid var(--line);
+  padding: 10px 0 14px;
   margin-bottom: 16px;
 }
 .timeline-title {
@@ -1009,13 +1042,18 @@ main.layout {
   align-items: center;
 }
 
-/* ============ SECTIONS ============ */
+/* ============ SECTIONS ============
+ * Stage 1: cards are flat. The page is the paper — sections are
+ * marked by their caps-mono title on a hairline rule (newspaper
+ * section heads), not by boxes. Frames are reserved for the two
+ * things that represent the physical device: the editor stage and
+ * the preview frame. */
 section.card {
-  background: #fff;
-  border: var(--bw-frame) solid var(--line);
-  border-radius: var(--r-md);
-  padding: 16px;
-  margin-bottom: 16px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  margin-bottom: 24px;
 }
 
 .section-title {
