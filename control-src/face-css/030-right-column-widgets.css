@@ -1,10 +1,4 @@
-/* ============ RIGHT COLUMN WIDGETS ============ */
-
-.col-right {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+/* ============ WIDGET SHELL + TEXT CARD ============ */
 
 .widget {
   border: 2px solid #000;
@@ -47,33 +41,4 @@
   margin-top: 6px;
   border-top: 2px solid #fff;
   padding-top: 4px;
-}
-
-/* Todos */
-.todo-list { list-style: none; }
-.todo-list li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-family: var(--face-sans);
-  font-size: 14px;
-  font-weight: 600;
-  padding: 3px 0;
-  letter-spacing: 0.5px;
-}
-.todo-list .checkbox {
-  flex-shrink: 0;
-  width: 14px;
-  height: 14px;
-  border: 2px solid #000;
-  background: #fff;
-  box-sizing: border-box;
-}
-.todo-list .done .checkbox {
-  background: #000;
-}
-.todo-list .todo-text { flex: 1; line-height: 1.15; }
-.todo-list .done .todo-text {
-  text-decoration: line-through;
-  text-decoration-thickness: 2px;
 }
