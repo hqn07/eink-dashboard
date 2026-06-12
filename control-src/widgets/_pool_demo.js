@@ -67,7 +67,6 @@ export const DEMO_NOWPLAYING = {
 
 export const DEMO_BATTERY = { percent: 87, state: 'charging' };
 
-export const DEMO_MESSAGE = { text: 'Welcome home.', subtitle: 'Be present.' };
 
 export const DEMO_CLOCK = {
   timeStr: '9:18',
@@ -101,11 +100,9 @@ export function demoCtxForWidget(id, cellW, cellH) {
       return { ...base,
         battery: { v: 4.03, pct: 82, at: Date.now() - 5 * 60 * 1000 },
         settings: {} };
-    case 'message':
-      return { ...base, resolvedMessage: DEMO_MESSAGE, settings: {} };
     case 'clock':
       return { ...base, clockNow: DEMO_CLOCK, settings: {} };
-    case 'text_bar':
+    case 'text':
       // Tokens are resolved server-side, so the palette can't run them
       // here. Pre-resolve to a believable headline + subtitle so the
       // pool card reads as a configured text widget rather than the
@@ -113,7 +110,7 @@ export function demoCtxForWidget(id, cellW, cellH) {
       return { ...base, resolvedText: {
         text: 'Brooklyn · Saturday, June 6',
         subtitle: 'refreshed 12m ago'
-      }, settings: { align: 'left', upper: true, fontFamily: 'sans' } };
+      }, settings: { variant: 'bar', align: 'left', upper: true, fontFamily: 'sans' } };
     default:
       return { ...base, settings: {} };
   }

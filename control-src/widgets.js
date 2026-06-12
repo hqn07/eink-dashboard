@@ -28,8 +28,7 @@ export const SCREENS = [1, 2];
 export const WIDGET_REGISTRY = [
   { ...migratedDef('weather_hero') },
   { ...migratedDef('weather_forecast') },
-  { ...migratedDef('message') },
-  { ...migratedDef('text_bar') },
+  { ...migratedDef('text') },
   { ...migratedDef('calendar') },
   // Mac-only widgets — only render data when the server is running on
   // the user's Mac (LAN path). On Railway/Linux they show MAC OFFLINE.
@@ -76,13 +75,13 @@ const DEFAULT_LAYOUTS = {
   1: [
     { id: 'weather_hero',     x: 0,  y: 0, size: 'M', enabled: true },
     { id: 'weather_forecast', x: 8,  y: 0, size: 'M', enabled: true },
-    { id: 'message',          x: 14, y: 0, size: 'M', enabled: true },
+    { id: 'text',             x: 14, y: 0, size: 'M', enabled: true, settings: { variant: 'card' } },
     { id: 'calendar',         x: 14, y: 4, size: 'M', enabled: true }
   ],
   2: [
     { id: 'weather_hero',     x: 0, y: 0, size: 'XL', enabled: true },
     { id: 'weather_forecast', x: 0, y: 0, size: 'M',  enabled: false },
-    { id: 'message',          x: 0, y: 0, size: 'M',  enabled: false },
+    { id: 'text',             x: 0, y: 0, size: 'M',  enabled: false, settings: { variant: 'card' } },
     { id: 'calendar',         x: 0, y: 0, size: 'M',  enabled: false }
   ]
 };
@@ -176,11 +175,11 @@ export const SCREEN_PRESETS = [
   {
     id: 'editorial',
     name: 'Editorial',
-    description: 'Newspaper feel: weather + forecast + message + calendar.',
+    description: 'Newspaper feel: weather + forecast + text card + calendar.',
     layout: [
       { widgetId: 'weather_hero',     x: 0,  y: 0, w: 8,  h: 12 },
       { widgetId: 'weather_forecast', x: 8,  y: 0, w: 6,  h: 12 },
-      { widgetId: 'message',          x: 14, y: 0, w: 10, h: 4 },
+      { widgetId: 'text',             x: 14, y: 0, w: 10, h: 4, settings: { variant: 'card' } },
       { widgetId: 'calendar',         x: 14, y: 4, w: 10, h: 8 }
     ]
   },
@@ -197,8 +196,8 @@ export const SCREEN_PRESETS = [
     name: 'Now Playing',
     description: 'Mac · Now Playing dominant on the right, weather + clock left.',
     layout: [
-      { widgetId: 'text_bar',       x: 0,  y: 0,  w: 12, h: 1,
-        settings: { text: '{{city}} · {{date|long}}', align: 'left', upper: true, fontFamily: 'sans' } },
+      { widgetId: 'text',           x: 0,  y: 0,  w: 12, h: 1,
+        settings: { variant: 'bar', text: '{{city}} · {{date|long}}', align: 'left', upper: true, fontFamily: 'sans' } },
       { widgetId: 'weather_hero',   x: 0,  y: 1,  w: 12, h: 7 },
       { widgetId: 'clock',          x: 0,  y: 8,  w: 12, h: 4 },
       { widgetId: 'mac_nowplaying', x: 12, y: 0,  w: 12, h: 12 }
@@ -209,8 +208,8 @@ export const SCREEN_PRESETS = [
     name: 'Daily Briefing',
     description: 'Info-dense: header strip + weather + forecast + calendar + clock.',
     layout: [
-      { widgetId: 'text_bar',         x: 0,  y: 0,  w: 24, h: 1,
-        settings: { text: '{{date|long}} · {{city}}', align: 'center', upper: true, fontFamily: 'serif' } },
+      { widgetId: 'text',             x: 0,  y: 0,  w: 24, h: 1,
+        settings: { variant: 'bar', text: '{{date|long}} · {{city}}', align: 'center', upper: true, fontFamily: 'serif' } },
       { widgetId: 'weather_hero',     x: 0,  y: 1,  w: 8,  h: 8 },
       { widgetId: 'weather_forecast', x: 8,  y: 1,  w: 6,  h: 8 },
       { widgetId: 'calendar',         x: 14, y: 1,  w: 10, h: 11 },
@@ -222,9 +221,9 @@ export const SCREEN_PRESETS = [
     name: 'Focus',
     description: 'Big custom message centered with a thin date header + weather strip.',
     layout: [
-      { widgetId: 'text_bar',         x: 0, y: 0,  w: 24, h: 1,
-        settings: { text: '{{day}} · {{date|short}}', align: 'center', upper: true, fontFamily: 'sans' } },
-      { widgetId: 'message',          x: 0, y: 2,  w: 24, h: 7 },
+      { widgetId: 'text',             x: 0, y: 0,  w: 24, h: 1,
+        settings: { variant: 'bar', text: '{{day}} · {{date|short}}', align: 'center', upper: true, fontFamily: 'sans' } },
+      { widgetId: 'text',             x: 0, y: 2,  w: 24, h: 7, settings: { variant: 'card' } },
       { widgetId: 'weather_forecast', x: 0, y: 10, w: 18, h: 2 },
       { widgetId: 'clock',            x: 18, y: 9, w: 6,  h: 3 }
     ]
@@ -291,7 +290,10 @@ function migrateLayoutV2ToV3(layout) {
 // rewriting their settings. Runs on every config load (idempotent).
 // Mirrored in server.js — keep both tables in sync.
 const WIDGET_ID_MIGRATIONS = {
-  stocks: null  // killed 2026-06-12
+  stocks: null,  // killed 2026-06-12
+  // merged into `text` 2026-06-12
+  message:  { id: 'text', settings: (s) => ({ ...s, variant: 'card' }) },
+  text_bar: { id: 'text', settings: (s) => ({ ...s, variant: 'bar' }) }
 };
 function migrateWidgetIds(layout) {
   return (layout || []).flatMap(it => {

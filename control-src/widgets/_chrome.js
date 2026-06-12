@@ -1,5 +1,5 @@
 // Per-tile typography + class helpers. Originally hosted header/footer
-// rendering too, but those were removed in favor of the text_bar widget
+// rendering too, but those were removed in favor of the text widget (bar variant)
 // + {{token}} system. File name kept to avoid churn across imports.
 
 import { FONT_STACKS } from './_shared.js';

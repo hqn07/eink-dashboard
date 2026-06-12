@@ -8,14 +8,13 @@ import * as clock            from './clock.js';
 import * as eink_battery     from './eink_battery.js';
 import * as mac_battery      from './mac_battery.js';
 import * as mac_nowplaying   from './mac_nowplaying.js';
-import * as message          from './message.js';
-import * as text_bar         from './text_bar.js';
+import * as text             from './text.js';
 import * as weather_forecast from './weather_forecast.js';
 import * as weather_hero     from './weather_hero.js';
 
 const MODULES = [
   calendar, clock, eink_battery, mac_battery, mac_nowplaying,
-  message, text_bar, weather_forecast, weather_hero
+  text, weather_forecast, weather_hero
 ];
 
 export const DEFS = Object.fromEntries(MODULES.map(m => [m.def.id, m.def]));

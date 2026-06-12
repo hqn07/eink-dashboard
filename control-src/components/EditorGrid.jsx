@@ -37,7 +37,7 @@ const SHOWCASE_SIZE_BY_ID = {
   clock:            'S',
   mac_battery:      'S',
   eink_battery:     'S',
-  message:          'M',
+  text:             'S',
   calendar:         'M',
   weather_forecast: 'M',
   weather_hero:     'L',
@@ -168,7 +168,7 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
     : WIDGET_REGISTRY;
 
   // Editor canvas is sized to the full dashboard aspect. Header + footer
-  // chrome was removed in favor of the text_bar widget; widgets now own
+  // chrome was removed in favor of the text widget (bar variant); widgets now own
   // the full 800×480 panel.
   const HEADER_H = 0;
   const FOOTER_H = 0;

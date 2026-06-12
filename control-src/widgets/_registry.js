@@ -11,8 +11,7 @@ import * as clock            from './clock.js';
 import * as eink_battery     from './eink_battery.js';
 import * as mac_battery      from './mac_battery.js';
 import * as mac_nowplaying   from './mac_nowplaying.js';
-import * as message          from './message.js';
-import * as text_bar         from './text_bar.js';
+import * as text             from './text.js';
 import * as weather_forecast from './weather_forecast.js';
 import * as weather_hero     from './weather_hero.js';
 
@@ -21,14 +20,13 @@ import { Form as clockForm }           from './clock.form.jsx';
 import { Form as einkBatteryForm }     from './eink_battery.form.jsx';
 import { Form as macBatteryForm }      from './mac_battery.form.jsx';
 import { Form as macNowPlayingForm }   from './mac_nowplaying.form.jsx';
-import { Form as messageForm }         from './message.form.jsx';
-import { Form as textBarForm }         from './text_bar.form.jsx';
+import { Form as textForm }            from './text.form.jsx';
 import { Form as weatherForecastForm } from './weather_forecast.form.jsx';
 import { Form as weatherHeroForm }     from './weather_hero.form.jsx';
 
 const MODULES = [
   calendar, clock, eink_battery, mac_battery, mac_nowplaying,
-  message, text_bar, weather_forecast, weather_hero
+  text, weather_forecast, weather_hero
 ];
 
 const FORMS = {
@@ -37,8 +35,7 @@ const FORMS = {
   eink_battery:     einkBatteryForm,
   mac_battery:      macBatteryForm,
   mac_nowplaying:   macNowPlayingForm,
-  message:          messageForm,
-  text_bar:         textBarForm,
+  text:             textForm,
   weather_forecast: weatherForecastForm,
   weather_hero:     weatherHeroForm
 };

@@ -550,7 +550,7 @@ function migrateLayoutV2ToV3(layout) {
 const EDITORIAL_LAYOUT = [
   { widgetId: 'weather_hero',     x: 0,  y: 0, w: 8,  h: 12 },
   { widgetId: 'weather_forecast', x: 8,  y: 0, w: 6,  h: 12 },
-  { widgetId: 'message',          x: 14, y: 0, w: 10, h: 4 },
+  { widgetId: 'text',             x: 14, y: 0, w: 10, h: 4, settings: { variant: 'card' } },
   { widgetId: 'calendar',         x: 14, y: 4, w: 10, h: 8 }
 ];
 function seedLayoutFromEditorial() {
@@ -558,7 +558,8 @@ function seedLayoutFromEditorial() {
     id: `seed-${it.widgetId}-${i}`,
     widgetId: it.widgetId,
     x: it.x, y: it.y, w: it.w, h: it.h,
-    flush: false
+    flush: false,
+    ...(it.settings ? { settings: { ...it.settings } } : {})
   }));
 }
 
@@ -567,7 +568,10 @@ function seedLayoutFromEditorial() {
 // rewriting their settings. Runs on every config load (idempotent).
 // Mirrored in control-src/widgets.js — keep both tables in sync.
 const WIDGET_ID_MIGRATIONS = {
-  stocks: null  // killed 2026-06-12
+  stocks: null,  // killed 2026-06-12
+  // merged into `text` 2026-06-12
+  message:  { id: 'text', settings: (s) => ({ ...s, variant: 'card' }) },
+  text_bar: { id: 'text', settings: (s) => ({ ...s, variant: 'bar' }) }
 };
 function migrateWidgetIds(layout) {
   return (layout || []).flatMap(it => {
@@ -814,7 +818,7 @@ async function buildWidgetData(cfg, units, layout) {
     lastRefresh: Date.now(),
   };
 
-  const resolvedMessage = ids.has('message') ? resolveMessage(cfg, tokenCtx) : null;
+  const resolvedMessage = ids.has('text') ? resolveMessage(cfg, tokenCtx) : null;
 
   // Attach alerts onto weather so the renderer can show a banner without
   // a separate top-level lookup.
@@ -902,24 +906,21 @@ async function buildWidgetData(cfg, units, layout) {
         }
 
         // --- Pre-resolved synthesized slots ---
-        case 'message':
-          // New contract: pass only the per-item message + cfg.timezone
-          // (needed for schedule-window resolution). No other global cfg
-          // bleeds through.
-          slot.resolvedMessage = resolveMessage(
-            { timezone: cfg.timezone, message: eff },
-            tokenCtx
-          );
-          break;
-        case 'text_bar': {
-          // Generic token text widget — the replacement for chrome.
-          // Tokens are resolved here so the SSR render fn stays a pure
-          // string template with no widget data access.
-          const { renderTokens } = require('./widgets/_tokens');
-          slot.resolvedText = {
-            text:     renderTokens(eff.text || '',     tokenCtx),
-            subtitle: renderTokens(eff.subtitle || '', tokenCtx),
-          };
+        case 'text': {
+          // Merged text widget. Tokens / schedule windows resolve here
+          // so the SSR render fn stays a pure string template.
+          if ((eff.variant || 'bar') === 'card') {
+            slot.resolvedMessage = resolveMessage(
+              { timezone: cfg.timezone, message: eff },
+              tokenCtx
+            );
+          } else {
+            const { renderTokens } = require('./widgets/_tokens');
+            slot.resolvedText = {
+              text:     renderTokens(eff.text || '',     tokenCtx),
+              subtitle: renderTokens(eff.subtitle || '', tokenCtx),
+            };
+          }
           break;
         }
 
@@ -1099,7 +1100,7 @@ function buildPageBodyHtml({ payload, ssr, mode }) {
   }
 
   // Normal dashboard mode. Header/footer chrome was removed in favor of
-  // the text_bar widget; widgets now own the full 800×480 panel.
+  // the text widget (bar variant); widgets now own the full 800×480 panel.
   const nowM = localMinutesNow((cfg && cfg.timezone) || 'UTC');
   const cells = [];
   for (const item of layout) {
@@ -1469,7 +1470,7 @@ app.get('/widgets-matrix', checkAdminAuth, async (req, res) => {
     // Force-fetch every data widget so the matrix has real content.
     const fakeLayout = [
       { widgetId: 'weather_hero' }, { widgetId: 'weather_forecast' },
-      { widgetId: 'calendar' }, { widgetId: 'message' }
+      { widgetId: 'calendar' }, { widgetId: 'text' }
     ];
     const data = await buildWidgetData(cfg, units, fakeLayout);
     const [shell, ssr] = await Promise.all([loadDashboardHtml(), loadSsr()]);
