@@ -10,9 +10,10 @@
     "control-dev": "vite",
     "build": "vite build",
     "build:css": "node scripts/build-face-css.mjs",
-    "prebuild": "npm run build:css",
+    "prebuild": "npm run build:css && npm run lint:eink",
     "prestart": "npm run build:css",
-    "predev": "npm run build:css"
+    "predev": "npm run build:css",
+    "lint:eink": "node scripts/eink-lint.mjs"
   },
   "engines": {
     "node": ">=20.0.0"
