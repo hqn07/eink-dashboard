@@ -33,3 +33,8 @@ export {
   buildTileCtx,
   tileCellClasses
 } from './_chrome.js';
+
+// Frozen demo data — /widgets-matrix uses it to fill slots that have
+// no live data (clock, batteries, now-playing) so the matrix shows
+// real layouts instead of SETUP NEEDED placeholders.
+export { demoCtxForWidget } from './_pool_demo.js';

@@ -1,4 +1,14 @@
-import { escapeHtml, pickTier, placeholder } from './_shared.js';
+// Mac battery — percent + charge state pushed by the mac-agent.
+//
+// Contract v2 (widgets-refresh W2): variants —
+//   gauge   — stacked: title, percent, state (the original)
+//   inline  — one row: title · percent · state; for short strip tiles
+//   minimal — centered percent only
+// Same family as eink_battery so the two battery tiles read as a pair.
+// Gauge gates on grid rows directly (battery presets never leave the
+// tiny/compact tier band): ≤2 rows shows percent only.
+
+import { escapeHtml, placeholder } from './_shared.js';
 
 export const def = {
   id: 'mac_battery',
@@ -11,14 +21,33 @@ export const def = {
     L:  { w: 8, h: 3 }
   },
   defaultSize: 'S',
-  defaults: () => ({ title: '', fontScale: 1, padding: 14 })
+  variants: {
+    gauge:   { label: 'Gauge — percent + state' },
+    inline:  { label: 'Inline — one-row strip' },
+    minimal: { label: 'Minimal — percent only' }
+  },
+  defaultVariant: 'gauge',
+  degrade: {
+    tiny: ['title', 'state']
+  },
+  defaults: () => ({
+    variant: 'gauge',
+    title: '',
+    showState: true,
+    fontScale: 1,
+    padding: 14
+  })
 };
 
-export function render({ macBattery, settings, cellW, cellH, density }) {
-  const titleLabel = (settings && typeof settings.title === 'string' && settings.title.trim())
-    ? settings.title.trim()
+export function render(ctx) {
+  const { macBattery, settings, cellW, cellH } = ctx;
+  const s = settings || {};
+  const titleLabel = (typeof s.title === 'string' && s.title.trim())
+    ? s.title.trim()
     : 'MAC BATTERY';
   if (!macBattery) return placeholder(titleLabel.split(/\s+/)[0] || 'MAC', 'OFFLINE', 'msg', { cellW, cellH });
+  const variant = ctx.variant
+    || (def.variants[s.variant] ? s.variant : 'gauge');
   const charging = /charg/i.test(macBattery.state);
   // Solid inline SVG lightning bolt instead of the U+26A1 emoji. The
   // emoji rendered as a yellow glyph in Chrome's color-emoji font
@@ -28,17 +57,36 @@ export function render({ macBattery, settings, cellW, cellH, density }) {
   const arrow = charging
     ? '<svg class="mac-batt-bolt" viewBox="0 0 24 24" width="0.7em" height="0.7em" aria-hidden="true"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" fill="#000"/></svg>'
     : '';
-  // Tier picks font + label visibility — a 3×2 tile and an 8×3 tile no
-  // longer render the same. Title hides on tiny since "MAC BATTERY"
-  // crowds out the percent.
-  const tier = pickTier(cellW || 0, cellH || 0, density);
-  const showTitle = tier !== 'tiny';
-  const showState = tier !== 'tiny';
+  const pctBlock = `<div class="mac-batt-pct autofit" data-min-font="22">${macBattery.percent}%${arrow}</div>`;
+  const title = `<div class="col-title">${escapeHtml(titleLabel)}</div>`;
+  const state = (s.showState !== false)
+    ? `<div class="mac-batt-state">${escapeHtml(macBattery.state.toUpperCase())}</div>`
+    : '';
+
+  if (variant === 'minimal') {
+    return `<div class="mac-batt mac-batt-minimal">${pctBlock}</div>`;
+  }
+
+  if (variant === 'inline') {
+    // Width gates: title needs ~8 grid cols, the state line ~6;
+    // narrower strips keep just the percent.
+    const cw = cellW || 0;
+    return `
+      <div class="mac-batt mac-batt-inline">
+        ${cw >= 8 ? title : ''}
+        ${pctBlock}
+        ${cw >= 6 ? state : ''}
+      </div>
+    `;
+  }
+
+  // gauge — ≤2 rows keeps the percent only; 3+ adds title + state.
+  const roomy = (cellH || 0) >= 3;
   return `
-    <div class="mac-batt mac-batt-tier-${tier}">
-      ${showTitle ? `<div class="col-title">${escapeHtml(titleLabel)}</div>` : ''}
-      <div class="mac-batt-pct autofit" data-min-font="22">${macBattery.percent}%${arrow}</div>
-      ${showState ? `<div class="mac-batt-state">${escapeHtml(macBattery.state.toUpperCase())}</div>` : ''}
+    <div class="mac-batt">
+      ${roomy ? title : ''}
+      ${pctBlock}
+      ${roomy ? state : ''}
     </div>
   `;
 }

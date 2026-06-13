@@ -1063,8 +1063,21 @@ function buildPageBodyHtml({ payload, ssr, mode }) {
         for (const vn of variantNames) {
           const settings = typeof def.defaults === 'function' ? def.defaults() : undefined;
           if (vn && settings) settings.variant = vn;
+          // Live data where the matrix fetch produced some; frozen demo
+          // data (same set the editor pool uses) for the rest, so
+          // clock / batteries / now-playing show layouts, not
+          // SETUP NEEDED placeholders.
+          const demo = ssr.demoCtxForWidget ? ssr.demoCtxForWidget(id, cw, ch) : {};
+          const live = {};
+          for (const k of Object.keys(ctxBase)) {
+            const val = ctxBase[k];
+            if (val == null) continue;
+            if (Array.isArray(val) && !val.length) continue;
+            live[k] = val;
+          }
           const itemCtx = {
-            ...ctxBase, cellW: cw, cellH: ch, settings,
+            ...demo, ...live, cellW: cw, cellH: ch,
+            settings: { ...(demo.settings || {}), ...(settings || {}) },
             variant: vn || def.defaultVariant || null
           };
           const inner = ssr.renderWidget(id, itemCtx);

@@ -3,6 +3,13 @@
 // /api/battery at the start of every refresh cycle; the server persists
 // to data/battery.json and injects it as `battery` on the render
 // payload. No fetcher needed — purely a display widget.
+//
+// Contract v2 (widgets-refresh W2): variants —
+//   gauge   — stacked readout: title, percent, volts, bar, age
+//   inline  — one row: title · bar · percent; for short strip tiles
+//   minimal — centered percent only
+// Tier gates the gauge extras so a 4×2 tile stops rendering five
+// stacked lines into 80px.
 
 import { escapeHtml, placeholder } from './_shared.js';
 
@@ -17,7 +24,22 @@ export const def = {
     L: { w: 8, h: 4 }
   },
   defaultSize: 'S',
+  variants: {
+    gauge:   { label: 'Gauge — percent + volts + bar + age' },
+    inline:  { label: 'Inline — one-row strip' },
+    minimal: { label: 'Minimal — percent only' }
+  },
+  defaultVariant: 'gauge',
+  // Gauge drops downward as the tile shrinks. Battery presets all live
+  // in the tiny/compact tier band (even L 8×4 is compact), so the
+  // render gates on grid rows directly: ≤2 rows ≈ tiny, 3 ≈ compact.
+  // Inline and minimal render the same at every size by design.
+  degrade: {
+    compact: ['volts', 'age'],
+    tiny:    ['title', 'volts', 'age']
+  },
   defaults: () => ({
+    variant: 'gauge',
     title: '',
     showVoltage: true,
     showAge:     true,
@@ -40,20 +62,22 @@ function ageLabel(at) {
   return `${days}d ago`;
 }
 
-export function render({ battery, settings, cellW, cellH }) {
+export function render(ctx) {
+  const { battery, settings, cellW, cellH, density } = ctx;
   const s = settings || {};
   const titleLabel = (typeof s.title === 'string' && s.title.trim())
     ? s.title.trim() : 'E-INK BATTERY';
   if (!battery || !Number.isFinite(battery.pct)) {
     return placeholder(titleLabel.split(/\s+/)[0] || 'BATTERY', 'NO DATA', 'msg', { cellW, cellH });
   }
+  const variant = ctx.variant
+    || (def.variants[s.variant] ? s.variant : 'gauge');
   const pct = Math.max(0, Math.min(100, battery.pct));
   const v = Number.isFinite(battery.v) ? battery.v.toFixed(2) : null;
-  const age = (s.showAge !== false) ? ageLabel(battery.at) : null;
 
-  // Battery bar — 100 px wide, 18 px tall, single rectangle clipped by
-  // an inner fill width = pct%. Threshold-safe at 1-bit; the outline
-  // stays crisp because it's a solid stroke at >= 1.5 px.
+  // Battery bar — single rectangle clipped by an inner fill width =
+  // pct%. Threshold-safe at 1-bit; the outline stays crisp because
+  // it's a solid stroke at >= 2 px.
   // Floor the fill at 3% so 0-2% still renders a visible sliver — a
   // truly empty bar reads as "no data" rather than "empty battery".
   const fillPct = pct > 0 && pct < 3 ? 3 : pct;
@@ -70,12 +94,37 @@ export function render({ battery, settings, cellW, cellH }) {
   const bolt = charging
     ? '<svg class="eink-batt-bolt" viewBox="0 0 24 24" width="0.7em" height="0.7em" aria-hidden="true"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" fill="#000"/></svg>'
     : '';
+  const pctBlock = `<div class="eink-batt-pct autofit" data-min-font="22">${pct}%${bolt}</div>`;
+  const title = `<div class="col-title">${escapeHtml(titleLabel)}</div>`;
 
+  if (variant === 'minimal') {
+    return `<div class="eink-batt eink-batt-minimal">${pctBlock}</div>`;
+  }
+
+  if (variant === 'inline') {
+    // Title needs ~8 grid cols beside the bar + percent; narrower
+    // strips keep just the bar + percent.
+    const wideEnough = (cellW || 0) >= 8;
+    return `
+      <div class="eink-batt eink-batt-inline">
+        ${wideEnough ? title : ''}
+        ${bar}
+        ${pctBlock}
+      </div>
+    `;
+  }
+
+  // gauge — row height drops elements from the bottom of the stack up:
+  // 2 rows keeps percent + bar, 3 adds the title, 4+ adds volts + age.
+  const ch = cellH || 0;
+  const showTitle = ch >= 3;
+  const showVolts = ch >= 4 && s.showVoltage !== false && v;
+  const age = (ch >= 4 && s.showAge !== false) ? ageLabel(battery.at) : null;
   return `
     <div class="eink-batt">
-      <div class="col-title">${escapeHtml(titleLabel)}</div>
-      <div class="eink-batt-pct autofit" data-min-font="22">${pct}%${bolt}</div>
-      ${(s.showVoltage !== false && v) ? `<div class="eink-batt-volts">${v} V</div>` : ''}
+      ${showTitle ? title : ''}
+      ${pctBlock}
+      ${showVolts ? `<div class="eink-batt-volts">${v} V</div>` : ''}
       ${bar}
       ${age ? `<div class="eink-batt-age">UPDATED ${escapeHtml(age)}</div>` : ''}
     </div>

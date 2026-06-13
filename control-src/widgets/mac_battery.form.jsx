@@ -3,7 +3,7 @@ import React from 'react';
 export function Form({ values, onChange, fields }) {
   const v = values || {};
   const patch = (p) => onChange({ ...v, ...p });
-  const { TextField, TypographyFields, FormSection } = fields;
+  const { TextField, ToggleField, TypographyFields, FormSection, defaults = {} } = fields;
   return (
     <>
       <FormSection title="Content">
@@ -13,6 +13,12 @@ export function Form({ values, onChange, fields }) {
           onChange={(x) => patch({ title: x })}
           placeholder="MAC BATTERY"
           help="Leave blank to keep the default heading."
+        />
+        <ToggleField
+          label='State line (CHARGING / DISCHARGING)'
+          value={v.showState !== false}
+          defaultValue={defaults.showState}
+          onChange={(x) => patch({ showState: x })}
         />
       </FormSection>
       <FormSection title="Style">

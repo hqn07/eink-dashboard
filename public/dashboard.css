@@ -711,6 +711,64 @@ html, body {
 .cell.cell-inverted .eink-batt-bar-fill { background: #fff; }
 .cell.cell-inverted .eink-batt-bar-tip { background: #fff; }
 .cell.cell-inverted .eink-batt-age { color: #fff; } /* #aaa lied in the editor; device thresholds it to white */
+
+/* Battery variants (shared by eink_battery + mac_battery so the two
+ * tiles read as a pair). inline = one centered row, the bar stretches
+ * into the leftover width; minimal = percent alone, centered. */
+.eink-batt-inline,
+.mac-batt-inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+.eink-batt-inline .col-title,
+.mac-batt-inline .col-title { margin: 0; white-space: nowrap; }
+.eink-batt-inline .eink-batt-bar {
+  flex: 1 1 0;
+  width: auto;
+  margin: 0 6px 0 0; /* keeps the tip nub off the percent */
+}
+.eink-batt-inline .eink-batt-pct,
+.mac-batt-inline .mac-batt-pct { flex: 0 0 auto; align-self: center; }
+.mac-batt-inline .mac-batt-state { margin-left: auto; }
+/* minimal: stretch (not center) so the autofit percent measures the
+ * full cell width; the text itself centers via justify-content. */
+.eink-batt-minimal,
+.mac-batt-minimal {
+  align-items: stretch;
+  justify-content: center;
+}
+/* Gauge percent stretches across the tile so autofit can grow it with
+ * the cell; content stays left-aligned to match title + volts. */
+.eink-batt .eink-batt-pct,
+.mac-batt .mac-batt-pct { align-self: stretch; justify-content: flex-start; }
+.eink-batt-minimal .eink-batt-pct,
+.mac-batt-minimal .mac-batt-pct { justify-content: center; }
+
+/* Mac battery base — mirrors .eink-batt so the variant rules above
+ * can share one layout model. */
+.mac-batt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  height: 100%;
+}
+.mac-batt-pct {
+  font-family: 'DM Serif Display', serif;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.mac-batt-state {
+  font-family: var(--face-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #000;
+}
 .mac-np-art-empty {
   display: flex; align-items: center; justify-content: center;
   font-size: 32px;
@@ -891,7 +949,11 @@ html, body {
 /* ---------- Clock widget ---------- */
 .clock {
   display: flex; flex-direction: column;
-  justify-content: center; align-items: center;
+  /* align-items: stretch (not center) — the autofit time needs the
+   * full cell width as its measuring box or the binary search locks
+   * at the initial font size. Text centers via .autofit's own
+   * justify-content. */
+  justify-content: center; align-items: stretch;
   height: 100%; width: 100%;
   text-align: center; gap: 4px;
 }
@@ -912,6 +974,24 @@ html, body {
   font-family: var(--face-mono);
   font-weight: 700; letter-spacing: 4px; font-size: 13px;
 }
+
+/* Banner variant — one horizontal strip: time left, date right. */
+.clock-banner {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  text-align: left;
+}
+/* Time stretches to the row height so autofit can measure it;
+ * justify-content overrides .autofit's centering to keep it left. */
+.clock-banner .clock-time {
+  flex: 1 1 auto;
+  align-self: stretch;
+  justify-content: flex-start;
+  text-align: left;
+}
+.clock-banner .clock-date { flex: 0 0 auto; }
 
 /* ============ ICON UTIL ============ */
 /* Icons are now <img src="/static/icons/sevesalm/*.svg"> (vendored
