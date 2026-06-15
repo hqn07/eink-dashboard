@@ -4,6 +4,13 @@
 // art whose contents are picked by the `variant` setting — time
 // counters by default, or one of several decorative variants that
 // turn the side gutters into texture instead.
+//
+// Contract v2 (widgets-refresh W2): the side-space options are declared
+// as def.variants so the settings modal auto-renders the shared visual
+// picker and the chosen name rides on ctx.variant. NOTE: variants only
+// re-fill the bookend slots on stacked (extended/full) tiers — smaller
+// tiles ignore variant and use the inline layout, so the picker
+// thumbnails read alike at small sizes.
 
 import { escapeHtml, fmtSec, pickTier, placeholder } from './_shared.js';
 
@@ -66,6 +73,23 @@ export const def = {
     XXL: { w: 24, h: 12 }
   },
   defaultSize: 'M',
+  variants: {
+    time_bookends: { label: 'Time bookends — elapsed · remaining' },
+    centered:      { label: 'Centered — no bookends' },
+    vertical_text: { label: 'Vertical NOW PLAYING text' },
+    play_state:    { label: 'Big play / pause glyph' },
+    bars:          { label: 'Decorative bars' },
+    metadata:      { label: 'Artist · album / source labels' }
+  },
+  defaultVariant: 'time_bookends',
+  // Advisory; the TIER_CFG table below is the source of truth. Variant
+  // side-space only renders on the stacked (extended/full) tiers, so
+  // it degrades out first as the tile shrinks.
+  degrade: {
+    standard: ['sidespace'],
+    compact:  ['sidespace', 'progress', 'source'],
+    tiny:     ['sidespace', 'progress', 'source', 'art']
+  },
   defaults: () => ({
     title: '',
     variant: 'time_bookends',
@@ -86,7 +110,8 @@ export const def = {
   })
 };
 
-export function render({ macNowPlaying, cellW, cellH, density, settings }) {
+export function render(ctx) {
+  const { macNowPlaying, cellW, cellH, density, settings } = ctx;
   const titleLabel = (settings && typeof settings.title === 'string' && settings.title.trim())
     ? settings.title.trim()
     : 'NOW PLAYING';
@@ -100,7 +125,9 @@ export function render({ macNowPlaying, cellW, cellH, density, settings }) {
     ? '<svg class="mac-np-glyph" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M6 4l14 8-14 8z" fill="#000"/></svg>'
     : '<svg class="mac-np-glyph" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><rect x="6" y="4" width="5" height="16" fill="#000"/><rect x="13" y="4" width="5" height="16" fill="#000"/></svg>';
   const s = settings || {};
-  const variant   = s.variant   || 'time_bookends';
+  // buildTileCtx resolves settings.variant → ctx.variant against
+  // def.variants; fall back to the raw setting for direct render calls.
+  const variant   = ctx.variant || s.variant || 'time_bookends';
   const fontScale = Number.isFinite(s.fontScale) ? s.fontScale : 1;
   const TIER_CFG = {
     tiny:     { art: 0,   maxFont: 20, showProgress: false, showSource: false, stacked: false },
