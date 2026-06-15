@@ -1077,7 +1077,14 @@ function buildPageBodyHtml({ payload, ssr, mode }) {
           }
           const itemCtx = {
             ...demo, ...live, cellW: cw, cellH: ch,
-            settings: { ...(demo.settings || {}), ...(settings || {}) },
+            // defaults first, demo data settings win over them (so
+            // calendar's empty icalUrls can't clobber the demo feed),
+            // then re-pin the matrix's per-row variant last.
+            settings: {
+              ...(settings || {}),
+              ...(demo.settings || {}),
+              ...(vn ? { variant: vn } : {})
+            },
             variant: vn || def.defaultVariant || null
           };
           const inner = ssr.renderWidget(id, itemCtx);

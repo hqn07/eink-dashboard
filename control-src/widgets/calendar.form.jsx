@@ -8,13 +8,13 @@ import UrlBadge from '../components/UrlBadge.jsx';
 // show toggles) so a single click switches everything in one go.
 const PRESETS = [
   { id: 'agenda', label: 'Agenda — list with sections',
-    values: { viewMode: 'list',  density: 'rich',     showDayLabel: true,  showTime: true } },
+    values: { variant: 'list',  density: 'rich',     showDayLabel: true,  showTime: true } },
   { id: 'today',  label: 'Today — compact list',
-    values: { viewMode: 'list',  density: 'compact',  showDayLabel: false, showTime: true } },
+    values: { variant: 'list',  density: 'compact',  showDayLabel: false, showTime: true } },
   { id: 'strip',  label: 'Strip — 7-day horizontal',
-    values: { viewMode: 'strip', density: 'auto',     showDayLabel: true,  showTime: true } },
+    values: { variant: 'strip', density: 'auto',     showDayLabel: true,  showTime: true } },
   { id: 'month',  label: 'Month — full grid',
-    values: { viewMode: 'month', density: 'auto',     showDayLabel: true,  showTime: true } }
+    values: { variant: 'month', density: 'auto',     showDayLabel: true,  showTime: true } }
 ];
 
 export function Form({ values, patch, onChange, fields }) {
@@ -121,17 +121,10 @@ export function Form({ values, patch, onChange, fields }) {
           onChange={(x) => patch({ showTime:     x })} />
       </FormSection>
       <FormSection title="Layout">
-        <SelectField
-          label="View"
-          value={v.viewMode || 'list'}
-          defaultValue={defaults.viewMode}
-          options={[
-            { value: 'list',  label: 'List — agenda (works at any size)' },
-            { value: 'strip', label: 'Strip — 7-day horizontal (needs ≥7 wide)' },
-            { value: 'month', label: 'Month — full grid (needs ≥7×4)' }
-          ]}
-          onChange={(x) => patch({ viewMode: x })}
-        />
+        <div className="wsm-field-help" style={{ marginBottom: 6 }}>
+          Pick the view with the variant cards above. Strip needs a tile
+          ≥7 wide, month ≥7×4 — smaller tiles fall back to the list.
+        </div>
         <SelectField
           label="Density (list view only)"
           value={v.density || 'auto'}

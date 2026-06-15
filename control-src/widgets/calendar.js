@@ -1,5 +1,13 @@
 import { escapeHtml, pickTier, placeholder } from './_shared.js';
 
+// Calendar — three layout variants (contract v2, widgets-refresh W2):
+//   list  — agenda rows (universal; the fallback when a tile is too
+//           small for a 7-column grid)
+//   strip — 7-day horizontal week
+//   month — full month grid
+// Pre-variant tiles carry `settings.viewMode` from before the variant
+// system — the render maps that forward when no variant is set.
+
 export const def = {
   id: 'calendar',
   label: 'Calendar',
@@ -12,11 +20,23 @@ export const def = {
     XL: { w: 24, h: 8 }
   },
   defaultSize: 'M',
+  variants: {
+    list:  { label: 'List — agenda rows' },
+    strip: { label: 'Strip — 7-day horizontal' },
+    month: { label: 'Month — full grid' }
+  },
+  defaultVariant: 'list',
+  // Advisory. strip needs ≥7 cols × 2 rows, month ≥7 × 4; under that
+  // the render falls back to the list view regardless of variant.
+  degrade: {
+    compact: ['month'],
+    tiny:    ['month', 'strip']
+  },
   defaults: () => ({
     icalUrls: [],
     disabledFeeds: [],   // URL strings currently muted (server skips fetch)
     title: '',
-    viewMode: 'list',    // 'list' | 'strip' | 'month'
+    variant: 'list',     // 'list' | 'strip' | 'month'
     density: 'auto',     // 'auto' | 'compact' | 'standard' | 'rich'
     showDayLabel: true,
     showTime:     true,
@@ -25,15 +45,22 @@ export const def = {
   })
 };
 
-export function render({ events, cfg, settings, cellW, cellH, density }) {
+export function render(ctx) {
+  const { events, cfg, settings, cellW, cellH, density } = ctx;
+  const s = settings || {};
   const urls = collectUrls(settings, cfg);
-  const titleLabel = (settings && typeof settings.title === 'string' && settings.title.trim())
-    ? settings.title.trim()
+  const titleLabel = (typeof s.title === 'string' && s.title.trim())
+    ? s.title.trim()
     : 'UPCOMING';
   if (!urls.length) return placeholder(titleLabel, 'Paste an iCal URL in settings', 'calendar', { cellW, cellH });
   const all = events || [];
   if (!all.length) return placeholder(titleLabel, 'No events in the next 14 days', 'calendar', { cellW, cellH });
-  const mode = (settings && settings.viewMode) || 'list';
+  // variant wins; legacy tiles fall back to settings.viewMode, then the
+  // ctx-resolved default. (buildTileCtx already maps settings.variant →
+  // ctx.variant, but viewMode-only tiles need the explicit forward map.)
+  const mode = (s.variant && def.variants[s.variant]) ? s.variant
+    : (s.viewMode && def.variants[s.viewMode]) ? s.viewMode
+    : ctx.variant || 'list';
   // Both alternative views auto-size a 7-column grid, so the only
   // hard floor is "enough rows to read". Thresholds kept low so a
   // tile the user explicitly picked Month / Strip for still renders
