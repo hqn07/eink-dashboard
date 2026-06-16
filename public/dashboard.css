@@ -562,6 +562,56 @@ html, body {
  * without relying on color. */
 .aqi-seg-cur { height: 18px; }
 
+/* ============ Countdown widget ============
+ * 1-bit safe: serif number, mono caps for unit + label. Mirrors the
+ * AQI/clock type treatment so the numeric widgets read as a family.
+ */
+.countdown {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--face-gap-4);
+  height: 100%;
+  width: 100%;
+}
+.cd-num {
+  font-family: 'DM Serif Display', serif;
+  font-weight: 700;
+  line-height: 0.9;
+}
+.cd-big .cd-num { font-size: 72px; }     /* autofit overrides */
+.cd-unit {
+  font-family: var(--face-mono);
+  font-weight: 700;
+  letter-spacing: 2px;
+  font-size: 13px;
+  color: #000;
+}
+.cd-label {
+  font-family: var(--face-mono);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #000;
+}
+
+/* minimal — centered number + unit */
+.cd-minimal {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.cd-minimal .cd-num { font-size: 80px; }
+
+/* detail — days + hours columns */
+.cd-detail-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--face-gap-20);
+}
+.cd-cell { display: flex; flex-direction: column; align-items: flex-start; }
+.cd-detail .cd-num { font-size: 48px; }
+
 /* ============ ITEM PRIMITIVE ============
  * TRMNL-inspired list-item shape. A standardized three-slot row used
  * by calendar (and any future list widget — stocks watch, alarms,

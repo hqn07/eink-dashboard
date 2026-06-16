@@ -6,6 +6,7 @@
 import * as aqi              from './aqi.js';
 import * as calendar         from './calendar.js';
 import * as clock            from './clock.js';
+import * as countdown        from './countdown.js';
 import * as eink_battery     from './eink_battery.js';
 import * as mac_battery      from './mac_battery.js';
 import * as mac_nowplaying   from './mac_nowplaying.js';
@@ -14,7 +15,7 @@ import * as weather_forecast from './weather_forecast.js';
 import * as weather_hero     from './weather_hero.js';
 
 const MODULES = [
-  aqi, calendar, clock, eink_battery, mac_battery, mac_nowplaying,
+  aqi, calendar, clock, countdown, eink_battery, mac_battery, mac_nowplaying,
   text, weather_forecast, weather_hero
 ];
 

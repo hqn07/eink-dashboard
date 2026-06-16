@@ -109,6 +109,14 @@ export function demoCtxForWidget(id, cellW, cellH) {
       return { ...base, clockNow: DEMO_CLOCK, settings: {} };
     case 'aqi':
       return { ...base, aqi: DEMO_AQI, settings: {} };
+    case 'countdown':
+      // Frozen now + target → deterministic "12 DAYS" in the matrix /
+      // visual-regression. now is a fixed epoch, target 12d 6h later.
+      return {
+        ...base,
+        now: Date.UTC(2026, 5, 1, 0, 0, 0),
+        settings: { target: '2026-06-13T06:00', label: 'until launch' }
+      };
     case 'text':
       // Tokens are resolved server-side, so the palette can't run them
       // here. Pre-resolve to a believable headline + subtitle so the
