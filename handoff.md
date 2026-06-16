@@ -1,8 +1,72 @@
 # E-Ink Dashboard — Handoff
 
-State as of 2026-06-15. Read this + `CLAUDE.md` + memory pointers below before touching anything.
+State as of 2026-06-16. Read this + `CLAUDE.md` + memory pointers below before touching anything.
 
-## What shipped in the 2026-06-13 → 06-15 sessions (HEAD on `origin/main`)
+## What shipped in the 2026-06-16 session (HEAD on `origin/main`)
+
+A visual-regression harness, a variant-thumbnail fix, and **six new
+widgets** — all no-key. Pushed `196c9c5` → `afbf62e`. Widget count
+8 → 14. Every widget rides the contract-v2 scaffold (def.variants +
+defaultVariant + degrade, render(ctx) reads ctx.variant) and is covered
+by the new visual-regression test.
+
+### Visual-regression test (`88182ad`)
+
+`npm run test:visual` boots the server, screenshots
+`/widgets-matrix?demo=1`, and pixel-diffs (via sharp — no new deps,
+matches the eink-lint script idiom) against a committed baseline
+(`test/visual-baseline/widgets-matrix.png`). `test:visual:update`
+rebaselines. Exit 1 on drift + writes a red-pixel diff PNG (gitignored).
+
+- New `?demo=1` on the matrix route skips the live fetch so every tile
+  renders from frozen demo data → output is **byte-identical** (0 px on
+  an unchanged render). A single spacing-token nudge trips it.
+- Threshold 0.05%; baseline is **machine-specific** — regenerate with
+  `--update` on a new machine. **Rebaseline whenever the matrix changes
+  on purpose (every new widget / layout edit), or the test fails.**
+
+### mac_nowplaying variant thumbnails (`edf790b`)
+
+Its variants only change stacked (extended/full) tiles, so the settings
+picker rendered every thumbnail identically. Added `def.variantThumb
+{ w, h }` (the picker renders thumbnails at that size instead of the
+live tile) + seeded `demoCtxForWidget` into `PresetCard` so thumbnails
+have data even when live is absent. Reusable for any tier-specific
+variant.
+
+### Six new widgets (all no-key)
+
+| commit | widget | data | notes |
+|--------|--------|------|-------|
+| `1067162` | **aqi** | Open-Meteo air-quality (no key) | server fetcher `widgets/aqi.js`; reuses weather's geocoder; variants big/bar/minimal; severity = filled scale + word, never color |
+| `1b5a9b6` | **countdown** | pure compute | no fetcher; reads ctx.now (frozen demo) else Date.now(); variants big/detail/minimal |
+| `03cff6f` | **moon** | pure compute | synodic-month phase; disc is a 1-bit SVG (limb semicircle + half-ellipse terminator) **verified at all 8 phases** before wiring |
+| `7c1380e` | **world_clock** | pure compute | Intl.DateTimeFormat; zones as `LABEL\|IANA` strings; variants stack/big/dual |
+| `dd6cdcb` | **quote** | built-in set | rotates by day-of-year; optional custom list; uses autofit `multiline` so long quotes wrap (not clip) |
+| `afbf62e` | **onthisday** | Wikipedia REST (no key) | server fetcher `widgets/onthisday.js`; **needs a descriptive User-Agent or 403**; variants list/feature/compact |
+
+**Adding a widget — the wiring (all six followed this):**
+1. `control-src/widgets/<id>.js` (def + render) + `<id>.form.jsx`.
+2. Register in BOTH `control-src/widgets/_registry.js` AND `_ssr.js`
+   (import + MODULES array; `_registry` also needs the FORMS entry).
+3. Demo data in `control-src/widgets/_pool_demo.js`
+   (`demoCtxForWidget` case) — frozen so the matrix stays deterministic.
+4. A `control-src/face-css/0NN-<id>.css` partial (numeric-ordered;
+   `build:css` concatenates).
+5. Data widgets only: a `widgets/<id>.js` CommonJS fetcher + `server.js`
+   plumbing (`wantX` gate → Promise.all → buildWidgetData return →
+   `...data` → `ctxBase` + the destructure at the top of
+   `buildPageBodyHtml`).
+6. `npm run build:css && npm run test:visual:update`, verify on the
+   matrix, commit.
+
+Note: legacy `cfg.*` keys (aqi/quote/photo/news/github/iss/etc.) are
+pre-redesign scaffolding; the new widgets don't read them.
+
+## What shipped in the 2026-06-13 → 06-15 sessions
+
+Widgets-refresh **W2** (per-widget variant contract) finished, plus a
+small TRMNL-parity pass **W3**. All pushed to `origin/main`
 
 Widgets-refresh **W2** (per-widget variant contract) finished, plus a
 small TRMNL-parity pass **W3**. All pushed to `origin/main`
