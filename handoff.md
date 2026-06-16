@@ -1,8 +1,87 @@
 # E-Ink Dashboard — Handoff
 
-State as of 2026-06-09. Read this + `CLAUDE.md` + memory pointers below before touching anything.
+State as of 2026-06-15. Read this + `CLAUDE.md` + memory pointers below before touching anything.
 
-## What shipped in the 2026-06-09 session (HEAD on `origin/main`)
+## What shipped in the 2026-06-13 → 06-15 sessions (HEAD on `origin/main`)
+
+Widgets-refresh **W2** (per-widget variant contract) finished, plus a
+small TRMNL-parity pass **W3**. All pushed to `origin/main`
+(`70fc191` → `196c9c5`).
+
+### W2 — every widget onto contract v2 (one variant model + one picker)
+
+Contract v2 (defined in `control-src/widgets/_registry.js` header):
+a widget declares `def.variants { <name>: { label } }` +
+`def.defaultVariant` + advisory `def.degrade { <tier>: [dropped] }`;
+`buildTileCtx` resolves `settings.variant` → `ctx.variant`; the
+settings modal auto-renders the shared visual variant picker for any
+widget with `def.variants` (no hand-rolled `<select>`). Render fns take
+`render(ctx)` and read `ctx.variant`.
+
+Batches (one commit each, panel-checked between):
+- `40725a7` **W2-B1** weather pair — `weather_hero` (classic/split/
+  minimal) + `weather_forecast` variants.
+- `70fc191` **W2-B2** clock + battery pair — `clock` (big/thin/banner),
+  `eink_battery` + `mac_battery` (gauge/inline/minimal, shared layout so
+  the two batteries read as a pair). Legacy `settings.style` maps
+  forward to a variant. Also: `/widgets-matrix` fills no-live-data slots
+  (clock/batteries/now-playing) with frozen demo data via
+  `demoCtxForWidget` (`control-src/widgets/_pool_demo.js`) so rows show
+  layouts, not SETUP NEEDED.
+- `14df252` **W2-B3** `mac_nowplaying` onto contract v2 — its six
+  side-space options (time_bookends/centered/vertical_text/play_state/
+  bars/metadata) became `def.variants`; dropped the hand-rolled select.
+  NOTE: these variants only re-fill the bookend slots on **stacked
+  (extended/full) tiers**, so picker thumbnails read alike at small
+  sizes — expected.
+- `af4d4f8` **W2-B4** `calendar` onto contract v2 — `viewMode`
+  (list/strip/month) became `def.variants`; legacy `viewMode` maps
+  forward (variant → viewMode → default). **calendar is grid-based on
+  purpose** (month/strip are CSS grid, not flex). Also fixed a matrix
+  bug: the per-row settings merge let `def.defaults()` clobber demo-data
+  settings (calendar's empty `icalUrls` overwrote the demo feed → four
+  SETUP NEEDED rows). Now demo settings win over defaults, per-row
+  variant re-pinned last. `/widgets-matrix` renders 0 placeholders.
+
+All eight widgets (calendar, clock, eink_battery, mac_battery,
+mac_nowplaying, text, weather_forecast, weather_hero) now share the
+contract. Verified each: `build:css` + `lint:eink` + `vite` clean,
+`/widgets-matrix` 200, variants render distinct (screenshots).
+
+### W3 — TRMNL framework parity (partial)
+
+Audited TRMNL's framework (trmnl.com/framework) for primitives we
+lack. Plan + read-only codecheck in `docs/plan-framework-hardening.md`.
+
+- `196c9c5` **shipped**: a face-namespaced spacing scale
+  `--face-gap-2…20` in `005-*` design tokens; 39 hardcoded `gap:` values
+  swapped to `var()` refs across the partials. Tokens map **1:1** to the
+  face's existing rhythm (2/4/6/8/12/16/20 — NOT TRMNL's 5/7/30/40,
+  which never appear here), so the swap is a visual no-op with one
+  source of truth. One-offs (1px, 14px) left bare.
+- **Dropped — tabular numerals.** Looked obvious (numbers jitter as
+  digits change) but measured `tabular-nums` directly on the self-hosted
+  woff2: **zero effect** on DM Serif Display + Oswald (the gstatic Latin
+  subsets carry no `tnum` table; JetBrains Mono is already monospaced).
+  Would've been dead code. Number-jitter fix parked pending a
+  tnum-enabled font build or a mono-digit decision.
+- **Dropped — `.columns` primitive.** The three "column" consumers
+  (forecast / hourly / cal-strip) use *different* layouts (flex /
+  flex+space-between / CSS grid), so a shared primitive earns ~nothing.
+- **Parked (not started):** `title_bar` unification, `.item > .icon`
+  slot, layout alignment utilities. Skipped as N/A to a 1-bit fixed
+  800×480 face: responsive prefixes, view mashups, 16-shade grayscale.
+
+### Font audit (no defect found)
+
+Investigated whether bold was broken (Oswald/JetBrains weights share
+woff2 files). Measured: Oswald 700 renders genuinely heavier than 400
+(278.9 vs 253.9px @100px) — variable-font weight axis works; shared
+files are normal for variable fonts. DM Serif Display `font-weight:700`
+is inert but that's correct (single-weight display face). Only real
+font limitation = no `tnum` table (see W3 above). Nothing to fix.
+
+## What shipped in the 2026-06-09 session
 
 One long CAVEMAN-ULTRA pass spanning four big areas:
 **token system**, **chrome removal**, **calendar overhaul +
