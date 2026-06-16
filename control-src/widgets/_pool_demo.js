@@ -109,6 +109,13 @@ export function demoCtxForWidget(id, cellW, cellH) {
       return { ...base, clockNow: DEMO_CLOCK, settings: {} };
     case 'aqi':
       return { ...base, aqi: DEMO_AQI, settings: {} };
+    case 'world_clock':
+      // Frozen now → deterministic times across zones for the matrix.
+      return {
+        ...base,
+        now: Date.UTC(2026, 5, 1, 16, 20, 0),
+        settings: { zones: ['LONDON|Europe/London', 'TOKYO|Asia/Tokyo', 'NEW YORK|America/New_York'], format: '12h' }
+      };
     case 'moon':
       // Frozen now ≈ 8 days into the cycle → a clean first-quarter disc
       // (~58% lit, waxing) for the matrix / visual-regression.

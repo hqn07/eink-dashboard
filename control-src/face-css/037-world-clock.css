@@ -1,0 +1,41 @@
+/* ============ World Clock widget ============
+ * 1-bit safe: serif time, mono caps for zone labels. Tabular feel by
+ * using the same type family as the clock widget.
+ */
+.wclock { display: flex; flex-direction: column; height: 100%; width: 100%; }
+
+.wclock-zone {
+  font-family: var(--face-mono);
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  font-size: 13px;
+  color: #000;
+}
+.wclock-time {
+  font-family: 'DM Serif Display', serif;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* stack — label left, time right, one row per zone */
+.wclock-stack { gap: var(--face-gap-4); justify-content: center; }
+.wclock-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--face-gap-12);
+  border-bottom: 2px solid #000;
+  padding-bottom: 2px;
+}
+.wclock-row:last-child { border-bottom: none; }
+.wclock-stack .wclock-time { font-size: 24px; }
+
+/* big — one zone, large */
+.wclock-big { align-items: stretch; justify-content: center; text-align: left; }
+.wclock-big .wclock-time { font-size: 64px; }
+.wclock-big .wclock-zone { margin-top: var(--face-gap-2); }
+
+/* dual — two zones side by side */
+.wclock-dual { flex-direction: row; align-items: center; gap: var(--face-gap-16); }
+.wclock-cell { flex: 1 1 0; display: flex; flex-direction: column; align-items: flex-start; }
+.wclock-dual .wclock-time { font-size: 40px; }
