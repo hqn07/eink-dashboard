@@ -28,3 +28,6 @@ esp32/weather_station_b/secrets.h
 # Vite build output for the React control app (built on deploy)
 public/control-app/
 .claude/
+
+# visual-regression diff output (baseline PNG is committed; diff is not)
+test/visual-baseline/*.diff.png

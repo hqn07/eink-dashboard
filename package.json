@@ -13,7 +13,9 @@
     "prebuild": "npm run build:css && npm run lint:eink",
     "prestart": "npm run build:css",
     "predev": "npm run build:css",
-    "lint:eink": "node scripts/eink-lint.mjs"
+    "lint:eink": "node scripts/eink-lint.mjs",
+    "test:visual": "node scripts/visual-regression.mjs",
+    "test:visual:update": "node scripts/visual-regression.mjs --update"
   },
   "engines": {
     "node": ">=20.0.0"

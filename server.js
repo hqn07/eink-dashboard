@@ -1499,12 +1499,17 @@ app.get('/widgets-matrix', checkAdminAuth, async (req, res) => {
   try {
     const cfg = await loadConfig();
     const units = cfg.units || 'F';
+    // `?demo=1` skips the live fetch so every tile falls back to the
+    // frozen demo data (clock/weather/calendar/etc.) — deterministic
+    // output for the visual-regression snapshot. Without it the matrix
+    // pulls live weather + clock and no two renders match.
+    const demoOnly = req.query.demo === '1' || req.query.demo === 'true';
     // Force-fetch every data widget so the matrix has real content.
     const fakeLayout = [
       { widgetId: 'weather_hero' }, { widgetId: 'weather_forecast' },
       { widgetId: 'calendar' }, { widgetId: 'text' }
     ];
-    const data = await buildWidgetData(cfg, units, fakeLayout);
+    const data = demoOnly ? {} : await buildWidgetData(cfg, units, fakeLayout);
     const [shell, ssr] = await Promise.all([loadDashboardHtml(), loadSsr()]);
     const payload = {
       cfg, units, screen: 1, layout: [],
