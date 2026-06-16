@@ -109,6 +109,18 @@ export function demoCtxForWidget(id, cellW, cellH) {
       return { ...base, clockNow: DEMO_CLOCK, settings: {} };
     case 'aqi':
       return { ...base, aqi: DEMO_AQI, settings: {} };
+    case 'onthisday':
+      return { ...base, onThisDay: {
+        dateLabel: 'JUNE 16',
+        events: [
+          { year: 1963, text: 'Valentina Tereshkova becomes the first woman in space aboard Vostok 6.' },
+          { year: 1884, text: 'The first purpose-built roller coaster in America opens at Coney Island.' },
+          { year: 1779, text: 'Spain declares war on the Kingdom of Great Britain.' },
+          { year: 2016, text: 'Shanghai Disneyland, the first Disney park in mainland China, opens.' },
+          { year: 1903, text: 'The Ford Motor Company is incorporated.' },
+          { year: 1846, text: 'The Bear Flag Revolt begins in California.' }
+        ], stale: false
+      }, settings: {} };
     case 'quote':
       // Frozen now → a fixed day-of-year → deterministic built-in quote.
       return { ...base, now: Date.UTC(2026, 5, 1, 12, 0, 0), settings: {} };

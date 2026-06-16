@@ -16,6 +16,7 @@ const sharp = require('sharp');
 
 const { fetchWeather, geocodeCity } = require('./widgets/weather');
 const { fetchAqi } = require('./widgets/aqi');
+const { fetchOnThisDay } = require('./widgets/onthisday');
 const { fetchEvents } = require('./widgets/calendar');
 const { fetchAlerts } = require('./widgets/alerts');
 const widgetStatus = require('./widgets/_status');
@@ -788,6 +789,7 @@ async function buildWidgetData(cfg, units, layout) {
   const ids = new Set((layout || []).map(it => it.widgetId || it.id));
   const wantWeather = ids.has('weather_hero') || ids.has('weather_forecast');
   const wantAqi = ids.has('aqi');
+  const wantOtd = ids.has('onthisday');
   const loc = (Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon))
     ? { lat: cfg.lat, lon: cfg.lon }
     : cfg.city;
@@ -799,7 +801,7 @@ async function buildWidgetData(cfg, units, layout) {
     : (cfg.calendar && cfg.calendar.icalUrl ? [cfg.calendar.icalUrl] : []);
 
   const [
-    weather, events, alerts, aqi
+    weather, events, alerts, aqi, onThisDay
   ] = await Promise.all([
     wantWeather ? fetchWeather(loc, process.env.OPENWEATHER_API_KEY, units) : null,
     (ids.has('calendar') && icalUrls.length)
@@ -807,7 +809,8 @@ async function buildWidgetData(cfg, units, layout) {
       : [],
     (wantWeather && cfg.alerts !== false && Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon))
       ? fetchAlerts({ lat: cfg.lat, lon: cfg.lon }) : [],
-    wantAqi ? fetchAqi(loc) : null
+    wantAqi ? fetchAqi(loc) : null,
+    wantOtd ? fetchOnThisDay() : null
   ]);
 
   // Context for {{token}} interpolation in user-facing text widgets.
@@ -951,7 +954,7 @@ async function buildWidgetData(cfg, units, layout) {
   }));
 
   return {
-    weather, events, aqi,
+    weather, events, aqi, onThisDay,
     resolvedMessage,
     perItem
   };
@@ -1038,13 +1041,13 @@ function htmlAttr(s) {
 // rendering pulls the per-item slot data via `perItem[item.id]` so each
 // tile gets its own context (overrides global where set).
 function buildPageBodyHtml({ payload, ssr, mode }) {
-  const { cfg, weather, events, aqi, units, resolvedMessage,
+  const { cfg, weather, events, aqi, onThisDay, units, resolvedMessage,
           perItem, battery, layout: rawLayout, devWidgetId } = payload;
 
   const defs = ssr.DEFS;
   const layout = expandLayout(rawLayout, defs);
   const ctxBase = {
-    cfg, weather, events, aqi, units,
+    cfg, weather, events, aqi, onThisDay, units,
     resolvedMessage, battery
   };
 

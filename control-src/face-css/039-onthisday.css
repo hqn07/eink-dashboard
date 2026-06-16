@@ -1,0 +1,60 @@
+/* ============ On This Day widget ============
+ * 1-bit safe: mono year tag + serif/sans event text. Newspaper "today
+ * in history" column. Each row clamps to keep the list scannable.
+ */
+.otd { display: flex; flex-direction: column; height: 100%; width: 100%; gap: var(--face-gap-6); }
+
+.otd-row {
+  display: flex;
+  gap: var(--face-gap-8);
+  align-items: baseline;
+  border-bottom: 2px solid #000;
+  padding-bottom: var(--face-gap-4);
+}
+.otd-row:last-child { border-bottom: none; }
+.otd-year {
+  flex: 0 0 auto;
+  font-family: var(--face-mono);
+  font-weight: 700;
+  letter-spacing: 1px;
+  font-size: 14px;
+  color: #000;
+}
+.otd-text {
+  flex: 1 1 auto;
+  font-family: var(--face-sans);
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.2;
+  color: #000;
+  /* Keep rows scannable: two lines max, ellipsis past that. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.otd-compact { gap: var(--face-gap-2); }
+.otd-compact .otd-row { padding-bottom: var(--face-gap-2); }
+.otd-compact .otd-text { -webkit-line-clamp: 1; font-size: 13px; }
+.otd-compact .otd-year { font-size: 13px; }
+
+/* feature — one big event */
+.otd-feature { justify-content: center; gap: var(--face-gap-8); }
+.otd-feature-year {
+  font-family: 'DM Serif Display', serif;
+  font-weight: 700;
+  font-size: 48px;
+  line-height: 1;
+  color: #000;
+}
+.otd-feature-text {
+  font-family: var(--face-sans);
+  font-weight: 400;
+  color: #000;
+  text-align: left;
+  justify-content: flex-start;
+}
+.otd-stale {
+  font-family: var(--face-mono); font-weight: 700; font-size: 11px;
+  letter-spacing: 1px; background: #000; color: #fff; padding: 1px 4px;
+}
