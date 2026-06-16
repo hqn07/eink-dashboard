@@ -18,7 +18,7 @@
 .item {
   display: grid;
   grid-template-columns: 50px 1fr auto;
-  gap: 8px;
+  gap: var(--face-gap-8);
   align-items: baseline;
   padding: 4px 0;
   border-bottom: var(--face-rule) dashed #000;
@@ -108,7 +108,7 @@
 
 /* ---------- Mac · Now Playing ---------- */
 .mac-np-card {
-  display: flex; flex-direction: column; gap: 6px;
+  display: flex; flex-direction: column; gap: var(--face-gap-6);
   font-family: var(--face-mono);
   /* Absolute fill of the nearest positioned ancestor (.cell when the
    * tile has no fontScale, .cell-scale when it does). Without this,
@@ -120,7 +120,7 @@
   position: absolute;
   inset: 0;
 }
-.mac-np-head { display: flex; align-items: center; gap: 8px; }
+.mac-np-head { display: flex; align-items: center; gap: var(--face-gap-8); }
 /* Per-tile header alignment knob — moves the "NOW PLAYING" heading
  * (plus its inline state glyph when present) inside the row. */
 .mac-np-head-left   { justify-content: flex-start; }
@@ -146,7 +146,7 @@
   font-family: var(--face-mono);
 }
 .mac-np-body {
-  display: flex; gap: 12px; flex: 1; min-height: 0;
+  display: flex; gap: var(--face-gap-12); flex: 1; min-height: 0;
 }
 .mac-np-art {
   flex-shrink: 0;
@@ -181,7 +181,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  gap: var(--face-gap-6);
   height: 100%;
 }
 .eink-batt-pct {
@@ -190,7 +190,7 @@
   line-height: 1;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--face-gap-6);
 }
 .eink-batt-bolt { vertical-align: -0.05em; }
 .eink-batt-volts {
@@ -240,7 +240,7 @@
 .mac-batt-inline {
   flex-direction: row;
   align-items: center;
-  gap: 12px;
+  gap: var(--face-gap-12);
 }
 .eink-batt-inline .col-title,
 .mac-batt-inline .col-title { margin: 0; white-space: nowrap; }
@@ -272,7 +272,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  gap: var(--face-gap-6);
   height: 100%;
 }
 .mac-batt-pct {
@@ -281,7 +281,7 @@
   line-height: 1;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--face-gap-6);
 }
 .mac-batt-state {
   font-family: var(--face-mono);
@@ -296,7 +296,7 @@
 }
 .mac-np-text {
   flex: 1; min-width: 0;
-  display: flex; flex-direction: column; justify-content: center; gap: 4px;
+  display: flex; flex-direction: column; justify-content: center; gap: var(--face-gap-4);
 }
 .mac-np-title {
   /* Inherits font-family from .mac-np-card so the per-tile typography
@@ -346,7 +346,7 @@
   margin-left: 0.15em;
 }
 .mac-np-progress {
-  display: flex; flex-direction: column; gap: 4px;
+  display: flex; flex-direction: column; gap: var(--face-gap-4);
 }
 .mac-np-bar {
   height: 4px;
@@ -368,7 +368,7 @@
  * bookends, title block beneath. */
 .mac-np-stacked .mac-np-stacked-row {
   display: flex; align-items: center; justify-content: center;
-  gap: 16px;
+  gap: var(--face-gap-16);
   flex: 1; min-height: 0;
 }
 .mac-np-bookend {
@@ -397,7 +397,7 @@
   margin-top: auto;
 }
 .mac-np-stacked .mac-np-stacked-text {
-  display: flex; flex-direction: column; align-items: stretch; gap: 4px;
+  display: flex; flex-direction: column; align-items: stretch; gap: var(--face-gap-4);
   text-align: center;
   width: 100%;
 }
@@ -431,7 +431,7 @@
 
 /* bars: stacked dither bars per side. Pure decoration. */
 .mac-np-bookend-bars {
-  display: flex; flex-direction: column; gap: 6px;
+  display: flex; flex-direction: column; gap: var(--face-gap-6);
   min-width: 36px;
   align-items: stretch;
 }
@@ -449,7 +449,7 @@
 /* metadata: artist on the left, album / source on the right. Two-line
  * stack with a tiny label above the value. */
 .mac-np-bookend-meta {
-  display: flex; flex-direction: column; gap: 4px;
+  display: flex; flex-direction: column; gap: var(--face-gap-4);
   min-width: 110px;
   font-size: 13px;
   letter-spacing: 1px;
@@ -476,7 +476,7 @@
    * justify-content. */
   justify-content: center; align-items: stretch;
   height: 100%; width: 100%;
-  text-align: center; gap: 4px;
+  text-align: center; gap: var(--face-gap-4);
 }
 .clock-time {
   line-height: 0.95;
@@ -501,7 +501,7 @@
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: var(--face-gap-16);
   text-align: left;
 }
 /* Time stretches to the row height so autofit can measure it;

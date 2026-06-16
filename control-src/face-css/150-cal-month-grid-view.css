@@ -3,7 +3,7 @@
 .month-head {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+  gap: var(--face-gap-2);
   font-family: var(--face-mono);
   font-size: 11px;
   letter-spacing: 2px;
@@ -16,7 +16,7 @@
 .month-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+  gap: var(--face-gap-2);
   flex: 1; min-height: 0;
 }
 .month-cell {
@@ -44,7 +44,7 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 4px;
+  gap: var(--face-gap-4);
 }
 .month-num {
   font-size: 12px;

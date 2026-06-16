@@ -3,7 +3,7 @@
 .col-left {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--face-gap-8);
 }
 
 .weather-hero {
@@ -57,7 +57,7 @@
   display: grid;
   grid-template-columns: auto 1fr;
   column-gap: 14px;
-  row-gap: 6px;
+  row-gap: var(--face-gap-6);
   align-items: baseline;
   padding-top: 12px;
   margin-top: 8px;
@@ -85,7 +85,7 @@
   flex-direction: row; /* beats .hero-tier-compact's column */
   align-items: center;
   justify-content: center;
-  gap: 20px;
+  gap: var(--face-gap-20);
   text-align: left;
   padding-top: 0;
 }
@@ -107,6 +107,6 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  gap: 8px;
+  gap: var(--face-gap-8);
 }
 .hero-minimal .weather-temp { margin-top: 0; }

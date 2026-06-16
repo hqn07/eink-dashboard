@@ -4,7 +4,7 @@
   display: flex; flex-direction: column;
   justify-content: center; align-items: flex-start;
   padding: 12px;
-  gap: 6px;
+  gap: var(--face-gap-6);
   position: relative;
   background: #fff;
   border: 3px dashed #000;
@@ -55,7 +55,7 @@
 /* Compact tiers — small tiles drop the hint/badge (markup omits them);
  * shrink the chrome so what's left doesn't collide with the border. */
 .widget-placeholder.ph-sm {
-  gap: 4px;
+  gap: var(--face-gap-4);
   padding: 8px 10px;
 }
 .widget-placeholder.ph-sm .ph-icon { width: 30px; height: 30px; margin-bottom: 0; }

@@ -22,6 +22,18 @@
   /* type floor — nothing on the face below these */
   --face-fs-min-mono: 11px;
   --face-fs-min-sans: 14px;
+  /* spacing scale — derived from the face's existing gap rhythm, NOT
+   * TRMNL's literal 5/7/30/40 (those never appear here). Tokens map 1:1
+   * to current px values so adoption is a no-op visually; widgets
+   * reference these instead of bare numbers so the rhythm has one
+   * source of truth. */
+  --face-gap-2: 2px;
+  --face-gap-4: 4px;   /* most common */
+  --face-gap-6: 6px;
+  --face-gap-8: 8px;
+  --face-gap-12: 12px;
+  --face-gap-16: 16px;
+  --face-gap-20: 20px;
 }
 
 /* Per-tile typography override. The cell wrapper picks up --w-font

@@ -3,7 +3,7 @@
 .cal-strip {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: var(--face-gap-4);
   flex: 1; min-height: 0;
 }
 .strip-day {
@@ -17,7 +17,7 @@
 .strip-day.strip-today { background: #000; color: #fff; }
 .strip-day-head {
   display: flex; align-items: baseline; justify-content: space-between;
-  gap: 4px;
+  gap: var(--face-gap-4);
   border-bottom: var(--face-rule) solid currentColor;
   padding-bottom: 2px;
   margin-bottom: 3px;
@@ -31,7 +31,7 @@
 .strip-day-num { font-size: 16px; font-weight: 700; line-height: 1; }
 .strip-day-events {
   display: flex; flex-direction: column;
-  gap: 2px;
+  gap: var(--face-gap-2);
   min-height: 0;
   overflow: hidden;
 }

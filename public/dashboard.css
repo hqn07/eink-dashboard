@@ -29,6 +29,18 @@
   /* type floor — nothing on the face below these */
   --face-fs-min-mono: 11px;
   --face-fs-min-sans: 14px;
+  /* spacing scale — derived from the face's existing gap rhythm, NOT
+   * TRMNL's literal 5/7/30/40 (those never appear here). Tokens map 1:1
+   * to current px values so adoption is a no-op visually; widgets
+   * reference these instead of bare numbers so the rhythm has one
+   * source of truth. */
+  --face-gap-2: 2px;
+  --face-gap-4: 4px;   /* most common */
+  --face-gap-6: 6px;
+  --face-gap-8: 8px;
+  --face-gap-12: 12px;
+  --face-gap-16: 16px;
+  --face-gap-20: 20px;
 }
 
 /* Per-tile typography override. The cell wrapper picks up --w-font
@@ -144,7 +156,7 @@ html, body {
   border-bottom: 2px solid #000;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--face-gap-8);
   min-width: 0;
   min-height: 0;
   background: #fff;
@@ -250,7 +262,7 @@ html, body {
 .col-left {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--face-gap-8);
 }
 
 .weather-hero {
@@ -304,7 +316,7 @@ html, body {
   display: grid;
   grid-template-columns: auto 1fr;
   column-gap: 14px;
-  row-gap: 6px;
+  row-gap: var(--face-gap-6);
   align-items: baseline;
   padding-top: 12px;
   margin-top: 8px;
@@ -332,7 +344,7 @@ html, body {
   flex-direction: row; /* beats .hero-tier-compact's column */
   align-items: center;
   justify-content: center;
-  gap: 20px;
+  gap: var(--face-gap-20);
   text-align: left;
   padding-top: 0;
 }
@@ -354,7 +366,7 @@ html, body {
   align-items: center;
   justify-content: center;
   height: 100%;
-  gap: 8px;
+  gap: var(--face-gap-8);
 }
 .hero-minimal .weather-temp { margin-top: 0; }
 
@@ -369,7 +381,7 @@ html, body {
   display: grid;
   grid-template-columns: 50px 50px 1fr;
   align-items: center;
-  gap: 8px;
+  gap: var(--face-gap-8);
   padding: 10px 0;
   border-bottom: var(--face-rule) dashed #000;
 }
@@ -413,7 +425,7 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: var(--face-gap-6);
   border-right: var(--face-rule) dashed #000;
   padding: 4px 2px;
 }
@@ -424,7 +436,7 @@ html, body {
 .fc-col .fc-precip { margin-top: 2px; text-align: center; min-width: 0; }
 
 /* Forecast hi/lo variants ----- */
-.fc-hilo-inline { display: flex; align-items: baseline; gap: 4px; justify-content: flex-end; }
+.fc-hilo-inline { display: flex; align-items: baseline; gap: var(--face-gap-4); justify-content: flex-end; }
 .fc-hilo-inline .fc-hi { font-size: 18px; }
 .fc-hilo-inline .fc-lo { font-size: 16px; }
 .fc-hilo-inline .fc-hilo-sep { font-size: 14px; font-weight: 300; }
@@ -497,7 +509,7 @@ html, body {
 .item {
   display: grid;
   grid-template-columns: 50px 1fr auto;
-  gap: 8px;
+  gap: var(--face-gap-8);
   align-items: baseline;
   padding: 4px 0;
   border-bottom: var(--face-rule) dashed #000;
@@ -587,7 +599,7 @@ html, body {
 
 /* ---------- Mac · Now Playing ---------- */
 .mac-np-card {
-  display: flex; flex-direction: column; gap: 6px;
+  display: flex; flex-direction: column; gap: var(--face-gap-6);
   font-family: var(--face-mono);
   /* Absolute fill of the nearest positioned ancestor (.cell when the
    * tile has no fontScale, .cell-scale when it does). Without this,
@@ -599,7 +611,7 @@ html, body {
   position: absolute;
   inset: 0;
 }
-.mac-np-head { display: flex; align-items: center; gap: 8px; }
+.mac-np-head { display: flex; align-items: center; gap: var(--face-gap-8); }
 /* Per-tile header alignment knob — moves the "NOW PLAYING" heading
  * (plus its inline state glyph when present) inside the row. */
 .mac-np-head-left   { justify-content: flex-start; }
@@ -625,7 +637,7 @@ html, body {
   font-family: var(--face-mono);
 }
 .mac-np-body {
-  display: flex; gap: 12px; flex: 1; min-height: 0;
+  display: flex; gap: var(--face-gap-12); flex: 1; min-height: 0;
 }
 .mac-np-art {
   flex-shrink: 0;
@@ -660,7 +672,7 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  gap: var(--face-gap-6);
   height: 100%;
 }
 .eink-batt-pct {
@@ -669,7 +681,7 @@ html, body {
   line-height: 1;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--face-gap-6);
 }
 .eink-batt-bolt { vertical-align: -0.05em; }
 .eink-batt-volts {
@@ -719,7 +731,7 @@ html, body {
 .mac-batt-inline {
   flex-direction: row;
   align-items: center;
-  gap: 12px;
+  gap: var(--face-gap-12);
 }
 .eink-batt-inline .col-title,
 .mac-batt-inline .col-title { margin: 0; white-space: nowrap; }
@@ -751,7 +763,7 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  gap: var(--face-gap-6);
   height: 100%;
 }
 .mac-batt-pct {
@@ -760,7 +772,7 @@ html, body {
   line-height: 1;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--face-gap-6);
 }
 .mac-batt-state {
   font-family: var(--face-mono);
@@ -775,7 +787,7 @@ html, body {
 }
 .mac-np-text {
   flex: 1; min-width: 0;
-  display: flex; flex-direction: column; justify-content: center; gap: 4px;
+  display: flex; flex-direction: column; justify-content: center; gap: var(--face-gap-4);
 }
 .mac-np-title {
   /* Inherits font-family from .mac-np-card so the per-tile typography
@@ -825,7 +837,7 @@ html, body {
   margin-left: 0.15em;
 }
 .mac-np-progress {
-  display: flex; flex-direction: column; gap: 4px;
+  display: flex; flex-direction: column; gap: var(--face-gap-4);
 }
 .mac-np-bar {
   height: 4px;
@@ -847,7 +859,7 @@ html, body {
  * bookends, title block beneath. */
 .mac-np-stacked .mac-np-stacked-row {
   display: flex; align-items: center; justify-content: center;
-  gap: 16px;
+  gap: var(--face-gap-16);
   flex: 1; min-height: 0;
 }
 .mac-np-bookend {
@@ -876,7 +888,7 @@ html, body {
   margin-top: auto;
 }
 .mac-np-stacked .mac-np-stacked-text {
-  display: flex; flex-direction: column; align-items: stretch; gap: 4px;
+  display: flex; flex-direction: column; align-items: stretch; gap: var(--face-gap-4);
   text-align: center;
   width: 100%;
 }
@@ -910,7 +922,7 @@ html, body {
 
 /* bars: stacked dither bars per side. Pure decoration. */
 .mac-np-bookend-bars {
-  display: flex; flex-direction: column; gap: 6px;
+  display: flex; flex-direction: column; gap: var(--face-gap-6);
   min-width: 36px;
   align-items: stretch;
 }
@@ -928,7 +940,7 @@ html, body {
 /* metadata: artist on the left, album / source on the right. Two-line
  * stack with a tiny label above the value. */
 .mac-np-bookend-meta {
-  display: flex; flex-direction: column; gap: 4px;
+  display: flex; flex-direction: column; gap: var(--face-gap-4);
   min-width: 110px;
   font-size: 13px;
   letter-spacing: 1px;
@@ -955,7 +967,7 @@ html, body {
    * justify-content. */
   justify-content: center; align-items: stretch;
   height: 100%; width: 100%;
-  text-align: center; gap: 4px;
+  text-align: center; gap: var(--face-gap-4);
 }
 .clock-time {
   line-height: 0.95;
@@ -980,7 +992,7 @@ html, body {
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: var(--face-gap-16);
   text-align: left;
 }
 /* Time stretches to the row height so autofit can measure it;
@@ -1013,10 +1025,10 @@ img.icon { object-fit: contain; }
 
 .hero-tier-compact {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  height: 100%; padding: 4px; gap: 4px;
+  height: 100%; padding: 4px; gap: var(--face-gap-4);
 }
 .hero-tier-compact .hero-row {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: var(--face-gap-8);
 }
 .hero-tier-compact .weather-temp { margin: 0; line-height: 0.9; }
 /* Icon size is inline from the render (60px at compact) — no override. */
@@ -1086,7 +1098,7 @@ img.icon { object-fit: contain; }
 .hourly-strip {
   display: flex;
   justify-content: space-between;
-  gap: 4px;
+  gap: var(--face-gap-4);
   margin-top: 10px;
   margin-bottom: 8px;
   padding: 6px 4px 2px;
@@ -1097,7 +1109,7 @@ img.icon { object-fit: contain; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: var(--face-gap-2);
   min-width: 0;
 }
 .hr-time {
@@ -1141,7 +1153,7 @@ img.icon { object-fit: contain; }
   display: flex; flex-direction: column;
   height: 100%;
   padding: 8px;
-  gap: 4px;
+  gap: var(--face-gap-4);
 }
 .clock-time {
   font-family: 'DM Serif Display', serif;
@@ -1190,7 +1202,7 @@ img.icon { object-fit: contain; }
   background: #000;
   color: #fff;
   display: flex;
-  gap: 8px;
+  gap: var(--face-gap-8);
   align-items: center;
 }
 .alert-tag {
@@ -1237,7 +1249,7 @@ img.icon { object-fit: contain; }
 .cal-strip {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: var(--face-gap-4);
   flex: 1; min-height: 0;
 }
 .strip-day {
@@ -1251,7 +1263,7 @@ img.icon { object-fit: contain; }
 .strip-day.strip-today { background: #000; color: #fff; }
 .strip-day-head {
   display: flex; align-items: baseline; justify-content: space-between;
-  gap: 4px;
+  gap: var(--face-gap-4);
   border-bottom: var(--face-rule) solid currentColor;
   padding-bottom: 2px;
   margin-bottom: 3px;
@@ -1265,7 +1277,7 @@ img.icon { object-fit: contain; }
 .strip-day-num { font-size: 16px; font-weight: 700; line-height: 1; }
 .strip-day-events {
   display: flex; flex-direction: column;
-  gap: 2px;
+  gap: var(--face-gap-2);
   min-height: 0;
   overflow: hidden;
 }
@@ -1292,7 +1304,7 @@ img.icon { object-fit: contain; }
 .month-head {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+  gap: var(--face-gap-2);
   font-family: var(--face-mono);
   font-size: 11px;
   letter-spacing: 2px;
@@ -1305,7 +1317,7 @@ img.icon { object-fit: contain; }
 .month-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+  gap: var(--face-gap-2);
   flex: 1; min-height: 0;
 }
 .month-cell {
@@ -1333,7 +1345,7 @@ img.icon { object-fit: contain; }
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 4px;
+  gap: var(--face-gap-4);
 }
 .month-num {
   font-size: 12px;
@@ -1364,7 +1376,7 @@ img.icon { object-fit: contain; }
   display: flex; flex-direction: column;
   justify-content: center; align-items: flex-start;
   padding: 12px;
-  gap: 6px;
+  gap: var(--face-gap-6);
   position: relative;
   background: #fff;
   border: 3px dashed #000;
@@ -1415,7 +1427,7 @@ img.icon { object-fit: contain; }
 /* Compact tiers — small tiles drop the hint/badge (markup omits them);
  * shrink the chrome so what's left doesn't collide with the border. */
 .widget-placeholder.ph-sm {
-  gap: 4px;
+  gap: var(--face-gap-4);
   padding: 8px 10px;
 }
 .widget-placeholder.ph-sm .ph-icon { width: 30px; height: 30px; margin-bottom: 0; }
