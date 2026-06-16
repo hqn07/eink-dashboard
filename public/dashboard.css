@@ -489,6 +489,79 @@ html, body {
   padding-top: 4px;
 }
 
+/* ============ Air Quality widget ============
+ * 1-bit safe: pure black/white, ≥2px strokes, ≥11px type. The AQI
+ * category can't lean on color (EPA green/red dither into noise), so
+ * severity reads from the filled scale + the category word.
+ */
+.aqi {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--face-gap-6);
+  height: 100%;
+  width: 100%;
+}
+.aqi-head { display: flex; align-items: baseline; gap: var(--face-gap-8); }
+.aqi-num {
+  font-family: 'DM Serif Display', serif;
+  font-weight: 700;
+  line-height: 0.9;
+}
+.aqi-big .aqi-num { font-size: 64px; }            /* autofit overrides */
+.aqi-cat {
+  font-family: var(--face-mono);
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  font-size: 13px;
+  color: #000;
+}
+.aqi-sub {
+  font-family: var(--face-mono);
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #000;
+}
+.aqi-stale {
+  font-family: var(--face-mono);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 1px;
+  background: #000;
+  color: #fff;
+  padding: 1px 4px;
+}
+
+/* minimal — centered number + category */
+.aqi-minimal {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.aqi-minimal .aqi-num { font-size: 72px; }
+
+/* bar — number + category over a 6-segment Good→Hazardous scale */
+.aqi-bar-head { display: flex; align-items: baseline; gap: var(--face-gap-8); }
+.aqi-bar-head .aqi-num { font-size: 40px; }
+.aqi-scale {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--face-gap-2);
+  width: 100%;
+  height: 18px;
+}
+.aqi-seg {
+  flex: 1 1 0;
+  height: 10px;
+  border: 2px solid #000;
+  background: #fff;
+}
+.aqi-seg-on { background: #000; }
+/* current band pops above the row so "you are here" is unmistakable
+ * without relying on color. */
+.aqi-seg-cur { height: 18px; }
+
 /* ============ ITEM PRIMITIVE ============
  * TRMNL-inspired list-item shape. A standardized three-slot row used
  * by calendar (and any future list widget — stocks watch, alarms,

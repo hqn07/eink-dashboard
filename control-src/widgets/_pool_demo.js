@@ -67,6 +67,11 @@ export const DEMO_NOWPLAYING = {
 
 export const DEMO_BATTERY = { percent: 87, state: 'charging' };
 
+export const DEMO_AQI = {
+  aqi: 42, band: 0, bands: 6, label: 'GOOD',
+  pm25: 9, pm10: 17, o3: 31, no2: 8, stale: false
+};
+
 
 export const DEMO_CLOCK = {
   timeStr: '9:18',
@@ -102,6 +107,8 @@ export function demoCtxForWidget(id, cellW, cellH) {
         settings: {} };
     case 'clock':
       return { ...base, clockNow: DEMO_CLOCK, settings: {} };
+    case 'aqi':
+      return { ...base, aqi: DEMO_AQI, settings: {} };
     case 'text':
       // Tokens are resolved server-side, so the palette can't run them
       // here. Pre-resolve to a believable headline + subtitle so the

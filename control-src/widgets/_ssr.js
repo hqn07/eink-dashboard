@@ -3,6 +3,7 @@
 // JSX into Node's import graph (which would happen if we imported
 // _registry.js — that pulls in every <id>.form.jsx).
 
+import * as aqi              from './aqi.js';
 import * as calendar         from './calendar.js';
 import * as clock            from './clock.js';
 import * as eink_battery     from './eink_battery.js';
@@ -13,7 +14,7 @@ import * as weather_forecast from './weather_forecast.js';
 import * as weather_hero     from './weather_hero.js';
 
 const MODULES = [
-  calendar, clock, eink_battery, mac_battery, mac_nowplaying,
+  aqi, calendar, clock, eink_battery, mac_battery, mac_nowplaying,
   text, weather_forecast, weather_hero
 ];
 

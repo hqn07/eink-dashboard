@@ -15,6 +15,7 @@ const puppeteer = require('puppeteer');
 const sharp = require('sharp');
 
 const { fetchWeather, geocodeCity } = require('./widgets/weather');
+const { fetchAqi } = require('./widgets/aqi');
 const { fetchEvents } = require('./widgets/calendar');
 const { fetchAlerts } = require('./widgets/alerts');
 const widgetStatus = require('./widgets/_status');
@@ -786,6 +787,7 @@ app.use('/control-app', express.static(CONTROL_APP_DIR));
 async function buildWidgetData(cfg, units, layout) {
   const ids = new Set((layout || []).map(it => it.widgetId || it.id));
   const wantWeather = ids.has('weather_hero') || ids.has('weather_forecast');
+  const wantAqi = ids.has('aqi');
   const loc = (Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon))
     ? { lat: cfg.lat, lon: cfg.lon }
     : cfg.city;
@@ -797,14 +799,15 @@ async function buildWidgetData(cfg, units, layout) {
     : (cfg.calendar && cfg.calendar.icalUrl ? [cfg.calendar.icalUrl] : []);
 
   const [
-    weather, events, alerts
+    weather, events, alerts, aqi
   ] = await Promise.all([
     wantWeather ? fetchWeather(loc, process.env.OPENWEATHER_API_KEY, units) : null,
     (ids.has('calendar') && icalUrls.length)
       ? Promise.all(icalUrls.map(u => fetchEvents(u))).then(lists => mergeEvents(lists.flat()))
       : [],
     (wantWeather && cfg.alerts !== false && Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon))
-      ? fetchAlerts({ lat: cfg.lat, lon: cfg.lon }) : []
+      ? fetchAlerts({ lat: cfg.lat, lon: cfg.lon }) : [],
+    wantAqi ? fetchAqi(loc) : null
   ]);
 
   // Context for {{token}} interpolation in user-facing text widgets.
@@ -948,7 +951,7 @@ async function buildWidgetData(cfg, units, layout) {
   }));
 
   return {
-    weather, events,
+    weather, events, aqi,
     resolvedMessage,
     perItem
   };
@@ -1035,13 +1038,13 @@ function htmlAttr(s) {
 // rendering pulls the per-item slot data via `perItem[item.id]` so each
 // tile gets its own context (overrides global where set).
 function buildPageBodyHtml({ payload, ssr, mode }) {
-  const { cfg, weather, events, units, resolvedMessage,
+  const { cfg, weather, events, aqi, units, resolvedMessage,
           perItem, battery, layout: rawLayout, devWidgetId } = payload;
 
   const defs = ssr.DEFS;
   const layout = expandLayout(rawLayout, defs);
   const ctxBase = {
-    cfg, weather, events, units,
+    cfg, weather, events, aqi, units,
     resolvedMessage, battery
   };
 
