@@ -1,0 +1,44 @@
+/* ============ Moon Phase widget ============
+ * 1-bit safe: the disc SVG is pure black/white with a ≥2px limb; mono
+ * caps for the phase name + stats. Geometry verified at all eight
+ * phases (see the moon-phase test harness).
+ */
+.moon { display: flex; height: 100%; width: 100%; }
+
+/* disc / minimal — centered column */
+.moon-disc-layout {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--face-gap-6);
+  text-align: center;
+}
+
+/* detail — disc left, readings right */
+.moon-detail {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--face-gap-16);
+}
+.moon-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--face-gap-4);
+}
+
+.moon-disc { display: block; flex: 0 0 auto; }
+.moon-name {
+  font-family: var(--face-mono);
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  font-size: 13px;
+  color: #000;
+}
+.moon-stat {
+  font-family: var(--face-mono);
+  font-weight: 500;
+  letter-spacing: 1px;
+  font-size: 11px;
+  color: #000;
+}

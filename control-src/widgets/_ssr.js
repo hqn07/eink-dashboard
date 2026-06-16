@@ -10,13 +10,14 @@ import * as countdown        from './countdown.js';
 import * as eink_battery     from './eink_battery.js';
 import * as mac_battery      from './mac_battery.js';
 import * as mac_nowplaying   from './mac_nowplaying.js';
+import * as moon             from './moon.js';
 import * as text             from './text.js';
 import * as weather_forecast from './weather_forecast.js';
 import * as weather_hero     from './weather_hero.js';
 
 const MODULES = [
   aqi, calendar, clock, countdown, eink_battery, mac_battery, mac_nowplaying,
-  text, weather_forecast, weather_hero
+  moon, text, weather_forecast, weather_hero
 ];
 
 export const DEFS = Object.fromEntries(MODULES.map(m => [m.def.id, m.def]));

@@ -109,6 +109,10 @@ export function demoCtxForWidget(id, cellW, cellH) {
       return { ...base, clockNow: DEMO_CLOCK, settings: {} };
     case 'aqi':
       return { ...base, aqi: DEMO_AQI, settings: {} };
+    case 'moon':
+      // Frozen now ≈ 8 days into the cycle → a clean first-quarter disc
+      // (~58% lit, waxing) for the matrix / visual-regression.
+      return { ...base, now: Date.UTC(2000, 0, 6, 18, 14, 0) + 8 * 86400000, settings: {} };
     case 'countdown':
       // Frozen now + target → deterministic "12 DAYS" in the matrix /
       // visual-regression. now is a fixed epoch, target 12d 6h later.
