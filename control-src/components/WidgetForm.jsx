@@ -6,6 +6,7 @@ import { MIGRATED_FORMS, MIGRATED_DEFS } from '../widgets/_registry.js';
 import {
   renderWidget, typographyCss, cellClasses, scaleWrap
 } from '../widget-render.js';
+import { demoCtxForWidget } from '../widgets/_pool_demo.js';
 
 // Context the modal uses to seed PresetCards thumbnails with the same
 // dashboard payload the live preview is rendering from. Lets each card
@@ -686,7 +687,7 @@ function Collapsible({ title, storageScope, defaultOpen = true, children }) {
 // MY data" instead of having to read preset names.
 //
 // TRMNL plugin editor + WordPress Block Styles use the same idiom.
-function PresetField({ presets, onApply, currentValues, title = 'Preset' }) {
+function PresetField({ presets, onApply, currentValues, title = 'Preset', thumbSize = null }) {
   if (!Array.isArray(presets) || !presets.length) return null;
   const ctx = useContext(PresetContext);
   // Migrated forms currently call <PresetField presets onApply /> without
@@ -722,6 +723,7 @@ function PresetField({ presets, onApply, currentValues, title = 'Preset' }) {
               isActive={p.id === activeId}
               ctx={ctx}
               currentValues={effectiveValues}
+              thumbSize={thumbSize}
               onPick={() => onApply(p.values)}
             />
           ))}
@@ -734,12 +736,15 @@ function PresetField({ presets, onApply, currentValues, title = 'Preset' }) {
 // Single preset card. Renders the widget HTML at the real cell
 // dimensions, then CSS-scales the result down into a small thumbnail
 // so the user sees what each preset produces on their own data.
-function PresetCard({ preset, isActive, ctx, currentValues, onPick }) {
+function PresetCard({ preset, isActive, ctx, currentValues, onPick, thumbSize }) {
   const { widgetId, item, previewData } = ctx;
   const THUMB_W = 160;
   const THUMB_H = 90;
-  const cellW = (item && item.w) || 8;
-  const cellH = (item && item.h) || 4;
+  // thumbSize (from def.variantThumb) overrides the live tile size when
+  // a widget's variants only manifest at a specific tier — otherwise
+  // every thumbnail would render the same small-tile layout.
+  const cellW = (thumbSize && thumbSize.w) || (item && item.w) || 8;
+  const cellH = (thumbSize && thumbSize.h) || (item && item.h) || 4;
   // Approx pixel size matching the dashboard body — 24 cols × ~33px,
   // 12 rows × ~33px. Close enough that the preset's tier resolves the
   // same way it will on the actual tile.
@@ -751,12 +756,19 @@ function PresetCard({ preset, isActive, ctx, currentValues, onPick }) {
     try {
       const merged = { ...(currentValues || {}), ...(preset.values || {}) };
       const itemSlot = (previewData && previewData.perItem && item && previewData.perItem[item.id]) || {};
+      // Seed frozen demo data (same set the pool uses) so the thumbnail
+      // always has content to lay out — without it a widget whose live
+      // data is missing (e.g. mac now-playing with no agent) renders
+      // every variant as the same OFFLINE placeholder. Live previewData
+      // + perItem slot win over demo where present.
+      const demo = demoCtxForWidget(widgetId, cellW, cellH) || {};
       const inner = renderWidget(widgetId, {
+        ...demo,
         ...(previewData || {}),
         ...itemSlot,
         cellW, cellH,
         density: item && item.density,
-        settings: merged
+        settings: { ...(demo.settings || {}), ...merged }
       }) || '';
       const sw = scaleWrap(merged);
       const classes = ['cell', `cell-${widgetId}`];
@@ -843,7 +855,12 @@ export default function WidgetForm({ widgetId, values, onChange, item, previewDa
     return (
       <PresetContext.Provider value={{ widgetId, item, previewData, values: v, onHoverPreset }}>
         {variantPresets && (
-          <PresetField presets={variantPresets} onApply={patch} title="Variant" />
+          <PresetField
+            presets={variantPresets}
+            onApply={patch}
+            title="Variant"
+            thumbSize={def.variantThumb || null}
+          />
         )}
         <TabbedForm
           widgetId={widgetId}

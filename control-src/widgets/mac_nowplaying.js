@@ -82,6 +82,11 @@ export const def = {
     metadata:      { label: 'Artist · album / source labels' }
   },
   defaultVariant: 'time_bookends',
+  // The settings-modal variant picker renders each thumbnail at this
+  // size instead of the live tile size — the side-space variants only
+  // show on stacked (extended/full) tiers, so a small tile would make
+  // every thumbnail look identical. 16×8 = the L stacked preset.
+  variantThumb: { w: 16, h: 8 },
   // Advisory; the TIER_CFG table below is the source of truth. Variant
   // side-space only renders on the stacked (extended/full) tiers, so
   // it degrades out first as the tile shrinks.
