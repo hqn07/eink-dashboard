@@ -47,8 +47,14 @@ variant.
 
 **Adding a widget — the wiring (all six followed this):**
 1. `control-src/widgets/<id>.js` (def + render) + `<id>.form.jsx`.
-2. Register in BOTH `control-src/widgets/_registry.js` AND `_ssr.js`
-   (import + MODULES array; `_registry` also needs the FORMS entry).
+2. Register in THREE places:
+   - `control-src/widgets/_registry.js` (import + MODULES array + FORMS entry)
+   - `control-src/widgets/_ssr.js` (import + MODULES array)
+   - `control-src/widgets.js` → `WIDGET_REGISTRY` (`{ ...migratedDef('<id>') }`)
+   **The last one is the editor palette's source of truth.** Miss it and
+   the widget renders server-side + in the matrix but never shows in the
+   add-widget pool (the `+ ADD WIDGET` badge count = WIDGET_REGISTRY
+   length). This bit all six 06-16 widgets — fixed `9e?` after the fact.
 3. Demo data in `control-src/widgets/_pool_demo.js`
    (`demoCtxForWidget` case) — frozen so the matrix stays deterministic.
 4. A `control-src/face-css/0NN-<id>.css` partial (numeric-ordered;

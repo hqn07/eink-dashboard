@@ -38,9 +38,16 @@ export const WIDGET_REGISTRY = [
   { ...migratedDef('mac_nowplaying') },
   { ...migratedDef('mac_battery') },
   { ...migratedDef('eink_battery') },
-  {
-    ...migratedDef('clock')
-  }
+  { ...migratedDef('clock') },
+  // No-key widgets (2026-06-16). This array is the editor palette's
+  // source of truth — a widget missing here renders server-side but
+  // never shows in the add-widget pool. Keep in sync with _registry.js.
+  { ...migratedDef('aqi') },
+  { ...migratedDef('countdown') },
+  { ...migratedDef('moon') },
+  { ...migratedDef('world_clock') },
+  { ...migratedDef('quote') },
+  { ...migratedDef('onthisday') }
 ];
 
 // Tier resolver lives in widgets/_shared.js (the copy every widget
