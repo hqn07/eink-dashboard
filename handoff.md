@@ -54,7 +54,7 @@ variant.
    **The last one is the editor palette's source of truth.** Miss it and
    the widget renders server-side + in the matrix but never shows in the
    add-widget pool (the `+ ADD WIDGET` badge count = WIDGET_REGISTRY
-   length). This bit all six 06-16 widgets — fixed `9e?` after the fact.
+   length). This bit all six 06-16 widgets — fixed in `4eceed1` after the fact.
 3. Demo data in `control-src/widgets/_pool_demo.js`
    (`demoCtxForWidget` case) — frozen so the matrix stays deterministic.
 4. A `control-src/face-css/0NN-<id>.css` partial (numeric-ordered;
