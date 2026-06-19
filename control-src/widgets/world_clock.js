@@ -178,9 +178,12 @@ export function render(ctx) {
     `;
   }
 
-  // stack — cap rows so a tiny tile doesn't overflow; font scales by
-  // tier so the time tracks tile size without per-row autofit.
-  const maxRows = tier === 'tiny' ? 2 : tier === 'compact' ? 3 : 6;
+  // stack — row count is driven by available HEIGHT, not pickTier
+  // (tier is min(width,height) tier, so a tall narrow tile would cap at
+  // the width tier and waste vertical space — the 3-row bug). Grid is
+  // 12 rows tall; ~1.25 grid rows per clock row, minus one for title.
+  const titleRows = tier !== 'tiny' ? 1 : 0;
+  const maxRows = Math.max(2, Math.min(12, Math.floor(((cellH || 0) - titleRows) / 1.25)));
   const rows = infos.slice(0, maxRows);
   return `
     <div class="wclock wclock-stack wclock-stack--${tier}">
