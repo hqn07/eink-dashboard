@@ -2810,6 +2810,19 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   flex-shrink: 0;
 }
 .wsm-list-add { font-size: var(--fs-md); padding: 4px 10px; }
+
+/* Quick-pick favourite chips (world clock zone picker). */
+.wsm-chip {
+  background: #fff;
+  border: var(--bw-rule) solid var(--ink);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  padding: 3px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.wsm-chip:hover { background: var(--ink); color: #fff; }
 .wsm-list-reorder {
   display: flex;
   flex-direction: column;

@@ -1,6 +1,8 @@
 /* ============ World Clock widget ============
  * 1-bit safe: serif time, mono caps for zone labels. Tabular feel by
- * using the same type family as the clock widget.
+ * using the same type family as the clock widget. Each zone can carry
+ * a day/night glyph, a weekday + UTC offset meta line, and a relative
+ * day badge (+1d / −1d vs the first/home zone).
  */
 .wclock { display: flex; flex-direction: column; height: 100%; width: 100%; }
 
@@ -17,25 +19,77 @@
   line-height: 1;
 }
 
+/* meta line — weekday · UTC offset, mono caps, sits under the label */
+.wclock-meta {
+  font-family: var(--face-mono);
+  font-weight: 600;
+  letter-spacing: 1px;
+  font-size: 11px;
+  color: #000;
+}
+
+/* relative-day badge — boxed mono, e.g. +1d / −1d */
+.wclock-delta {
+  font-family: var(--face-mono);
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1;
+  padding: 1px 4px;
+  border: 2px solid #000;
+  white-space: nowrap;
+}
+
+/* day/night glyph — sized by SVG width/height attrs; never shrink */
+.wclock-dn { flex: 0 0 auto; display: block; }
+
 /* stack — label left, time right, one row per zone */
 .wclock-stack { gap: var(--face-gap-4); justify-content: center; }
 .wclock-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--face-gap-12);
   border-bottom: 2px solid #000;
   padding-bottom: 2px;
 }
 .wclock-row:last-child { border-bottom: none; }
-.wclock-stack .wclock-time { font-size: 24px; }
+.wclock-rowhead {
+  display: flex;
+  align-items: center;
+  gap: var(--face-gap-8);
+  min-width: 0;
+}
+.wclock-headtext { display: flex; flex-direction: column; min-width: 0; }
+.wclock-rowtime { display: flex; align-items: center; gap: var(--face-gap-8); }
 
-/* big — one zone, large */
+/* stack time scales by tier so it tracks tile size (per-row autofit
+ * can't measure a content-sized inline box). */
+.wclock-stack .wclock-time { font-size: 24px; }
+.wclock-stack--tiny     .wclock-time { font-size: 18px; }
+.wclock-stack--compact  .wclock-time { font-size: 22px; }
+.wclock-stack--standard .wclock-time { font-size: 28px; }
+.wclock-stack--extended .wclock-time,
+.wclock-stack--full     .wclock-time { font-size: 34px; }
+
+/* big — one zone, large; footer = glyph · label · meta */
 .wclock-big { align-items: stretch; justify-content: center; text-align: left; }
 .wclock-big .wclock-time { font-size: 64px; }
-.wclock-big .wclock-zone { margin-top: var(--face-gap-2); }
+.wclock-bigfoot {
+  display: flex;
+  align-items: center;
+  gap: var(--face-gap-8);
+  flex-wrap: wrap;
+  margin-top: var(--face-gap-2);
+}
 
-/* dual — two zones side by side */
-.wclock-dual { flex-direction: row; align-items: center; gap: var(--face-gap-16); }
-.wclock-cell { flex: 1 1 0; display: flex; flex-direction: column; align-items: flex-start; }
-.wclock-dual .wclock-time { font-size: 40px; }
+/* dual — two zones side by side; time autofits to the half-cell width */
+.wclock-dual { flex-direction: row; align-items: stretch; gap: var(--face-gap-16); }
+.wclock-cell {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+.wclock-dual .wclock-time { width: 100%; font-size: 40px; }
