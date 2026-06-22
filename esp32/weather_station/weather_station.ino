@@ -1667,8 +1667,9 @@ void loop() {
   //                              (add a network for a new location).
   //   ≥5 s (keep holding)      → factory reset, WIPES everything.
   // A quick tap (released during/right after the cycle) does neither.
-  // A single beep at the 2 s mark tells the user "release now for WiFi
-  // setup"; holding through to 5 s triggers factoryReset()'s own buzzer.
+  // THREE quick beeps at the 2 s mark (distinct from the single refresh
+  // chime) tell the user "release now for WiFi setup"; holding through
+  // to 5 s triggers factoryReset()'s own buzzer.
   if (buttonWake && digitalRead(BTN_REFRESH) == LOW) {
     unsigned long holdStart = millis();
     bool armedPortal = false;
@@ -1679,7 +1680,9 @@ void loop() {
       }
       if (held >= 2000 && !armedPortal) {
         armedPortal = true;
-        beep(50);                // "release now for WiFi setup"
+        // Three quick beeps — distinct from the single refresh chime —
+        // mean "release now for WiFi setup".
+        beep(50); delay(60); beep(50); delay(60); beep(50);
       }
       delay(50);
     }
