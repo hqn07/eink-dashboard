@@ -44,7 +44,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.12.4"
+#define FW_VERSION "1.13.0"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -191,6 +191,11 @@ RTC_DATA_ATTR uint32_t g_cachedGateway  = 0;
 RTC_DATA_ATTR uint32_t g_cachedSubnet   = 0;
 RTC_DATA_ATTR uint32_t g_cachedDns      = 0;
 RTC_DATA_ATTR bool     g_wifiCacheValid = false;
+// SSID the fast cache belongs to — multi-network support means the warm
+// boot must know WHICH saved network the BSSID/channel/IP lease maps to,
+// so it can look up the matching password. Cleared whenever the cache
+// is invalidated. 32 chars + NUL = max SSID length.
+RTC_DATA_ATTR char     g_cachedSsid[33] = {0};
 
 
 // Pin-change ISR: latch a refresh request on press. Flag-only — the
@@ -304,38 +309,166 @@ void cacheWifiState() {
   g_cachedGateway = (uint32_t)WiFi.gatewayIP();
   g_cachedSubnet  = (uint32_t)WiFi.subnetMask();
   g_cachedDns     = (uint32_t)WiFi.dnsIP();
+  // Remember which saved network this lease belongs to so the warm-boot
+  // fast path can look up the right password (multi-network support).
+  strncpy(g_cachedSsid, WiFi.SSID().c_str(), sizeof(g_cachedSsid) - 1);
+  g_cachedSsid[sizeof(g_cachedSsid) - 1] = '\0';
   g_wifiCacheValid = true;
-  Serial.printf("WiFi cache saved: ch=%d IP=%s\n",
-                g_cachedChannel, WiFi.localIP().toString().c_str());
+  Serial.printf("WiFi cache saved: %s ch=%d IP=%s\n",
+                g_cachedSsid, g_cachedChannel, WiFi.localIP().toString().c_str());
 }
 
 void invalidateWifiCache() {
   g_wifiCacheValid = false;
+  g_cachedSsid[0] = '\0';
   Serial.println("WiFi cache invalidated");
 }
 
-// ---------- In-house captive portal ----------
+// ---------- In-house captive portal + multi-network store ----------
 //
-// Keyed on the "wifi" Preferences namespace. NVS schema:
-//   ssid : String
-//   pass : String
+// Keyed on the "wifi" Preferences namespace. NVS schema (multi-network):
+//   count  : uint   — number of saved networks (0..MAX_WIFI_NETS)
+//   ssid0..ssidN : String
+//   pass0..passN : String
+// Legacy single-network schema (`ssid`/`pass`) is auto-migrated into
+// slot 0 the first time the list is saved.
 //
-// If both are empty at boot, openCaptivePortal() runs softAP +
-// WebServer at 192.168.4.1, serves a form, and saves whatever the
-// user submits. Block for up to 5 minutes; reboot on save.
+// Why a list: the device travels between locations (home, office, etc).
+// Storing several networks means it associates with whichever saved SSID
+// is in range at wake without the user re-running setup each move. The
+// full-scan connect picks the strongest matching SSID; the warm-boot
+// fast path remembers which SSID the RTC lease belongs to.
+//
+// If the list is empty at boot, openCaptivePortal() runs softAP +
+// WebServer at 192.168.4.1, serves a form, and APPENDS whatever the user
+// submits (existing networks are kept). Block up to 5 minutes; reboot on
+// save.
 //
 // Bypasses every WiFiManager 2.0.17 + arduino-esp32 core 3.x bug
 // (tzapu/WiFiManager #1797, #1490) because no third-party lib is in
 // the path.
+#define MAX_WIFI_NETS 5
+
 Preferences wifiPrefs;
 DNSServer dnsServer;
 WebServer portal(80);
 
-// Styled to match the dashboard's editorial identity (newsprint bg,
-// serif masthead over an Oxford rule, mono caps labels). No webfonts —
-// the AP has no internet, so Georgia/monospace system stacks stand in
-// for DM Serif Display / JetBrains Mono.
-static const char PORTAL_HTML[] PROGMEM =
+// Load every saved network into parallel arrays; returns the count.
+// Transparently migrates the legacy single-cred schema (no `count` key
+// but a `ssid` key present) into slot 0 so old installs keep working.
+static int loadNetworks(String* ssids, String* passes, int maxN) {
+  wifiPrefs.begin("wifi", true);
+  int count = (int)wifiPrefs.getUInt("count", 0xFFFF);
+  if (count == 0xFFFF) {
+    // Not migrated yet — fall back to the legacy single pair.
+    String s = wifiPrefs.getString("ssid", "");
+    String p = wifiPrefs.getString("pass", "");
+    wifiPrefs.end();
+    if (s.length() && maxN > 0) { ssids[0] = s; passes[0] = p; return 1; }
+    return 0;
+  }
+  int n = 0;
+  for (int i = 0; i < count && n < maxN; i++) {
+    String s = wifiPrefs.getString(("ssid" + String(i)).c_str(), "");
+    if (!s.length()) continue;
+    ssids[n]  = s;
+    passes[n] = wifiPrefs.getString(("pass" + String(i)).c_str(), "");
+    n++;
+  }
+  wifiPrefs.end();
+  return n;
+}
+
+// Look up the password for a given SSID. Returns true when the SSID is in
+// the saved list (passOut may legitimately be "" for an open network).
+static bool passForSsid(const String& ssid, String& passOut) {
+  String ssids[MAX_WIFI_NETS], passes[MAX_WIFI_NETS];
+  int n = loadNetworks(ssids, passes, MAX_WIFI_NETS);
+  for (int i = 0; i < n; i++) {
+    if (ssids[i] == ssid) { passOut = passes[i]; return true; }
+  }
+  return false;
+}
+
+// Upsert a network: if the SSID already exists its password is updated;
+// otherwise it's prepended (most-recent-first). The list is capped at
+// MAX_WIFI_NETS, evicting the oldest. Rewrites the whole namespace under
+// the new `count` schema and drops the legacy keys.
+static void saveNetworkUpsert(const String& ssid, const String& pass) {
+  String ssids[MAX_WIFI_NETS], passes[MAX_WIFI_NETS];
+  int n = loadNetworks(ssids, passes, MAX_WIFI_NETS);
+
+  // Build the new ordering: incoming network first, then the rest minus
+  // any existing copy of this SSID.
+  String outS[MAX_WIFI_NETS], outP[MAX_WIFI_NETS];
+  int m = 0;
+  outS[m] = ssid; outP[m] = pass; m++;
+  for (int i = 0; i < n && m < MAX_WIFI_NETS; i++) {
+    if (ssids[i] == ssid) continue;       // dedupe
+    outS[m] = ssids[i]; outP[m] = passes[i]; m++;
+  }
+
+  wifiPrefs.begin("wifi", false);
+  wifiPrefs.clear();                       // wipe legacy + stale slots
+  wifiPrefs.putUInt("count", m);
+  for (int i = 0; i < m; i++) {
+    wifiPrefs.putString(("ssid" + String(i)).c_str(), outS[i]);
+    wifiPrefs.putString(("pass" + String(i)).c_str(), outP[i]);
+  }
+  wifiPrefs.end();
+  Serial.printf("Saved network '%s' (%d total)\n", ssid.c_str(), m);
+}
+
+// Remove a network by SSID and rewrite the namespace.
+static void forgetNetwork(const String& ssid) {
+  String ssids[MAX_WIFI_NETS], passes[MAX_WIFI_NETS];
+  int n = loadNetworks(ssids, passes, MAX_WIFI_NETS);
+  wifiPrefs.begin("wifi", false);
+  wifiPrefs.clear();
+  int m = 0;
+  for (int i = 0; i < n; i++) {
+    if (ssids[i] == ssid) continue;
+    wifiPrefs.putString(("ssid" + String(m)).c_str(), ssids[i]);
+    wifiPrefs.putString(("pass" + String(m)).c_str(), passes[i]);
+    m++;
+  }
+  wifiPrefs.putUInt("count", m);
+  wifiPrefs.end();
+  Serial.printf("Forgot network '%s' (%d left)\n", ssid.c_str(), m);
+}
+
+// Percent-encode an SSID for use in the /forget?ssid= query string.
+static String urlEncode(const String& in) {
+  String o; o.reserve(in.length() * 3);
+  const char* hex = "0123456789ABCDEF";
+  for (size_t i = 0; i < in.length(); i++) {
+    char c = in[i];
+    if (isalnum((unsigned char)c) || c == '-' || c == '_' || c == '.' || c == '~') {
+      o += c;
+    } else {
+      o += '%'; o += hex[(c >> 4) & 0xF]; o += hex[c & 0xF];
+    }
+  }
+  return o;
+}
+
+// Minimal HTML-escape for SSIDs shown in the saved list.
+static String htmlEscape(const String& in) {
+  String o; o.reserve(in.length() + 8);
+  for (size_t i = 0; i < in.length(); i++) {
+    char c = in[i];
+    if      (c == '&') o += "&amp;";
+    else if (c == '<') o += "&lt;";
+    else if (c == '>') o += "&gt;";
+    else if (c == '"') o += "&quot;";
+    else o += c;
+  }
+  return o;
+}
+
+// Editorial-styled page head (newsprint bg, serif masthead, mono labels).
+// No webfonts — the AP has no internet, so system stacks stand in.
+static const char PORTAL_HEAD[] PROGMEM =
   "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>"
   "<title>E-Ink Dashboard · Setup</title>"
   "<style>body{font-family:Georgia,serif;background:#faf8f3;color:#111;max-width:420px;margin:24px auto;padding:0 16px}"
@@ -345,13 +478,32 @@ static const char PORTAL_HTML[] PROGMEM =
   "label{display:block;font-family:ui-monospace,monospace;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#6b6960;margin:18px 0 6px}"
   "input{width:100%;box-sizing:border-box;padding:10px 12px;font-size:16px;font-family:inherit;background:#fff;border:1.5px solid #111;border-radius:0;outline-offset:-1px}"
   "input:focus{outline:2px solid #111}"
+  "ul.nets{list-style:none;padding:0;margin:6px 0;font-family:ui-monospace,monospace;font-size:13px}"
+  "ul.nets li{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #ddd}"
+  "ul.nets a{color:#111;font-size:11px;letter-spacing:1px;text-transform:uppercase}"
   "button{margin-top:22px;padding:12px 18px;font-family:ui-monospace,monospace;font-size:13px;font-weight:700;letter-spacing:3px;text-transform:uppercase;border:2px solid #111;background:#111;color:#fff;width:100%;cursor:pointer}"
-  "</style></head><body><h1>E-Ink Dashboard</h1>"
-  "<div class='sub'>Device setup</div>"
-  "<form action='/save' method='POST'>"
-  "<label>WiFi network (SSID)</label><input name='ssid' required>"
-  "<label>Password</label><input name='pass' type='password'>"
-  "<button>Save &amp; restart</button></form></body></html>";
+  "</style></head><body><h1>E-Ink Dashboard</h1>";
+
+// Build the portal page: saved networks (with forget links) + add form.
+static String buildPortalPage() {
+  String h = FPSTR(PORTAL_HEAD);
+  String ssids[MAX_WIFI_NETS], passes[MAX_WIFI_NETS];
+  int n = loadNetworks(ssids, passes, MAX_WIFI_NETS);
+  if (n) {
+    h += "<div class='sub'>Saved networks</div><ul class='nets'>";
+    for (int i = 0; i < n; i++) {
+      h += "<li><span>" + htmlEscape(ssids[i]) + "</span>"
+           "<a href='/forget?ssid=" + urlEncode(ssids[i]) + "'>Forget</a></li>";
+    }
+    h += "</ul>";
+  }
+  h += "<div class='sub'>Add a network</div>"
+       "<form action='/save' method='POST'>"
+       "<label>WiFi network (SSID)</label><input name='ssid' required>"
+       "<label>Password</label><input name='pass' type='password'>"
+       "<button>Save &amp; restart</button></form></body></html>";
+  return h;
+}
 
 void openCaptivePortal() {
   Serial.println("Opening captive portal AP=eink-setup …");
@@ -377,7 +529,7 @@ void openCaptivePortal() {
   dnsServer.start(53, "*", apIP);
 
   portal.on("/", HTTP_GET, []() {
-    portal.send_P(200, "text/html", PORTAL_HTML);
+    portal.send(200, "text/html", buildPortalPage());
   });
   portal.on("/save", HTTP_POST, []() {
     String ssid = portal.arg("ssid");
@@ -386,15 +538,19 @@ void openCaptivePortal() {
       portal.send(400, "text/plain", "SSID required");
       return;
     }
-    wifiPrefs.begin("wifi", false);
-    wifiPrefs.putString("ssid", ssid);
-    wifiPrefs.putString("pass", pass);
-    wifiPrefs.end();
+    saveNetworkUpsert(ssid, pass);
     portal.send(200, "text/html",
       "<html><body style='font-family:system-ui;text-align:center;padding:40px'>"
       "<h2>Saved. Restarting…</h2></body></html>");
     delay(800);
     ESP.restart();
+  });
+  // Remove a saved network (forget link). WebServer URL-decodes the arg.
+  portal.on("/forget", HTTP_GET, []() {
+    String ssid = portal.arg("ssid");
+    if (ssid.length()) forgetNetwork(ssid);
+    portal.sendHeader("Location", "/", true);
+    portal.send(302, "text/plain", "");
   });
   // Captive-portal redirect endpoints — iOS, Android, Windows probe
   // these and follow the 302 back to the form.
@@ -426,23 +582,27 @@ void openCaptivePortal() {
   WiFi.softAPdisconnect(true);
 }
 
-// Read saved SSID/password from the captive-portal Preferences namespace.
-// Returns true when both fields are populated.
-static bool loadSavedCreds(String& ssid, String& pass) {
-  wifiPrefs.begin("wifi", true);
-  ssid = wifiPrefs.getString("ssid", "");
-  pass = wifiPrefs.getString("pass", "");
-  wifiPrefs.end();
-  return ssid.length() > 0;
+// True when at least one network is saved.
+static bool hasSavedNetworks() {
+  String ssids[MAX_WIFI_NETS], passes[MAX_WIFI_NETS];
+  return loadNetworks(ssids, passes, MAX_WIFI_NETS) > 0;
 }
 
 // Fast-path connect using the RTC cache. Skips the SSID scan by passing
 // the saved BSSID + channel into WiFi.begin and skips DHCP by feeding
 // the prior lease into WiFi.config. ~600-900 ms warm-boot association.
+// Uses the cached SSID (g_cachedSsid) to find the right password — if
+// that network was forgotten since the last boot, the lookup fails and
+// we fall through to the full scan.
 bool connectWiFiFast(unsigned long timeoutMs = 4000) {
-  if (!g_wifiCacheValid) return false;
-  String ssid, pass;
-  if (!loadSavedCreds(ssid, pass)) return false;
+  if (!g_wifiCacheValid || g_cachedSsid[0] == '\0') return false;
+  String ssid = String(g_cachedSsid);
+  String pass;
+  if (!passForSsid(ssid, pass)) {
+    Serial.printf("Fast: cached SSID '%s' no longer saved\n", ssid.c_str());
+    invalidateWifiCache();
+    return false;
+  }
 
   WiFi.mode(WIFI_STA);
   WiFi.persistent(false);
@@ -450,8 +610,8 @@ bool connectWiFiFast(unsigned long timeoutMs = 4000) {
               IPAddress(g_cachedGateway),
               IPAddress(g_cachedSubnet),
               IPAddress(g_cachedDns));
-  Serial.printf("WiFi fast: ch=%d BSSID=%02X:%02X:%02X:%02X:%02X:%02X\n",
-                g_cachedChannel,
+  Serial.printf("WiFi fast: %s ch=%d BSSID=%02X:%02X:%02X:%02X:%02X:%02X\n",
+                ssid.c_str(), g_cachedChannel,
                 g_cachedBssid[0], g_cachedBssid[1], g_cachedBssid[2],
                 g_cachedBssid[3], g_cachedBssid[4], g_cachedBssid[5]);
   WiFi.begin(ssid.c_str(), pass.c_str(), g_cachedChannel, g_cachedBssid);
@@ -474,11 +634,17 @@ bool connectWiFiFast(unsigned long timeoutMs = 4000) {
 }
 
 // Slow-path connect. Full scan + DHCP. Used on cold boot, when the AP
-// roamed channels, or when the fast path failed.
+// roamed channels, or when the fast path failed. With multiple saved
+// networks it scans the air and connects to the saved SSID with the
+// strongest signal that's actually present — so moving between locations
+// "just works" without re-running setup. Falls back to a blind attempt
+// at the first saved network if the scan finds no match (covers hidden
+// SSIDs).
 bool connectWiFiFull(unsigned long timeoutMs = 15000) {
-  String ssid, pass;
-  if (!loadSavedCreds(ssid, pass)) {
-    Serial.println("connectWiFiFull: no saved SSID");
+  String ssids[MAX_WIFI_NETS], passes[MAX_WIFI_NETS];
+  int n = loadNetworks(ssids, passes, MAX_WIFI_NETS);
+  if (!n) {
+    Serial.println("connectWiFiFull: no saved networks");
     return false;
   }
   WiFi.mode(WIFI_STA);
@@ -486,7 +652,26 @@ bool connectWiFiFull(unsigned long timeoutMs = 15000) {
   WiFi.config((uint32_t)0, (uint32_t)0, (uint32_t)0);  // DHCP
   WiFi.disconnect();
   delay(100);
-  WiFi.begin(ssid.c_str(), pass.c_str());
+
+  // Pick the strongest in-range saved network.
+  int pick = -1, bestRssi = -999;
+  int found = WiFi.scanNetworks();
+  for (int i = 0; i < found; i++) {
+    String scanned = WiFi.SSID(i);
+    int rssi = WiFi.RSSI(i);
+    for (int j = 0; j < n; j++) {
+      if (scanned == ssids[j] && rssi > bestRssi) { bestRssi = rssi; pick = j; }
+    }
+  }
+  WiFi.scanDelete();
+  if (pick < 0) {
+    Serial.println("No saved network in range — blind try of slot 0");
+    pick = 0;
+  } else {
+    Serial.printf("Scan picked '%s' (RSSI=%d)\n", ssids[pick].c_str(), bestRssi);
+  }
+
+  WiFi.begin(ssids[pick].c_str(), passes[pick].c_str());
   Serial.print("WiFi full");
   unsigned long start = millis();
   while (WiFi.status() != WL_CONNECTED && (millis() - start) < timeoutMs) {
@@ -531,9 +716,8 @@ bool connectWiFi() {
 bool provisionWiFi() {
   WiFi.mode(WIFI_STA);
   WiFi.persistent(false);
-  String ssid, pass;
-  if (!loadSavedCreds(ssid, pass)) {
-    Serial.println("No saved WiFi creds — launching portal");
+  if (!hasSavedNetworks()) {
+    Serial.println("No saved WiFi networks — launching portal");
     openCaptivePortal();
     return false;
   }
