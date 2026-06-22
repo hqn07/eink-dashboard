@@ -501,7 +501,14 @@ static String buildPortalPage() {
        "<form action='/save' method='POST'>"
        "<label>WiFi network (SSID)</label><input name='ssid' required>"
        "<label>Password</label><input name='pass' type='password'>"
-       "<button>Save &amp; restart</button></form></body></html>";
+       "<button>Save network</button></form>";
+  // Finish only matters once at least one network is saved — restart so
+  // the device leaves AP mode and connects.
+  if (n) {
+    h += "<form action='/done' method='POST'>"
+         "<button style='background:#fff;color:#111'>Finish &amp; restart</button></form>";
+  }
+  h += "</body></html>";
   return h;
 }
 
@@ -539,11 +546,10 @@ void openCaptivePortal() {
       return;
     }
     saveNetworkUpsert(ssid, pass);
-    portal.send(200, "text/html",
-      "<html><body style='font-family:system-ui;text-align:center;padding:40px'>"
-      "<h2>Saved. Restarting…</h2></body></html>");
-    delay(800);
-    ESP.restart();
+    // Return to the list so the user can add more networks before
+    // finishing — no restart here (that's what /done is for).
+    portal.sendHeader("Location", "/", true);
+    portal.send(302, "text/plain", "");
   });
   // Remove a saved network (forget link). WebServer URL-decodes the arg.
   portal.on("/forget", HTTP_GET, []() {
@@ -551,6 +557,14 @@ void openCaptivePortal() {
     if (ssid.length()) forgetNetwork(ssid);
     portal.sendHeader("Location", "/", true);
     portal.send(302, "text/plain", "");
+  });
+  // Done — leave the portal and reboot into normal (STA) operation.
+  portal.on("/done", HTTP_POST, []() {
+    portal.send(200, "text/html",
+      "<html><body style='font-family:system-ui;text-align:center;padding:40px'>"
+      "<h2>Saved. Restarting…</h2></body></html>");
+    delay(800);
+    ESP.restart();
   });
   // Captive-portal redirect endpoints — iOS, Android, Windows probe
   // these and follow the 302 back to the form.
@@ -1647,16 +1661,32 @@ void loop() {
   int sleepMin = runCycle(wakeCause);
   uint64_t sleepUs = (uint64_t)sleepMin * 60ULL * 1000000ULL;
 
-  // Long-press factory reset (button still held continuously since wake,
-  // for ≥5 s in total). Non-blocking: if the user already released the
-  // button during runCycle, this is a no-op. If they're still holding it,
-  // wait the remainder of the 5 s window before triggering the reset.
-  if (buttonWake) {
+  // Two-stage button hold, measured from when the refresh finished (so
+  // the screen updates fast regardless). Keep holding after the refresh:
+  //   ≥2 s, release before 5 s → open WiFi portal, KEEPING saved networks
+  //                              (add a network for a new location).
+  //   ≥5 s (keep holding)      → factory reset, WIPES everything.
+  // A quick tap (released during/right after the cycle) does neither.
+  // A single beep at the 2 s mark tells the user "release now for WiFi
+  // setup"; holding through to 5 s triggers factoryReset()'s own buzzer.
+  if (buttonWake && digitalRead(BTN_REFRESH) == LOW) {
+    unsigned long holdStart = millis();
+    bool armedPortal = false;
     while (digitalRead(BTN_REFRESH) == LOW) {
-      if (millis() - wakeAtMs > 5000) {
-        factoryReset();   // never returns
+      unsigned long held = millis() - holdStart;
+      if (held >= 5000) {
+        factoryReset();          // never returns
+      }
+      if (held >= 2000 && !armedPortal) {
+        armedPortal = true;
+        beep(50);                // "release now for WiFi setup"
       }
       delay(50);
+    }
+    if (armedPortal) {
+      Serial.println("Button hold 2-5s → opening WiFi portal (networks kept)");
+      openCaptivePortal();       // blocks up to 5 min
+      ESP.restart();             // re-provision with whatever was saved
     }
   }
   // Belt-and-braces: small grace window so a quick double-tap doesn't
