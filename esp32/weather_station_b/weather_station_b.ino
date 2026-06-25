@@ -49,7 +49,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.13.2"
+#define FW_VERSION "1.14.0"
 #define FW_BOARD   "b"
 #define OTA_MIN_BATT_PCT 50
 
@@ -856,10 +856,11 @@ bool enrollDevice() {
   return true;
 }
 
-// Download the full 48000-byte image into a heap buffer.
-// Returns nullptr on failure (caller frees on success).
+// Download the two-plane 96000-byte image (black plane + red plane) into
+// one heap buffer. black = buf, red = buf + IMG_BYTES. Returns nullptr on
+// failure (caller frees on success).
 uint8_t* downloadImage() {
-  String url = addToken(String(activeServerBase) + "/display.bin");
+  String url = addToken(String(activeServerBase) + "/display-3c.bin");
   Serial.printf("GET %s\n", url.c_str());
 
   HTTPClient http;
@@ -896,15 +897,16 @@ uint8_t* downloadImage() {
     }
   }
 
+  const int WANT = 2 * IMG_BYTES;   // black plane + red plane = 96000
   int len = http.getSize();
-  if (len > 0 && len != IMG_BYTES) {
-    Serial.printf("Unexpected size %d (expected %d)\n", len, IMG_BYTES);
+  if (len > 0 && len != WANT) {
+    Serial.printf("Unexpected size %d (expected %d)\n", len, WANT);
     http.end();
     return nullptr;
   }
 
-  uint8_t* buf = (uint8_t*)ps_malloc(IMG_BYTES);
-  if (!buf) buf = (uint8_t*)malloc(IMG_BYTES);
+  uint8_t* buf = (uint8_t*)ps_malloc(WANT);
+  if (!buf) buf = (uint8_t*)malloc(WANT);
   if (!buf) {
     Serial.println("malloc FAILED");
     http.end();
@@ -915,10 +917,10 @@ uint8_t* downloadImage() {
   int read = 0;
   bool streamTimedOut = false;
   unsigned long lastData = millis();
-  while (read < IMG_BYTES) {
+  while (read < WANT) {
     size_t avail = stream->available();
     if (avail) {
-      int n = stream->readBytes(buf + read, min((int)avail, IMG_BYTES - read));
+      int n = stream->readBytes(buf + read, min((int)avail, WANT - read));
       read += n;
       lastData = millis();
     } else {
@@ -932,8 +934,8 @@ uint8_t* downloadImage() {
   }
   http.end();
 
-  if (read != IMG_BYTES) {
-    Serial.printf("Short read: %d / %d\n", read, IMG_BYTES);
+  if (read != WANT) {
+    Serial.printf("Short read: %d / %d\n", read, WANT);
     // Surface a code so drawFailScreen's hint line still fires on
     // mid-stream failures (previously left 0 — no tip exactly when
     // the failure is most confusing). Reuse HTTPClient's own
@@ -1438,9 +1440,9 @@ void drawFailScreen(const char* reason) {
   display.hibernate();
 }
 
-// Direct-write path for the 3-color panel. The server sends one 1-bit
-// image — paint it on the BLACK plane and feed the RED plane a blank
-// (all 0xFF = "white, no red"). One write, one refresh, hibernate.
+// Direct-write path for the 3-color panel. The server ships two stacked
+// 1-bit planes in one buffer: black = buf, red = buf + IMG_BYTES. Paint
+// both, one full refresh, hibernate.
 //
 // Unlike the BW panel (UC8179), the Z08 3-color controller always runs a
 // full multi-pass refresh with its own LUT, so it does NOT suffer the
@@ -1450,7 +1452,8 @@ void drawFailScreen(const char* reason) {
 //   black plane: 0 = black, 1 = white
 //   red   plane: 0 = red,   1 = white   (0xFF everywhere = no red)
 void pushImage(const uint8_t* buf) {
-  // IMG_BYTES is the existing 48000-byte macro (SW * SH / 8).
+  const uint8_t* blackPlane = buf;
+  const uint8_t* redPlane   = buf + IMG_BYTES;
   display.setRotation(0);
   display.setFullWindow();
   // If the previous render was the fail screen, its big banner leaves
@@ -1461,18 +1464,7 @@ void pushImage(const uint8_t* buf) {
     display.clearScreen();
     g_lastRenderWasFail = false;
   }
-  // PSRAM if present, else heap. 48000 bytes after WiFi/TLS is tight, so
-  // fall back to a black-only write rather than abort if malloc fails.
-  uint8_t* redPlane = (uint8_t*)ps_malloc(IMG_BYTES);
-  if (!redPlane) redPlane = (uint8_t*)malloc(IMG_BYTES);
-  if (redPlane) {
-    memset(redPlane, 0xFF, IMG_BYTES);   // no red anywhere
-    display.epd2.writeImage(buf, redPlane, 0, 0, SW, SH, false, false, false);
-    free(redPlane);
-  } else {
-    Serial.println("red plane malloc failed — black-only write");
-    display.epd2.writeImage(buf, 0, 0, SW, SH, false, false, false);
-  }
+  display.epd2.writeImage(blackPlane, redPlane, 0, 0, SW, SH, false, false, false);
   display.refresh(false);  // full refresh
   display.hibernate();
 }
