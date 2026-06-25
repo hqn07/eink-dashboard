@@ -20,6 +20,11 @@
 :root {
   --face-ink: #000;
   --face-paper: #fff;
+  /* 3-color (B/W/R) panel accent. The server's plane-split classifier
+     keys on this strong vermilion; anything color:var(--face-red) lands
+     on the red plane. No-op on BW panels (greyscales to dark). */
+  --face-red: #d32f2f;
+  --face-red-rule: #d32f2f;
   --face-serif: 'DM Serif Display', Georgia, serif;
   --face-sans: 'Oswald', 'Arial Narrow', sans-serif;
   --face-mono: 'JetBrains Mono', monospace;
@@ -651,6 +656,16 @@ html, body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ============ 3-COLOR RED ACCENT ============
+ * Base layer of the layered red model: any element can opt into red via
+ * .face-red (text/glyph), .face-red-bd (border/rule), .face-red-bg (fill).
+ * On the B panel these land on the red plane; on BW they greyscale to
+ * dark and read as black. Semantic auto-red rules and the per-widget
+ * accent toggle build on top of these. */
+.face-red    { color: var(--face-red) !important; }
+.face-red-bd { border-color: var(--face-red) !important; }
+.face-red-bg { background: var(--face-red) !important; color: #fff !important; }
 
 /* ============ ITEM PRIMITIVE ============
  * TRMNL-inspired list-item shape. A standardized three-slot row used

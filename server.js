@@ -388,6 +388,39 @@ function packMonoBin(rawMono, info) {
   return bytes;
 }
 
+// ---------- 3-color (B/W/R) plane split ----------
+// The Z08 panel takes two 1-bit planes: black (0=black,1=white) and red
+// (0=red,1=white). We reuse the tuned mono pipeline for the black plane
+// (so text AA stays crisp), then detect red pixels from the raw RGBA and
+// carve them out of the black plane into the red plane. A pixel is red
+// when it's strongly R-dominant — tuned to catch the CSS --face-red token
+// without misfiring on dark/near-black text.
+function isRedPixel(r, g, b) {
+  return r > 140 && g < 110 && b < 110 && (r - Math.max(g, b)) > 45;
+}
+
+// Returns a 96000-byte buffer: black plane (48000) followed by red plane
+// (48000), both MSB-first the way GxEPD2's 3-color writeImage expects.
+async function rgbaToPlanes(rgbaPng) {
+  const { rawMono, info } = await rgbaToMono(rgbaPng);
+  const { data: rgba } = await sharp(rgbaPng)
+    .resize(SCREEN_W, SCREEN_H, { fit: 'fill' })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const n = info.width * info.height;
+  const ch = rgba.length / n;            // 4 (RGBA)
+  const blackRaw = Buffer.from(rawMono); // 0=black, 255=white (copy)
+  const redRaw = Buffer.alloc(n, 255);   // default white (no red)
+  for (let p = 0, q = 0; p < n; p++, q += ch) {
+    if (isRedPixel(rgba[q], rgba[q + 1], rgba[q + 2])) {
+      redRaw[p] = 0;        // this pixel is red
+      blackRaw[p] = 255;    // and therefore not black
+    }
+  }
+  return Buffer.concat([packMonoBin(blackRaw, info), packMonoBin(redRaw, info)]);
+}
+
 // ---------- Image cache ----------
 
 const imageCache = new Map(); // key: "units|screen" -> { at, png, bin }
@@ -407,7 +440,13 @@ async function getCurrentImage({ units, screen }) {
     const rgba = await renderDashboardPng({ units, screen });
     const { rawMono, info, png } = await rgbaToMono(rgba);
     const bin = packMonoBin(rawMono, info);
-    const entry = { at: Date.now(), png, bin };
+    // 3-color plane pair (black+red, 96000 B). Cached lazily on first
+    // access so BW-only fleets don't pay the extra RGBA pass.
+    let bin3c = null;
+    const entry = {
+      at: Date.now(), png, bin,
+      get3c: async () => (bin3c || (bin3c = await rgbaToPlanes(rgba)))
+    };
     imageCache.set(key, entry);
     return entry;
   })().finally(() => inflightImage.delete(key));
@@ -1687,6 +1726,35 @@ app.get('/display.bin', checkDeviceAuth, async (req, res) => {
     res.send(bin);
   } catch (err) {
     console.error('BIN error:', err);
+    res.status(500).send(safeError(err).error);
+  }
+});
+
+// Raw two-plane packed binary for the 3-color (B) panel.
+// 96000 bytes = black plane (48000) + red plane (48000), each MSB-first.
+app.get('/display-3c.bin', checkDeviceAuth, async (req, res) => {
+  try {
+    const cfg = await loadConfig();
+    const variant = resolveVariant(req, cfg);
+    const entry = await getCurrentImage(variant);
+    const bin = await entry.get3c();
+
+    res.set('X-Refresh-Rate', String(resolveRefreshMinutes(cfg)));
+    const hBattV = parseFloat(req.headers['battery-voltage']);
+    const hBattPct = parseInt(req.headers['battery-pct'], 10);
+    if (Number.isFinite(hBattV) && hBattV >= 0 && hBattV <= 6 &&
+        Number.isFinite(hBattPct) && hBattPct >= 0 && hBattPct <= 100) {
+      saveBatteryState({ v: hBattV, pct: hBattPct, at: Date.now() })
+        .catch(e => console.warn('battery-header save:', e.message));
+    }
+    res.set('Content-Type', 'application/octet-stream');
+    res.set('Cache-Control', 'no-store');
+    res.set('X-Image-Width', String(SCREEN_W));
+    res.set('X-Image-Height', String(SCREEN_H));
+    res.set('X-Image-Planes', '2');
+    res.send(bin);
+  } catch (err) {
+    console.error('3C BIN error:', err);
     res.status(500).send(safeError(err).error);
   }
 });
