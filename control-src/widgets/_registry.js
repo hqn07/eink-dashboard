@@ -25,6 +25,7 @@ import * as mac_battery      from './mac_battery.js';
 import * as mac_nowplaying   from './mac_nowplaying.js';
 import * as moon             from './moon.js';
 import * as onthisday        from './onthisday.js';
+import * as qr               from './qr.js';
 import * as quote            from './quote.js';
 import * as text             from './text.js';
 import * as weather_forecast from './weather_forecast.js';
@@ -40,6 +41,7 @@ import { Form as macBatteryForm }      from './mac_battery.form.jsx';
 import { Form as macNowPlayingForm }   from './mac_nowplaying.form.jsx';
 import { Form as moonForm }            from './moon.form.jsx';
 import { Form as onThisDayForm }       from './onthisday.form.jsx';
+import { Form as qrForm }              from './qr.form.jsx';
 import { Form as quoteForm }           from './quote.form.jsx';
 import { Form as textForm }            from './text.form.jsx';
 import { Form as weatherForecastForm } from './weather_forecast.form.jsx';
@@ -48,7 +50,7 @@ import { Form as worldClockForm }      from './world_clock.form.jsx';
 
 const MODULES = [
   aqi, calendar, clock, countdown, eink_battery, mac_battery, mac_nowplaying,
-  moon, onthisday, quote, text, weather_forecast, weather_hero, world_clock
+  moon, onthisday, qr, quote, text, weather_forecast, weather_hero, world_clock
 ];
 
 const FORMS = {
@@ -61,6 +63,7 @@ const FORMS = {
   mac_nowplaying:   macNowPlayingForm,
   moon:             moonForm,
   onthisday:        onThisDayForm,
+  qr:               qrForm,
   quote:            quoteForm,
   text:             textForm,
   weather_forecast: weatherForecastForm,
