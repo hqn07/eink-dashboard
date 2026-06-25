@@ -1,5 +1,5 @@
 // weather_station.ino — Server-rendered version
-// Pulls a pre-rendered 800x480 1-bit image from your dashboard server
+// Pulls a pre-renderedxx 800x480 1-bit image from your dashboard server
 // and pushes it to the Waveshare 7.5" GDEY075T7 display.
 //
 // All layout/drawing logic now lives on the server. This firmware only:
@@ -44,7 +44,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.13.1"
+#define FW_VERSION "1.13.2"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -96,7 +96,7 @@ static const int EPD_CS = 15, EPD_SCK = 13, EPD_MOSI = 14;
 // Range 0-255. ~64 = soft; below ~10 the buzzer falls under its
 // minimum operating voltage and goes silent.
 #define BUZZER_PIN     4
-#define BUZZER_FREQ    20000
+#define BUZZER_FREQ    2731
 #define BUZZER_RES     8
 #define BUZZER_VOLUME  64
 #define LOW_BATT_PCT   10
@@ -500,7 +500,12 @@ static String buildPortalPage() {
   h += "<div class='sub'>Add a network</div>"
        "<form action='/save' method='POST'>"
        "<label>WiFi network (SSID)</label><input name='ssid' required>"
-       "<label>Password</label><input name='pass' type='password'>"
+       "<label>Password</label><input id='pw' name='pass' type='password'>"
+       "<label style='display:flex;gap:6px;align-items:center;margin-top:8px;"
+       "text-transform:none;font-weight:400;letter-spacing:0;font-size:13px'>"
+       "<input type='checkbox' style='width:auto' "
+       "onchange=\"document.getElementById('pw').type=this.checked?'text':'password'\">"
+       "Show password</label>"
        "<button>Save network</button></form>";
   // Finish only matters once at least one network is saved — restart so
   // the device leaves AP mode and connects.
@@ -1224,6 +1229,39 @@ void drawAlarmScreen(const char* label) {
   display.hibernate();
 }
 
+// Full-screen WiFi-setup instructions, shown when the user long-presses
+// the button to re-provision. No code/password gate — physical button
+// access is the trust boundary, and reflashing is the recovery path.
+void drawSetupScreen() {
+  display.setRotation(0);
+  display.setFullWindow();
+  display.firstPage();
+  do {
+    display.fillScreen(GxEPD_WHITE);
+    display.fillRect(0, 0, SW, 80, GxEPD_BLACK);
+    display.setTextColor(GxEPD_WHITE);
+    display.setCursor(40, 56);
+    display.setTextSize(4);
+    display.print("WIFI SETUP");
+
+    display.setTextColor(GxEPD_BLACK);
+    display.setTextSize(3);
+    display.setCursor(40, 170);
+    display.print("1. Join WiFi:");
+    display.setCursor(40, 215);
+    display.print("   eink-setup");
+    display.setCursor(40, 285);
+    display.print("2. Open in browser:");
+    display.setCursor(40, 330);
+    display.print("   192.168.4.1");
+
+    display.setTextSize(2);
+    display.setCursor(40, 420);
+    display.print("Window open 5 min, then restarts.");
+  } while (display.nextPage());
+  display.hibernate();
+}
+
 // Run the alarm loop: paint the alarm screen, then ring the buzzer in
 // a pattern until either the user presses the button or the timeout
 // elapses. Returns once the alarm is silenced.
@@ -1404,9 +1442,19 @@ void pushImage(const uint8_t* buf) {
     display.clearScreen();
     g_lastRenderWasFail = false;
   }
-  display.fillScreen(GxEPD_WHITE);
+  // Write the image to the NEW-data RAM bank, full-refresh, THEN write the
+  // same image again to the OLD-data RAM bank. This panel's controller
+  // (UC8179) drives a full update as an old→new transition. After
+  // hibernate() + the next cycle's reset, the old bank is blank, so if we
+  // only write the new bank each cycle the transition gets weaker every
+  // refresh and the image fades PALER over time. Writing the buffer a
+  // second time syncs the old bank to match, so every refresh starts from
+  // a correct reference and lands at full black. (fillScreen was removed —
+  // without firstPage/nextPage paging it only touched the MCU-side buffer
+  // and was never sent to the panel.)
   display.epd2.writeImage(buf, 0, 0, SW, SH, false, false, false);
-  display.refresh(false);  // false = full refresh — no ghosting
+  display.refresh(false);  // full refresh
+  display.epd2.writeImage(buf, 0, 0, SW, SH, false, false, false);  // sync old bank
   display.hibernate();
 }
 
@@ -1431,7 +1479,8 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
   bool coldBoot   = (wakeCause == ESP_SLEEP_WAKEUP_UNDEFINED);
   bool buttonWake = (wakeCause == ESP_SLEEP_WAKEUP_EXT1);
 
-  if (buttonWake) beep(50);
+  // Press-ack beep already fired at the top of setup() (instant feedback),
+  // so no beep here — doing it again would double-beep on a button wake.
   const char* wakeLabel = coldBoot ? "cold/POR"
                         : buttonWake ? "BTN_REFRESH"
                         : "timer";
@@ -1566,6 +1615,13 @@ void setup() {
   pinMode(BTN_REFRESH, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(BTN_REFRESH), onButtonEdge, CHANGE);
 
+  // Instant press feedback. The old ack beep lived in runCycle, which
+  // only runs after display.init + battery + WiFi connect (~1-3 s) — long
+  // enough that the click felt unacknowledged. Beeping here, right after
+  // the buzzer is attached and before any of that work, makes the press
+  // feel immediate. Battery (deep-sleep) wakes arrive as EXT1.
+  if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT1) beep(40);
+
   hspi.begin(EPD_SCK, -1, EPD_MOSI, EPD_CS);
   display.epd2.selectSPI(hspi, SPISettings(4000000, MSBFIRST, SPI_MODE0));
   // Deep sleep fully powers the EPD controller down between cycles, so
@@ -1661,21 +1717,25 @@ void loop() {
   int sleepMin = runCycle(wakeCause);
   uint64_t sleepUs = (uint64_t)sleepMin * 60ULL * 1000000ULL;
 
-  // Two-stage button hold, measured from when the refresh finished (so
-  // the screen updates fast regardless). Keep holding after the refresh:
-  //   ≥2 s, release before 5 s → open WiFi portal, KEEPING saved networks
-  //                              (add a network for a new location).
-  //   ≥5 s (keep holding)      → factory reset, WIPES everything.
+  // Staged button hold, measured from when the refresh finished (so the
+  // screen updates fast regardless). Keep holding after the refresh:
+  //   ≥2 s, release before 7 s  → open WiFi portal, KEEPING saved networks
+  //                               (add a network for a new location).
+  //   7–10 s                    → CONTINUOUS warning beep ("hold to reset").
+  //                               Releasing during the beep CANCELS — does
+  //                               nothing (no portal, no reset).
+  //   ≥10 s (hold through beep) → factory reset, WIPES everything.
   // A quick tap (released during/right after the cycle) does neither.
-  // THREE quick beeps at the 2 s mark (distinct from the single refresh
-  // chime) tell the user "release now for WiFi setup"; holding through
-  // to 5 s triggers factoryReset()'s own buzzer.
+  // THREE quick beeps at the 2 s mark mean "release now for WiFi setup".
+  // The long 3 s beep is the deliberate, hard-to-trigger reset confirm.
   if (buttonWake && digitalRead(BTN_REFRESH) == LOW) {
     unsigned long holdStart = millis();
     bool armedPortal = false;
+    bool warning = false;        // true once the 7 s reset-warning beep starts
     while (digitalRead(BTN_REFRESH) == LOW) {
       unsigned long held = millis() - holdStart;
-      if (held >= 5000) {
+      if (held >= 10000) {
+        buzzerOff();
         factoryReset();          // never returns
       }
       if (held >= 2000 && !armedPortal) {
@@ -1684,10 +1744,21 @@ void loop() {
         // mean "release now for WiFi setup".
         beep(50); delay(60); beep(50); delay(60); beep(50);
       }
+      if (held >= 7000 && !warning) {
+        warning = true;
+        buzzerOn();              // continuous beep until 10 s or release
+      }
       delay(50);
     }
-    if (armedPortal) {
-      Serial.println("Button hold 2-5s → opening WiFi portal (networks kept)");
+    // Button released. A continuous beep means we were in the 7–10 s reset
+    // window → cancel the reset entirely (and skip the portal — the user
+    // was reaching past it).
+    buzzerOff();
+    if (warning) {
+      Serial.println("Factory reset CANCELLED — released during warning beep");
+    } else if (armedPortal) {
+      Serial.println("Button hold 2-7s → opening WiFi portal (networks kept)");
+      drawSetupScreen();         // on-screen join instructions
       openCaptivePortal();       // blocks up to 5 min
       ESP.restart();             // re-provision with whatever was saved
     }
