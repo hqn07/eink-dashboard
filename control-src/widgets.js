@@ -47,7 +47,8 @@ export const WIDGET_REGISTRY = [
   { ...migratedDef('moon') },
   { ...migratedDef('world_clock') },
   { ...migratedDef('quote') },
-  { ...migratedDef('onthisday') }
+  { ...migratedDef('onthisday') },
+  { ...migratedDef('qr') }
 ];
 
 // Tier resolver lives in widgets/_shared.js (the copy every widget
