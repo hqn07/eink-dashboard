@@ -862,8 +862,10 @@ export default function WidgetForm({ widgetId, values, onChange, item, previewDa
             thumbSize={def.variantThumb || null}
           />
         )}
-        {/* Red accent (3-color B panel). Global control for every widget —
-            tints the tile's heading + key figure red. No-op on BW. */}
+        {/* Red controls (3-color B panel). Accent = manual tint of the
+            tile's heading/hero figure. Semantic red = auto-red by meaning
+            (AQI unhealthy, low battery, overdue, today, heavy rain). Both
+            no-op on BW. */}
         <SegmentedField
           label="Accent"
           value={v.accent || 'none'}
@@ -873,7 +875,14 @@ export default function WidgetForm({ widgetId, values, onChange, item, previewDa
             { value: 'red',  label: 'Red' }
           ]}
           onChange={(x) => patch({ accent: x })}
-          help="Red shows only on the 3-color panel."
+          help="Manual red tint. Shows only on the 3-color panel."
+        />
+        <ToggleField
+          label="Semantic red"
+          value={v.semanticRed !== false}
+          defaultValue={true}
+          onChange={(x) => patch({ semanticRed: x })}
+          help="Auto-red for alerts/thresholds (AQI, battery, overdue, today, rain)."
         />
         <TabbedForm
           widgetId={widgetId}

@@ -8,7 +8,7 @@
 // Gauge gates on grid rows directly (battery presets never leave the
 // tiny/compact tier band): ≤2 rows shows percent only.
 
-import { escapeHtml, placeholder } from './_shared.js';
+import { escapeHtml, placeholder, semRed } from './_shared.js';
 
 export const def = {
   id: 'mac_battery',
@@ -57,7 +57,13 @@ export function render(ctx) {
   const arrow = charging
     ? '<svg class="mac-batt-bolt" viewBox="0 0 24 24" width="0.7em" height="0.7em" aria-hidden="true"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" fill="#000"/></svg>'
     : '';
-  const pctBlock = `<div class="mac-batt-pct autofit" data-min-font="22">${macBattery.percent}%${arrow}</div>`;
+  // Semantic auto-red: low charge (<20%) and running on battery. Note
+  // `charging` above matches "discharging" too (it contains "charging"),
+  // so detect on-battery explicitly rather than reusing it.
+  const onBattery = /dischar/i.test(macBattery.state)
+    || !/charg(ing|ed)/i.test(macBattery.state);
+  const low = semRed(s, Number(macBattery.percent) < 20 && onBattery);
+  const pctBlock = `<div class="mac-batt-pct autofit${low}" data-min-font="22">${macBattery.percent}%${arrow}</div>`;
   const title = `<div class="col-title">${escapeHtml(titleLabel)}</div>`;
   const state = (s.showState !== false)
     ? `<div class="mac-batt-state">${escapeHtml(macBattery.state.toUpperCase())}</div>`

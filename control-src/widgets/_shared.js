@@ -56,6 +56,17 @@ export function placeholder(title, hint, iconKey, ctx) {
   `;
 }
 
+// Semantic auto-red helper. Returns ' face-red' (a leading-space class
+// fragment, ready to concat into a class="" list) when `condition` is true
+// AND the tile hasn't disabled semantic red (settings.semanticRed === false).
+// Reuses the .face-red base utility so no per-widget CSS is needed; widgets
+// add it to the element that should ride the red plane by meaning (an
+// unhealthy AQI, a low battery, an overdue countdown, today's date, …).
+// No-op on BW panels (red greyscales to dark).
+export function semRed(s, condition) {
+  return (condition && (!s || s.semanticRed !== false)) ? ' face-red' : '';
+}
+
 // Minimal inline markdown: caller must escapeHtml first to keep this safe.
 export function md(s) {
   return String(s || '')

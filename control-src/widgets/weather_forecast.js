@@ -7,7 +7,7 @@
 // Day count auto-scales with the variant's long axis (rows → height,
 // columns → width); an explicit forecastDays setting wins.
 
-import { escapeHtml, placeholder } from './_shared.js';
+import { escapeHtml, placeholder, semRed } from './_shared.js';
 import { icon } from './_weather_shared.js';
 
 export const def = {
@@ -114,7 +114,7 @@ export function render(ctx) {
             ${showIcons   ? `<div class="fc-icon">${icon(f.main, iconPx)}</div>` : ''}
             ${hiloBlock(f, hiloStyle)}
             ${showPrecip && Number.isFinite(f.precip) && f.precip > 0
-              ? `<div class="fc-precip">${f.precip}%</div>` : ''}
+              ? `<div class="fc-precip${semRed(s, f.precip >= 60)}">${f.precip}%</div>` : ''}
           </div>
         `).join('')}
       </div>
@@ -134,7 +134,7 @@ export function render(ctx) {
         ${showIcons   ? `<div class="fc-icon">${icon(f.main, iconPx)}</div>` : ''}
         ${hiloBlock(f, hiloStyle)}
         ${showPrecip && Number.isFinite(f.precip) && f.precip > 0
-          ? `<div class="fc-precip">${f.precip}%</div>` : ''}
+          ? `<div class="fc-precip${semRed(s, f.precip >= 60)}">${f.precip}%</div>` : ''}
       </div>
     `).join('')}
   `;

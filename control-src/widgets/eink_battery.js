@@ -11,7 +11,7 @@
 // Tier gates the gauge extras so a 4×2 tile stops rendering five
 // stacked lines into 80px.
 
-import { escapeHtml, placeholder } from './_shared.js';
+import { escapeHtml, placeholder, semRed } from './_shared.js';
 
 export const def = {
   id: 'eink_battery',
@@ -94,7 +94,9 @@ export function render(ctx) {
   const bolt = charging
     ? '<svg class="eink-batt-bolt" viewBox="0 0 24 24" width="0.7em" height="0.7em" aria-hidden="true"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" fill="#000"/></svg>'
     : '';
-  const pctBlock = `<div class="eink-batt-pct autofit" data-min-font="22">${pct}%${bolt}</div>`;
+  // Semantic auto-red: low charge (<20%) and not on the charger.
+  const low = semRed(s, pct < 20 && !charging);
+  const pctBlock = `<div class="eink-batt-pct autofit${low}" data-min-font="22">${pct}%${bolt}</div>`;
   const title = `<div class="col-title">${escapeHtml(titleLabel)}</div>`;
 
   if (variant === 'minimal') {

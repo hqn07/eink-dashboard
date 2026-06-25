@@ -1,4 +1,4 @@
-import { escapeHtml, pickTier, placeholder } from './_shared.js';
+import { escapeHtml, pickTier, placeholder, semRed } from './_shared.js';
 
 // Air Quality (US AQI). Data comes from widgets/aqi.js (server) on
 // ctx.aqi: { aqi, band, bands, label, pm25, pm10, o3, no2, stale }.
@@ -65,9 +65,12 @@ export function render(ctx) {
   const variant = ctx.variant || (def.variants[s.variant] ? s.variant : 'big');
   const tier = pickTier(cellW || 0, cellH || 0, density);
 
-  const num = `<div class="aqi-num autofit" data-min-font="22">${a.aqi}</div>`;
-  const numInline = `<span class="aqi-num">${a.aqi}</span>`;
-  const cat = `<div class="aqi-cat">${escapeHtml(a.label || '')}</div>`;
+  // Semantic auto-red: band >= 3 is "Unhealthy" or worse on the 6-step
+  // Good→Hazardous scale — exactly what AQI color-coding signals.
+  const danger = semRed(s, Number.isFinite(a.band) && a.band >= 3);
+  const num = `<div class="aqi-num autofit${danger}" data-min-font="22">${a.aqi}</div>`;
+  const numInline = `<span class="aqi-num${danger}">${a.aqi}</span>`;
+  const cat = `<div class="aqi-cat${danger}">${escapeHtml(a.label || '')}</div>`;
   const title = `<div class="col-title">${escapeHtml(titleLabel)}</div>`;
   const stale = a.stale ? '<span class="aqi-stale">OLD</span>' : '';
 
@@ -88,7 +91,7 @@ export function render(ctx) {
     return `
       <div class="aqi aqi-bar">
         ${tier !== 'tiny' ? title : ''}
-        <div class="aqi-bar-head">${numInline}<span class="aqi-cat">${escapeHtml(a.label || '')}</span>${stale}</div>
+        <div class="aqi-bar-head">${numInline}<span class="aqi-cat${danger}">${escapeHtml(a.label || '')}</span>${stale}</div>
         ${scaleHtml(a.band, a.bands)}
         ${sub}
       </div>

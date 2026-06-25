@@ -1,4 +1,4 @@
-import { escapeHtml, pickTier, placeholder } from './_shared.js';
+import { escapeHtml, pickTier, placeholder, semRed } from './_shared.js';
 
 // Countdown — days (and optionally hours) until a target date. Pure
 // client compute: no fetcher, no server data. `now` comes from
@@ -80,15 +80,18 @@ export function render(ctx) {
     ? (s.label && s.label.trim() ? `${s.label.trim()} (PASSED)` : 'AGO')
     : (s.label || '').trim();
 
+  // Semantic auto-red: an overdue countdown (target in the past) reads as
+  // an alert — redden the number, unit and the "(PASSED)" label.
+  const od = semRed(s, past);
   const title = `<div class="col-title">${escapeHtml(titleLabel)}</div>`;
   const label = (tier !== 'tiny' && labelText)
-    ? `<div class="cd-label">${escapeHtml(labelText)}</div>` : '';
+    ? `<div class="cd-label${od}">${escapeHtml(labelText)}</div>` : '';
 
   if (variant === 'minimal') {
     return `
       <div class="countdown cd-minimal">
-        <div class="cd-num autofit" data-min-font="22">${days}</div>
-        <div class="cd-unit">${unitWord}</div>
+        <div class="cd-num autofit${od}" data-min-font="22">${days}</div>
+        <div class="cd-unit${od}">${unitWord}</div>
       </div>
     `;
   }
@@ -99,8 +102,8 @@ export function render(ctx) {
       <div class="countdown cd-detail">
         ${tier !== 'tiny' ? title : ''}
         <div class="cd-detail-row">
-          <div class="cd-cell"><span class="cd-num">${days}</span><span class="cd-unit">${unitWord}</span></div>
-          ${showHours ? `<div class="cd-cell"><span class="cd-num">${hours}</span><span class="cd-unit">${hours === 1 ? 'HR' : 'HRS'}</span></div>` : ''}
+          <div class="cd-cell"><span class="cd-num${od}">${days}</span><span class="cd-unit${od}">${unitWord}</span></div>
+          ${showHours ? `<div class="cd-cell"><span class="cd-num${od}">${hours}</span><span class="cd-unit${od}">${hours === 1 ? 'HR' : 'HRS'}</span></div>` : ''}
         </div>
         ${label}
       </div>
@@ -111,8 +114,8 @@ export function render(ctx) {
   return `
     <div class="countdown cd-big">
       ${tier !== 'tiny' ? title : ''}
-      <div class="cd-num autofit" data-min-font="22">${days}</div>
-      <div class="cd-unit">${unitWord}</div>
+      <div class="cd-num autofit${od}" data-min-font="22">${days}</div>
+      <div class="cd-unit${od}">${unitWord}</div>
       ${label}
     </div>
   `;

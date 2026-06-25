@@ -1,4 +1,4 @@
-import { escapeHtml, pickTier, placeholder } from './_shared.js';
+import { escapeHtml, pickTier, placeholder, semRed } from './_shared.js';
 
 // Calendar — three layout variants (contract v2, widgets-refresh W2):
 //   list  — agenda rows (universal; the fallback when a tile is too
@@ -66,8 +66,8 @@ export function render(ctx) {
   // tile the user explicitly picked Month / Strip for still renders
   // that view, just compact. List remains the universal fallback
   // when the tile is too short to fit any grid row at all.
-  if (mode === 'month' && cellW >= 7 && cellH >= 4) return renderMonth(all, titleLabel);
-  if (mode === 'strip' && cellW >= 7 && cellH >= 2) return renderStrip(all, titleLabel, cellH);
+  if (mode === 'month' && cellW >= 7 && cellH >= 4) return renderMonth(all, titleLabel, settings);
+  if (mode === 'strip' && cellW >= 7 && cellH >= 2) return renderStrip(all, titleLabel, cellH, settings);
   return renderList(all, settings, titleLabel, cellW, cellH, density);
 }
 
@@ -144,7 +144,8 @@ function eventDate(ev) {
 
 const DAY_INITIALS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
-function renderStrip(events, titleLabel, cellH) {
+function renderStrip(events, titleLabel, cellH, settings) {
+  const s = settings || {};
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const days = [];
   for (let i = 0; i < 7; i++) {
@@ -172,7 +173,7 @@ function renderStrip(events, titleLabel, cellH) {
     `).join('');
     const more = evs.length > linesPer ? `<div class="strip-more">+${evs.length - linesPer}</div>` : '';
     return `
-      <div class="strip-day ${isToday ? 'strip-today' : ''}">
+      <div class="strip-day ${isToday ? 'strip-today' + semRed(s, true) : ''}">
         <div class="strip-day-head">
           <span class="strip-day-name">${dayName}</span>
           <span class="strip-day-num">${dayNum}</span>
@@ -194,7 +195,8 @@ function renderStrip(events, titleLabel, cellH) {
 
 const MONTH_NAMES = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 
-function renderMonth(events, titleLabel) {
+function renderMonth(events, titleLabel, settings) {
+  const s = settings || {};
   const today = new Date();
   const year = today.getFullYear();
   const month = today.getMonth();
@@ -238,7 +240,7 @@ function renderMonth(events, titleLabel) {
     const firstTitle = evs[0] ? escapeHtml(evs[0].title || '') : '';
     const moreCount = evs.length - 1;
     return `
-      <div class="month-cell ${isToday ? 'month-cell-today' : ''}">
+      <div class="month-cell ${isToday ? 'month-cell-today' + semRed(s, true) : ''}">
         <div class="month-cell-top">
           <span class="month-num">${num}</span>
           ${moreCount > 0 ? `<span class="month-more">+${moreCount}</span>` : ''}
