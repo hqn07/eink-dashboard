@@ -1874,11 +1874,16 @@ img.icon { object-fit: contain; }
 }
 
 /* --- Layer 3: per-widget accent toggle --- */
-/* Tint the tile heading red when the user sets Accent = Red. Widgets can
-   extend by adding their key figure's class to this selector list. */
-.cell-accent-red .col-title,
-.cell-accent-red .cd-num,
+/* Tint the tile heading + hero figure red when Accent = Red. Targets the
+   universal .col-title plus each number-centric widget's hero element so
+   widgets without a heading (weather_hero, onthisday) still respond.
+   Widgets can extend by adding their key class here. */
+.cell-accent-red .col-title,            /* universal heading */
+.cell-accent-red .cd-num,               /* countdown */
 .cell-accent-red .cd-unit,
-.cell-accent-red .aqi-value {
+.cell-accent-red .aqi-num,              /* air quality index */
+.cell-accent-red .temp-num,             /* weather_hero temperature */
+.cell-accent-red .temp-deg,
+.cell-accent-red .otd-feature-year {    /* on-this-day year */
   color: var(--face-red);
 }
