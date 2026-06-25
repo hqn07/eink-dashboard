@@ -1450,7 +1450,7 @@ void drawFailScreen(const char* reason) {
 //   black plane: 0 = black, 1 = white
 //   red   plane: 0 = red,   1 = white   (0xFF everywhere = no red)
 void pushImage(const uint8_t* buf) {
-  const size_t IMG_BYTES = (size_t)SW * SH / 8;
+  // IMG_BYTES is the existing 48000-byte macro (SW * SH / 8).
   display.setRotation(0);
   display.setFullWindow();
   // If the previous render was the fail screen, its big banner leaves
