@@ -732,17 +732,126 @@ function checkDeviceAuth(req, res, next) {
   next();
 }
 
-// Admin auth — fleet DEVICE_TOKEN only, per-device api_keys rejected.
-// /api/setup hands out api_keys to anyone who asks (it's the
-// unauthenticated bootstrap path), so a device key must NOT unlock
-// config writes or the device roster — otherwise enrolling a fake MAC
-// bypasses DEVICE_TOKEN entirely. The control panel and mac-agent
-// always send the fleet token; firmware never calls these endpoints.
-function checkAdminAuth(req, res, next) {
-  if (!DEVICE_TOKEN) return next();
-  const tok = req.query.token || req.headers['x-device-token'];
-  if (tok !== DEVICE_TOKEN) return res.status(401).send('Bad token');
-  next();
+// ---------- Control-panel PIN (human editor auth) ----------
+// Separate from DEVICE_TOKEN: the PIN gates the browser editor, devices
+// and the mac-agent keep using DEVICE_TOKEN. PIN lives hashed in
+// config.auth (scrypt + per-PIN salt); a signed cookie (HMAC over an
+// expiry, keyed by a random sessionSecret) is the unlocked session.
+// First run (no PIN set) leaves the editor open so the user can set one.
+const SESSION_DAYS = 30;
+const SESSION_COOKIE = 'eink_sess';
+
+function authBlock(cfg) { return (cfg && cfg.auth) || {}; }
+function pinConfigured(cfg) { return !!authBlock(cfg).pinHash; }
+
+function hashPin(pin, salt) {
+  return crypto.scryptSync(String(pin), salt, 64).toString('hex');
+}
+
+function verifyPin(cfg, pin) {
+  const a = authBlock(cfg);
+  if (!a.pinHash || !a.pinSalt) return false;
+  const got = hashPin(pin, a.pinSalt);
+  const want = a.pinHash;
+  if (got.length !== want.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want));
+}
+
+// Persist a new PIN (and a sessionSecret if missing) under config.auth.
+async function setPinInConfig(pin) {
+  return withConfigLock(async () => {
+    const cfg = await loadConfig();
+    const salt = crypto.randomBytes(16).toString('hex');
+    cfg.auth = {
+      ...(cfg.auth || {}),
+      pinSalt: salt,
+      pinHash: hashPin(pin, salt),
+      sessionSecret: (cfg.auth && cfg.auth.sessionSecret) || crypto.randomBytes(32).toString('hex')
+    };
+    await saveConfig(cfg);
+    return cfg.auth;
+  });
+}
+
+function parseCookies(req) {
+  const out = {};
+  const raw = req.headers.cookie;
+  if (!raw) return out;
+  for (const part of raw.split(';')) {
+    const i = part.indexOf('=');
+    if (i < 0) continue;
+    out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+  }
+  return out;
+}
+
+// Session token = base64url(exp) + '.' + HMAC-SHA256(secret, exp).
+function makeSession(secret) {
+  const exp = Date.now() + SESSION_DAYS * 86400000;
+  const payload = Buffer.from(String(exp)).toString('base64url');
+  const mac = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
+  return `${payload}.${mac}`;
+}
+
+function sessionValid(req, cfg) {
+  const a = authBlock(cfg);
+  if (!a.sessionSecret) return false;
+  const tok = parseCookies(req)[SESSION_COOKIE];
+  if (!tok || tok.indexOf('.') < 0) return false;
+  const [payload, mac] = tok.split('.');
+  const want = crypto.createHmac('sha256', a.sessionSecret).update(payload).digest('base64url');
+  if (mac.length !== want.length
+    || !crypto.timingSafeEqual(Buffer.from(mac), Buffer.from(want))) return false;
+  const exp = Number(Buffer.from(payload, 'base64url').toString());
+  return Number.isFinite(exp) && exp > Date.now();
+}
+
+function setSessionCookie(res, token) {
+  const attrs = [
+    `${SESSION_COOKIE}=${token}`,
+    'HttpOnly', 'Path=/', 'SameSite=Lax',
+    `Max-Age=${SESSION_DAYS * 86400}`
+  ];
+  if (IS_PROD) attrs.push('Secure');
+  res.append('Set-Cookie', attrs.join('; '));
+}
+
+function clearSessionCookie(res) {
+  res.append('Set-Cookie', `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`);
+}
+
+// Gate the HTML editor surfaces (/control, /control-app/*). When a PIN is
+// configured and the request has no valid session, bounce to the login
+// page. First run (no PIN) passes through so the user can set one.
+async function gateControlHtml(req, res, next) {
+  try {
+    const cfg = await loadConfig();
+    if (!pinConfigured(cfg) || sessionValid(req, cfg)) return next();
+    return res.redirect('/control/login');
+  } catch (err) {
+    return next(err);
+  }
+}
+
+// Admin auth — DEVICE_TOKEN (mac-agent / programmatic) OR a valid PIN
+// session cookie (the browser editor). Per-device api_keys are rejected:
+// /api/setup hands those out unauthenticated, so a device key must NOT
+// unlock config writes or the device roster. When a PIN is configured,
+// the editor authenticates via cookie and sends no token.
+async function checkAdminAuth(req, res, next) {
+  try {
+    const cfg = await loadConfig();
+    if (pinConfigured(cfg) && sessionValid(req, cfg)) return next();
+    if (DEVICE_TOKEN) {
+      const tok = req.query.token || req.headers['x-device-token'];
+      if (tok === DEVICE_TOKEN) return next();
+    }
+    // No PIN and no token requirement → open (local dev / first run).
+    if (!pinConfigured(cfg) && !DEVICE_TOKEN) return next();
+    return res.status(401).send('Unauthorized');
+  } catch (err) {
+    return next(err);
+  }
 }
 
 // Generic error body so we don't leak internals (e.g. file paths,
@@ -780,7 +889,7 @@ app.use('/api/', apiLimiter);
 // React control panel build output (built by Vite via `npm run build`).
 const CONTROL_APP_DIR = path.join(__dirname, 'public', 'control-app');
 const CONTROL_APP_INDEX = path.join(CONTROL_APP_DIR, 'index.html');
-app.use('/control-app', express.static(CONTROL_APP_DIR));
+app.use('/control-app', gateControlHtml, express.static(CONTROL_APP_DIR));
 
 // Gather all widget data needed by the dashboard. Each fetch only runs
 // if at least one instance of that widget is on the active layout (or
@@ -1654,7 +1763,75 @@ app.get('/sleep', checkDeviceAuth, async (req, res) => {
 
 // Control panel
 app.get('/', (req, res) => res.redirect('/control'));
-app.get('/control', (req, res) => {
+
+// ---------- Control-panel PIN auth ----------
+// Login page: editorial-styled, no webfonts/JS deps, posts the PIN and
+// redirects on success. Served unauthenticated (it's the unlock door).
+const LOGIN_PAGE = `<!doctype html><html><head>
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Unlock · E-Ink Dashboard</title>
+<style>body{font-family:Georgia,serif;background:#faf8f3;color:#111;max-width:360px;margin:64px auto;padding:0 16px}
+h1{font-size:24px;font-weight:400;border-bottom:3px solid #111;padding-bottom:10px}
+label{display:block;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#6b6960;margin:22px 0 6px}
+input{width:100%;box-sizing:border-box;padding:11px 12px;font-size:18px;letter-spacing:4px;font-family:inherit;background:#fff;border:1.5px solid #111}
+button{margin-top:18px;padding:12px;font-family:ui-monospace,monospace;font-weight:700;letter-spacing:3px;text-transform:uppercase;border:2px solid #111;background:#111;color:#fff;width:100%;cursor:pointer}
+.err{font-family:ui-monospace,monospace;font-size:12px;color:#b00;margin-top:14px;min-height:16px}</style>
+</head><body><h1>E-Ink Dashboard</h1>
+<form id="f"><label>Enter PIN</label>
+<input id="pin" type="password" inputmode="numeric" autocomplete="current-password" autofocus>
+<button>Unlock</button><div class="err" id="e"></div></form>
+<script>
+const f=document.getElementById('f'),e=document.getElementById('e');
+f.onsubmit=async(ev)=>{ev.preventDefault();e.textContent='';
+const r=await fetch('/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({pin:document.getElementById('pin').value})});
+if(r.ok){location.href='/control';}else{e.textContent='Wrong PIN';document.getElementById('pin').value='';}};
+</script></body></html>`;
+
+app.get('/control/login', async (req, res) => {
+  const cfg = await loadConfig().catch(() => ({}));
+  // Nothing to log into yet → straight to the (open) editor.
+  if (!pinConfigured(cfg)) return res.redirect('/control');
+  if (sessionValid(req, cfg)) return res.redirect('/control');
+  res.type('html').send(LOGIN_PAGE);
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  const cfg = await loadConfig();
+  if (!pinConfigured(cfg)) return res.status(400).json({ error: 'no_pin_set' });
+  const pin = (req.body && req.body.pin) || '';
+  if (!verifyPin(cfg, pin)) return res.status(401).json({ error: 'bad_pin' });
+  setSessionCookie(res, makeSession(authBlock(cfg).sessionSecret));
+  res.json({ ok: true });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  clearSessionCookie(res);
+  res.json({ ok: true });
+});
+
+app.get('/api/auth/status', async (req, res) => {
+  const cfg = await loadConfig().catch(() => ({}));
+  res.json({ configured: pinConfigured(cfg), authed: sessionValid(req, cfg) });
+});
+
+// Set or change the PIN. First run (no PIN yet) is open so the user can
+// set one from the editor. Once set, requires a valid session OR the
+// current PIN — so a logged-in editor (or someone who knows the PIN) can
+// rotate it, but a stranger can't.
+app.post('/api/auth/set-pin', async (req, res) => {
+  const cfg = await loadConfig();
+  const newPin = String((req.body && req.body.pin) || '');
+  if (newPin.length < 4) return res.status(400).json({ error: 'pin_too_short' });
+  if (pinConfigured(cfg)) {
+    const ok = sessionValid(req, cfg)
+      || verifyPin(cfg, (req.body && req.body.currentPin) || '');
+    if (!ok) return res.status(401).json({ error: 'unauthorized' });
+  }
+  const auth = await setPinInConfig(newPin);
+  setSessionCookie(res, makeSession(auth.sessionSecret));
+  res.json({ ok: true });
+});
+
+app.get('/control', gateControlHtml, (req, res) => {
   // Prefer the React app; fall back to the legacy vanilla page when the
   // build artifact hasn't been produced yet (e.g. local dev before
   // `npm run build`).
