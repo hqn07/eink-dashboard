@@ -862,6 +862,19 @@ export default function WidgetForm({ widgetId, values, onChange, item, previewDa
             thumbSize={def.variantThumb || null}
           />
         )}
+        {/* Red accent (3-color B panel). Global control for every widget —
+            tints the tile's heading + key figure red. No-op on BW. */}
+        <SegmentedField
+          label="Accent"
+          value={v.accent || 'none'}
+          defaultValue="none"
+          options={[
+            { value: 'none', label: 'None' },
+            { value: 'red',  label: 'Red' }
+          ]}
+          onChange={(x) => patch({ accent: x })}
+          help="Red shows only on the 3-color panel."
+        />
         <TabbedForm
           widgetId={widgetId}
           MigratedForm={MigratedForm}

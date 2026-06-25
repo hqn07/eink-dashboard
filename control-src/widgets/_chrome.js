@@ -10,6 +10,11 @@ import { FONT_STACKS } from './_shared.js';
 export function cellClasses(s) {
   const out = [];
   if (s && s.theme === 'inverted') out.push('cell-inverted');
+  // Per-widget red accent (3-color B panel). The class drives CSS that
+  // tints this tile's heading + key figure onto the red plane; no-op on
+  // BW panels (greyscales to dark). Part of the layered red model with
+  // the semantic auto-red rules and the .face-red base utilities.
+  if (s && s.accent === 'red') out.push('cell-accent-red');
   return out;
 }
 

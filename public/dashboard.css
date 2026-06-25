@@ -1857,3 +1857,28 @@ img.icon { object-fit: contain; }
   margin: 2px;
 }
 .widget-placeholder.ph-xs .ph-title { font-size: 12px; letter-spacing: 1px; }
+
+/* ============ 3-COLOR RED: SEMANTIC + ACCENT ============
+ * End-of-file so these win the cascade without !important. Three layers:
+ *   1. base .face-red utilities (defined up top) — manual opt-in
+ *   2. semantic auto-red (here) — red applied by meaning, every panel
+ *   3. per-widget accent toggle (.cell-accent-red) — opt-in per tile
+ * All no-op on BW panels (red greyscales to dark). */
+
+/* --- Layer 2: semantic auto-red --- */
+/* Weather alerts always ride the red plane — that's what red is for. */
+.weather-alert {
+  background: var(--face-red);
+  border-color: var(--face-red);
+  color: #fff;
+}
+
+/* --- Layer 3: per-widget accent toggle --- */
+/* Tint the tile heading red when the user sets Accent = Red. Widgets can
+   extend by adding their key figure's class to this selector list. */
+.cell-accent-red .col-title,
+.cell-accent-red .cd-num,
+.cell-accent-red .cd-unit,
+.cell-accent-red .aqi-value {
+  color: var(--face-red);
+}
