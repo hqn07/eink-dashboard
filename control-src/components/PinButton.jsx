@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Lock } from '@phosphor-icons/react';
 
 // Control-panel PIN: set/change/lock from the header. Talks to the
 // server's /api/auth/* endpoints. When no PIN is set the button reads
@@ -43,7 +44,9 @@ export default function PinButton() {
     window.location.href = '/control/login';
   };
 
-  const label = status.configured ? '🔒 Lock' : 'Set PIN';
+  const label = status.configured
+    ? (<><Lock size={14} weight="bold" /> Lock</>)
+    : 'Set PIN';
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
@@ -52,7 +55,7 @@ export default function PinButton() {
         className="app-header-shortcut-btn"
         onClick={() => (status.configured ? lock() : setOpen(o => !o))}
         title={status.configured ? 'Lock the control panel' : 'Set a PIN to protect the editor'}
-        style={{ width: 'auto', padding: '0 10px' }}
+        style={{ width: 'auto', padding: '0 10px', display: 'inline-flex', alignItems: 'center', gap: 5 }}
       >
         {label}
       </button>

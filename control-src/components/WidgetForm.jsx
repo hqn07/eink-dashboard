@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as Switch from '@radix-ui/react-switch';
-import { CaretUp, CaretDown, DotsSixVertical } from '@phosphor-icons/react';
+import { CaretUp, CaretDown, DotsSixVertical, Crosshair } from '@phosphor-icons/react';
 import { geocode, reverseGeocode } from '../api.js';
 import { MIGRATED_FORMS, MIGRATED_DEFS } from '../widgets/_registry.js';
 import {
@@ -492,9 +492,11 @@ function LocationFields({ values, onChange }) {
         className="btn"
         onClick={useMyLocation}
         disabled={locating}
-        style={{ marginBottom: 8, width: '100%' }}
+        style={{ marginBottom: 8, width: '100%', display: 'inline-flex',
+                 alignItems: 'center', justifyContent: 'center', gap: 6 }}
       >
-        {locating ? 'Locating…' : '📍 Use my current location'}
+        <Crosshair size={15} weight="bold" />
+        {locating ? 'Locating…' : 'Use my current location'}
       </button>
       {geoErr && (
         <div className="wsm-field-help" style={{ color: '#b00', marginBottom: 6 }}>{geoErr}</div>

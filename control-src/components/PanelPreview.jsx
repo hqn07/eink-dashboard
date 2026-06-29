@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ArrowClockwise, X } from '@phosphor-icons/react';
 
 // Panel-accurate 3-color preview. The live canvas/preview shows red via
 // CSS, which approximates but doesn't run the server's plane-split
@@ -51,9 +52,11 @@ export default function PanelPreview() {
               <span>3-color panel render</span>
               <span style={{ display: 'flex', gap: 8 }}>
                 <button type="button" onClick={load} className="app-header-shortcut-btn"
-                  style={{ width: 'auto', padding: '0 8px' }} title="Re-render">↻</button>
+                  style={{ width: 'auto', padding: '0 8px', display: 'inline-flex', alignItems: 'center' }}
+                  title="Re-render"><ArrowClockwise size={14} weight="bold" /></button>
                 <button type="button" onClick={() => setOpen(false)} className="app-header-shortcut-btn"
-                  style={{ width: 'auto', padding: '0 8px' }}>✕</button>
+                  style={{ width: 'auto', padding: '0 8px', display: 'inline-flex', alignItems: 'center' }}
+                  title="Close"><X size={14} weight="bold" /></button>
               </span>
             </div>
             <div style={{
