@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
-import { Star, GridFour, ArrowCounterClockwise, Gear, Trash } from '@phosphor-icons/react';
+import { Star, GridFour, ArrowCounterClockwise, Gear, Trash, MagicWand } from '@phosphor-icons/react';
 import { fetchConfig, saveConfig, fetchPreviewData } from './api.js';
 import {
   WIDGET_REGISTRY,
@@ -330,6 +330,9 @@ export default function App() {
   }));
 
   const [showPresetPicker, setShowPresetPicker] = useState(false);
+  // Manual re-launch of the setup wizard (it otherwise only auto-shows on
+  // first run when no location is set).
+  const [showWizard, setShowWizard] = useState(false);
 
   const addScreen = () => {
     if (cfg && cfg.screens && cfg.screens.length >= MAX_SCREENS) {
@@ -617,6 +620,16 @@ export default function App() {
             ?
           </button>
           <MacAgentBadge />
+          <button
+            type="button"
+            className="app-header-shortcut-btn"
+            onClick={() => setShowWizard(true)}
+            title="Run the setup wizard (location + starting layout)"
+            style={{ width: 'auto', padding: '0 10px', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+          >
+            <MagicWand size={14} weight="bold" />
+            Setup
+          </button>
           <PanelPreview />
           <PinButton />
           {cfg && (
@@ -857,9 +870,9 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* First-run setup wizard: shows until user picks a location or
-       *  explicitly skips. cfg.firstRun is set to false once dismissed. */}
-      {cfg.firstRun !== false && !cfg.lat && (
+      {/* Setup wizard: auto-shows on first run (no location set), or on
+       *  demand via the header "Setup" button. */}
+      {((cfg.firstRun !== false && !cfg.lat) || showWizard) && (
         <SetupWizard
           cfg={cfg}
           onPatch={patchCfg}
@@ -870,7 +883,7 @@ export default function App() {
             const layout = inflatePresetLayout(preset);
             updateScreenLayout(defaultId, layout);
           }}
-          onClose={() => {}}
+          onClose={() => setShowWizard(false)}
         />
       )}
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check } from '@phosphor-icons/react';
+import { Check, Crosshair } from '@phosphor-icons/react';
 import { geocode, reverseGeocode, flagEmoji } from '../api.js';
 import { SCREEN_PRESETS, inflatePresetLayout } from '../widgets.js';
 import LiveDashboard from './LiveDashboard.jsx';
@@ -117,8 +117,10 @@ export default function SetupWizard({ cfg, onPatch, onApplyPreset, onClose }) {
           </label>
 
           <div className="btn-row">
-            <button className="btn" onClick={useMyLocation} disabled={busy}>
-              {busy ? '📍 LOCATING...' : '📍 USE MY LOCATION'}
+            <button className="btn" onClick={useMyLocation} disabled={busy}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Crosshair size={14} weight="bold" />
+              {busy ? 'LOCATING...' : 'USE MY LOCATION'}
             </button>
           </div>
 
