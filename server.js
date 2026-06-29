@@ -38,13 +38,21 @@ function loadSsr() {
 
 const PORT = process.env.PORT || 3000;
 const DEVICE_TOKEN = process.env.DEVICE_TOKEN || '';
-const CONFIG_PATH = path.join(__dirname, 'data', 'config.json');
-// Seed config lives outside the `data/` directory so a persistent
-// volume mount (Railway / Fly / etc.) can take over `data/` without
-// hiding the baked-in defaults that shipped with the image.
+// Mutable state (config, battery, devices) lives under DATA_DIR. Set it
+// to a persistent volume mount on hosts with an ephemeral filesystem
+// (Railway/Fly/Render wipe the container FS on every redeploy — without
+// a volume the dashboard resets to defaults each deploy). Defaults to the
+// in-repo ./data for local dev.
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+// A fresh volume mount is an empty directory — make sure it exists before
+// the first config/battery write.
+try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) { /* exists */ }
+const CONFIG_PATH = path.join(DATA_DIR, 'config.json');
+// Seed config lives outside DATA_DIR so a persistent volume taking over
+// that directory can't hide the baked-in defaults shipped with the image.
 const DEFAULT_CONFIG_PATH = path.join(__dirname, 'data-defaults', 'config.default.json');
-const BATTERY_PATH = path.join(__dirname, 'data', 'battery.json');
-const DEVICES_PATH = path.join(__dirname, 'data', 'devices.json');
+const BATTERY_PATH = path.join(DATA_DIR, 'battery.json');
+const DEVICES_PATH = path.join(DATA_DIR, 'devices.json');
 
 // Loud warning when no DEVICE_TOKEN is set in production: the control
 // panel + config API end up wide-open. Local dev intentionally allows
