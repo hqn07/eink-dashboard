@@ -18,7 +18,8 @@ cmd = 'node server.js'
 [variables]
 PUPPETEER_SKIP_DOWNLOAD = '1'
 PUPPETEER_EXECUTABLE_PATH = '/nix/var/nix/profiles/default/bin/chromium'
-# Mutable state (config/battery/devices) lives here. Mount a Railway
-# Volume at /data so it survives redeploys — without the volume this is
-# just an ephemeral dir and the dashboard resets to defaults each deploy.
-DATA_DIR = '/data'
+# Mutable state (config/battery/devices) lives here. Must match the
+# Railway Volume mount path (currently /app/data) so config survives
+# redeploys. This also equals the code default (__dirname/data = /app/data
+# at runtime), but set explicitly so the dependency is documented.
+DATA_DIR = '/app/data'
