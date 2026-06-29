@@ -107,6 +107,16 @@ export function demoCtxForWidget(id, cellW, cellH) {
         settings: {} };
     case 'clock':
       return { ...base, clockNow: DEMO_CLOCK, settings: {} };
+    case 'sparkline': {
+      // A plausible day of battery discharge so the trend reads at a glance.
+      const t0 = Date.now() - 24 * 3600 * 1000;
+      const pcts = [98, 95, 92, 90, 86, 83, 80, 78, 74, 71, 68, 66, 61, 58, 55, 52, 49, 45, 42, 39, 35, 31, 28, 24];
+      return { ...base,
+        batteryHistory: pcts.map((pct, i) => ({
+          pct, v: 3.4 + (pct / 100) * 0.8, at: t0 + i * 3600 * 1000
+        })),
+        settings: {} };
+    }
     case 'aqi':
       return { ...base, aqi: DEMO_AQI, settings: {} };
     case 'onthisday':

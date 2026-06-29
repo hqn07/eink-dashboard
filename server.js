@@ -161,6 +161,39 @@ async function saveBatteryState(state) {
   } catch (err) {
     console.warn('Battery persist failed:', err.message);
   }
+  // Append to the rolling history (for the sparkline widget). Best-effort,
+  // de-duped on `at`, capped — a failure here must never block the save.
+  appendBatteryHistory(state).catch(e => console.warn('battery-history:', e.message));
+}
+
+// ---------- Battery history (rolling, for the sparkline) ----------
+const BATTERY_HISTORY_PATH = path.join(DATA_DIR, 'battery-history.json');
+const BATTERY_HISTORY_MAX = 96;       // ~2 days at a 30-min refresh
+let _batteryHistory = null;           // [{ pct, v, at }] oldest→newest
+
+async function loadBatteryHistory() {
+  if (_batteryHistory !== null) return _batteryHistory;
+  try {
+    const arr = JSON.parse(await fsp.readFile(BATTERY_HISTORY_PATH, 'utf8'));
+    _batteryHistory = Array.isArray(arr) ? arr : [];
+  } catch { _batteryHistory = []; }
+  return _batteryHistory;
+}
+
+let _batHistChain = Promise.resolve();
+function appendBatteryHistory(state) {
+  // Serialize so two near-simultaneous pushes can't clobber the file.
+  _batHistChain = _batHistChain.then(async () => {
+    if (!state || !Number.isFinite(state.pct) || !Number.isFinite(state.at)) return;
+    const hist = await loadBatteryHistory();
+    const last = hist[hist.length - 1];
+    if (last && last.at === state.at) return;   // dedupe identical timestamp
+    hist.push({ pct: state.pct, v: state.v, at: state.at });
+    while (hist.length > BATTERY_HISTORY_MAX) hist.shift();
+    _batteryHistory = hist;
+    await atomicWriteFile(BATTERY_HISTORY_PATH, JSON.stringify(hist));
+  }, () => {});
+  return _batHistChain;
 }
 
 // ---------- Device registry ----------
@@ -1393,8 +1426,9 @@ app.get('/dashboard', checkDeviceAuth, async (req, res) => {
 
     const [shell, ssr] = await Promise.all([loadDashboardHtml(), loadSsr()]);
     const battery = await loadBatteryState();
+    const batteryHistory = await loadBatteryHistory();
     const payload = {
-      cfg, units, screen, layout, battery,
+      cfg, units, screen, layout, battery, batteryHistory,
       ...data,
       generatedAt: new Date().toISOString()
     };
@@ -2098,8 +2132,9 @@ app.get('/api/preview-data', checkAdminAuth, async (req, res) => {
     const layout = resolveScreenLayout(activeScreen);
     const data = await buildWidgetData(cfg, units, layout);
     const battery = await loadBatteryState();
+    const batteryHistory = await loadBatteryHistory();
     res.json({
-      cfg, units, screen, layout, battery,
+      cfg, units, screen, layout, battery, batteryHistory,
       ...data,
       generatedAt: new Date().toISOString()
     });
