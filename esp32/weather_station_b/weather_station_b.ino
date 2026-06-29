@@ -49,7 +49,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.14.1"
+#define FW_VERSION "1.14.2"
 #define FW_BOARD   "b"
 #define OTA_MIN_BATT_PCT 50
 
@@ -1254,6 +1254,9 @@ bool fetchNextAlarm(NextAlarm* out) {
 
 // Big "ALARM" + label + scheduled time text on a full white screen.
 void drawAlarmScreen(const char* label) {
+  // This overwrites the dashboard, so invalidate the cached ETag — else
+  // the next wake could 304 and leave the alarm screen stuck on-panel.
+  g_lastEtag[0] = '\0';
   display.setRotation(0);
   display.setFullWindow();
   display.firstPage();
@@ -1281,6 +1284,7 @@ void drawAlarmScreen(const char* label) {
 // the button to re-provision. No code/password gate — physical button
 // access is the trust boundary, and reflashing is the recovery path.
 void drawSetupScreen() {
+  g_lastEtag[0] = '\0';   // overwrites dashboard — invalidate cached ETag
   display.setRotation(0);
   display.setFullWindow();
   display.firstPage();
@@ -1364,6 +1368,8 @@ const char* httpHint(int code) {
 
 void drawFailScreen(const char* reason) {
   g_lastRenderWasFail = true;
+  g_lastEtag[0] = '\0';   // overwrites dashboard — invalidate cached ETag
+                          // so recovery can't be skipped by a 304
   display.setRotation(0);
   display.setFullWindow();
 
