@@ -24,6 +24,7 @@ import ScreenPresetPicker from './components/ScreenPresetPicker.jsx';
 import ScreenPanel from './components/ScreenPanel.jsx';
 import MacAgentBadge from './components/MacAgentBadge.jsx';
 import PinButton from './components/PinButton.jsx';
+import PanelPreview from './components/PanelPreview.jsx';
 import ScheduleTimeline from './components/ScheduleTimeline.jsx';
 import SetupWizard from './components/SetupWizard.jsx';
 import ToolsButton from './components/ToolsButton.jsx';
@@ -616,6 +617,7 @@ export default function App() {
             ?
           </button>
           <MacAgentBadge />
+          <PanelPreview />
           <PinButton />
           {cfg && (
             <ToolsButton

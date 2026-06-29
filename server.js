@@ -421,6 +421,28 @@ async function rgbaToPlanes(rgbaPng) {
   return Buffer.concat([packMonoBin(blackRaw, info), packMonoBin(redRaw, info)]);
 }
 
+// Composite the two planes into a true-color PNG for a panel-accurate
+// editor preview: red plane wins (vermilion), else black plane (black),
+// else white. This is exactly what the B panel paints, so the preview
+// reflects the classifier — not the editor's CSS approximation.
+async function planesToPng(bin3c) {
+  const PLANE = (SCREEN_W * SCREEN_H) / 8;
+  const black = bin3c.subarray(0, PLANE);
+  const red = bin3c.subarray(PLANE, 2 * PLANE);
+  const rgb = Buffer.alloc(SCREEN_W * SCREEN_H * 3);
+  for (let p = 0; p < SCREEN_W * SCREEN_H; p++) {
+    const byte = p >> 3, bit = 7 - (p & 7);
+    const isBlack = !((black[byte] >> bit) & 1);
+    const isRed = !((red[byte] >> bit) & 1);
+    const o = p * 3;
+    if (isRed) { rgb[o] = 0xd3; rgb[o + 1] = 0x2f; rgb[o + 2] = 0x2f; }
+    else if (isBlack) { rgb[o] = rgb[o + 1] = rgb[o + 2] = 0; }
+    else { rgb[o] = rgb[o + 1] = rgb[o + 2] = 255; }
+  }
+  return sharp(rgb, { raw: { width: SCREEN_W, height: SCREEN_H, channels: 3 } })
+    .png().toBuffer();
+}
+
 // ---------- Image cache ----------
 
 const imageCache = new Map(); // key: "units|screen" -> { at, png, bin }
@@ -1698,6 +1720,24 @@ app.get('/display.png', checkDeviceAuth, async (req, res) => {
     res.send(png);
   } catch (err) {
     console.error('PNG error:', err);
+    res.status(500).send(safeError(err).error);
+  }
+});
+
+// Panel-accurate 3-color preview — composites the actual black+red planes
+// (what the B panel draws) into a true-color PNG. checkAdminAuth: it's a
+// human/editor preview, not a device endpoint.
+app.get('/display-3c.png', checkAdminAuth, async (req, res) => {
+  try {
+    const cfg = await loadConfig();
+    const variant = resolveVariant(req, cfg);
+    const { bin } = await (await getCurrentImage(variant)).get3c();
+    const png = await planesToPng(bin);
+    res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'no-store');
+    res.send(png);
+  } catch (err) {
+    console.error('3C PNG error:', err);
     res.status(500).send(safeError(err).error);
   }
 });
