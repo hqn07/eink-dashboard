@@ -1,0 +1,26 @@
+name: ci
+
+# Fast, deterministic guards — no browser, no machine-specific baselines.
+# Catches the regressions that actually keep recurring: CSS edited into the
+# generated dashboard.css instead of the partials, a widget missing from
+# the editor palette, and sub-threshold colors / tiny type in the face CSS.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - name: dashboard.css in sync with face-css partials
+        run: npm run check:css
+      - name: widgets wired (render + form + registry + palette)
+        run: npm run check:widgets
+      - name: e-ink physics lint (1-bit colors, type/stroke floors)
+        run: npm run lint:eink
