@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as Switch from '@radix-ui/react-switch';
 import { CaretUp, CaretDown, DotsSixVertical } from '@phosphor-icons/react';
-import { geocode } from '../api.js';
+import { geocode, reverseGeocode } from '../api.js';
 import { MIGRATED_FORMS, MIGRATED_DEFS } from '../widgets/_registry.js';
 import {
   renderWidget, typographyCss, cellClasses, scaleWrap
@@ -454,11 +454,51 @@ function LocationAutocomplete({ value, onPick }) {
 // still possible. Lat/lon take precedence over city at fetch time.
 function LocationFields({ values, onChange }) {
   const v = values || {};
+  const [locating, setLocating] = useState(false);
+  const [geoErr, setGeoErr] = useState('');
+
+  // Browser geolocation → precise lat/lon, plus a reverse-geocode to fill
+  // the city label with the closest named place. HTTPS-only (works on the
+  // deployed site + localhost).
+  const useMyLocation = () => {
+    setGeoErr('');
+    if (!navigator.geolocation) { setGeoErr('Geolocation not supported here.'); return; }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const lat = Number(pos.coords.latitude.toFixed(4));
+      const lon = Number(pos.coords.longitude.toFixed(4));
+      let city = v.city;
+      try {
+        const r = await reverseGeocode(lat, lon);
+        if (r && r.name) {
+          city = `${r.name}${r.state ? ', ' + r.state : ''}${r.country ? ', ' + r.country : ''}`;
+        }
+      } catch { /* keep coords even if the reverse lookup fails */ }
+      onChange({ ...v, lat, lon, city });
+      setLocating(false);
+    }, (err) => {
+      setGeoErr(err && err.code === 1 ? 'Location permission denied.' : 'Could not get your location.');
+      setLocating(false);
+    }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 });
+  };
+
   return (
     <>
       <div className="wsm-field-help" style={{ marginBottom: 6 }}>
         Pick from search to set lat/lon. Manual lat/lon overrides city. Leave blank to inherit global.
       </div>
+      <button
+        type="button"
+        className="btn"
+        onClick={useMyLocation}
+        disabled={locating}
+        style={{ marginBottom: 8, width: '100%' }}
+      >
+        {locating ? 'Locating…' : '📍 Use my current location'}
+      </button>
+      {geoErr && (
+        <div className="wsm-field-help" style={{ color: '#b00', marginBottom: 6 }}>{geoErr}</div>
+      )}
       <LocationAutocomplete
         value={v.city}
         onPick={(r) => onChange({ ...v, city: `${r.name}${r.state ? ', ' + r.state : ''}${r.country ? ', ' + r.country : ''}`, lat: r.lat, lon: r.lon })}
