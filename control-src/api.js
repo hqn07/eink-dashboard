@@ -161,6 +161,23 @@ export async function reverseGeocode(lat, lon) {
   return r.json();
 }
 
+// Control-panel PIN. status → { configured, authed }. setPin sets/changes
+// the PIN (first run is open; later requires the active session, which the
+// editor has). Returns true on success.
+export async function authStatus() {
+  const r = await authFetch('/api/auth/status');
+  if (!r.ok) return { configured: false, authed: false };
+  return r.json();
+}
+export async function setPin(pin) {
+  const r = await authFetch('/api/auth/set-pin', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ pin })
+  });
+  return r.ok;
+}
+
 export async function weatherCheck({ city, lat, lon, units }) {
   const params = new URLSearchParams();
   if (Number.isFinite(lat) && Number.isFinite(lon)) {

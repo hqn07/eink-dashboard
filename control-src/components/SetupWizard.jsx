@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Crosshair } from '@phosphor-icons/react';
-import { geocode, reverseGeocode, flagEmoji } from '../api.js';
+import { Check, Crosshair, Lock } from '@phosphor-icons/react';
+import { geocode, reverseGeocode, flagEmoji, setPin as apiSetPin } from '../api.js';
 import { SCREEN_PRESETS, inflatePresetLayout } from '../widgets.js';
 import LiveDashboard from './LiveDashboard.jsx';
 
@@ -33,10 +33,12 @@ function StepIndicator({ currentStep, steps }) {
   );
 }
 
-// First-time setup. Two steps:
+// First-time setup. Three steps:
 //   1. Location + timezone
 //   2. Pick a starting screen preset
+//   3. Optional control-panel PIN
 // Sets `cfg.firstRun = false` when finished so it doesn't reappear.
+const WIZARD_STEPS = ['Location', 'Layout', 'Security'];
 export default function SetupWizard({ cfg, onPatch, onApplyPreset, onClose }) {
   const [step, setStep] = useState('location');
   const [search, setSearch] = useState('');
@@ -47,6 +49,9 @@ export default function SetupWizard({ cfg, onPatch, onApplyPreset, onClose }) {
     catch { return cfg.timezone || 'UTC'; }
   });
   const [busy, setBusy] = useState(false);
+  const [pin, setPin] = useState('');
+  const [pinErr, setPinErr] = useState('');
+  const [pinBusy, setPinBusy] = useState(false);
 
   useEffect(() => {
     let id = null;
@@ -85,8 +90,13 @@ export default function SetupWizard({ cfg, onPatch, onApplyPreset, onClose }) {
     setStep('preset');
   };
 
-  const finish = (preset) => {
+  // Layout chosen → apply it, then move on to the optional PIN step.
+  const choosePreset = (preset) => {
     if (preset && onApplyPreset) onApplyPreset(preset);
+    setStep('pin');
+  };
+
+  const finish = () => {
     onPatch({ firstRun: false });
     onClose();
   };
@@ -96,6 +106,16 @@ export default function SetupWizard({ cfg, onPatch, onApplyPreset, onClose }) {
     onClose();
   };
 
+  const savePin = async () => {
+    setPinErr('');
+    if (!/^\d{4,}$/.test(pin)) { setPinErr('PIN must be at least 4 digits.'); return; }
+    setPinBusy(true);
+    const ok = await apiSetPin(pin);
+    setPinBusy(false);
+    if (ok) finish();
+    else setPinErr('Could not set PIN.');
+  };
+
   // ---- Location step ----
   if (step === 'location') {
     return (
@@ -103,7 +123,7 @@ export default function SetupWizard({ cfg, onPatch, onApplyPreset, onClose }) {
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
         <motion.div className="wizard-modal"
           initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}>
-          <StepIndicator currentStep={1} steps={['Location', 'Layout']} />
+          <StepIndicator currentStep={1} steps={WIZARD_STEPS} />
           <header>
             <h2>Welcome — let's pick your spot</h2>
             <div className="terminal-line">&gt; SET YOUR LOCATION AND TIMEZONE TO GET STARTED</div>
@@ -171,26 +191,70 @@ export default function SetupWizard({ cfg, onPatch, onApplyPreset, onClose }) {
   }
 
   // ---- Preset step ----
+  if (step === 'preset') {
+    return (
+      <motion.div className="wizard-overlay"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+        <motion.div className="wizard-modal preset-modal"
+          initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}>
+          <StepIndicator currentStep={2} steps={WIZARD_STEPS} />
+          <header>
+            <h2>Pick a starting layout</h2>
+            <div className="terminal-line">&gt; START FROM A PRESET · YOU CAN EDIT EVERYTHING AFTER</div>
+          </header>
+
+          <div className="preset-grid">
+            {SCREEN_PRESETS.map(p => (
+              <PresetCard key={p.id} preset={p} onPick={() => choosePreset(p)} />
+            ))}
+          </div>
+
+          <div className="btn-row" style={{ justifyContent: 'space-between', marginTop: 20 }}>
+            <button className="btn btn-ghost" onClick={() => setStep('location')}>← BACK</button>
+            <button className="btn btn-ghost" onClick={() => setStep('pin')}>SKIP — KEEP CURRENT</button>
+          </div>
+        </motion.div>
+      </motion.div>
+    );
+  }
+
+  // ---- PIN step (optional) ----
   return (
     <motion.div className="wizard-overlay"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      <motion.div className="wizard-modal preset-modal"
+      <motion.div className="wizard-modal"
         initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}>
-        <StepIndicator currentStep={2} steps={['Location', 'Layout']} />
+        <StepIndicator currentStep={3} steps={WIZARD_STEPS} />
         <header>
-          <h2>Pick a starting layout</h2>
-          <div className="terminal-line">&gt; START FROM A PRESET · YOU CAN EDIT EVERYTHING AFTER</div>
+          <h2>Protect the control panel</h2>
+          <div className="terminal-line">&gt; OPTIONAL · SET A PIN TO LOCK THE EDITOR</div>
         </header>
 
-        <div className="preset-grid">
-          {SCREEN_PRESETS.map(p => (
-            <PresetCard key={p.id} preset={p} onPick={() => finish(p)} />
-          ))}
-        </div>
+        <label className="field">
+          <span className="label">Control-panel PIN (4+ digits)</span>
+          <input
+            type="password" inputMode="numeric" autoFocus value={pin}
+            placeholder="••••"
+            onChange={e => setPin(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') savePin(); }}
+            style={{ letterSpacing: 4 }}
+          />
+          <div className="terminal-line" style={{ fontSize: 10, marginTop: 4 }}>
+            &gt; ANYONE WITH THE URL CAN EDIT UNTIL YOU SET ONE · CHANGE IT LATER IN THE HEADER
+          </div>
+        </label>
+        {pinErr && <div className="loc-badge" style={{ color: '#b00', marginTop: 10 }}>{pinErr}</div>}
 
         <div className="btn-row" style={{ justifyContent: 'space-between', marginTop: 20 }}>
-          <button className="btn btn-ghost" onClick={() => setStep('location')}>← BACK</button>
-          <button className="btn btn-ghost" onClick={skip}>SKIP — CONFIGURE LATER</button>
+          <button className="btn btn-ghost" onClick={() => setStep('preset')}>← BACK</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-ghost" onClick={skip}>SKIP — NO PIN</button>
+            <button className="btn btn-primary" onClick={savePin} disabled={pinBusy}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Lock size={14} weight="bold" />
+              {pinBusy ? 'SAVING...' : 'SET PIN & FINISH'}
+            </button>
+          </div>
         </div>
       </motion.div>
     </motion.div>
