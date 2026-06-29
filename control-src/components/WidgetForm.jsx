@@ -28,6 +28,14 @@ const PresetContext = React.createContext({ widgetId: null, item: null, previewD
 // Single-tab list = preferred default when the persisted active tab is
 // missing or invalid. First match wins → Data is the most common
 // landing tab; Content is the fallback for widgets without a Data tab.
+// Widgets whose renderer calls semRed() (auto-reds by data threshold/state)
+// — only these show the "Semantic red" toggle. Keep in sync with the
+// widgets that import semRed from _shared.js.
+const SEMANTIC_RED_WIDGETS = new Set([
+  'aqi', 'eink_battery', 'mac_battery', 'countdown',
+  'calendar', 'weather_forecast', 'weather_hero', 'sparkline'
+]);
+
 const DEFAULT_OPEN_SECTIONS = ['Data', 'Content', 'Layout', 'Style'];
 const SECTION_STORAGE_PREFIX = 'wsm-accordion-open:';
 
@@ -919,13 +927,15 @@ export default function WidgetForm({ widgetId, values, onChange, item, previewDa
           onChange={(x) => patch({ accent: x })}
           help="Manual red tint. Shows only on the 3-color panel."
         />
-        <ToggleField
-          label="Semantic red"
-          value={v.semanticRed !== false}
-          defaultValue={true}
-          onChange={(x) => patch({ semanticRed: x })}
-          help="Auto-red for alerts/thresholds (AQI, battery, overdue, today, rain)."
-        />
+        {SEMANTIC_RED_WIDGETS.has(widgetId) && (
+          <ToggleField
+            label="Semantic red"
+            value={v.semanticRed !== false}
+            defaultValue={true}
+            onChange={(x) => patch({ semanticRed: x })}
+            help="Auto-red for alerts/thresholds (AQI, battery, overdue, today, rain)."
+          />
+        )}
         <TabbedForm
           widgetId={widgetId}
           MigratedForm={MigratedForm}

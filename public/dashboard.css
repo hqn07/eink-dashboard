@@ -1899,6 +1899,10 @@ img.icon { object-fit: contain; }
 }
 /* now-playing progress fill is a background, not text */
 .cell-accent-red .mac-np-bar-fill { background: var(--face-red); }
+/* sparkline value (text) + the trend line (stroke) */
+.cell-accent-red .spark-value { color: var(--face-red); }
+.cell-accent-red .spark-line { stroke: var(--face-red); }
+.cell-accent-red .spark-dot { fill: var(--face-red); }
 
 /* ============ SPARKLINE ============ */
 .spark {
