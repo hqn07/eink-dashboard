@@ -2482,6 +2482,88 @@ app.get('/api/devices', checkAdminAuth, (req, res) => {
 // Health
 app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
 
+// ---------- Ops status page ----------
+// Human-readable "is it working?" dashboard. checkAdminAuth (PIN/token):
+// it exposes device + battery telemetry. Auto-refreshes every 60s.
+const _serverStartedAt = Date.now();
+function relAge(ms) {
+  if (!Number.isFinite(ms)) return 'never';
+  const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.round(s / 60)}m ago`;
+  if (s < 86400) return `${Math.round(s / 3600)}h ago`;
+  return `${Math.round(s / 86400)}d ago`;
+}
+function dur(ms) {
+  const s = Math.round(ms / 1000);
+  if (s < 3600) return `${Math.round(s / 60)}m`;
+  if (s < 86400) return `${(s / 3600).toFixed(1)}h`;
+  return `${(s / 86400).toFixed(1)}d`;
+}
+app.get('/status', checkAdminAuth, async (req, res) => {
+  try {
+    const cfg = await loadConfig();
+    const battery = await loadBatteryState();
+    const history = await loadBatteryHistory();
+    const devices = Object.values(loadDevicesSync());
+    // Most recent render across cached variants.
+    let lastRender = 0;
+    for (const e of imageCache.values()) if (e.at > lastRender) lastRender = e.at;
+
+    const esc = (s) => String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const ok = (b) => b ? '<span class="ok">OK</span>' : '<span class="bad">—</span>';
+
+    const rows = [];
+    rows.push(['Server', `${ok(true)} up ${dur(Date.now() - _serverStartedAt)} · refresh every ${resolveRefreshMinutes(cfg)} min`]);
+    rows.push(['Last render', lastRender ? relAge(lastRender) : 'not yet']);
+    rows.push(['Weather key', ok(!!process.env.OPENWEATHER_API_KEY)]);
+    rows.push(['Device token', ok(!!DEVICE_TOKEN)]);
+    rows.push(['Control PIN', pinConfigured(cfg) ? '<span class="ok">SET</span>' : '<span class="warn">not set</span>']);
+    if (battery) {
+      rows.push(['Battery', `${battery.pct}% · ${Number(battery.v).toFixed(2)} V · ${relAge(battery.at)}`]);
+    } else {
+      rows.push(['Battery', '<span class="warn">no reading yet</span>']);
+    }
+    rows.push(['Battery history', `${history.length} point${history.length === 1 ? '' : 's'}`]);
+
+    const devRows = devices.length ? devices.map(d =>
+      `<tr><td>${esc(d.friendly_id || d.mac)}</td><td>${esc(d.board || '?')}</td>`
+      + `<td>${esc(d.fw_version || '?')}</td><td>${relAge(d.last_seen_at)}</td></tr>`
+    ).join('') : '<tr><td colspan="4" class="muted">No devices enrolled yet.</td></tr>';
+
+    res.type('html').send(`<!doctype html><html><head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="refresh" content="60"><title>Status · E-Ink Dashboard</title>
+<style>body{font-family:Georgia,serif;background:#faf8f3;color:#111;max-width:560px;margin:32px auto;padding:0 16px}
+h1{font-size:26px;font-weight:400;border-bottom:3px solid #111;padding-bottom:10px}
+h2{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#6b6960;margin:26px 0 8px}
+table{width:100%;border-collapse:collapse;font-family:ui-monospace,monospace;font-size:13px}
+td{padding:7px 0;border-bottom:1px solid #e2ded3;vertical-align:top}
+tr td:first-child{color:#6b6960;width:42%}
+.ok{color:#1a7f37;font-weight:700}.bad{color:#b00}.warn{color:#b06a00}.muted{color:#999}
+thead td{font-weight:700;color:#111;text-transform:uppercase;font-size:11px;letter-spacing:1px}
+a{color:#111}</style></head><body>
+<h1>E-Ink Dashboard · Status</h1>
+<h2>System</h2>
+<table>${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>
+<h2>Devices</h2>
+<table><thead><tr><td>ID</td><td>Board</td><td>Firmware</td><td>Last seen</td></tr></thead>
+<tbody>${devRows}</tbody></table>
+<h2>Links</h2>
+<table>
+<tr><td>Control panel</td><td><a href="/control">/control</a></td></tr>
+<tr><td>Live render</td><td><a href="/display.png">/display.png</a></td></tr>
+<tr><td>Health JSON</td><td><a href="/health">/health</a></td></tr>
+</table>
+<p style="font-family:ui-monospace,monospace;font-size:10px;color:#999;margin-top:24px">Auto-refreshes every 60s.</p>
+</body></html>`);
+  } catch (err) {
+    console.error('status error:', err);
+    res.status(500).send(safeError(err).error);
+  }
+});
+
 // JSON dump of every data-widget's last fetch outcome.
 app.get('/api/health/widgets', (req, res) => {
   res.json({ now: Date.now(), widgets: widgetStatus.snapshot() });
