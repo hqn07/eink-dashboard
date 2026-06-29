@@ -1,0 +1,56 @@
+/* ============ 3-COLOR (B/W/R) RED ============
+ * The B panel (GDEY075Z08) adds a red plane. The server's plane-split
+ * classifier keys on the strong vermilion below; anything that resolves
+ * to color:var(--face-red) lands on the red plane. On a BW panel the
+ * same vermilion greyscales to luma ~96 → solid black at threshold(128),
+ * so red elements stay readable (never disappear). Three layers:
+ *   1. base .face-red utilities — manual opt-in
+ *   2. semantic auto-red — applied by meaning (renderers add .face-red)
+ *   3. per-widget accent toggle (.cell-accent-red) — opt-in per tile
+ */
+:root {
+  --face-red: #d32f2f;       /* eink-lint-allow: 3-color red, →black on BW */
+  --face-red-rule: #d32f2f;  /* eink-lint-allow */
+}
+
+/* --- Layer 1: base utilities (manual opt-in) --- */
+.face-red    { color: var(--face-red) !important; }
+.face-red-bd { border-color: var(--face-red) !important; }
+.face-red-bg { background: var(--face-red) !important; color: #fff !important; }
+
+/* --- Layer 2: semantic auto-red --- */
+/* Weather alerts always ride the red plane — that's what red is for.
+   (Renderers add .face-red to other elements by meaning: unhealthy AQI,
+   low battery, overdue countdown, today's date, heavy rain.) */
+.weather-alert {
+  background: var(--face-red);
+  border-color: var(--face-red);
+  color: #fff;
+}
+
+/* --- Layer 3: per-widget accent toggle --- */
+/* Tint the tile heading + hero figure red when Accent = Red. Targets the
+   universal .col-title plus each number-centric widget's hero element so
+   widgets without a heading (weather_hero, onthisday) still respond. */
+.cell-accent-red .col-title,            /* universal heading */
+.cell-accent-red .widget-title,         /* calendar heading */
+.cell-accent-red .cal-section-title,
+.cell-accent-red .cd-num,               /* countdown */
+.cell-accent-red .cd-unit,
+.cell-accent-red .aqi-num,              /* air quality index */
+.cell-accent-red .temp-num,             /* weather_hero temperature */
+.cell-accent-red .temp-deg,
+.cell-accent-red .otd-feature-year,     /* on-this-day year */
+.cell-accent-red .clock-time,           /* clock */
+.cell-accent-red .wclock-time,          /* world clock */
+.cell-accent-red .quote-glyph,          /* quote mark (not the body) */
+.cell-accent-red .tb-text,              /* text bar headline */
+.cell-accent-red .msg-text,
+.cell-accent-red .moon-name,            /* moon phase */
+.cell-accent-red .eink-batt-pct,        /* battery percents */
+.cell-accent-red .mac-batt-pct,
+.cell-accent-red .mac-np-title {        /* now-playing track title */
+  color: var(--face-red);
+}
+/* now-playing progress fill is a background, not text */
+.cell-accent-red .mac-np-bar-fill { background: var(--face-red); }

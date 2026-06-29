@@ -20,11 +20,6 @@
 :root {
   --face-ink: #000;
   --face-paper: #fff;
-  /* 3-color (B/W/R) panel accent. The server's plane-split classifier
-     keys on this strong vermilion; anything color:var(--face-red) lands
-     on the red plane. No-op on BW panels (greyscales to dark). */
-  --face-red: #d32f2f;
-  --face-red-rule: #d32f2f;
   --face-serif: 'DM Serif Display', Georgia, serif;
   --face-sans: 'Oswald', 'Arial Narrow', sans-serif;
   --face-mono: 'JetBrains Mono', monospace;
@@ -616,56 +611,6 @@ html, body {
 }
 .cd-cell { display: flex; flex-direction: column; align-items: flex-start; }
 .cd-detail .cd-num { font-size: 48px; }
-
-/* ============ QR ============ */
-.qr {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--face-gap-4);
-  height: 100%;
-  width: 100%;
-}
-.qr .col-title { align-self: flex-start; }
-.qr-code {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-}
-.qr-svg {
-  height: 100%;
-  width: auto;
-  max-width: 100%;
-  max-height: 100%;
-  aspect-ratio: 1 / 1;
-  image-rendering: pixelated;
-}
-.qr-caption {
-  font-family: var(--face-mono);
-  font-weight: 500;
-  font-size: 12px;
-  letter-spacing: 1px;
-  color: #000;
-  text-align: center;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ============ 3-COLOR RED ACCENT ============
- * Base layer of the layered red model: any element can opt into red via
- * .face-red (text/glyph), .face-red-bd (border/rule), .face-red-bg (fill).
- * On the B panel these land on the red plane; on BW they greyscale to
- * dark and read as black. Semantic auto-red rules and the per-widget
- * accent toggle build on top of these. */
-.face-red    { color: var(--face-red) !important; }
-.face-red-bd { border-color: var(--face-red) !important; }
-.face-red-bg { background: var(--face-red) !important; color: #fff !important; }
 
 /* ============ ITEM PRIMITIVE ============
  * TRMNL-inspired list-item shape. A standardized three-slot row used
@@ -1858,15 +1803,70 @@ img.icon { object-fit: contain; }
 }
 .widget-placeholder.ph-xs .ph-title { font-size: 12px; letter-spacing: 1px; }
 
-/* ============ 3-COLOR RED: SEMANTIC + ACCENT ============
- * End-of-file so these win the cascade without !important. Three layers:
- *   1. base .face-red utilities (defined up top) — manual opt-in
- *   2. semantic auto-red (here) — red applied by meaning, every panel
+/* ============ QR ============ */
+.qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--face-gap-4);
+  height: 100%;
+  width: 100%;
+}
+.qr .col-title { align-self: flex-start; }
+.qr-code {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+.qr-svg {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  max-height: 100%;
+  aspect-ratio: 1 / 1;
+  image-rendering: pixelated;
+}
+.qr-caption {
+  font-family: var(--face-mono);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #000;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ============ 3-COLOR (B/W/R) RED ============
+ * The B panel (GDEY075Z08) adds a red plane. The server's plane-split
+ * classifier keys on the strong vermilion below; anything that resolves
+ * to color:var(--face-red) lands on the red plane. On a BW panel the
+ * same vermilion greyscales to luma ~96 → solid black at threshold(128),
+ * so red elements stay readable (never disappear). Three layers:
+ *   1. base .face-red utilities — manual opt-in
+ *   2. semantic auto-red — applied by meaning (renderers add .face-red)
  *   3. per-widget accent toggle (.cell-accent-red) — opt-in per tile
- * All no-op on BW panels (red greyscales to dark). */
+ */
+:root {
+  --face-red: #d32f2f;       /* eink-lint-allow: 3-color red, →black on BW */
+  --face-red-rule: #d32f2f;  /* eink-lint-allow */
+}
+
+/* --- Layer 1: base utilities (manual opt-in) --- */
+.face-red    { color: var(--face-red) !important; }
+.face-red-bd { border-color: var(--face-red) !important; }
+.face-red-bg { background: var(--face-red) !important; color: #fff !important; }
 
 /* --- Layer 2: semantic auto-red --- */
-/* Weather alerts always ride the red plane — that's what red is for. */
+/* Weather alerts always ride the red plane — that's what red is for.
+   (Renderers add .face-red to other elements by meaning: unhealthy AQI,
+   low battery, overdue countdown, today's date, heavy rain.) */
 .weather-alert {
   background: var(--face-red);
   border-color: var(--face-red);
@@ -1876,8 +1876,7 @@ img.icon { object-fit: contain; }
 /* --- Layer 3: per-widget accent toggle --- */
 /* Tint the tile heading + hero figure red when Accent = Red. Targets the
    universal .col-title plus each number-centric widget's hero element so
-   widgets without a heading (weather_hero, onthisday) still respond.
-   Widgets can extend by adding their key class here. */
+   widgets without a heading (weather_hero, onthisday) still respond. */
 .cell-accent-red .col-title,            /* universal heading */
 .cell-accent-red .widget-title,         /* calendar heading */
 .cell-accent-red .cal-section-title,
