@@ -49,7 +49,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.14.0"
+#define FW_VERSION "1.14.1"
 #define FW_BOARD   "b"
 #define OTA_MIN_BATT_PCT 50
 
@@ -172,6 +172,14 @@ int         g_lastHttpCode = 0;
 // "Last good: Nm ago" so the user knows whether this is a fresh
 // outage or a long-running one.
 RTC_DATA_ATTR time_t g_lastGoodAt = 0;
+
+// ETag of the last image we actually drew. Sent back as If-None-Match so
+// the server replies 304 when nothing changed and we skip the slow
+// ~15-26 s color refresh entirely. SHA-1 hex in quotes = 42 chars.
+RTC_DATA_ATTR char g_lastEtag[48] = {0};
+// Set by downloadImage when the server answered 304 (image unchanged).
+// Plain global — meaningful only within the current cycle.
+bool g_imageUnchanged = false;
 
 // Survives deep sleep. Set when drawFailScreen paints the connection
 // error (lots of solid black in the header banner), checked on the
@@ -860,6 +868,7 @@ bool enrollDevice() {
 // one heap buffer. black = buf, red = buf + IMG_BYTES. Returns nullptr on
 // failure (caller frees on success).
 uint8_t* downloadImage() {
+  g_imageUnchanged = false;
   String url = addToken(String(activeServerBase) + "/display-3c.bin");
   Serial.printf("GET %s\n", url.c_str());
 
@@ -875,12 +884,27 @@ uint8_t* downloadImage() {
   http.addHeader("RSSI",       String(WiFi.RSSI()));
   http.addHeader("FW-Version", FW_VERSION);
   http.addHeader("FW-Board",   FW_BOARD);
-  // Ask HTTPClient to retain the one response header we care about.
-  // X-Refresh-Rate is set by the server on every /display.bin reply.
-  const char* keepHeaders[] = { "X-Refresh-Rate" };
-  http.collectHeaders(keepHeaders, 1);
+  // Conditional GET — if the last image's ETag still matches, the server
+  // returns 304 and we skip the slow color refresh.
+  if (g_lastEtag[0]) http.addHeader("If-None-Match", g_lastEtag);
+  // Retain the response headers we care about: refresh hint + ETag.
+  const char* keepHeaders[] = { "X-Refresh-Rate", "ETag" };
+  http.collectHeaders(keepHeaders, 2);
 
   int code = http.GET();
+  // 304 Not Modified — image identical to what's already on the panel.
+  // Skip the redraw entirely; caller leaves the screen as-is and sleeps.
+  if (code == 304) {
+    Serial.println("304 Not Modified — image unchanged, skipping refresh");
+    g_imageUnchanged = true;
+    // Still honour an updated refresh-rate hint if present.
+    if (http.hasHeader("X-Refresh-Rate")) {
+      int rr = http.header("X-Refresh-Rate").toInt();
+      if (rr > 0 && rr <= 1440) g_serverRefreshMin = rr;
+    }
+    http.end();
+    return nullptr;
+  }
   if (code != 200) {
     Serial.printf("HTTP %d\n", code);
     g_lastHttpCode = code;
@@ -932,6 +956,9 @@ uint8_t* downloadImage() {
       delay(5);
     }
   }
+  // Grab the ETag before tearing down the client — stored only once the
+  // read is confirmed complete so a partial read can't poison the cache.
+  String etag = http.hasHeader("ETag") ? http.header("ETag") : "";
   http.end();
 
   if (read != WANT) {
@@ -944,6 +971,12 @@ uint8_t* downloadImage() {
                                     : HTTPC_ERROR_CONNECTION_LOST;
     free(buf);
     return nullptr;
+  }
+  // Remember the ETag of the image we're about to draw so the next wake
+  // can send If-None-Match and skip an unchanged refresh.
+  if (etag.length() && etag.length() < sizeof(g_lastEtag)) {
+    strncpy(g_lastEtag, etag.c_str(), sizeof(g_lastEtag) - 1);
+    g_lastEtag[sizeof(g_lastEtag) - 1] = '\0';
   }
   Serial.printf("Got %d bytes\n", read);
   return buf;
@@ -1562,10 +1595,15 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
     }
   }
 
+  // A manual button press means "refresh now" — drop the cached ETag so
+  // the server can't 304 us, forcing a real redraw even if unchanged.
+  if (buttonWake) g_lastEtag[0] = '\0';
+
   do {
     refreshRequested = false;
     uint8_t* img = downloadImage();
-    if (!img) {
+    // 304 (unchanged) is a success, not a failure — don't retry it.
+    if (!img && !g_imageUnchanged) {
       Serial.println("Retry download once after 2s");
       delay(2000);
       img = downloadImage();
@@ -1575,12 +1613,20 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
     // tries — 10 s of breathing room costs little and saves a 5-minute
     // fail-screen cycle. (The old "re-probe LAN vs cloud" logic here
     // was a no-op once the base became cloud-only.)
-    if (!img) {
+    if (!img && !g_imageUnchanged) {
       Serial.println("Both attempts failed — backing off 10 s, final try");
       delay(10000);
       img = downloadImage();
     }
-    if (img) {
+    if (g_imageUnchanged) {
+      // Image identical to what's on the panel — skip the ~15-26 s color
+      // refresh entirely, just refresh the clock-keeping state.
+      Serial.println("Unchanged — leaving panel as-is");
+      g_lastGoodAt = time(nullptr);
+      if (buttonWake) beepChime();
+      sleepMin = fetchSleepMinutes();
+      Serial.printf("Sleep %d min\n", sleepMin);
+    } else if (img) {
       pushImage(img);
       free(img);
       g_lastGoodAt = time(nullptr);

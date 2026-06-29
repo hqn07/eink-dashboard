@@ -442,10 +442,18 @@ async function getCurrentImage({ units, screen }) {
     const bin = packMonoBin(rawMono, info);
     // 3-color plane pair (black+red, 96000 B). Cached lazily on first
     // access so BW-only fleets don't pay the extra RGBA pass.
-    let bin3c = null;
+    // ETags (content hash) let the firmware skip the slow refresh when the
+    // image is byte-identical — sent as a conditional-GET 304. Matters
+    // most on the 3-color panel where a full refresh is ~15-26 s.
+    let bin3c = null, etag3c = null;
+    const etagOf = (b) => `"${crypto.createHash('sha1').update(b).digest('hex')}"`;
     const entry = {
       at: Date.now(), png, bin,
-      get3c: async () => (bin3c || (bin3c = await rgbaToPlanes(rgba)))
+      etagBin: etagOf(bin),
+      get3c: async () => {
+        if (!bin3c) { bin3c = await rgbaToPlanes(rgba); etag3c = etagOf(bin3c); }
+        return { bin: bin3c, etag: etag3c };
+      }
     };
     imageCache.set(key, entry);
     return entry;
@@ -1700,7 +1708,7 @@ app.get('/display.bin', checkDeviceAuth, async (req, res) => {
   try {
     const cfg = await loadConfig();
     const variant = resolveVariant(req, cfg);
-    const { bin } = await getCurrentImage(variant);
+    const { bin, etagBin } = await getCurrentImage(variant);
 
     // Adaptive-refresh header — tells the device how many minutes to
     // sleep before the next wake. Replaces the older /sleep round-trip;
@@ -1719,11 +1727,18 @@ app.get('/display.bin', checkDeviceAuth, async (req, res) => {
         .catch(e => console.warn('battery-header save:', e.message));
     }
 
-    res.set('Content-Type', 'application/octet-stream');
+    res.set('ETag', etagBin);
     res.set('Cache-Control', 'no-store');
+    // Conditional GET: unchanged image → 304 so the firmware can skip the
+    // refresh and go straight back to sleep.
+    if (req.headers['if-none-match'] === etagBin) {
+      return res.status(304).end();
+    }
+    res.set('Content-Type', 'application/octet-stream');
     res.set('X-Image-Width', String(SCREEN_W));
     res.set('X-Image-Height', String(SCREEN_H));
-    res.send(bin);
+    // res.end (not res.send) so Express keeps our strong ETag as-is.
+    res.end(bin);
   } catch (err) {
     console.error('BIN error:', err);
     res.status(500).send(safeError(err).error);
@@ -1737,7 +1752,7 @@ app.get('/display-3c.bin', checkDeviceAuth, async (req, res) => {
     const cfg = await loadConfig();
     const variant = resolveVariant(req, cfg);
     const entry = await getCurrentImage(variant);
-    const bin = await entry.get3c();
+    const { bin, etag } = await entry.get3c();
 
     res.set('X-Refresh-Rate', String(resolveRefreshMinutes(cfg)));
     const hBattV = parseFloat(req.headers['battery-voltage']);
@@ -1747,12 +1762,20 @@ app.get('/display-3c.bin', checkDeviceAuth, async (req, res) => {
       saveBatteryState({ v: hBattV, pct: hBattPct, at: Date.now() })
         .catch(e => console.warn('battery-header save:', e.message));
     }
-    res.set('Content-Type', 'application/octet-stream');
+    res.set('ETag', etag);
     res.set('Cache-Control', 'no-store');
+    // Conditional GET: identical image → 304, firmware skips the slow
+    // ~15-26 s color refresh entirely and goes back to sleep.
+    if (req.headers['if-none-match'] === etag) {
+      return res.status(304).end();
+    }
+    res.set('Content-Type', 'application/octet-stream');
     res.set('X-Image-Width', String(SCREEN_W));
     res.set('X-Image-Height', String(SCREEN_H));
     res.set('X-Image-Planes', '2');
-    res.send(bin);
+    // res.end (not res.send) so Express doesn't replace our strong ETag
+    // with its own weak one or run its freshness logic.
+    res.end(bin);
   } catch (err) {
     console.error('3C BIN error:', err);
     res.status(500).send(safeError(err).error);
