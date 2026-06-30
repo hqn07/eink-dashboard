@@ -840,7 +840,8 @@ void addAuth(HTTPClient& http) {
 // can authenticate per-device.
 bool enrollDevice() {
   if (g_apiKey.length() > 0) return true;
-  String url = String(activeServerBase) + "/api/setup";
+  // addToken so the server can gate enrollment behind DEVICE_TOKEN.
+  String url = addToken(String(activeServerBase) + "/api/setup");
   Serial.printf("Enrolling: POST %s\n", url.c_str());
   HTTPClient http;
   WiFiClientSecure tls;

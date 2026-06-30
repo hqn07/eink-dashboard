@@ -2582,6 +2582,14 @@ app.get('/firmware/:file', checkDeviceAuth, (req, res) => {
 // /api/* middleware to keep abuse from filling the device store.
 app.post('/api/setup', async (req, res) => {
   try {
+    // Gate enrollment behind DEVICE_TOKEN when one is set, so a stranger
+    // can't mint a device key (and then read /display.*). Open when no
+    // token is configured (local dev / first run). Firmware sends the token
+    // on the enroll request via addToken().
+    if (DEVICE_TOKEN) {
+      const tok = req.query.token || req.headers['x-device-token'];
+      if (tok !== DEVICE_TOKEN) return res.status(401).json({ error: 'unauthorized' });
+    }
     const mac = String((req.body && req.body.mac) || '').toLowerCase().trim();
     if (!/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/.test(mac)) {
       return res.status(400).json({ error: 'bad_mac' });
