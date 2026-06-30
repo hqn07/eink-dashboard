@@ -12,7 +12,7 @@
 // stacked lines into 80px.
 
 import { escapeHtml, placeholder, semRed } from './_shared.js';
-import { sparkSvg } from './sparkline.js';
+import { sparkSvg, niceDomain } from './sparkline.js';
 
 export const def = {
   id: 'eink_battery',
@@ -126,7 +126,7 @@ export function render(ctx) {
     const series = hist.map(p => (p && Number.isFinite(p.pct)) ? p.pct : null)
       .filter(x => x !== null);
     const chart = series.length >= 2
-      ? `<div class="eink-batt-trend-chart${low}">${sparkSvg(series, false)}</div>`
+      ? `<div class="eink-batt-trend-chart${low}">${sparkSvg(series, false, niceDomain(series, 20, 0, 100))}</div>`
       : bar;
     return `
       <div class="eink-batt eink-batt-trend">

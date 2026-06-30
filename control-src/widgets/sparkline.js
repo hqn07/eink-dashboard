@@ -1,4 +1,6 @@
 import { escapeHtml, pickTier, placeholder, semRed } from './_shared.js';
+// niceDomain is defined below and used by render(); kept in this module so
+// eink_battery can import the same domain logic.
 
 // Sparkline — a compact trend line over a rolling numeric series. First
 // source is the e-ink battery history the server accumulates on every
@@ -41,23 +43,44 @@ export const def = {
 };
 
 const SOURCES = {
-  battery_pct: { label: 'BATTERY', unit: '%', key: 'pct', lowAt: 20, dp: 0 },
-  battery_v:   { label: 'VOLTAGE', unit: 'V', key: 'v',  lowAt: 3.4, dp: 2 }
+  // minSpan/lo/hi shape the sparkline's y-domain so flat data reads as flat.
+  battery_pct: { label: 'BATTERY', unit: '%', key: 'pct', lowAt: 20, dp: 0, minSpan: 20, lo: 0, hi: 100 },
+  battery_v:   { label: 'VOLTAGE', unit: 'V', key: 'v',  lowAt: 3.4, dp: 2, minSpan: 0.4, lo: 3.0, hi: 4.3 }
 };
+
+// Pick a sensible y-domain so a nearly-flat series (e.g. battery sitting at
+// 99–100%) doesn't get min/max-stretched into a fake seismograph. Enforces a
+// minimum span and clamps to [lo, hi], shifting the window to keep the data
+// inside. Without this, span = max-min = 1 makes a 1-point wiggle fill the
+// whole chart. Exported so callers compute it per source (% vs volts).
+export function niceDomain(values, minSpan, lo, hi) {
+  let dmin = Math.min(...values), dmax = Math.max(...values);
+  if (dmax - dmin < minSpan) {
+    const mid = (dmin + dmax) / 2;
+    dmin = mid - minSpan / 2;
+    dmax = mid + minSpan / 2;
+  }
+  if (hi != null && dmax > hi) { dmin -= (dmax - hi); dmax = hi; }
+  if (lo != null && dmin < lo) { dmax += (lo - dmin); dmin = lo; if (hi != null && dmax > hi) dmax = hi; }
+  return { min: dmin, max: dmax };
+}
 
 // Build the SVG path(s) from values. viewBox is arbitrary (0..100 × 0..H);
 // preserveAspectRatio=none stretches to the cell, vector-effect keeps the
-// stroke uniform. Exported so other widgets (eink_battery's trend variant)
-// can reuse the same crisp line. Returns the SVG string.
-export function sparkSvg(values, dot) {
+// stroke uniform. `domain` ({min,max}) fixes the y-scale; defaults to data
+// min/max for backward compatibility. Exported so other widgets
+// (eink_battery's trend variant) can reuse the same crisp line.
+export function sparkSvg(values, dot, domain) {
   const W = 100, H = 32, pad = 3;
   const n = values.length;
-  const min = Math.min(...values), max = Math.max(...values);
+  const min = domain ? domain.min : Math.min(...values);
+  const max = domain ? domain.max : Math.max(...values);
   const span = (max - min) || 1;
   const innerH = H - pad * 2;
   const pts = values.map((v, i) => {
     const x = n === 1 ? W / 2 : (i / (n - 1)) * W;
-    const y = pad + innerH - ((v - min) / span) * innerH;
+    const frac = Math.max(0, Math.min(1, (v - min) / span)); // clamp outliers
+    const y = pad + innerH - frac * innerH;
     return [x, y];
   });
   const d = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
@@ -95,7 +118,8 @@ export function render(ctx) {
 
   // Semantic auto-red: latest reading at/below the low threshold.
   const red = semRed(s, cur <= src.lowAt);
-  const svg = sparkSvg(values, variant === 'dots');
+  const domain = niceDomain(values, src.minSpan, src.lo, src.hi);
+  const svg = sparkSvg(values, variant === 'dots', domain);
 
   const value = `<span class="spark-value">${fmt(cur)}</span><span class="spark-unit">${src.unit}</span>`;
   const head = (variant !== 'minimal' && tier !== 'tiny')
