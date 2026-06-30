@@ -23,6 +23,7 @@ import ScreenTabs from './components/ScreenTabs.jsx';
 import ScreenPresetPicker from './components/ScreenPresetPicker.jsx';
 import ScreenPanel from './components/ScreenPanel.jsx';
 import ScheduleTimeline from './components/ScheduleTimeline.jsx';
+import QuietHours from './components/QuietHours.jsx';
 import SetupWizard from './components/SetupWizard.jsx';
 import SettingsMenu from './components/SettingsMenu.jsx';
 import ShortcutsHelp from './components/ShortcutsHelp.jsx';
@@ -668,6 +669,12 @@ export default function App() {
             onUpdateSchedule={(id, patch) => updateScreen(id, {
               schedule: { ...(screens.find(s => s.id === id)?.schedule || { enabled: false }), ...patch, enabled: true }
             })}
+          />
+        )}
+        {timelineOpen && (
+          <QuietHours
+            value={cfg.quietHours}
+            onChange={(next) => { setUndoCfg(cfg); setCfg({ ...cfg, quietHours: next }); markDirty(); }}
           />
         )}
       </div>

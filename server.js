@@ -887,24 +887,47 @@ function batteryRefreshFloor(pct) {
   return 0;
 }
 
+// ---------- Quiet hours ----------
+// A nightly window where the device should barely wake. During it we tell the
+// device to sleep straight through to the window's end (one wake when quiet
+// ends) instead of refreshing on the normal cadence. Saves a lot of overnight
+// battery. cfg.quietHours = { enabled, from:'HH:MM', to:'HH:MM' }; tz-aware.
+function quietMinutesRemaining(cfg) {
+  const q = cfg.quietHours;
+  if (!q || !q.enabled) return 0;
+  const from = parseHHMM(q.from), to = parseHHMM(q.to);
+  if (!Number.isFinite(from) || !Number.isFinite(to) || from === to) return 0;
+  const now = localMinutesNow(cfg.timezone || 'UTC');
+  const inWindow = from < to ? (now >= from && now < to)
+                             : (now >= from || now < to); // wraps past midnight
+  if (!inWindow) return 0;
+  const mins = ((to - now) + 1440) % 1440; // minutes until the window ends
+  return mins > 0 ? mins : 1440;
+}
+
 // Refresh cadence the device should use right now. Order of precedence:
-//   1. push-now fast window (user-initiated, ignores battery — it's brief)
-//   2. battery-aware floor (stretch interval when low)
-//   3. the config/schedule interval
+//   1. push-now fast window (user-initiated, ignores everything — it's brief)
+//   2. quiet hours (sleep through to the window end)
+//   3. battery-aware floor (stretch interval when low)
+//   4. the config/schedule interval
 // Returns minutes (legacy X-Refresh-Rate, floored at 1 so current firmware
 // speeds up in a fast window) and exact seconds (X-Refresh-Seconds — firmware
 // can adopt for true sub-minute once reflashed). battPct defaults to the last
 // reported battery so /sleep and the warmer see the same value the device does.
 function effectiveRefresh(cfg, battPct) {
   if (Date.now() < fastWakeUntil) {
-    return { minutes: 1, seconds: FAST_INTERVAL_SECONDS, fast: true, battSaver: false };
+    return { minutes: 1, seconds: FAST_INTERVAL_SECONDS, fast: true, battSaver: false, quiet: false };
   }
   const pct = Number.isFinite(battPct) ? battPct
     : (_batteryState && Number.isFinite(_batteryState.pct) ? _batteryState.pct : -1);
   const base = resolveRefreshMinutes(cfg);
-  const floor = batteryRefreshFloor(pct);
-  const minutes = Math.max(base, floor);
-  return { minutes, seconds: minutes * 60, fast: false, battSaver: minutes > base };
+  const battFloor = batteryRefreshFloor(pct);
+  const quiet = quietMinutesRemaining(cfg);
+  const minutes = Math.min(1440, Math.max(base, battFloor, quiet));
+  return {
+    minutes, seconds: minutes * 60, fast: false,
+    battSaver: battFloor > base, quiet: quiet > 0
+  };
 }
 
 // ---------- Auth ----------
@@ -2037,7 +2060,7 @@ app.get('/sleep', checkDeviceAuth, async (req, res) => {
   const refresh = effectiveRefresh(cfg);
   res.json({
     minutes: refresh.minutes, seconds: refresh.seconds,
-    fast: refresh.fast, battSaver: refresh.battSaver,
+    fast: refresh.fast, battSaver: refresh.battSaver, quiet: refresh.quiet,
     screenId: s ? s.id : null, screenName: s ? s.name : null
   });
 });
@@ -2667,6 +2690,8 @@ app.get('/status', checkAdminAuth, async (req, res) => {
     let refreshNote;
     if (refresh.fast) {
       refreshNote = `<span class="warn">FAST</span> ${refresh.seconds}s · push-now window`;
+    } else if (refresh.quiet) {
+      refreshNote = `${refresh.minutes} min · <span class="warn">quiet hours</span> (sleeping through)`;
     } else if (refresh.battSaver) {
       refreshNote = `${refresh.minutes} min · <span class="warn">battery-saver</span> (base ${baseMin})`;
     } else {

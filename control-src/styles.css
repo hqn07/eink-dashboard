@@ -448,6 +448,39 @@ main.layout {
 /* Schedule-timeline collapse — collapsed by default since the strip
  * is only useful when multiple screens have scheduling enabled. */
 .schedule-collapsible { margin-bottom: 16px; }
+.quiet-hours {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: var(--bw-hair, 1px) solid var(--ink);
+}
+.quiet-hours-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-sm);
+  letter-spacing: 0.3px;
+  cursor: pointer;
+}
+.quiet-hours-times {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+.quiet-hours-times.is-disabled { opacity: 0.4; }
+.quiet-hours-times input[type="time"] {
+  font-family: var(--font-mono);
+  padding: 3px 6px;
+  border: var(--bw-rule, 1px) solid var(--ink);
+  background: #fff;
+}
+.quiet-hours-dash { color: var(--mute, #8a877e); }
+.quiet-hours-note { color: var(--mute, #8a877e); font-size: var(--fs-xs, 10px); }
 .schedule-collapsible-trigger {
   display: flex;
   align-items: center;
