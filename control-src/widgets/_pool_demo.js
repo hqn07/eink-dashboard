@@ -101,10 +101,14 @@ export function demoCtxForWidget(id, cellW, cellH) {
       return { ...base, macNowPlaying: DEMO_NOWPLAYING, settings: {} };
     case 'mac_battery':
       return { ...base, macBattery: DEMO_BATTERY, settings: {} };
-    case 'eink_battery':
+    case 'eink_battery': {
+      const t0 = Date.now() - 12 * 3600 * 1000;
+      const pcts = [98, 95, 91, 88, 84, 80, 76, 73, 69, 66, 62, 82];
       return { ...base,
         battery: { v: 4.03, pct: 82, at: Date.now() - 5 * 60 * 1000 },
+        batteryHistory: pcts.map((pct, i) => ({ pct, v: 3.4 + (pct / 100) * 0.8, at: t0 + i * 3600 * 1000 })),
         settings: {} };
+    }
     case 'clock':
       return { ...base, clockNow: DEMO_CLOCK, settings: {} };
     case 'sparkline': {

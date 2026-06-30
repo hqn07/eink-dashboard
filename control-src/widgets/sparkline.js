@@ -47,8 +47,9 @@ const SOURCES = {
 
 // Build the SVG path(s) from values. viewBox is arbitrary (0..100 × 0..H);
 // preserveAspectRatio=none stretches to the cell, vector-effect keeps the
-// stroke uniform. Returns { svg } including an optional last-point dot.
-function buildSvg(values, dot) {
+// stroke uniform. Exported so other widgets (eink_battery's trend variant)
+// can reuse the same crisp line. Returns the SVG string.
+export function sparkSvg(values, dot) {
   const W = 100, H = 32, pad = 3;
   const n = values.length;
   const min = Math.min(...values), max = Math.max(...values);
@@ -94,7 +95,7 @@ export function render(ctx) {
 
   // Semantic auto-red: latest reading at/below the low threshold.
   const red = semRed(s, cur <= src.lowAt);
-  const svg = buildSvg(values, variant === 'dots');
+  const svg = sparkSvg(values, variant === 'dots');
 
   const value = `<span class="spark-value">${fmt(cur)}</span><span class="spark-unit">${src.unit}</span>`;
   const head = (variant !== 'minimal' && tier !== 'tiny')

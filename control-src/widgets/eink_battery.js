@@ -12,6 +12,7 @@
 // stacked lines into 80px.
 
 import { escapeHtml, placeholder, semRed } from './_shared.js';
+import { sparkSvg } from './sparkline.js';
 
 export const def = {
   id: 'eink_battery',
@@ -26,6 +27,7 @@ export const def = {
   defaultSize: 'S',
   variants: {
     gauge:   { label: 'Gauge — percent + volts + bar + age' },
+    trend:   { label: 'Trend — percent + history sparkline' },
     inline:  { label: 'Inline — one-row strip' },
     minimal: { label: 'Minimal — percent only' }
   },
@@ -112,6 +114,27 @@ export function render(ctx) {
         ${wideEnough ? title : ''}
         ${bar}
         ${pctBlock}
+      </div>
+    `;
+  }
+
+  if (variant === 'trend') {
+    // Current readout + a discharge sparkline from the rolling history
+    // the server accumulates (ctx.batteryHistory). Falls back to the bar
+    // until there are at least two points to draw a line from.
+    const hist = Array.isArray(ctx.batteryHistory) ? ctx.batteryHistory : [];
+    const series = hist.map(p => (p && Number.isFinite(p.pct)) ? p.pct : null)
+      .filter(x => x !== null);
+    const chart = series.length >= 2
+      ? `<div class="eink-batt-trend-chart${low}">${sparkSvg(series, false)}</div>`
+      : bar;
+    return `
+      <div class="eink-batt eink-batt-trend">
+        <div class="eink-batt-trend-head">
+          ${(cellH || 0) >= 3 ? title : ''}
+          ${pctBlock}
+        </div>
+        ${chart}
       </div>
     `;
   }
