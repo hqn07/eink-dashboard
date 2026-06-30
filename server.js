@@ -36,6 +36,28 @@ function loadSsr() {
   return _ssrPromise;
 }
 
+// ---------- Error ring buffer ----------
+// Production errors otherwise only hit stdout, which is invisible unless you
+// happen to be tailing Railway logs. Capture every console.error into a small
+// in-memory ring so /status can show "what recently broke". Wrapping
+// console.error (vs retrofitting every catch) captures all existing log sites
+// for free; it's lost on restart, which is fine for an at-a-glance signal.
+const ERR_LOG_MAX = 50;
+const _errLog = [];
+const _origConsoleError = console.error.bind(console);
+console.error = (...args) => {
+  try {
+    const msg = args.map(a =>
+      a instanceof Error ? (a.stack || a.message)
+      : typeof a === 'string' ? a
+      : (() => { try { return JSON.stringify(a); } catch { return String(a); } })()
+    ).join(' ');
+    _errLog.push({ at: Date.now(), msg: msg.slice(0, 400) });
+    while (_errLog.length > ERR_LOG_MAX) _errLog.shift();
+  } catch { /* never let logging throw */ }
+  _origConsoleError(...args);
+};
+
 const PORT = process.env.PORT || 3000;
 const DEVICE_TOKEN = process.env.DEVICE_TOKEN || '';
 // Mutable state (config, battery, devices) lives under DATA_DIR. Set it
@@ -2778,6 +2800,11 @@ app.get('/status', checkAdminAuth, async (req, res) => {
     }
     rows.push(['Battery history', `${history.length} point${history.length === 1 ? '' : 's'}`,
       'How many battery readings are stored. These feed the trend and sparkline above; more points = a better trend estimate.']);
+    const lastErr = _errLog[_errLog.length - 1];
+    rows.push(['Errors', _errLog.length === 0
+      ? '<span class="ok">none</span>'
+      : `<span class="warn">${_errLog.length}</span> · last ${relAge(lastErr.at)}`,
+      'Server errors captured since the last restart (cleared on restart). 0 is what you want. If this climbs, expand the Recent errors list below. A few stale ones from a transient blip are usually harmless.']);
 
     const STALE_MS = 2 * 86400000; // 2 days without contact = prunable
     const devRows = devices.length ? devices.map(d => {
@@ -2821,6 +2848,10 @@ button.rm:hover{background:#b00;color:#fff;border-color:#b00}</style></head><bod
 <p class="desc" id="ddev-p" style="display:none;font-family:Georgia,serif;font-size:13px;line-height:1.5;color:#555;background:#f3f0e8;padding:10px 12px;border:1px solid #e2ded3">Each ESP32 that has checked in. <b>Board</b> = panel it reported (<code>b</code> = 3-colour, <code>bw</code> = black/white). <b>Firmware</b> = its flashed version. <b>Last seen</b> = time since its last request; <b>stale</b> means &gt;2 days — usually an old enrollment from before a reflash. Removing a row just prunes the list; a live device re-adds itself automatically on its next wake.</p>
 <table><thead><tr><td>ID</td><td>Board</td><td>Firmware</td><td>Last seen</td><td></td></tr></thead>
 <tbody>${devRows}</tbody></table>
+${_errLog.length ? `<h2>Recent errors (${_errLog.length})</h2>
+<table>${_errLog.slice(-8).reverse().map(e =>
+  `<tr><td style="width:auto;white-space:nowrap;vertical-align:top">${relAge(e.at)}</td>`
+  + `<td style="font-size:11px;color:#a33">${esc(e.msg)}</td></tr>`).join('')}</table>` : ''}
 <h2>Links</h2>
 <table>
 <tr><td>Control panel</td><td><a href="/control">/control</a></td></tr>
