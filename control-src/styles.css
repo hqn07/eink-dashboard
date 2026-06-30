@@ -3194,28 +3194,48 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   margin: 0;
 }
 
-/* ---------- Settings menu rows ---------- */
+/* ---------- Settings menu (Option A: sectioned, iconed) ---------- */
+.settings-menu { width: 300px; }
+.settings-section-label {
+  padding: 9px 14px 4px;
+  font-size: var(--fs-xs, 10px);
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--mute, #8a877e);
+  border-top: var(--bw-hair) solid var(--ink);
+}
+.settings-section-label:first-child { border-top: none; }
 .settings-status-row {
-  padding: 10px 14px;
+  padding: 4px 14px 10px;
   display: flex;
   align-items: center;
+  gap: 8px;
+  color: var(--mute, #8a877e);
 }
+.settings-status-row .mac-agent-badge-label { display: inline; }
 .settings-row {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 10px 14px;
+  padding: 9px 14px;
   background: transparent;
   border: none;
   font: inherit;
   font-size: var(--fs-sm);
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   text-align: left;
   color: var(--ink);
   cursor: pointer;
 }
 .settings-row:hover { background: var(--ink); color: #fff; }
+.settings-row--expandable .settings-row-caret {
+  margin-left: auto;
+  transition: transform 0.12s ease;
+}
+.settings-row--expandable.is-open .settings-row-caret { transform: rotate(90deg); }
+.settings-collapse-body { border-top: var(--bw-hair) solid var(--ink); }
 
 /* ---------- Alarms panel ---------- */
 .alarms-panel { padding: 10px 14px; display: flex; flex-direction: column; gap: 10px; }

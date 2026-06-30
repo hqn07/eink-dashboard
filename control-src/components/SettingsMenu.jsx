@@ -1,20 +1,26 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Gear, MagicWand, Keyboard } from '@phosphor-icons/react';
+import {
+  Gear, MagicWand, Keyboard, Broadcast, Bell, Archive, CaretRight,
+} from '@phosphor-icons/react';
 import MacAgentBadge from './MacAgentBadge.jsx';
 import PanelPreview from './PanelPreview.jsx';
 import PinButton from './PinButton.jsx';
 import AlarmsPanel from './AlarmsPanel.jsx';
 import BackupPanel from './BackupPanel.jsx';
 
-// Single header settings menu. Consolidates what used to be five separate
+// Single header settings menu. Consolidates what used to be separate
 // header controls — Mac-agent status, Setup wizard, Panel view, PIN/Lock,
-// and Tools (alarms + backup) — into one gear dropdown.
+// keyboard shortcuts, and Tools (alarms + backup) — into one gear
+// dropdown, grouped into labelled sections (Option A layout).
 //
-// Panel view + PIN keep their own modal/popover logic; they just render
-// their trigger as a full-width menu row here (block prop).
+// Panel view + PIN keep their own modal/popover logic; they render their
+// trigger as a full-width menu row here (block prop). Alarms + Backup are
+// heavy blocks, so they collapse behind expandable rows to keep the menu
+// short.
 export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcuts }) {
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(null); // 'alarms' | 'backup' | null
   const ref = useRef(null);
 
   useEffect(() => {
@@ -31,6 +37,8 @@ export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcut
     };
   }, [open]);
 
+  const toggle = (key) => setExpanded((cur) => (cur === key ? null : key));
+
   return (
     <div className="gdm-wrap" ref={ref}>
       <button
@@ -45,19 +53,20 @@ export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcut
       <AnimatePresence>
         {open && (
           <motion.div
-            className="gdm-menu"
+            className="gdm-menu settings-menu"
             role="menu"
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.12 }}
-            style={{ width: 340 }}
           >
+            <div className="settings-section-label">Status</div>
             <div className="settings-status-row">
+              <Broadcast size={14} weight="bold" />
               <MacAgentBadge />
             </div>
-            <hr className="gdm-divider" />
 
+            <div className="settings-section-label">Device</div>
             <button
               type="button"
               className="settings-row"
@@ -66,6 +75,8 @@ export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcut
               <MagicWand size={14} weight="bold" /> Setup
             </button>
             <PanelPreview block />
+
+            <div className="settings-section-label">Security</div>
             <PinButton block />
             <button
               type="button"
@@ -75,10 +86,33 @@ export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcut
               <Keyboard size={14} weight="bold" /> Keyboard shortcuts
             </button>
 
-            <hr className="gdm-divider" />
-            <AlarmsPanel />
-            <hr className="gdm-divider" />
-            <BackupPanel cfg={cfg} onReplaceConfig={onReplaceConfig} />
+            <div className="settings-section-label">Tools</div>
+            <button
+              type="button"
+              className={`settings-row settings-row--expandable ${expanded === 'alarms' ? 'is-open' : ''}`}
+              aria-expanded={expanded === 'alarms'}
+              onClick={() => toggle('alarms')}
+            >
+              <Bell size={14} weight="bold" /> Alarms
+              <CaretRight className="settings-row-caret" size={12} weight="bold" />
+            </button>
+            {expanded === 'alarms' && (
+              <div className="settings-collapse-body"><AlarmsPanel /></div>
+            )}
+            <button
+              type="button"
+              className={`settings-row settings-row--expandable ${expanded === 'backup' ? 'is-open' : ''}`}
+              aria-expanded={expanded === 'backup'}
+              onClick={() => toggle('backup')}
+            >
+              <Archive size={14} weight="bold" /> Backup &amp; reset
+              <CaretRight className="settings-row-caret" size={12} weight="bold" />
+            </button>
+            {expanded === 'backup' && (
+              <div className="settings-collapse-body">
+                <BackupPanel cfg={cfg} onReplaceConfig={onReplaceConfig} />
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

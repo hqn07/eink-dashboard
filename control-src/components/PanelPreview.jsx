@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowClockwise, X } from '@phosphor-icons/react';
+import { ArrowClockwise, X, Monitor } from '@phosphor-icons/react';
 
 // Panel-accurate 3-color preview. The live canvas/preview shows red via
 // CSS, which approximates but doesn't run the server's plane-split
@@ -26,6 +26,7 @@ export default function PanelPreview({ block = false }) {
         title="Preview the true 3-color (B/W/R) render the panel draws"
         style={block ? undefined : { width: 'auto', padding: '0 10px' }}
       >
+        {block && <Monitor size={14} weight="bold" />}
         Panel view
       </button>
       {open && (
