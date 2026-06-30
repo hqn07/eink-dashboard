@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
-import { Star, GridFour, ArrowCounterClockwise, Gear, Trash, MagicWand } from '@phosphor-icons/react';
+import { Star, GridFour, ArrowCounterClockwise, Gear, Trash } from '@phosphor-icons/react';
 import { fetchConfig, saveConfig, fetchPreviewData } from './api.js';
 import {
   WIDGET_REGISTRY,
@@ -22,12 +22,9 @@ import SaveBar from './components/SaveBar.jsx';
 import ScreenTabs from './components/ScreenTabs.jsx';
 import ScreenPresetPicker from './components/ScreenPresetPicker.jsx';
 import ScreenPanel from './components/ScreenPanel.jsx';
-import MacAgentBadge from './components/MacAgentBadge.jsx';
-import PinButton from './components/PinButton.jsx';
-import PanelPreview from './components/PanelPreview.jsx';
 import ScheduleTimeline from './components/ScheduleTimeline.jsx';
 import SetupWizard from './components/SetupWizard.jsx';
-import ToolsButton from './components/ToolsButton.jsx';
+import SettingsMenu from './components/SettingsMenu.jsx';
 import ShortcutsHelp from './components/ShortcutsHelp.jsx';
 import LiveDashboard from './components/LiveDashboard.jsx';
 import DeviceStatusCard from './components/DeviceStatusCard.jsx';
@@ -619,22 +616,10 @@ export default function App() {
           >
             ?
           </button>
-          <MacAgentBadge />
-          <button
-            type="button"
-            className="app-header-shortcut-btn"
-            onClick={() => setShowWizard(true)}
-            title="Run the setup wizard (location + starting layout)"
-            style={{ width: 'auto', padding: '0 10px', display: 'inline-flex', alignItems: 'center', gap: 5 }}
-          >
-            <MagicWand size={14} weight="bold" />
-            Setup
-          </button>
-          <PanelPreview />
-          <PinButton />
           {cfg && (
-            <ToolsButton
+            <SettingsMenu
               cfg={cfg}
+              onSetup={() => setShowWizard(true)}
               onReplaceConfig={(next) => {
                 setCfg(migrateConfigToScreens(next));
                 setStatus('dirty');

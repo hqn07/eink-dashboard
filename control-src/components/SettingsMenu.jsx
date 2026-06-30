@@ -1,13 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wrench } from '@phosphor-icons/react';
-import BackupPanel from './BackupPanel.jsx';
+import { Gear, MagicWand } from '@phosphor-icons/react';
+import MacAgentBadge from './MacAgentBadge.jsx';
+import PanelPreview from './PanelPreview.jsx';
+import PinButton from './PinButton.jsx';
 import AlarmsPanel from './AlarmsPanel.jsx';
+import BackupPanel from './BackupPanel.jsx';
 
-// Small header button — replaces the heavier Global Defaults dropdown.
-// Currently just hosts BackupPanel (export / import / reset). Cheap
-// home for future cross-cutting tools (theme, debug toggles, etc.).
-export default function ToolsButton({ cfg, onReplaceConfig }) {
+// Single header settings menu. Consolidates what used to be five separate
+// header controls — Mac-agent status, Setup wizard, Panel view, PIN/Lock,
+// and Tools (alarms + backup) — into one gear dropdown.
+//
+// Panel view + PIN keep their own modal/popover logic; they just render
+// their trigger as a full-width menu row here (block prop).
+export default function SettingsMenu({ cfg, onReplaceConfig, onSetup }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -34,7 +40,7 @@ export default function ToolsButton({ cfg, onReplaceConfig }) {
         aria-haspopup="menu"
         onClick={() => setOpen(o => !o)}
       >
-        <Wrench size={14} weight="bold" /> TOOLS
+        <Gear size={14} weight="bold" /> SETTINGS
       </button>
       <AnimatePresence>
         {open && (
@@ -47,6 +53,22 @@ export default function ToolsButton({ cfg, onReplaceConfig }) {
             transition={{ duration: 0.12 }}
             style={{ width: 340 }}
           >
+            <div className="settings-status-row">
+              <MacAgentBadge />
+            </div>
+            <hr className="gdm-divider" />
+
+            <button
+              type="button"
+              className="settings-row"
+              onClick={() => { setOpen(false); onSetup && onSetup(); }}
+            >
+              <MagicWand size={14} weight="bold" /> Setup
+            </button>
+            <PanelPreview block />
+            <PinButton block />
+
+            <hr className="gdm-divider" />
             <AlarmsPanel />
             <hr className="gdm-divider" />
             <BackupPanel cfg={cfg} onReplaceConfig={onReplaceConfig} />

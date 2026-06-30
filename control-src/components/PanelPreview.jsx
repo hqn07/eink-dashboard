@@ -6,7 +6,7 @@ import { ArrowClockwise, X } from '@phosphor-icons/react';
 // classifier. This opens the *actual* B/W/R composite the panel draws
 // (server /display-3c.png), so the user sees true red placement —
 // including anything the classifier catches or misses.
-export default function PanelPreview() {
+export default function PanelPreview({ block = false }) {
   const [open, setOpen] = useState(false);
   const [src, setSrc] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,10 +21,10 @@ export default function PanelPreview() {
     <>
       <button
         type="button"
-        className="app-header-shortcut-btn"
+        className={block ? 'settings-row' : 'app-header-shortcut-btn'}
         onClick={show}
         title="Preview the true 3-color (B/W/R) render the panel draws"
-        style={{ width: 'auto', padding: '0 10px' }}
+        style={block ? undefined : { width: 'auto', padding: '0 10px' }}
       >
         Panel view
       </button>

@@ -3194,6 +3194,29 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   margin: 0;
 }
 
+/* ---------- Settings menu rows ---------- */
+.settings-status-row {
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  font: inherit;
+  font-size: var(--fs-sm);
+  letter-spacing: 0.5px;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+}
+.settings-row:hover { background: var(--ink); color: #fff; }
+
 /* ---------- Alarms panel ---------- */
 .alarms-panel { padding: 10px 14px; display: flex; flex-direction: column; gap: 10px; }
 .alarms-header { display: flex; align-items: center; justify-content: space-between; }
