@@ -26,6 +26,7 @@ export const def = {
   },
   defaultSize: 'S',
   variants: {
+    trmnl:   { label: 'TRMNL — card + dithered bar' },
     gauge:   { label: 'Gauge — percent + volts + bar + age' },
     trend:   { label: 'Trend — percent + history sparkline' },
     inline:  { label: 'Inline — one-row strip' },
@@ -100,6 +101,35 @@ export function render(ctx) {
   const low = semRed(s, pct < 20 && !charging);
   const pctBlock = `<div class="eink-batt-pct autofit${low}" data-min-font="22">${pct}%${bolt}</div>`;
   const title = `<div class="col-title">${escapeHtml(titleLabel)}</div>`;
+
+  if (variant === 'trmnl') {
+    // TRMNL card: percent + voltage label/values over a dithered progress
+    // bar (image-1 style), with a status/updated stat row on taller tiles.
+    const status = charging ? 'Charging' : (pct < 20 ? 'Low' : 'OK');
+    const fillTone = low ? 'face-tone-r50' : 'face-tone-g50';
+    const ageA = ageLabel(battery.at);
+    const barRow = (cellH || 0) >= 3
+      ? `<div class="tr-bar" style="height:26px;flex:none">
+           <div class="tr-bar-fill ${fillTone}" style="width:${fillPct}%"></div>
+           <div class="tr-bar-track face-tone-g15"></div>
+         </div>` : '';
+    const stats = (cellH || 0) >= 6
+      ? `<div class="tr-stats">
+           <div class="tr-stat"><div class="tr-sv">${status}</div><div class="tr-sl">Status</div></div>
+           ${ageA ? `<div class="tr-stat"><div class="tr-sv">${escapeHtml(ageA.replace(' ago', ''))}</div><div class="tr-sl">Updated</div></div>` : ''}
+         </div>` : '';
+    return `<div class="tr-card${low}">
+      <div class="tr-titlebar"><span>Battery</span><span class="tr-meta">${charging ? 'charging' : status.toLowerCase()}</span></div>
+      <div class="tr-body" style="gap:10px">
+        <div style="display:flex;align-items:flex-end;gap:18px">
+          <div class="tr-lv tr-lv-md"><div class="tr-v">${pct}<span class="tr-deg">%</span></div><div class="tr-l">Charge</div></div>
+          ${v ? `<div class="tr-lv tr-lv-sm"><div class="tr-v">${v}<span style="font-size:0.5em">V</span></div><div class="tr-l">Voltage</div></div>` : ''}
+        </div>
+        ${barRow}
+      </div>
+      ${stats}
+    </div>`;
+  }
 
   if (variant === 'minimal') {
     return `<div class="eink-batt eink-batt-minimal">${pctBlock}</div>`;

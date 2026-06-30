@@ -21,6 +21,7 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
+    trmnl: { label: 'TRMNL — title-bar agenda' },
     list:  { label: 'List — agenda rows' },
     strip: { label: 'Strip — 7-day horizontal' },
     month: { label: 'Month — full grid' }
@@ -66,9 +67,38 @@ export function render(ctx) {
   // tile the user explicitly picked Month / Strip for still renders
   // that view, just compact. List remains the universal fallback
   // when the tile is too short to fit any grid row at all.
+  if (mode === 'trmnl') return renderTrmnl(all, settings, titleLabel, cellW, cellH, density);
   if (mode === 'month' && cellW >= 7 && cellH >= 4) return renderMonth(all, titleLabel, settings);
   if (mode === 'strip' && cellW >= 7 && cellH >= 2) return renderStrip(all, titleLabel, cellH, settings);
   return renderList(all, settings, titleLabel, cellW, cellH, density);
+}
+
+// ---------- TRMNL agenda (title-bar card, time/title/day rows) --------
+
+function renderTrmnl(all, settings, titleLabel, cellW, cellH, density) {
+  const s = settings || {};
+  const tier = pickTier(cellW, cellH, density);
+  const maxRows = { tiny: 2, compact: 3, standard: 5, extended: 7, full: 9 }[tier] || 4;
+  const showTime = s.showTime !== false;
+  const showDay  = s.showDayLabel !== false;
+  const list = all.slice(0, maxRows);
+  const rows = list.map((ev, i) => {
+    const time = ev.isAllDay ? 'ALL&nbsp;DAY' : escapeHtml(ev.startLabel || '');
+    const day  = showDay ? escapeHtml(ev.dayLabel || '') : '';
+    // Band the soonest non-all-day event as "now/next".
+    const isNext = i === 0;
+    return `<div class="tr-row${isNext ? ' tr-row-now face-tone-g15' : ''}">
+      ${showTime ? `<div class="tr-row-time">${time}</div>` : ''}
+      <div class="tr-row-main">
+        <div class="tr-row-title">${escapeHtml(ev.title || '')}</div>
+        ${day ? `<div class="tr-row-sub">${day}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="tr-card">
+    <div class="tr-titlebar"><span>${escapeHtml(titleLabel)}</span><span class="tr-meta">${all.length} event${all.length === 1 ? '' : 's'}</span></div>
+    <div class="tr-body" style="padding:6px 14px;gap:0"><div class="tr-rows">${rows}</div></div>
+  </div>`;
 }
 
 // ---------- list view (the original) ---------------------------------
