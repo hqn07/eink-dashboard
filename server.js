@@ -2626,6 +2626,22 @@ app.get('/api/devices', checkAdminAuth, (req, res) => {
   res.json({ devices: out });
 });
 
+// Admin: remove a stale device record by friendly_id or MAC. The device
+// re-enrolls automatically if it ever checks in again, so this just prunes
+// dead/duplicate rows from the roster (e.g. pre-reflash enrollments).
+app.delete('/api/device/:id', checkAdminAuth, async (req, res) => {
+  const id = String(req.params.id || '').trim();
+  const devices = loadDevicesSync();
+  const mac = devices[id] ? id
+    : Object.keys(devices).find(m =>
+        (devices[m].friendly_id || '').toLowerCase() === id.toLowerCase() ||
+        m.toLowerCase() === id.toLowerCase());
+  if (!mac || !devices[mac]) return res.status(404).json({ error: 'not_found' });
+  delete devices[mac];
+  await saveDevices(devices);
+  res.json({ ok: true, removed: id });
+});
+
 // Health
 app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
 
@@ -2698,23 +2714,35 @@ app.get('/status', checkAdminAuth, async (req, res) => {
       refreshNote = `${refresh.minutes} min`;
     }
 
+    // Each row: [label, value-html, explanation]. The explanation drives a
+    // click-to-expand "ⓘ" so a non-expert can tell good from bad at a glance.
     const rows = [];
-    rows.push(['Server', `${ok(true)} up ${dur(Date.now() - _serverStartedAt)}`]);
-    rows.push(['Refresh now', refreshNote]);
+    rows.push(['Server', `${ok(true)} up ${dur(Date.now() - _serverStartedAt)}`,
+      'How long the server has been running. Resets to 0 on every deploy/restart — a small number right after you push is normal.']);
+    rows.push(['Refresh now', refreshNote,
+      'How often the panel updates right now. Normally your configured interval. It speeds up during a Push-now window, and slows down on low battery or during quiet hours (that is intended, not a fault).']);
     rows.push(['Pre-render', PRERENDER_ENABLED
       ? `${ok(true)} every ${Math.round(PRERENDER_INTERVAL_MS / 1000)}s`
-      : '<span class="warn">off</span>']);
-    rows.push(['Last render', lastRender ? relAge(lastRender) : 'not yet']);
+      : '<span class="warn">off</span>',
+      'The server keeps the next image ready in advance so the device never waits on a slow render. OK = on (what you want).']);
+    rows.push(['Last render', lastRender ? relAge(lastRender) : 'not yet',
+      'Time since the dashboard image was last drawn. Should be recent if anything is viewing it; "not yet" just means nothing has requested an image since the last restart.']);
     rows.push(['Push window', fastActive
       ? `<span class="ok">active</span> · ${dur(fastWakeUntil - Date.now())} left`
-      : '<span class="muted">idle</span>']);
-    rows.push(['Weather key', ok(!!process.env.OPENWEATHER_API_KEY)]);
-    rows.push(['Device token', ok(!!DEVICE_TOKEN)]);
-    rows.push(['Control PIN', pinConfigured(cfg) ? '<span class="ok">SET</span>' : '<span class="warn">not set</span>']);
+      : '<span class="muted">idle</span>',
+      'Active = a Push-now fast-refresh window is currently open, so the device polls quickly. Idle is the normal resting state.']);
+    rows.push(['Weather key', ok(!!process.env.OPENWEATHER_API_KEY),
+      'OpenWeatherMap API key. Blank/— is usually FINE: the default weather uses Open-Meteo, which needs no key. Only set this if you add a widget that specifically needs OpenWeatherMap.']);
+    rows.push(['Device token', ok(!!DEVICE_TOKEN),
+      'A shared secret the device sends so strangers cannot pull your image endpoints. OK = set (recommended). Blank = anyone with the URL can fetch /display.*']);
+    rows.push(['Control PIN', pinConfigured(cfg) ? '<span class="ok">SET</span>' : '<span class="warn">not set</span>',
+      'Whether the editor is PIN-locked. SET = the control panel asks for a PIN. "not set" means anyone who reaches the URL can edit.']);
     if (battery) {
-      rows.push(['Battery', `${battery.pct}% · ${Number(battery.v).toFixed(2)} V · ${relAge(battery.at)}`]);
+      rows.push(['Battery', `${battery.pct}% · ${Number(battery.v).toFixed(2)} V · ${relAge(battery.at)}`,
+        'The last battery reading the device reported: charge %, voltage, and how long ago. If "ago" is large the device has not checked in recently.']);
     } else {
-      rows.push(['Battery', '<span class="warn">no reading yet</span>']);
+      rows.push(['Battery', '<span class="warn">no reading yet</span>',
+        'No battery reading received yet. The device reports this on each wake, so it fills in after the next refresh on battery power.']);
     }
     const trend = batteryTrend(history);
     if (trend) {
@@ -2728,14 +2756,23 @@ app.get('/status', checkAdminAuth, async (req, res) => {
         t = 'flat';
       }
       const spark = sparkline(history.slice(-24).map(h => h.pct));
-      rows.push(['Battery trend', `${t}${spark ? ` · <span class="muted">${spark}</span>` : ''}`]);
+      rows.push(['Battery trend', `${t}${spark ? ` · <span class="muted">${spark}</span>` : ''}`,
+        'Which way the battery is going over recent readings. ▼ = draining (with %/hour and a rough time-to-empty), ▲ = charging, flat = no change. flat is FINE — it just means steady (e.g. on USB power or few readings). The sparkline is the recent % history, left=older.']);
     }
-    rows.push(['Battery history', `${history.length} point${history.length === 1 ? '' : 's'}`]);
+    rows.push(['Battery history', `${history.length} point${history.length === 1 ? '' : 's'}`,
+      'How many battery readings are stored. These feed the trend and sparkline above; more points = a better trend estimate.']);
 
-    const devRows = devices.length ? devices.map(d =>
-      `<tr><td>${esc(d.friendly_id || d.mac)}</td><td>${esc(d.board || '?')}</td>`
-      + `<td>${esc(d.fw_version || '?')}</td><td>${relAge(d.last_seen_at)}</td></tr>`
-    ).join('') : '<tr><td colspan="4" class="muted">No devices enrolled yet.</td></tr>';
+    const STALE_MS = 2 * 86400000; // 2 days without contact = prunable
+    const devRows = devices.length ? devices.map(d => {
+      const id = esc(d.friendly_id || d.mac);
+      const stale = d.last_seen_at && (Date.now() - d.last_seen_at) > STALE_MS;
+      const seen = `${relAge(d.last_seen_at)}${stale ? ' <span class="warn">stale</span>' : ''}`;
+      return `<tr><td>${id}</td><td>${esc(d.board || '?')}</td>`
+        + `<td>${esc(d.fw_version || '?')}</td><td>${seen}</td>`
+        + `<td><button class="rm" data-id="${id}">remove</button></td></tr>`;
+    }).join('') : '<tr><td colspan="5" class="muted">No devices enrolled yet.</td></tr>';
+
+    const liveRenderHref = '/display.png' + (DEVICE_TOKEN ? `?token=${encodeURIComponent(DEVICE_TOKEN)}` : '');
 
     res.type('html').send(`<!doctype html><html><head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -2748,20 +2785,52 @@ td{padding:7px 0;border-bottom:1px solid #e2ded3;vertical-align:top}
 tr td:first-child{color:#6b6960;width:42%}
 .ok{color:#1a7f37;font-weight:700}.bad{color:#b00}.warn{color:#b06a00}.muted{color:#999}
 thead td{font-weight:700;color:#111;text-transform:uppercase;font-size:11px;letter-spacing:1px}
-a{color:#111}</style></head><body>
+a{color:#111}
+.info{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;margin-left:7px;border:1px solid #b7b2a4;border-radius:50%;color:#8a857a;font-size:10px;font-style:italic;font-family:Georgia,serif;cursor:pointer;user-select:none;vertical-align:middle}
+.info:hover{border-color:#111;color:#111}
+.desc{display:none}
+.desc.show{display:table-row}
+.desc td{font-family:Georgia,serif;font-size:13px;line-height:1.5;color:#555;background:#f3f0e8;padding:10px 12px;border-bottom:1px solid #e2ded3}
+button.rm{font-family:ui-monospace,monospace;font-size:11px;color:#b00;background:none;border:1px solid #e0c4c4;padding:2px 8px;cursor:pointer;border-radius:3px}
+button.rm:hover{background:#b00;color:#fff;border-color:#b00}</style></head><body>
 <h1>E-Ink Dashboard · Status</h1>
+<p style="font-family:ui-monospace,monospace;font-size:11px;color:#8a857a;margin-top:-4px">Tap the <span class="info">i</span> on any row for what it means.</p>
 <h2>System</h2>
-<table>${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>
-<h2>Devices</h2>
-<table><thead><tr><td>ID</td><td>Board</td><td>Firmware</td><td>Last seen</td></tr></thead>
+<table>${rows.map(([k, v, desc], i) =>
+  `<tr><td>${k}${desc ? `<span class="info" data-d="d${i}">i</span>` : ''}</td><td>${v}</td></tr>`
+  + (desc ? `<tr class="desc" id="d${i}"><td colspan="2">${esc(desc)}</td></tr>` : '')
+).join('')}</table>
+<h2>Devices <span class="info" data-d="ddev">i</span></h2>
+<p class="desc" id="ddev-p" style="display:none;font-family:Georgia,serif;font-size:13px;line-height:1.5;color:#555;background:#f3f0e8;padding:10px 12px;border:1px solid #e2ded3">Each ESP32 that has checked in. <b>Board</b> = panel it reported (<code>b</code> = 3-colour, <code>bw</code> = black/white). <b>Firmware</b> = its flashed version. <b>Last seen</b> = time since its last request; <b>stale</b> means &gt;2 days — usually an old enrollment from before a reflash. Removing a row just prunes the list; a live device re-adds itself automatically on its next wake.</p>
+<table><thead><tr><td>ID</td><td>Board</td><td>Firmware</td><td>Last seen</td><td></td></tr></thead>
 <tbody>${devRows}</tbody></table>
 <h2>Links</h2>
 <table>
 <tr><td>Control panel</td><td><a href="/control">/control</a></td></tr>
-<tr><td>Live render</td><td><a href="/display.png">/display.png</a></td></tr>
+<tr><td>Live render</td><td><a href="${liveRenderHref}">/display.png</a></td></tr>
 <tr><td>Health JSON</td><td><a href="/health">/health</a></td></tr>
 </table>
 <p style="font-family:ui-monospace,monospace;font-size:10px;color:#999;margin-top:24px">Auto-refreshes every 60s.</p>
+<script>
+var qtok=new URLSearchParams(location.search).get('token');
+document.querySelectorAll('.info[data-d]').forEach(function(b){
+  b.addEventListener('click',function(){
+    var t=document.getElementById(b.dataset.d);
+    if(t)t.classList.toggle('show');
+    var p=document.getElementById(b.dataset.d+'-p'); // Devices note (a <p>, not a row)
+    if(p)p.style.display=p.style.display==='none'?'block':'none';
+  });
+});
+document.querySelectorAll('button.rm').forEach(function(b){
+  b.addEventListener('click',function(){
+    var id=b.dataset.id;
+    if(!confirm('Remove device '+id+'? It re-adds itself if it checks in again.'))return;
+    fetch('/api/device/'+encodeURIComponent(id)+(qtok?'?token='+encodeURIComponent(qtok):''),{method:'DELETE'})
+      .then(function(r){if(r.ok)location.reload();else alert('Remove failed ('+r.status+')');})
+      .catch(function(){alert('Remove failed');});
+  });
+});
+</script>
 </body></html>`);
   } catch (err) {
     console.error('status error:', err);
