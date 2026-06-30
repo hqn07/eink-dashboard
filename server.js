@@ -1261,13 +1261,13 @@ function htmlAttr(s) {
 // tile gets its own context (overrides global where set).
 function buildPageBodyHtml({ payload, ssr, mode }) {
   const { cfg, weather, events, aqi, onThisDay, units, resolvedMessage,
-          perItem, battery, layout: rawLayout, devWidgetId } = payload;
+          perItem, battery, batteryHistory, layout: rawLayout, devWidgetId } = payload;
 
   const defs = ssr.DEFS;
   const layout = expandLayout(rawLayout, defs);
   const ctxBase = {
     cfg, weather, events, aqi, onThisDay, units,
-    resolvedMessage, battery
+    resolvedMessage, battery, batteryHistory
   };
 
   // Matrix mode: every widget at every preset, stacked top-to-bottom.

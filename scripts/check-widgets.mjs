@@ -28,6 +28,14 @@ const formIds = new Set(entries
 
 const registrySrc = await readFile(join(WDIR, '_registry.js'), 'utf8');
 const paletteSrc = await readFile(join(root, 'control-src', 'widgets.js'), 'utf8');
+// _ssr.js is the SERVER render path (the panel). A widget missing here
+// renders in the editor but shows NO_WIDGETS_ENABLED / blank on the
+// e-ink — kept as its own hardcoded list so JSX never enters Node's graph.
+const ssrSrc = await readFile(join(WDIR, '_ssr.js'), 'utf8');
+const ssrModules = (ssrSrc.match(/const MODULES\s*=\s*\[([\s\S]*?)\];/) || [])[1] || '';
+const ssrImports = new Set(
+  [...ssrSrc.matchAll(/import \* as ([a-z0-9_]+)\s+from/g)].map(m => m[1])
+    .filter(id => new RegExp(`\\b${id}\\b`).test(ssrModules)));
 
 // `import * as <name> from './<id>.js'` → collect the <id>s in MODULES.
 const registryImports = new Set(
@@ -46,6 +54,7 @@ for (const id of widgetIds) {
   if (!registryImports.has(id)) problems.push(`${id}: not imported in _registry.js MODULES`);
   if (!registryForms.has(id)) problems.push(`${id}: missing from _registry.js FORMS map`);
   if (!palette.has(id)) problems.push(`${id}: missing from WIDGET_REGISTRY (editor palette) in widgets.js — renders server-side but never shows in the add-widget pool`);
+  if (!ssrImports.has(id)) problems.push(`${id}: missing from _ssr.js MODULES — renders in the editor but blank on the e-ink panel`);
 }
 // Palette entries that point at a non-existent widget.
 for (const id of palette) {
