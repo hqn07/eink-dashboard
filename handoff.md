@@ -80,10 +80,17 @@ with `BATTERY_AWARE=0`. Precedence in `effectiveRefresh`: fast window >
 battery floor > config interval. Verified locally (5min base → 60/120/240
 at 30/15/5%).
 
-Still-open options (not done, no reflash needed): status/health surface
-(pre-render age, battery trend, fast-window state on `/status`), quiet-hours
-deep-sleep window, Puppeteer `MAX_PAGES` bump. Custom domain — user wants
-LAST. Firmware sub-minute push-now — parked (no reflash yet).
+### /status enrichment — DONE
+
+`/status` now shows the device-cadence state: **Refresh now** (effective
+interval + reason: FAST push window / battery-saver vs base), **Pre-render**
+(warmer on/off + cadence), **Push window** (active countdown / idle), and
+**Battery trend** (drain %/h, rough time-to-empty, block-char sparkline of
+recent %). Helpers `batteryTrend()` + `sparkline()` added above the route.
+
+Still-open options (no reflash needed): quiet-hours deep-sleep window,
+Puppeteer `MAX_PAGES` bump. Custom domain — user wants LAST. Firmware
+sub-minute push-now — parked, write-up in `esp32/PUSH_NOW_FIRMWARE.md`.
 
 ## What shipped in the 2026-06-16 session (HEAD on `origin/main`)
 
