@@ -88,9 +88,20 @@ interval + reason: FAST push window / battery-saver vs base), **Pre-render**
 **Battery trend** (drain %/h, rough time-to-empty, block-char sparkline of
 recent %). Helpers `batteryTrend()` + `sparkline()` added above the route.
 
-Still-open options (no reflash needed): quiet-hours deep-sleep window,
-Puppeteer `MAX_PAGES` bump. Custom domain — user wants LAST. Firmware
-sub-minute push-now — parked, write-up in `esp32/PUSH_NOW_FIRMWARE.md`.
+### Quiet hours — DONE (no reflash)
+
+Global `cfg.quietHours = { enabled, from:'HH:MM', to:'HH:MM' }` (tz-aware,
+wrap-aware). `quietMinutesRemaining()` → during the window `effectiveRefresh`
+returns minutes-until-window-end (capped 1440), so the device wakes once at
+the end instead of all night. Precedence: push-now > quiet > battery floor >
+config. `quiet` flag on `/sleep`; "quiet hours" reason on `/status`. Editor
+control `QuietHours.jsx` in the schedule-collapsible. Default (disabled) in
+`config.default.json`. Verified: /sleep 5min → 1288min inside a covering
+window.
+
+Still-open options (no reflash needed): Puppeteer `MAX_PAGES` bump. Custom
+domain — user wants LAST. Firmware sub-minute push-now — parked, write-up in
+`esp32/PUSH_NOW_FIRMWARE.md`.
 
 ## What shipped in the 2026-06-16 session (HEAD on `origin/main`)
 
