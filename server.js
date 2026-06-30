@@ -850,6 +850,38 @@ function resolveRefreshMinutes(cfg) {
   return parseInt(cfg.refreshMinutes, 10) || 30;
 }
 
+// ---------- Push-now / fast-refresh window ----------
+// A deep-sleeping ESP32 can't be reached mid-sleep (no radio listening), so
+// "push now" instead shortens the refresh cadence for a short window: the
+// device's NEXT wake is told to poll fast for FAST_WINDOW_MS, then it returns
+// to the normal interval and deep-sleeps again. Latency to enter fast mode is
+// bounded by the current interval; after that, edits land within one fast tick.
+const FAST_WINDOW_MS = Math.max(
+  30_000, parseInt(process.env.PUSH_WINDOW_MS, 10) || 5 * 60_000
+);
+const FAST_INTERVAL_SECONDS = Math.max(
+  10, parseInt(process.env.PUSH_INTERVAL_SECONDS, 10) || 20
+);
+let fastWakeUntil = 0; // epoch ms; while now < this, serve the fast interval
+
+function pushNow() {
+  fastWakeUntil = Date.now() + FAST_WINDOW_MS;
+  invalidateImage(); // re-render + re-warm so the fast poll serves fresh pixels
+  return fastWakeUntil;
+}
+
+// Refresh cadence the device should use right now, honoring an active fast
+// window. Returns both minutes (legacy X-Refresh-Rate, floored at 1 so current
+// firmware already speeds up) and exact seconds (X-Refresh-Seconds — firmware
+// can adopt this for true sub-minute polling once reflashed).
+function effectiveRefresh(cfg) {
+  if (Date.now() < fastWakeUntil) {
+    return { minutes: 1, seconds: FAST_INTERVAL_SECONDS, fast: true };
+  }
+  const minutes = resolveRefreshMinutes(cfg);
+  return { minutes, seconds: minutes * 60, fast: false };
+}
+
 // ---------- Auth ----------
 
 function checkDeviceAuth(req, res, next) {
@@ -1832,11 +1864,14 @@ app.get('/display.bin', checkDeviceAuth, async (req, res) => {
     const variant = resolveVariant(req, cfg);
     const { bin, etagBin } = await getCurrentImage(variant);
 
-    // Adaptive-refresh header — tells the device how many minutes to
-    // sleep before the next wake. Replaces the older /sleep round-trip;
-    // /sleep stays alive for legacy firmware.
-    const minutes = resolveRefreshMinutes(cfg);
-    res.set('X-Refresh-Rate', String(minutes));
+    // Adaptive-refresh header — tells the device how long to sleep before
+    // the next wake. Replaces the older /sleep round-trip; /sleep stays alive
+    // for legacy firmware. X-Refresh-Seconds carries the exact cadence (used
+    // by the push-now fast window); X-Refresh-Rate stays minute-granular for
+    // current firmware and is floored at 1 so it speeds up during a window.
+    const refresh = effectiveRefresh(cfg);
+    res.set('X-Refresh-Rate', String(refresh.minutes));
+    res.set('X-Refresh-Seconds', String(refresh.seconds));
 
     // Battery telemetry over headers (firmware sends Battery-Voltage +
     // Battery-Pct on every /display.bin request). POST /api/battery
@@ -1876,7 +1911,9 @@ app.get('/display-3c.bin', checkDeviceAuth, async (req, res) => {
     const entry = await getCurrentImage(variant);
     const { bin, etag } = await entry.get3c();
 
-    res.set('X-Refresh-Rate', String(resolveRefreshMinutes(cfg)));
+    const refresh3c = effectiveRefresh(cfg);
+    res.set('X-Refresh-Rate', String(refresh3c.minutes));
+    res.set('X-Refresh-Seconds', String(refresh3c.seconds));
     const hBattV = parseFloat(req.headers['battery-voltage']);
     const hBattPct = parseInt(req.headers['battery-pct'], 10);
     if (Number.isFinite(hBattV) && hBattV >= 0 && hBattV <= 6 &&
@@ -1968,10 +2005,27 @@ app.get('/display-body.bin', checkDeviceAuth, async (req, res) => {
 app.get('/sleep', checkDeviceAuth, async (req, res) => {
   const cfg = await loadConfig();
   const s = pickActiveScreen(cfg);
-  const minutes = s && Number.isFinite(s.refreshMinutes) && s.refreshMinutes > 0
-    ? s.refreshMinutes
-    : (parseInt(cfg.refreshMinutes, 10) || 30);
-  res.json({ minutes, screenId: s ? s.id : null, screenName: s ? s.name : null });
+  const refresh = effectiveRefresh(cfg);
+  res.json({
+    minutes: refresh.minutes, seconds: refresh.seconds, fast: refresh.fast,
+    screenId: s ? s.id : null, screenName: s ? s.name : null
+  });
+});
+
+// Push now — opens a fast-refresh window so the device picks up the latest
+// render quickly instead of waiting out its full sleep interval. The device
+// still has to wake once to enter the window (deep sleep can't be interrupted
+// remotely), so the response reports the worst-case latency for the UI.
+app.post('/api/wake', checkAdminAuth, async (req, res) => {
+  const fastUntil = pushNow();
+  const cfg = await loadConfig().catch(() => ({}));
+  res.json({
+    ok: true,
+    fastUntil,
+    fastSeconds: FAST_INTERVAL_SECONDS,
+    windowMs: FAST_WINDOW_MS,
+    maxLatencyMinutes: resolveRefreshMinutes(cfg) // until the device next wakes
+  });
 });
 
 // Control panel

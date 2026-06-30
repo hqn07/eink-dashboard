@@ -3236,6 +3236,11 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 .settings-row--expandable.is-open .settings-row-caret { transform: rotate(90deg); }
 .settings-collapse-body { border-top: var(--bw-hair) solid var(--ink); }
+.settings-row-note {
+  padding: 2px 14px 8px;
+  font-size: var(--fs-xs, 10px);
+  color: var(--mute, #8a877e);
+}
 
 /* ---------- Alarms panel ---------- */
 .alarms-panel { padding: 10px 14px; display: flex; flex-direction: column; gap: 10px; }

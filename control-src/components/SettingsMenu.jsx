@@ -4,6 +4,7 @@ import {
   Gear, MagicWand, Keyboard, Broadcast, Bell, Archive, CaretRight,
 } from '@phosphor-icons/react';
 import MacAgentBadge from './MacAgentBadge.jsx';
+import PushNowButton from './PushNowButton.jsx';
 import PanelPreview from './PanelPreview.jsx';
 import PinButton from './PinButton.jsx';
 import AlarmsPanel from './AlarmsPanel.jsx';
@@ -67,6 +68,7 @@ export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcut
             </div>
 
             <div className="settings-section-label">Device</div>
+            <PushNowButton block />
             <button
               type="button"
               className="settings-row"
