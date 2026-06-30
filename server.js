@@ -1078,8 +1078,12 @@ function clearSessionCookie(res) {
 async function gateControlHtml(req, res, next) {
   try {
     const cfg = await loadConfig();
-    if (!pinConfigured(cfg) || sessionValid(req, cfg)) return next();
-    return res.redirect('/control/login');
+    if (sessionValid(req, cfg)) return next();
+    if (pinConfigured(cfg)) return res.redirect('/control/login');
+    // No PIN configured. In production, force first-run setup so a public
+    // instance never serves an open editor. Locally, stay open for dev.
+    if (IS_PROD) return res.redirect('/control/setup');
+    return next();
   } catch (err) {
     return next(err);
   }
@@ -1098,8 +1102,11 @@ async function checkAdminAuth(req, res, next) {
       const tok = req.query.token || req.headers['x-device-token'];
       if (tok === DEVICE_TOKEN) return next();
     }
-    // No PIN and no token requirement → open (local dev / first run).
-    if (!pinConfigured(cfg) && !DEVICE_TOKEN) return next();
+    // No PIN and no token requirement → open ONLY in local dev / first run.
+    // In production we refuse admin writes until a PIN (or token) exists, so
+    // a fresh public deploy can't be configured by a stranger. The first-run
+    // /api/auth/set-pin path is separate and stays reachable to bootstrap.
+    if (!pinConfigured(cfg) && !DEVICE_TOKEN && !IS_PROD) return next();
     return res.status(401).send('Unauthorized');
   } catch (err) {
     return next(err);
@@ -2128,12 +2135,49 @@ const r=await fetch('/api/auth/login',{method:'POST',headers:{'content-type':'ap
 if(r.ok){location.href='/control';}else{e.textContent='Wrong PIN';document.getElementById('pin').value='';}};
 </script></body></html>`;
 
+// First-run "create a PIN" page. Shown in production when no PIN is set yet,
+// so a freshly-deployed public instance can't sit with an open editor.
+const SETUP_PAGE = `<!doctype html><html><head>
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Secure your dashboard · E-Ink</title>
+<style>body{font-family:Georgia,serif;background:#faf8f3;color:#111;max-width:380px;margin:56px auto;padding:0 16px}
+h1{font-size:24px;font-weight:400;border-bottom:3px solid #111;padding-bottom:10px}
+p.lede{font-size:14px;line-height:1.5;color:#555}
+label{display:block;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#6b6960;margin:18px 0 6px}
+input{width:100%;box-sizing:border-box;padding:11px 12px;font-size:18px;letter-spacing:4px;font-family:inherit;background:#fff;border:1.5px solid #111}
+button{margin-top:18px;padding:12px;font-family:ui-monospace,monospace;font-weight:700;letter-spacing:3px;text-transform:uppercase;border:2px solid #111;background:#111;color:#fff;width:100%;cursor:pointer}
+.err{font-family:ui-monospace,monospace;font-size:12px;color:#b00;margin-top:14px;min-height:16px}</style>
+</head><body><h1>Secure your dashboard</h1>
+<p class="lede">This instance has no PIN yet. Set one to lock the editor before anyone else finds it.</p>
+<form id="f"><label>New PIN (4+ digits)</label>
+<input id="pin" type="password" inputmode="numeric" autocomplete="new-password" autofocus>
+<label>Confirm PIN</label>
+<input id="pin2" type="password" inputmode="numeric" autocomplete="new-password">
+<button>Set PIN &amp; continue</button><div class="err" id="e"></div></form>
+<script>
+const f=document.getElementById('f'),e=document.getElementById('e');
+f.onsubmit=async(ev)=>{ev.preventDefault();e.textContent='';
+const p=document.getElementById('pin').value,p2=document.getElementById('pin2').value;
+if(p.length<4){e.textContent='PIN must be 4+ digits';return;}
+if(p!==p2){e.textContent='PINs do not match';return;}
+const r=await fetch('/api/auth/set-pin',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({pin:p})});
+if(r.ok){location.href='/control';}else{e.textContent='Could not set PIN';}};
+</script></body></html>`;
+
 app.get('/control/login', async (req, res) => {
   const cfg = await loadConfig().catch(() => ({}));
-  // Nothing to log into yet → straight to the (open) editor.
-  if (!pinConfigured(cfg)) return res.redirect('/control');
   if (sessionValid(req, cfg)) return res.redirect('/control');
+  // No PIN yet: force setup in prod, open editor locally.
+  if (!pinConfigured(cfg)) return res.redirect(IS_PROD ? '/control/setup' : '/control');
   res.type('html').send(LOGIN_PAGE);
+});
+
+// First-run PIN setup. Only meaningful when no PIN is configured; once one
+// exists this bounces to login/editor so it can't be used to view a form.
+app.get('/control/setup', async (req, res) => {
+  const cfg = await loadConfig().catch(() => ({}));
+  if (sessionValid(req, cfg)) return res.redirect('/control');
+  if (pinConfigured(cfg)) return res.redirect('/control/login');
+  res.type('html').send(SETUP_PAGE);
 });
 
 app.post('/api/auth/login', async (req, res) => {

@@ -19,7 +19,7 @@
     "check": "npm run check:css && npm run check:widgets && npm run lint:eink",
     "test:visual": "node scripts/visual-regression.mjs",
     "test:visual:update": "node scripts/visual-regression.mjs --update",
-    "test:api": "node --test test/endpoints.test.mjs"
+    "test:api": "node --test test/endpoints.test.mjs test/firstrun.test.mjs"
   },
   "engines": {
     "node": ">=20.0.0"
