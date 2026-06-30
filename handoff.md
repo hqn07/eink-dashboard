@@ -17,10 +17,13 @@ pointed at from `CLAUDE.md` and the `project_eink_multitenant` memory.
 
 Security note (single-tenant, now): going public = set a Control PIN
 (immediately, or someone could claim the first-run set-pin) AND a
-`DEVICE_TOKEN` in Railway. That locks editor + settings writes. Gap:
-`/api/setup` is open, so a stranger could mint a device key and *read*
-the image (not change anything); fully closing it needs a reflash so the
-enroll request sends the token. `/control-classic` PIN-gate bug fixed.
+`DEVICE_TOKEN` in Railway. That locks editor + settings writes.
+`/api/setup` is now gated behind `DEVICE_TOKEN` too (was open) — closes
+the mint-a-key-then-read-image gap; firmware `enrollDevice()` sends the
+token via `addToken()`. Already-enrolled devices are unaffected; a device
+that loses NVS needs firmware with the addToken enroll change (flashed
+1.15.0 does NOT have it yet — reflash before relying on auto re-enroll).
+`/control-classic` PIN-gate bug fixed.
 
 ### Header → single Settings menu
 
