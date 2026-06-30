@@ -62,8 +62,9 @@ button lives in the Settings menu → Device.
 
 **Works today** via the 1-minute `X-Refresh-Rate` floor (no reflash).
 **Follow-up for true sub-minute:** firmware must read the new
-`X-Refresh-Seconds` header instead of minutes — UNVERIFIED, needs a flash
-on hardware. Inherent ceiling: latency to *enter* fast mode = current
+`X-Refresh-Seconds` header instead of minutes — paste-ready edit written
+up in `esp32/PUSH_NOW_FIRMWARE.md` (both boards, flash+verify steps).
+UNVERIFIED, needs a flash on hardware. Inherent ceiling: latency to *enter* fast mode = current
 sleep interval; can't beat that on battery deep-sleep without always-on
 radio.
 
