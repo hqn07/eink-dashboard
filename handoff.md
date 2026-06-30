@@ -81,6 +81,18 @@ with `BATTERY_AWARE=0`. Precedence in `effectiveRefresh`: fast window >
 battery floor > config interval. Verified locally (5min base → 60/120/240
 at 30/15/5%).
 
+### /status explanations + device cleanup — DONE
+
+Per-row click-to-expand "i" explanations on `/status` (flat battery = fine,
+blank weather key = fine since default is Open-Meteo, what "stale" means,
+etc.). Live-render link now carries `?token=` (was returning "bad token").
+Devices table marks rows >2d stale and has a "remove" action (`DELETE
+/api/device/:id`, admin, matches friendly_id or MAC) to prune old
+enrollments; a live device re-adds itself on next wake. Board strings:
+`b` = 3-colour firmware, `bw` = black/white. The two `bw`/1.13.x rows were
+pre-reflash enrollments — removable; the reflashed B device shows board
+`b` / FW `1.15.0` once it next checks in.
+
 ### /status enrichment — DONE
 
 `/status` now shows the device-cadence state: **Refresh now** (effective
