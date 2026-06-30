@@ -1,0 +1,27 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+  html,body{margin:0;padding:0;width:800px;height:480px;background:#fff;font-family:monospace}
+  .row{display:flex;gap:0;height:80px}
+  .sw{flex:1;display:flex;align-items:flex-end;justify-content:center;color:#000;font-size:11px;border-right:1px solid #000}
+  .lbl{background:#fff;padding:1px 3px}
+  /* crispEdges SVG tiles, 2px, pixelated — pure black/white or red/white */
+  .g25{background-color:#fff;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' x='0' y='0'/%3E%3C/svg%3E");background-size:2px 2px;image-rendering:pixelated}
+  .g50{background-color:#fff;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' x='0' y='0'/%3E%3Crect width='1' height='1' x='1' y='1'/%3E%3C/svg%3E");background-size:2px 2px;image-rendering:pixelated}
+  .g75{background-color:#000;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' x='1' y='0' fill='%23fff'/%3E%3C/svg%3E");background-size:2px 2px;image-rendering:pixelated}
+  .r25{background-color:#fff;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' x='0' y='0' fill='%23d00'/%3E%3C/svg%3E");background-size:2px 2px;image-rendering:pixelated}
+  .r50{background-color:#fff;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' x='0' y='0' fill='%23d00'/%3E%3Crect width='1' height='1' x='1' y='1' fill='%23d00'/%3E%3C/svg%3E");background-size:2px 2px;image-rendering:pixelated}
+  .solidk{background:#000;color:#fff}.solidr{background:#d00;color:#fff}.solidw{background:#fff}
+</style></head><body>
+  <div class="row">
+    <div class="sw solidw"><span class="lbl">white</span></div>
+    <div class="sw g25"><span class="lbl">gray25</span></div>
+    <div class="sw g50"><span class="lbl">gray50</span></div>
+    <div class="sw g75"><span class="lbl">gray75</span></div>
+    <div class="sw solidk"><span class="lbl">black</span></div>
+  </div>
+  <div class="row">
+    <div class="sw r25"><span class="lbl">red25 (pink)</span></div>
+    <div class="sw r50"><span class="lbl">red50</span></div>
+    <div class="sw solidr"><span class="lbl">red</span></div>
+  </div>
+  <div class="row"><div class="sw g50" style="font-size:18px">Gray panel under text — readable?</div></div>
+</body></html>
