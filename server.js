@@ -2830,12 +2830,21 @@ button.rm:hover{background:#b00;color:#fff;border-color:#b00}</style></head><bod
 <p style="font-family:ui-monospace,monospace;font-size:10px;color:#999;margin-top:24px">Auto-refreshes every 60s.</p>
 <script>
 var qtok=new URLSearchParams(location.search).get('token');
+// Remember which explanations are open so the 60s auto-refresh doesn't
+// collapse them mid-read.
+var OPEN_KEY='eink-status-open';
+function openSet(){try{return new Set(JSON.parse(sessionStorage.getItem(OPEN_KEY)||'[]'));}catch(e){return new Set();}}
+function saveOpen(s){try{sessionStorage.setItem(OPEN_KEY,JSON.stringify([...s]));}catch(e){}}
+function setOpen(id,on){
+  var t=document.getElementById(id); if(t)t.classList.toggle('show',on);
+  var p=document.getElementById(id+'-p'); if(p)p.style.display=on?'block':'none';
+}
+var _open=openSet();
+_open.forEach(function(id){setOpen(id,true);});
 document.querySelectorAll('.info[data-d]').forEach(function(b){
   b.addEventListener('click',function(){
-    var t=document.getElementById(b.dataset.d);
-    if(t)t.classList.toggle('show');
-    var p=document.getElementById(b.dataset.d+'-p'); // Devices note (a <p>, not a row)
-    if(p)p.style.display=p.style.display==='none'?'block':'none';
+    var id=b.dataset.d, s=openSet(), on=!s.has(id);
+    on?s.add(id):s.delete(id); saveOpen(s); setOpen(id,on);
   });
 });
 document.querySelectorAll('button.rm').forEach(function(b){
