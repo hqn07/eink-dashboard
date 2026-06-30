@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
-import { Star, GridFour, ArrowCounterClockwise, SlidersHorizontal, Trash } from '@phosphor-icons/react';
-import { fetchConfig, saveConfig, fetchPreviewData } from './api.js';
+import { Star, GridFour, ArrowCounterClockwise, SlidersHorizontal, Trash, Lock } from '@phosphor-icons/react';
+import { fetchConfig, saveConfig, fetchPreviewData, onUnauthorized } from './api.js';
 import {
   WIDGET_REGISTRY,
   GRID_COLS,
@@ -198,6 +198,11 @@ export default function App() {
   // us a re-render every minute so the pill ages without an explicit
   // poll here.
   const [lastSavedAt, setLastSavedAt] = useState(null);
+  // Locked when the server rejects us (401) and we have no working credential.
+  // Read-only: the grid stops responding to drag/resize and the save bar hides,
+  // so editing isn't possible without authorization (not just non-persistent).
+  const [readOnly, setReadOnly] = useState(false);
+  useEffect(() => { onUnauthorized(() => setReadOnly(true)); }, []);
 
   useEffect(() => {
     fetchConfig()
@@ -679,6 +684,13 @@ export default function App() {
         )}
       </div>
 
+      {readOnly && (
+        <div className="readonly-banner" role="alert">
+          <Lock size={14} weight="bold" />
+          <span>Read-only — not authorized to edit. Open the editor with <code>?token=…</code> or sign in, then reload.</span>
+        </div>
+      )}
+
       <main className={`layout edit-mode ${previewPaneOpen ? 'preview-on' : 'preview-off'}`}>
         <aside className="settings-sidebar">
           {editScreen && (
@@ -727,6 +739,7 @@ export default function App() {
             <EditorGrid
               layout={layout}
               showGrid={showGrid}
+              readOnly={readOnly}
               previewData={livePreviewData}
               seedCtx={{
                 city: cfg.city || '',
@@ -762,17 +775,19 @@ export default function App() {
         )}
       </main>
 
-      <SaveBar
-        status={canSave ? status : 'error'}
-        label={
-          canSave
-            ? (statusDef.label + (statusMsg && status === 'error' ? ` · ${statusMsg}` : ''))
-            : `BLOCKED · ${validationErrors[0]}`
-        }
-        onSave={handleSave}
-        onDiscard={undoCfg ? undo : null}
-        disabled={!canSave}
-      />
+      {!readOnly && (
+        <SaveBar
+          status={canSave ? status : 'error'}
+          label={
+            canSave
+              ? (statusDef.label + (statusMsg && status === 'error' ? ` · ${statusMsg}` : ''))
+              : `BLOCKED · ${validationErrors[0]}`
+          }
+          onSave={handleSave}
+          onDiscard={undoCfg ? undo : null}
+          disabled={!canSave}
+        />
+      )}
 
       {/* Mobile FAB — only shown by CSS below the breakpoint where
        *  the sidebar collapses out of the layout. */}

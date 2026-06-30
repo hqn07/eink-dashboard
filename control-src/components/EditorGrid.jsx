@@ -49,7 +49,7 @@ function showcaseSizeKey(def) {
   return def.defaultSize;
 }
 
-export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onChange, onError, onCommitItemNow }) {
+export default function EditorGrid({ layout, showGrid, readOnly = false, previewData, seedCtx, onChange, onError, onCommitItemNow }) {
   const wrapRef = useRef(null);
   const paletteRef = useRef(null);
   const [size, setSizeState] = useState({ w: 800, h: 480 });
@@ -396,7 +396,8 @@ export default function EditorGrid({ layout, showGrid, previewData, seedCtx, onC
           maxRows={GRID_ROWS}
           compactType={null}
           preventCollision
-          isResizable
+          isDraggable={!readOnly}
+          isResizable={!readOnly}
           resizeHandles={['se', 'sw', 'nw']}
           margin={[MARGIN, MARGIN]}
           containerPadding={[PAD, PAD]}

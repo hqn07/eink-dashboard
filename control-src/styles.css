@@ -447,6 +447,23 @@ main.layout {
 
 /* Schedule-timeline collapse — collapsed by default since the strip
  * is only useful when multiple screens have scheduling enabled. */
+.readonly-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  background: #b06a00;
+  color: #fff;
+  font-size: var(--fs-sm);
+  letter-spacing: 0.3px;
+}
+.readonly-banner code {
+  font-family: var(--font-mono);
+  background: rgba(255, 255, 255, 0.22);
+  padding: 0 4px;
+  border-radius: 2px;
+}
+
 .schedule-collapsible { margin-bottom: 16px; }
 .quiet-hours {
   display: flex;

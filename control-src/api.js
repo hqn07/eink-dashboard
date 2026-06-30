@@ -6,6 +6,12 @@
 
 const TOKEN_KEY = 'deviceToken';
 
+// Registered by the app so it can flip into read-only mode when the server
+// rejects us (401) and we have no working credential. Without this the
+// editor stays interactive client-side even though nothing can be saved.
+let _onUnauthorized = null;
+export function onUnauthorized(fn) { _onUnauthorized = fn; }
+
 function readUrlToken() {
   try {
     const u = new URL(window.location.href);
@@ -45,14 +51,16 @@ async function authFetch(url, opts = {}) {
   const merged = { ...opts, headers: authHeaders(opts.headers) };
   const r = await fetch(url, merged);
   if (r.status === 401) {
-    // Surface a single, app-wide prompt so the user can paste a token.
-    if (!window.__tokenPromptOpen) {
+    // Surface a single, app-wide prompt so the user can paste a token —
+    // but only when we don't already have one (a present-yet-rejected token
+    // means prompting again won't help).
+    if (!getToken() && !window.__tokenPromptOpen) {
       window.__tokenPromptOpen = true;
       try {
         const entered = window.prompt(
-          'Server requires DEVICE_TOKEN.\nPaste it here (or set ?token=… in the URL):'
+          'Server requires a device token to edit.\nPaste it here (or open the editor with ?token=… in the URL):'
         );
-        if (entered) {
+        if (entered && entered.trim()) {
           setToken(entered.trim());
           window.location.reload();
           return r;
@@ -61,6 +69,9 @@ async function authFetch(url, opts = {}) {
         window.__tokenPromptOpen = false;
       }
     }
+    // Still unauthorized (no token, prompt cancelled, or token rejected):
+    // tell the app so it can lock the editor read-only.
+    if (_onUnauthorized) _onUnauthorized();
   }
   return r;
 }
