@@ -2,6 +2,44 @@
 
 State as of 2026-06-16. Read this + `CLAUDE.md` + memory pointers below before touching anything.
 
+## 2026-06-29 session
+
+### Header → single Settings menu
+
+Consolidated five header controls (Mac-agent status, Setup, Panel view,
+Lock/PIN, Tools) plus the `?` keyboard-shortcuts button into one gear
+**Settings** dropdown (`control-src/components/SettingsMenu.jsx`).
+Layout is sectioned (Option A): STATUS / DEVICE / SECURITY / TOOLS, every
+row iconed, Mac status shows a broadcast icon + label, and Alarms +
+Backup collapse behind expandable rows. `PanelPreview` and `PinButton`
+gained a `block` prop (render trigger as a menu row, keep their own
+modal/popover). `ToolsButton.jsx` deleted (folded in). Mobile
+screen-settings FAB icon changed Gear → `SlidersHorizontal` so it no
+longer clashes with the Settings gear.
+
+### Railway persistent volume (config now survives redeploys)
+
+User upgraded to Railway **Hobby**. Mutable state already routes through
+`DATA_DIR` (server.js; default `./data`, seed defaults in `data-defaults/`
+so a volume doesn't shadow them — all writes funnel through
+`atomicWriteFile`). To persist across deploys:
+
+- Set env var `DATA_DIR=/data` on the service.
+- Attach a Railway **Volume** mounted at **`/data`** (right-click service
+  → Attach Volume, or Cmd+K → Volume). **Mount path MUST equal
+  `DATA_DIR`** — keep both `/data`, not `/app/data`.
+- A fresh volume starts empty → server seeds from `data-defaults/`, so the
+  pre-switch live config is lost. Export config first (Settings → Tools →
+  Backup → EXPORT), then IMPORT after the volume is live.
+
+Code/docs pushed (`.env.example` documents `DATA_DIR`). Volume + var are
+configured in the Railway dashboard, not in the repo.
+
+Other unlocked-by-Hobby options (not yet done): no-sleep always-on for
+ESP32 wakes, more Puppeteer RAM/`MAX_PAGES`, a cron service for
+pre-rendered `/display.bin`, custom domain, second service for a
+"push now" MQTT/poll wake path.
+
 ## What shipped in the 2026-06-16 session (HEAD on `origin/main`)
 
 A visual-regression harness, a variant-thumbnail fix, and **six new
