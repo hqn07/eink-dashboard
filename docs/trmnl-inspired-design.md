@@ -35,14 +35,30 @@ per-tile chrome + settings, self-hosted fonts, dither tones
 - Title bar height + body padding standardized via tokens (below). No
   per-widget ad-hoc spacing.
 
-## 2. Type scale (font decision deferred)
+## Validated direction (2026-06-30)
 
-Two candidate identities — pick after seeing the spec rendered:
+Reviewed 5 TRMNL panel photos + rendered a mockup through our real 3-color
+pipeline (`test/trmnl-mockup.html` → looked correct: title-bar cards, big
+sans heroes, dashed dividers, dithered progress bar, pink "on track" chip).
+The look is clearly reproducible here.
 
-- **A. Keep serif** (current): DM Serif Display headlines, Oswald small-caps
-  labels, JetBrains Mono numbers. Keeps our newspaper character.
-- **B. Grotesk** (closer to TRMNL): self-host one variable sans (Inter/Geist-
-  like) for labels + body, keep a display face for hero numbers.
+Concrete TRMNL patterns to adopt (from the photos):
+- **Dashed/dotted dividers** between zones + a 2px card border — signature.
+- **Title bar**: label left, meta/location or a tone chip right, hairline under.
+- **Label+value**: big sans value (−letter-spacing), small-caps label under.
+- **Icon+value+label cells** in a 2-col grid (weather conditions, low/high).
+- **Dithered bars** (progress: g50 fill / g15 track) and **donut/ring gauges**
+  (UV, humidity) and **contribution heatmaps** (dot-density grids).
+- **Footer**: small glyph + plugin name left, source/location right.
+- **Tone chips**: r50 (pink) for status badges, g50 for neutral.
+
+## 2. Type scale → font decision: B (grotesk)
+
+The photos are unambiguously grotesk sans; serif would fight the look.
+**Recommend B: self-host Inter Variable** for labels/body/values, used for
+hero numbers too (tight negative tracking reads like TRMNL). Drop DM Serif
+from the face (keep it in the editor chrome if desired). Mockup used system
+Helvetica as a stand-in; production self-hosts Inter for consistent render.
 
 Scale (px, respecting the 11px floor / eink-lint):
 ```

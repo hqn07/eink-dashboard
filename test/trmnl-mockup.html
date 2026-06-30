@@ -1,0 +1,86 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+  :root{
+    --g15:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' x='0' y='0'/%3E%3C/svg%3E");
+    --g50:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' x='0' y='0'/%3E%3Crect width='1' height='1' x='1' y='1'/%3E%3C/svg%3E");
+    --r50:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' x='0' y='0' fill='%23d32f2f'/%3E%3Crect width='1' height='1' x='1' y='1' fill='%23d32f2f'/%3E%3C/svg%3E");
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:800px;height:480px;background:#fff;color:#000;
+    font-family:"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:none}
+  .screen{width:800px;height:480px;display:flex;padding:14px;gap:0}
+  .card{flex:1;border:2px solid #000;display:flex;flex-direction:column;position:relative}
+  .card+.card{border-left:none}
+  .titlebar{display:flex;justify-content:space-between;align-items:center;
+    padding:7px 12px;border-bottom:2px solid #000;font-size:11px;font-weight:700;
+    letter-spacing:2px;text-transform:uppercase}
+  .body{flex:1;padding:14px;display:flex;flex-direction:column}
+  .foot{display:flex;justify-content:space-between;padding:6px 12px;border-top:1px dashed #000;
+    font-size:11px;letter-spacing:1px;text-transform:uppercase}
+  /* label+value */
+  .lv .v{font-size:64px;font-weight:700;line-height:0.95;letter-spacing:-2px}
+  .lv .l{font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+  .deg{font-size:34px;vertical-align:top}
+  /* weather hero row */
+  .wx-hero{display:flex;align-items:center;gap:14px;flex:1}
+  .wx-icon{width:96px;height:96px;flex:none}
+  .wx-cells{border-top:1px dashed #000;display:grid;grid-template-columns:1fr 1fr;gap:0}
+  .cell{display:flex;align-items:center;gap:8px;padding:10px 4px;border-right:1px dashed #000;border-bottom:1px dashed #000}
+  .cell:nth-child(2n){border-right:none}
+  .cell .ci{width:22px;height:22px;flex:none}
+  .cell .cv{font-size:20px;font-weight:700;line-height:1}
+  .cell .cl{font-size:11px;letter-spacing:1px;text-transform:uppercase}
+  /* progress card */
+  .big{font-size:60px;font-weight:700;letter-spacing:-2px;line-height:1}
+  .sub{font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+  .bar{height:54px;border:2px solid #000;margin-top:16px;display:flex;image-rendering:pixelated}
+  .bar .fill{width:62%;background-image:var(--g50);background-size:2px 2px;background-color:#fff}
+  .bar .trk{flex:1;background-image:var(--g15);background-size:4px 4px;background-color:#fff}
+  .stat-row{display:flex;gap:0;margin-top:18px;border-top:1px dashed #000}
+  .stat{flex:1;padding:12px 4px;border-right:1px dashed #000}
+  .stat:last-child{border-right:none}
+  .stat .sv{font-size:30px;font-weight:700;line-height:1}
+  .stat .sl{font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-top:3px}
+  .chip{display:inline-block;background-image:var(--r50);background-size:2px 2px;background-color:#fff;
+    padding:1px 7px;font-size:12px;font-weight:700;border:1.5px solid #000}
+</style></head><body>
+<div class="screen">
+  <!-- WEATHER CARD (image 4 inspired) -->
+  <div class="card">
+    <div class="titlebar"><span>Weather</span><span>Las Vegas</span></div>
+    <div class="body">
+      <div class="wx-hero">
+        <svg class="wx-icon" viewBox="0 0 48 48" fill="none" stroke="#000" stroke-width="2.5">
+          <circle cx="24" cy="24" r="9"/>
+          <g stroke-linecap="round"><path d="M24 4v6M24 38v6M4 24h6M38 24h6M9 9l4 4M35 35l4 4M39 9l-4 4M13 35l-4 4"/></g>
+        </svg>
+        <div class="lv"><div class="v">62<span class="deg">&deg;</span></div><div class="l">Temperature</div></div>
+      </div>
+      <div class="wx-cells">
+        <div class="cell"><svg class="ci" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><path d="M12 3a4 4 0 014 4v7a5 5 0 11-8 0V7a4 4 0 014-4z"/></svg><div><div class="cv">61&deg;</div><div class="cl">Feels like</div></div></div>
+        <div class="cell"><svg class="ci" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><path d="M12 3s7 8 7 13a7 7 0 11-14 0c0-5 7-13 7-13z"/></svg><div><div class="cv">26%</div><div class="cl">Humidity</div></div></div>
+        <div class="cell"><svg class="ci" viewBox="0 0 24 24" fill="#000"><circle cx="12" cy="12" r="9"/></svg><div><div class="cv">Clear</div><div class="cl">Right now</div></div></div>
+        <div class="cell"><svg class="ci" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><circle cx="12" cy="12" r="5"/><path stroke-linecap="round" d="M12 1v3M12 20v3M1 12h3M20 12h3"/></svg><div><div class="cv">6 <span style="font-size:12px">UV</span></div><div class="cl">Index</div></div></div>
+      </div>
+    </div>
+    <div class="foot"><span>&#9728; Weather</span><span>Updated 3m ago</span></div>
+  </div>
+
+  <!-- PROGRESS CARD (image 1 inspired) -->
+  <div class="card">
+    <div class="titlebar"><span>Progress to Retirement</span><span class="chip">on track</span></div>
+    <div class="body">
+      <div style="display:flex;gap:34px">
+        <div><div class="big">47%</div><div class="sub">Progress</div></div>
+        <div><div class="big">1672</div><div class="sub">Weeks left</div></div>
+      </div>
+      <div class="bar"><div class="fill"></div><div class="trk"></div></div>
+      <div class="stat-row">
+        <div class="stat"><div class="sv">$1.2M</div><div class="sl">Saved</div></div>
+        <div class="stat"><div class="sv">62</div><div class="sl">Target age</div></div>
+        <div class="stat"><div class="sv">8.4%</div><div class="sl">Return</div></div>
+      </div>
+    </div>
+    <div class="foot"><span>&#9632; Finance</span><span>FIRE plan</span></div>
+  </div>
+</div>
+</body></html>
