@@ -2960,11 +2960,37 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
+// Lockout recovery: set RESET_PIN=1 (env) and restart to clear a forgotten
+// control PIN. Strips the PIN hash and rotates the session secret (so old
+// sessions die), leaving the editor open so a new PIN can be set. Works on
+// Railway with no shell access — set the var, redeploy, then REMOVE it and
+// set a fresh PIN immediately.
+async function clearPinIfRequested() {
+  if (!process.env.RESET_PIN) return;
+  try {
+    const cfg = await loadConfig();
+    if (cfg.auth && (cfg.auth.pinHash || cfg.auth.pinSalt)) {
+      delete cfg.auth.pinHash;
+      delete cfg.auth.pinSalt;
+      cfg.auth.sessionSecret = crypto.randomBytes(32).toString('hex');
+      await saveConfig(cfg);
+      invalidateImage();
+      console.warn('⚠ RESET_PIN set — control PIN CLEARED. Remove the RESET_PIN env var now and set a new PIN in the editor.');
+    } else {
+      console.warn('RESET_PIN set — no PIN was configured; nothing to clear.');
+    }
+  } catch (e) {
+    console.error('RESET_PIN failed:', e.message);
+  }
+}
+
 app.listen(PORT, () => {
   console.log(`E-ink dashboard listening on http://localhost:${PORT}`);
   console.log(`  Control panel:  http://localhost:${PORT}/control`);
   console.log(`  Preview PNG:    http://localhost:${PORT}/display.png`);
   console.log(`  Dashboard HTML: http://localhost:${PORT}/dashboard`);
+
+  clearPinIfRequested();
 
   // Pre-render the active screen so the first device wake hits a warm cache,
   // then keep it warm on an interval. Stale-while-revalidate (above) means a
