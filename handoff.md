@@ -68,8 +68,22 @@ UNVERIFIED, needs a flash on hardware. Inherent ceiling: latency to *enter* fast
 sleep interval; can't beat that on battery deep-sleep without always-on
 radio.
 
-Still-open Hobby options (not done): more Puppeteer RAM/`MAX_PAGES`,
-custom domain baked into firmware (user wants this LAST).
+### Battery-aware refresh — DONE (no reflash)
+
+`effectiveRefresh(cfg, battPct)` raises the refresh-interval floor as the
+battery drains (`batteryRefreshFloor`: <35% →60min, <20% →120, <10% →240).
+Only raises a floor — never shortens below the configured interval — and
+push-now fast windows still override it. Reads the `Battery-Pct` header the
+firmware already sends (so no flash); `/sleep` + the warmer fall back to the
+cached `_batteryState.pct`. `battSaver` flag exposed on `/sleep`. Disable
+with `BATTERY_AWARE=0`. Precedence in `effectiveRefresh`: fast window >
+battery floor > config interval. Verified locally (5min base → 60/120/240
+at 30/15/5%).
+
+Still-open options (not done, no reflash needed): status/health surface
+(pre-render age, battery trend, fast-window state on `/status`), quiet-hours
+deep-sleep window, Puppeteer `MAX_PAGES` bump. Custom domain — user wants
+LAST. Firmware sub-minute push-now — parked (no reflash yet).
 
 ## What shipped in the 2026-06-16 session (HEAD on `origin/main`)
 
