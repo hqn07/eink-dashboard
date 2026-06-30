@@ -32,6 +32,21 @@ npm run control-dev   # React control panel hot-reload on :5173 (Vite)
 
 Visit `http://localhost:3000/control` for the production-built UI, or `http://localhost:5173` for hot-reload editing.
 
+### Tests & checks
+
+```bash
+npm run check         # css-in-sync + widget-wiring + e-ink lint (fast, runs in prebuild)
+npm run test:api      # boots a server on a temp DATA_DIR, hits the critical endpoints
+npm run test:visual   # screenshots the widget matrix, pixel-diffs vs baseline
+```
+
+`test:api` covers auth gating, config-write validation, the device cadence
+headers (refresh / battery-aware / quiet-hours / push-now), enrollment +
+device removal, and battery validation. Add a case here when you add or
+change an endpoint. Baselines for `test:visual` are machine-specific —
+regenerate with `npm run test:visual:update` after an intentional widget
+change.
+
 ## Layout
 
 - `server.js` — Express + Puppeteer + Sharp. Renders `/dashboard` to PNG/BIN.
