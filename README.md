@@ -162,6 +162,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for more.
 
 See [BOM.md](BOM.md) for the parts list, GPIO pinout, and assembly notes. Estimated build cost: **$55–80 USD**.
 
+## Design docs
+
+- [docs/multitenant-architecture.md](docs/multitenant-architecture.md) — design for the eventual multi-tenant SaaS model (accounts, per-device config, claim flow). Not built; the keystone is moving config from file to a database.
+- [docs/device-api.md](docs/device-api.md) — the device ↔ server HTTP contract.
+
 ---
 
 ## License
