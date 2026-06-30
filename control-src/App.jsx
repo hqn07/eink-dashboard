@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
-import { Star, GridFour, ArrowCounterClockwise, Gear, Trash } from '@phosphor-icons/react';
+import { Star, GridFour, ArrowCounterClockwise, SlidersHorizontal, Trash } from '@phosphor-icons/react';
 import { fetchConfig, saveConfig, fetchPreviewData } from './api.js';
 import {
   WIDGET_REGISTRY,
@@ -783,7 +783,7 @@ export default function App() {
         onClick={() => setMobileDrawerOpen(true)}
         aria-label="Open screen settings"
       >
-        <Gear size={22} weight="bold" />
+        <SlidersHorizontal size={22} weight="bold" />
       </button>
 
       {/* Mobile bottom-sheet drawer. Hand-rolled (no Radix Dialog dep);
