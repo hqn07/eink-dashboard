@@ -2161,7 +2161,7 @@ app.get('/control', gateControlHtml, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'control.html'));
   }
 });
-app.get('/control-classic', (req, res) => {
+app.get('/control-classic', gateControlHtml, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'control.html'));
 });
 
