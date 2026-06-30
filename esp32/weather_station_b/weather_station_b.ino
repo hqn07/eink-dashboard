@@ -49,7 +49,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.14.2"
+#define FW_VERSION "1.15.0"
 #define FW_BOARD   "b"
 #define OTA_MIN_BATT_PCT 50
 
@@ -162,6 +162,10 @@ int         g_battPct   = -1;
 // X-Refresh-Rate response header on /display.bin. -1 = none yet
 // (firmware falls back to /sleep until the server has answered once).
 int         g_serverRefreshMin = -1;
+// Exact next-refresh interval in SECONDS from the X-Refresh-Seconds
+// response header. Enables sub-minute polling during a push-now fast
+// window. -1 = not seen yet → fall back to the minute-based value.
+int         g_serverRefreshSec = -1;
 // Populated by downloadImage on a failed fetch so drawFailScreen can
 // show the underlying HTTP code + a short tip per status. Resets to
 // 0 on every cycle entry so a fail screen always shows the *current*
@@ -888,8 +892,8 @@ uint8_t* downloadImage() {
   // returns 304 and we skip the slow color refresh.
   if (g_lastEtag[0]) http.addHeader("If-None-Match", g_lastEtag);
   // Retain the response headers we care about: refresh hint + ETag.
-  const char* keepHeaders[] = { "X-Refresh-Rate", "ETag" };
-  http.collectHeaders(keepHeaders, 2);
+  const char* keepHeaders[] = { "X-Refresh-Rate", "ETag", "X-Refresh-Seconds" };
+  http.collectHeaders(keepHeaders, 3);
 
   int code = http.GET();
   // 304 Not Modified — image identical to what's already on the panel.
@@ -901,6 +905,10 @@ uint8_t* downloadImage() {
     if (http.hasHeader("X-Refresh-Rate")) {
       int rr = http.header("X-Refresh-Rate").toInt();
       if (rr > 0 && rr <= 1440) g_serverRefreshMin = rr;
+    }
+    if (http.hasHeader("X-Refresh-Seconds")) {
+      int rs = http.header("X-Refresh-Seconds").toInt();
+      if (rs >= 10 && rs <= 86400) g_serverRefreshSec = rs;
     }
     http.end();
     return nullptr;
@@ -919,6 +927,10 @@ uint8_t* downloadImage() {
     if (rr > 0 && rr <= 1440) {
       g_serverRefreshMin = rr;
     }
+  }
+  if (http.hasHeader("X-Refresh-Seconds")) {
+    int rs = http.header("X-Refresh-Seconds").toInt();
+    if (rs >= 10 && rs <= 86400) g_serverRefreshSec = rs;
   }
 
   const int WANT = 2 * IMG_BYTES;   // black plane + red plane = 96000
@@ -1197,6 +1209,18 @@ int fetchSleepMinutes() {
   if (mins < 1) mins = 1;
   if (mins > 1440) mins = 1440;
   return mins;
+}
+
+int fetchSleepSeconds() {
+  // Prefer the exact seconds hint (push-now fast window). Otherwise use the
+  // minute path (X-Refresh-Rate header, or the /sleep fallback) in seconds.
+  if (g_serverRefreshSec > 0) {
+    int s = g_serverRefreshSec;
+    if (s < 10) s = 10;
+    if (s > 86400) s = 86400;
+    return s;
+  }
+  return fetchSleepMinutes() * 60;
 }
 
 // =================== ALARMS ===================
@@ -1555,7 +1579,7 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
   Serial.printf("Battery: %.2fV (%d%%)\n", battV, battPct);
   if (battPct < LOW_BATT_PCT) beepLowBattery();
 
-  int sleepMin = DEFAULT_SLEEP_MIN;
+  int sleepSec = DEFAULT_SLEEP_MIN * 60;
 
   // setup() already ran connectWiFiFast → connectWiFiFull on every
   // deep-sleep wake, so by the time we're here the radio is either up
@@ -1579,7 +1603,7 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
 
   if (!wifiOk) {
     drawFailScreen("WiFi connection failed");
-    return 5;
+    return 300;
   }
 
   warmServer();
@@ -1630,18 +1654,18 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
       Serial.println("Unchanged — leaving panel as-is");
       g_lastGoodAt = time(nullptr);
       if (buttonWake) beepChime();
-      sleepMin = fetchSleepMinutes();
-      Serial.printf("Sleep %d min\n", sleepMin);
+      sleepSec = fetchSleepSeconds();
+      Serial.printf("Sleep %d s\n", sleepSec);
     } else if (img) {
       pushImage(img);
       free(img);
       g_lastGoodAt = time(nullptr);
       if (buttonWake) beepChime();
-      sleepMin = fetchSleepMinutes();
-      Serial.printf("Sleep %d min\n", sleepMin);
+      sleepSec = fetchSleepSeconds();
+      Serial.printf("Sleep %d s\n", sleepSec);
     } else {
       drawFailScreen("Could not fetch image");
-      sleepMin = 5;
+      sleepSec = 300;
     }
     if (refreshRequested) {
       Serial.println("Press during cycle — re-refreshing");
@@ -1654,16 +1678,16 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
     int64_t deltaSec = ((int64_t)post.tsMs - (int64_t)post.serverNowMs) / 1000;
     int64_t targetSec = deltaSec - 15;
     if (targetSec > 0) {
-      int alarmMin = (int)((targetSec + 59) / 60);
-      if (alarmMin < 1) alarmMin = 1;
-      if (alarmMin < sleepMin) {
-        Serial.printf("Alarm in %lld s — shortening sleep to %d min\n",
-                      deltaSec, alarmMin);
-        sleepMin = alarmMin;
+      int alarmSec = (int)targetSec;
+      if (alarmSec < 1) alarmSec = 1;
+      if (alarmSec < sleepSec) {
+        Serial.printf("Alarm in %lld s — shortening sleep to %d s\n",
+                      deltaSec, alarmSec);
+        sleepSec = alarmSec;
       }
     }
   }
-  return sleepMin;
+  return sleepSec;
 }
 
 void setup() {
@@ -1777,8 +1801,8 @@ void loop() {
   // refresh starts the moment we wake — the hold check happens after
   // the cycle returns.
   unsigned long wakeAtMs = millis();
-  int sleepMin = runCycle(wakeCause);
-  uint64_t sleepUs = (uint64_t)sleepMin * 60ULL * 1000000ULL;
+  int sleepSec = runCycle(wakeCause);
+  uint64_t sleepUs = (uint64_t)sleepSec * 1000000ULL;   // already seconds
 
   // Staged button hold, measured from when the refresh finished (so the
   // screen updates fast regardless). Keep holding after the refresh:
@@ -1847,7 +1871,7 @@ void loop() {
   bool onUsb = vbat > VBAT_USB_THRESHOLD;
 
   if (onUsb) {
-    Serial.printf("USB (%.2fV) — active wait %d min\n", vbat, sleepMin);
+    Serial.printf("USB (%.2fV) — active wait %d s\n", vbat, sleepSec);
     unsigned long until = millis() + (unsigned long)(sleepUs / 1000ULL);
     while ((long)(until - millis()) > 0) {
       if (refreshRequested) {
@@ -1859,7 +1883,7 @@ void loop() {
       delay(200);
     }
   } else {
-    Serial.printf("Battery (%.2fV) — deep sleep %d min\n", vbat, sleepMin);
+    Serial.printf("Battery (%.2fV) — deep sleep %d s\n", vbat, sleepSec);
     rtc_gpio_pulldown_dis((gpio_num_t)BTN_REFRESH);
     rtc_gpio_pullup_en((gpio_num_t)BTN_REFRESH);
     esp_sleep_enable_timer_wakeup(sleepUs);
