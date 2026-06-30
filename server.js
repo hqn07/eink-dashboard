@@ -2297,6 +2297,15 @@ app.get('/api/config', checkAdminAuth, async (req, res) => {
 
 app.post('/api/config', checkAdminAuth, async (req, res) => {
   try {
+    // Guard: req.body must be a plain object. A JSON string/array/number
+    // body would otherwise spread into the config and corrupt it (array
+    // indices become keys, string chars become keys, etc.).
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+      return res.status(400).json({ ok: false, error: 'body must be an object' });
+    }
+    if ('screens' in req.body && !Array.isArray(req.body.screens)) {
+      return res.status(400).json({ ok: false, error: 'screens must be an array' });
+    }
     const merged = await withConfigLock(async () => {
       const current = await loadConfig();
       // Top-level fields the client may send. `screens` is treated as
