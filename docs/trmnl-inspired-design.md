@@ -113,13 +113,26 @@ glyphs; unify weight/size. No filled/heart-shaped icons (the old bug).
 - Every batch: `npm run test:visual:update` after intentional change +
   panel photo before sign-off.
 
-## 7. Flagship batch (first 3)
+## 7. Flagship batch (first 3) — DONE (2026-06-30)
 
-Proposed to set the language, then roll out:
-1. **weather_hero** — hero number + icon + label/value stack + a tone zone.
-2. **calendar** — list/table rows, tone header, "now" row band.
-3. A **data/number** widget — `aqi` (semantic state → red accent) or
-   `eink_battery` (label+value + the trend chart). Pick with screenshots.
+Shipped as opt-in `trmnl` variants (existing variants untouched):
+1. **weather_hero** — title-bar card, hero temp + icon, 2×2 conditions grid.
+2. **calendar** — title-bar agenda, time/title/day rows, g15 "now" band.
+3. **eink_battery** — charge + voltage label/value over a dithered bar
+   (g50 fill / g15 track, r50 low), status/updated stats at h≥6.
+
+All verified through the real pipeline (weather/calendar live data, battery
+seeded). Foundation: Inter (`--face-grotesk`), tone scale incl. g15,
+`220-trmnl-components.css`. Standalone module-render is the quick way to
+verify widgets the /preview harness can't feed (battery has no preview data).
+
+### Next
+- Decide: flip `trmnl` to each widget's **defaultVariant** (changes existing
+  tiles) vs keep opt-in.
+- Roll the language to the rest in batches (forecast, aqi, moon, clock,
+  countdown, quote, world_clock, qr, sparkline, mac_nowplaying, text).
+- Optional: donut/ring gauges + contribution-heatmap components (seen in the
+  TRMNL photos) for aqi/humidity and a code/activity widget.
 
 ## 8. Open / needs user input
 
