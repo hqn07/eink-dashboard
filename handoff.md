@@ -60,13 +60,14 @@ opens it, re-renders + re-warms, returns `maxLatencyMinutes` (one current
 interval — the device must wake once to enter the window). "Push now"
 button lives in the Settings menu → Device.
 
-**Works today** via the 1-minute `X-Refresh-Rate` floor (no reflash).
-**Follow-up for true sub-minute:** firmware must read the new
-`X-Refresh-Seconds` header instead of minutes — paste-ready edit written
-up in `esp32/PUSH_NOW_FIRMWARE.md` (both boards, flash+verify steps).
-UNVERIFIED, needs a flash on hardware. Inherent ceiling: latency to *enter* fast mode = current
-sleep interval; can't beat that on battery deep-sleep without always-on
-radio.
+**B firmware flashed `1.15.0`** (2026-06-29): now sleeps in seconds and
+reads `X-Refresh-Seconds`, so a push-now window polls at the exact server
+cadence (20s) not the 1-minute floor. Repo `weather_station_b.ino` synced
+to match the flashed device. BW (`weather_station`) firmware NOT converted
+— still minute-based; apply `esp32/PUSH_NOW_FIRMWARE.md` if that board is
+ever revived. Inherent ceiling unchanged: latency to *enter* fast mode =
+current sleep interval (device must wake once); can't beat that on battery
+deep-sleep without always-on radio.
 
 ### Battery-aware refresh — DONE (no reflash)
 
