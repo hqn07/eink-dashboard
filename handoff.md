@@ -4,6 +4,24 @@ State as of 2026-06-16. Read this + `CLAUDE.md` + memory pointers below before t
 
 ## 2026-06-29 session
 
+### Multi-tenant / SaaS architecture doc — WRITTEN (not built)
+
+User confirmed the eventual target is SaaS (other people run their own
+devices off one instance), still parked behind hardware validation. Full
+design in `docs/multitenant-architecture.md`: Supabase schema
+(accounts/screens/devices), device claim-code flow, per-device request
+resolution (no firmware change — device already sends its api_key),
+caching at scale, file→DB build sequence, single-tenant guardrails.
+**Keystone = config file→DB; the only expensive-to-retrofit piece.** Also
+pointed at from `CLAUDE.md` and the `project_eink_multitenant` memory.
+
+Security note (single-tenant, now): going public = set a Control PIN
+(immediately, or someone could claim the first-run set-pin) AND a
+`DEVICE_TOKEN` in Railway. That locks editor + settings writes. Gap:
+`/api/setup` is open, so a stranger could mint a device key and *read*
+the image (not change anything); fully closing it needs a reflash so the
+enroll request sends the token. `/control-classic` PIN-gate bug fixed.
+
 ### Header → single Settings menu
 
 Consolidated five header controls (Mac-agent status, Setup, Panel view,
