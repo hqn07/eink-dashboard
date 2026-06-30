@@ -35,10 +35,22 @@ so a volume doesn't shadow them — all writes funnel through
 Code/docs pushed (`.env.example` documents `DATA_DIR`). Volume + var are
 configured in the Railway dashboard, not in the repo.
 
-Other unlocked-by-Hobby options (not yet done): no-sleep always-on for
-ESP32 wakes, more Puppeteer RAM/`MAX_PAGES`, a cron service for
-pre-rendered `/display.bin`, custom domain, second service for a
-"push now" MQTT/poll wake path.
+### Background pre-render (warm cache for device wakes) — DONE
+
+`server.js` image cache is now **stale-while-revalidate**: once an entry
+exists, `getCurrentImage` returns it instantly and refreshes stale
+entries (`>IMAGE_CACHE_MS`, 60s) in the background — only a cold cache
+renders inline. A boot warm + `setInterval` (`warmActiveImage`,
+`PRERENDER_INTERVAL_MS` default 5 min, `unref`'d) keeps the active
+variant fresh; `invalidateImage()` re-warms right after a config save.
+Disable with `PRERENDER=0`. Net effect: the ESP32 wake no longer waits
+on a ~2-3s cold Puppeteer render. Verified locally — first `/display.bin`
+hit served warm in ~1.7ms (48000 B). Relies on Hobby always-on; if the
+service ever sleeps the first wake after idle is cold again.
+
+Still-open Hobby options (not done): more Puppeteer RAM/`MAX_PAGES`,
+custom domain baked into firmware, second service for a "push now"
+MQTT/poll wake path.
 
 ## What shipped in the 2026-06-16 session (HEAD on `origin/main`)
 
