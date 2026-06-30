@@ -2624,6 +2624,27 @@ function dur(ms) {
   if (s < 86400) return `${(s / 3600).toFixed(1)}h`;
   return `${(s / 86400).toFixed(1)}d`;
 }
+// Drain rate + rough time-to-empty from battery history (oldest→newest).
+function batteryTrend(hist) {
+  if (!Array.isArray(hist) || hist.length < 2) return null;
+  const recent = hist.slice(-12);
+  const a = recent[0], b = recent[recent.length - 1];
+  const dtH = (b.at - a.at) / 3_600_000;
+  if (!(dtH > 0)) return null;
+  const ratePerH = (b.pct - a.pct) / dtH; // <0 draining, >0 charging
+  const etaH = ratePerH < 0 ? b.pct / -ratePerH : null;
+  return { ratePerH, etaH, latest: b.pct };
+}
+
+// Tiny block-character sparkline (status page only — not the editor UI).
+function sparkline(vals) {
+  if (!vals || !vals.length) return '';
+  const blocks = '▁▂▃▄▅▆▇█';
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const span = (max - min) || 1;
+  return vals.map(v => blocks[Math.round((v - min) / span * (blocks.length - 1))]).join('');
+}
+
 app.get('/status', checkAdminAuth, async (req, res) => {
   try {
     const cfg = await loadConfig();
@@ -2638,9 +2659,30 @@ app.get('/status', checkAdminAuth, async (req, res) => {
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const ok = (b) => b ? '<span class="ok">OK</span>' : '<span class="bad">—</span>';
 
+    const baseMin = resolveRefreshMinutes(cfg);
+    const battPct = battery && Number.isFinite(battery.pct) ? battery.pct : undefined;
+    const refresh = effectiveRefresh(cfg, battPct);
+    const fastActive = Date.now() < fastWakeUntil;
+
+    let refreshNote;
+    if (refresh.fast) {
+      refreshNote = `<span class="warn">FAST</span> ${refresh.seconds}s · push-now window`;
+    } else if (refresh.battSaver) {
+      refreshNote = `${refresh.minutes} min · <span class="warn">battery-saver</span> (base ${baseMin})`;
+    } else {
+      refreshNote = `${refresh.minutes} min`;
+    }
+
     const rows = [];
-    rows.push(['Server', `${ok(true)} up ${dur(Date.now() - _serverStartedAt)} · refresh every ${resolveRefreshMinutes(cfg)} min`]);
+    rows.push(['Server', `${ok(true)} up ${dur(Date.now() - _serverStartedAt)}`]);
+    rows.push(['Refresh now', refreshNote]);
+    rows.push(['Pre-render', PRERENDER_ENABLED
+      ? `${ok(true)} every ${Math.round(PRERENDER_INTERVAL_MS / 1000)}s`
+      : '<span class="warn">off</span>']);
     rows.push(['Last render', lastRender ? relAge(lastRender) : 'not yet']);
+    rows.push(['Push window', fastActive
+      ? `<span class="ok">active</span> · ${dur(fastWakeUntil - Date.now())} left`
+      : '<span class="muted">idle</span>']);
     rows.push(['Weather key', ok(!!process.env.OPENWEATHER_API_KEY)]);
     rows.push(['Device token', ok(!!DEVICE_TOKEN)]);
     rows.push(['Control PIN', pinConfigured(cfg) ? '<span class="ok">SET</span>' : '<span class="warn">not set</span>']);
@@ -2648,6 +2690,20 @@ app.get('/status', checkAdminAuth, async (req, res) => {
       rows.push(['Battery', `${battery.pct}% · ${Number(battery.v).toFixed(2)} V · ${relAge(battery.at)}`]);
     } else {
       rows.push(['Battery', '<span class="warn">no reading yet</span>']);
+    }
+    const trend = batteryTrend(history);
+    if (trend) {
+      let t;
+      if (trend.ratePerH < -0.05) {
+        const eta = trend.etaH != null && trend.etaH < 1000 ? ` · ~${dur(trend.etaH * 3_600_000)} to empty` : '';
+        t = `▼ ${Math.abs(trend.ratePerH).toFixed(1)}%/h${eta}`;
+      } else if (trend.ratePerH > 0.05) {
+        t = `<span class="ok">▲ charging ${trend.ratePerH.toFixed(1)}%/h</span>`;
+      } else {
+        t = 'flat';
+      }
+      const spark = sparkline(history.slice(-24).map(h => h.pct));
+      rows.push(['Battery trend', `${t}${spark ? ` · <span class="muted">${spark}</span>` : ''}`]);
     }
     rows.push(['Battery history', `${history.length} point${history.length === 1 ? '' : 's'}`]);
 
