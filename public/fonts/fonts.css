@@ -1,3 +1,12 @@
+/* Inter Variable — TRMNL-inspired grotesk face (self-hosted, latin) */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(/static/fonts/inter-latin-variable.woff2) format('woff2');
+}
+
 /* latin-ext */
 @font-face {
   font-family: 'DM Serif Display';

@@ -33,6 +33,7 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
+    trmnl:   { label: 'TRMNL — title-bar card' },
     classic: { label: 'Classic — centered stack' },
     split:   { label: 'Split — icon left, readings right' },
     minimal: { label: 'Minimal — temperature + high/low only' }
@@ -165,6 +166,40 @@ export function render(ctx) {
   const sun    = (tierRank >= 4 && s.showSunbar !== false) ? sunBar(w) : '';
   const hourly = (tierRank >= 4 && s.showHourly !== false) ? hourlyStrip(w) : '';
   const extras = `${alerts}${stats}${sun}${hourly}`;
+
+  if (variant === 'trmnl') {
+    // TRMNL-inspired title-bar card: label/value hero + icon, a 2×2 cell
+    // grid, and a footer. Uses the shared .tr-* components (Inter grotesk,
+    // dashed dividers, dither chips). See docs/trmnl-inspired-design.md.
+    const city = (s.city || (cfg && cfg.city) || '').toString();
+    const showCells = (cellH || 0) >= 6 && tier !== 'tiny';
+    const showFoot  = (cellH || 0) >= 8;
+    const heroPx = { tiny: 0, compact: 56, standard: 72, extended: 84, full: 84 }[tier] || 72;
+    const cell = (ic, v, l) =>
+      `<div class="tr-cell">${ic ? `<span class="tr-ci">${ic}</span>` : ''}`
+      + `<div><div class="tr-cv">${v}</div><div class="tr-cl">${l}</div></div></div>`;
+    const thermo = '<svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><path d="M12 3a3 3 0 013 3v8a5 5 0 11-6 0V6a3 3 0 013-3z"/></svg>';
+    const drop   = '<svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><path d="M12 3s7 8 7 13a7 7 0 11-14 0c0-5 7-13 7-13z"/></svg>';
+    const upK    = '<svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>';
+    const dnK    = '<svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>';
+    const cells = showCells ? `<div class="tr-cells tr-cells-2">
+      ${cell(thermo, `${w.feelsLike}°`, 'Feels like')}
+      ${cell(drop, `${w.humidity}%`, 'Humidity')}
+      ${cell(upK, `${w.tempMax}°`, 'High')}
+      ${cell(dnK, `${w.tempMin}°`, 'Low')}
+    </div>` : '';
+    return `<div class="tr-card${staleClass}">
+      <div class="tr-titlebar"><span>Weather</span><span class="tr-meta">${city || (w.stale ? 'cached' : '')}</span></div>
+      <div class="tr-body">
+        <div style="display:flex;align-items:center;gap:14px">
+          ${heroPx ? `<div style="flex:none;width:${heroPx}px;height:${heroPx}px">${icon(w, heroPx)}</div>` : ''}
+          <div class="tr-lv tr-lv-xl"><div class="tr-v">${w.temp}<span class="tr-deg">°${units}</span></div><div class="tr-l">${w.desc || 'Temperature'}</div></div>
+        </div>
+        ${cells}
+      </div>
+      ${showFoot ? `<div class="tr-foot"><span class="tr-foot-name">${icon(w, 14)} Weather</span><span>${w.stale ? 'cached' : 'now'}</span></div>` : ''}
+    </div>`;
+  }
 
   if (variant === 'minimal') {
     // Temperature-dominant; no icon and no extras at any tier. The temp

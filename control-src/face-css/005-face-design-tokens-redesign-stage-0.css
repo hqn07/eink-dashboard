@@ -16,6 +16,9 @@
   --face-serif: 'DM Serif Display', Georgia, serif;
   --face-sans: 'Oswald', 'Arial Narrow', sans-serif;
   --face-mono: 'JetBrains Mono', monospace;
+  /* TRMNL-inspired grotesk — used by the redesigned card components and the
+   * flagship widgets; other widgets migrate to it batch by batch. */
+  --face-grotesk: 'Inter', 'Helvetica Neue', Arial, sans-serif;
   /* rule weights — never below 2px on the panel */
   --face-rule: 2px;
   --face-rule-heavy: 4px;

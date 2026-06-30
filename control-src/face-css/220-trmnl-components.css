@@ -1,0 +1,150 @@
+/* ============ TRMNL-INSPIRED CARD COMPONENTS ============
+ * Reusable building blocks for the redesigned (flagship) widgets: title-bar
+ * card, label+value stack, icon/value/label cells, dithered progress bar,
+ * footer, tone chip. Grotesk type (Inter via --face-grotesk). All strokes
+ * ≥2px (eink-lint). Dividers are 2px dashed to echo TRMNL's dotted zones
+ * while staying legible on the panel. See docs/trmnl-inspired-design.md. */
+
+.tr-card {
+  font-family: var(--face-grotesk);
+  color: var(--face-ink);
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: none;
+}
+
+/* Title bar: label left, meta/chip right, hairline under. */
+.tr-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: var(--face-rule) solid var(--face-ink);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  flex: none;
+}
+.tr-titlebar .tr-meta { font-weight: 400; letter-spacing: 1px; }
+
+.tr-body {
+  flex: 1;
+  min-height: 0;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Footer: glyph + name left, source right. */
+.tr-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 12px;
+  border-top: var(--face-rule) dashed var(--face-ink);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  flex: none;
+}
+.tr-foot .tr-foot-name { display: flex; align-items: center; gap: 6px; }
+
+/* Label + value stack — the TRMNL staple. */
+.tr-lv { line-height: 1; }
+.tr-lv .tr-v {
+  font-weight: 800;
+  font-size: 56px;
+  line-height: 0.92;
+  letter-spacing: -2px;
+  font-variant-numeric: tabular-nums;
+}
+.tr-lv .tr-deg { font-size: 0.55em; font-weight: 700; vertical-align: top; }
+.tr-lv .tr-l {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+/* size modifiers */
+.tr-lv.tr-lv-sm .tr-v { font-size: 30px; letter-spacing: -1px; }
+.tr-lv.tr-lv-md .tr-v { font-size: 40px; }
+.tr-lv.tr-lv-xl .tr-v { font-size: 68px; }
+
+/* Icon + value + label cells, 2-col dashed grid. */
+.tr-cells {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: var(--face-rule) dashed var(--face-ink);
+  flex: 1;
+  min-height: 0;
+}
+.tr-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px;
+  border-right: var(--face-rule) dashed var(--face-ink);
+  border-bottom: var(--face-rule) dashed var(--face-ink);
+}
+.tr-cell:nth-child(2n) { border-right: none; }
+.tr-cells.tr-cells-2 .tr-cell:nth-last-child(-n+2) { border-bottom: none; }
+.tr-cell .tr-ci { width: 22px; height: 22px; flex: none; }
+.tr-cell .tr-cv { font-size: 20px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.tr-cell .tr-cl { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+
+/* Dithered progress bar: g50 fill on a g15 track, 2px frame. */
+.tr-bar {
+  height: 100%;
+  min-height: 28px;
+  border: var(--face-rule) solid var(--face-ink);
+  display: flex;
+  overflow: hidden;
+}
+.tr-bar .tr-bar-fill { height: 100%; }
+.tr-bar .tr-bar-track { flex: 1; height: 100%; }
+
+/* Stat row: equal cells, dashed separators, right of a bar/hero. */
+.tr-stats {
+  display: flex;
+  border-top: var(--face-rule) dashed var(--face-ink);
+  flex: none;
+}
+.tr-stat { flex: 1; padding: 8px 4px; border-right: var(--face-rule) dashed var(--face-ink); }
+.tr-stat:last-child { border-right: none; }
+.tr-stat .tr-sv { font-size: 24px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.tr-stat .tr-sl { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
+
+/* Tone chip — status badge. */
+.tr-chip {
+  display: inline-block;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border: var(--face-rule) solid var(--face-ink);
+}
+
+/* List rows (agenda/table). */
+.tr-rows { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+.tr-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: var(--face-rule) dashed var(--face-ink);
+}
+.tr-row:last-child { border-bottom: none; }
+.tr-row .tr-row-time { font-weight: 700; font-size: 13px; flex: none; min-width: 52px; font-variant-numeric: tabular-nums; }
+.tr-row .tr-row-main { flex: 1; min-width: 0; }
+.tr-row .tr-row-title { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tr-row .tr-row-sub { font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
+/* "now"/active row gets a tone band */
+.tr-row.tr-row-now { background-color: #fff; padding-left: 8px; }
