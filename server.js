@@ -488,19 +488,18 @@ async function planesToPng(bin3c) {
 
 const imageCache = new Map(); // key: "units|screen" -> { at, png, bin }
 const inflightImage = new Map(); // key -> Promise so concurrent hits share work
-const IMAGE_CACHE_MS = 60 * 1000; // re-render at most every 60s
+const IMAGE_CACHE_MS = 60 * 1000; // entry is "fresh" for 60s; older = revalidate
 
-async function getCurrentImage({ units, screen }) {
-  const key = `${units}|${screen}`;
-  const now = Date.now();
-  const cached = imageCache.get(key);
-  if (cached && (now - cached.at) < IMAGE_CACHE_MS) {
-    return cached;
-  }
+const imageCacheKey = (variant) => `${variant.units}|${variant.screen}`;
+
+// Render the dashboard for one variant and store it in the cache. Concurrent
+// callers for the same key share one render (inflight dedup).
+function renderImage(variant) {
+  const key = imageCacheKey(variant);
   const pending = inflightImage.get(key);
   if (pending) return pending;
   const promise = (async () => {
-    const rgba = await renderDashboardPng({ units, screen });
+    const rgba = await renderDashboardPng(variant);
     const { rawMono, info, png } = await rgbaToMono(rgba);
     const bin = packMonoBin(rawMono, info);
     // 3-color plane pair (black+red, 96000 B). Cached lazily on first
@@ -525,9 +524,50 @@ async function getCurrentImage({ units, screen }) {
   return promise;
 }
 
-// Force re-render on next request (called after config save)
+// Stale-while-revalidate: once an entry exists, the device is ALWAYS served
+// instantly. A stale entry is returned as-is and a refresh runs in the
+// background, so the ESP32 wake never blocks on a cold Puppeteer render
+// (~2-3s). Only the very first request for a key (cold cache) renders inline.
+// The background warmer below keeps that first render off the device path.
+async function getCurrentImage(variant) {
+  const key = imageCacheKey(variant);
+  const cached = imageCache.get(key);
+  if (cached) {
+    if ((Date.now() - cached.at) >= IMAGE_CACHE_MS && !inflightImage.has(key)) {
+      renderImage(variant).catch(err =>
+        console.error('Background re-render failed:', err.message));
+    }
+    return cached;
+  }
+  return renderImage(variant);
+}
+
+// Force re-render on next request (called after config save). Clearing the
+// cache plus an immediate warm means the next device hit is already fresh.
 function invalidateImage() {
   imageCache.clear();
+  if (PRERENDER_ENABLED) warmActiveImage();
+}
+
+// ---------- Background pre-render (keeps the device cache warm) ----------
+// Railway Hobby is always-on, so we proactively render the active screen on
+// an interval. The device wake then hits a warm cache instead of paying for
+// a cold render while the radio + e-ink display wait on it. Disable with
+// PRERENDER=0; tune cadence with PRERENDER_INTERVAL_MS.
+const PRERENDER_ENABLED = process.env.PRERENDER !== '0';
+const PRERENDER_INTERVAL_MS = Math.max(
+  60_000,
+  parseInt(process.env.PRERENDER_INTERVAL_MS, 10) || 5 * 60_000
+);
+
+async function warmActiveImage() {
+  try {
+    const cfg = await loadConfig();
+    const variant = resolveVariant({ query: {} }, cfg);
+    await renderImage(variant); // force fresh so the served entry is current
+  } catch (err) {
+    console.error('Pre-render warm failed:', err.message);
+  }
 }
 
 function parseHHMM(s) {
@@ -2665,4 +2705,14 @@ app.listen(PORT, () => {
   console.log(`  Control panel:  http://localhost:${PORT}/control`);
   console.log(`  Preview PNG:    http://localhost:${PORT}/display.png`);
   console.log(`  Dashboard HTML: http://localhost:${PORT}/dashboard`);
+
+  // Pre-render the active screen so the first device wake hits a warm cache,
+  // then keep it warm on an interval. Stale-while-revalidate (above) means a
+  // device request never blocks on a cold render once this has run once.
+  if (PRERENDER_ENABLED) {
+    console.log(`  Pre-render:     every ${Math.round(PRERENDER_INTERVAL_MS / 1000)}s`);
+    warmActiveImage();
+    const timer = setInterval(warmActiveImage, PRERENDER_INTERVAL_MS);
+    if (timer.unref) timer.unref(); // don't keep the process alive just for this
+  }
 });
