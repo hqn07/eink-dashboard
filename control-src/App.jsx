@@ -607,19 +607,11 @@ export default function App() {
           <SyncPill status={status} lastSavedAt={lastSavedAt} statusMsg={statusMsg} />
         </div>
         <div className="app-header-right">
-          <button
-            type="button"
-            className="app-header-shortcut-btn"
-            onClick={() => setShortcutsOpen(true)}
-            title="Show keyboard shortcuts (?)"
-            aria-label="Keyboard shortcuts"
-          >
-            ?
-          </button>
           {cfg && (
             <SettingsMenu
               cfg={cfg}
               onSetup={() => setShowWizard(true)}
+              onShortcuts={() => setShortcutsOpen(true)}
               onReplaceConfig={(next) => {
                 setCfg(migrateConfigToScreens(next));
                 setStatus('dirty');

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Gear, MagicWand } from '@phosphor-icons/react';
+import { Gear, MagicWand, Keyboard } from '@phosphor-icons/react';
 import MacAgentBadge from './MacAgentBadge.jsx';
 import PanelPreview from './PanelPreview.jsx';
 import PinButton from './PinButton.jsx';
@@ -13,7 +13,7 @@ import BackupPanel from './BackupPanel.jsx';
 //
 // Panel view + PIN keep their own modal/popover logic; they just render
 // their trigger as a full-width menu row here (block prop).
-export default function SettingsMenu({ cfg, onReplaceConfig, onSetup }) {
+export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcuts }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -67,6 +67,13 @@ export default function SettingsMenu({ cfg, onReplaceConfig, onSetup }) {
             </button>
             <PanelPreview block />
             <PinButton block />
+            <button
+              type="button"
+              className="settings-row"
+              onClick={() => { setOpen(false); onShortcuts && onShortcuts(); }}
+            >
+              <Keyboard size={14} weight="bold" /> Keyboard shortcuts
+            </button>
 
             <hr className="gdm-divider" />
             <AlarmsPanel />
