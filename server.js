@@ -870,16 +870,41 @@ function pushNow() {
   return fastWakeUntil;
 }
 
-// Refresh cadence the device should use right now, honoring an active fast
-// window. Returns both minutes (legacy X-Refresh-Rate, floored at 1 so current
-// firmware already speeds up) and exact seconds (X-Refresh-Seconds — firmware
-// can adopt this for true sub-minute polling once reflashed).
-function effectiveRefresh(cfg) {
+// ---------- Battery-aware refresh ----------
+// On low battery, stretch the sleep interval so the 2500mAh cell lasts
+// longer. Firmware already honors X-Refresh-Rate, so this needs no reflash.
+// We RAISE a floor rather than scale, so a config interval longer than the
+// floor is never shortened. Disable with BATTERY_AWARE=0.
+const BATTERY_AWARE = process.env.BATTERY_AWARE !== '0';
+
+// Returns the minimum refresh interval (minutes) for a given battery %, or 0
+// when the battery is fine / unknown (no stretch). pct === -1/null = unknown.
+function batteryRefreshFloor(pct) {
+  if (!BATTERY_AWARE || !Number.isFinite(pct) || pct < 0) return 0;
+  if (pct < 10) return 240; // <10% → at most every 4h
+  if (pct < 20) return 120; // <20% → at most every 2h
+  if (pct < 35) return 60;  // <35% → at most every 1h
+  return 0;
+}
+
+// Refresh cadence the device should use right now. Order of precedence:
+//   1. push-now fast window (user-initiated, ignores battery — it's brief)
+//   2. battery-aware floor (stretch interval when low)
+//   3. the config/schedule interval
+// Returns minutes (legacy X-Refresh-Rate, floored at 1 so current firmware
+// speeds up in a fast window) and exact seconds (X-Refresh-Seconds — firmware
+// can adopt for true sub-minute once reflashed). battPct defaults to the last
+// reported battery so /sleep and the warmer see the same value the device does.
+function effectiveRefresh(cfg, battPct) {
   if (Date.now() < fastWakeUntil) {
-    return { minutes: 1, seconds: FAST_INTERVAL_SECONDS, fast: true };
+    return { minutes: 1, seconds: FAST_INTERVAL_SECONDS, fast: true, battSaver: false };
   }
-  const minutes = resolveRefreshMinutes(cfg);
-  return { minutes, seconds: minutes * 60, fast: false };
+  const pct = Number.isFinite(battPct) ? battPct
+    : (_batteryState && Number.isFinite(_batteryState.pct) ? _batteryState.pct : -1);
+  const base = resolveRefreshMinutes(cfg);
+  const floor = batteryRefreshFloor(pct);
+  const minutes = Math.max(base, floor);
+  return { minutes, seconds: minutes * 60, fast: false, battSaver: minutes > base };
 }
 
 // ---------- Auth ----------
@@ -1864,25 +1889,28 @@ app.get('/display.bin', checkDeviceAuth, async (req, res) => {
     const variant = resolveVariant(req, cfg);
     const { bin, etagBin } = await getCurrentImage(variant);
 
+    // Battery telemetry over headers (firmware sends Battery-Voltage +
+    // Battery-Pct on every /display.bin request). POST /api/battery
+    // remains supported for backward compatibility. Parsed first so the
+    // adaptive-refresh header below can stretch the interval on low battery.
+    const hBattV = parseFloat(req.headers['battery-voltage']);
+    const hBattPct = parseInt(req.headers['battery-pct'], 10);
+    const battOk = Number.isFinite(hBattV) && hBattV >= 0 && hBattV <= 6 &&
+        Number.isFinite(hBattPct) && hBattPct >= 0 && hBattPct <= 100;
+    if (battOk) {
+      saveBatteryState({ v: hBattV, pct: hBattPct, at: Date.now() })
+        .catch(e => console.warn('battery-header save:', e.message));
+    }
+
     // Adaptive-refresh header — tells the device how long to sleep before
     // the next wake. Replaces the older /sleep round-trip; /sleep stays alive
     // for legacy firmware. X-Refresh-Seconds carries the exact cadence (used
     // by the push-now fast window); X-Refresh-Rate stays minute-granular for
     // current firmware and is floored at 1 so it speeds up during a window.
-    const refresh = effectiveRefresh(cfg);
+    // Stretched on low battery via effectiveRefresh.
+    const refresh = effectiveRefresh(cfg, battOk ? hBattPct : undefined);
     res.set('X-Refresh-Rate', String(refresh.minutes));
     res.set('X-Refresh-Seconds', String(refresh.seconds));
-
-    // Battery telemetry over headers (firmware sends Battery-Voltage +
-    // Battery-Pct on every /display.bin request). POST /api/battery
-    // remains supported for backward compatibility.
-    const hBattV = parseFloat(req.headers['battery-voltage']);
-    const hBattPct = parseInt(req.headers['battery-pct'], 10);
-    if (Number.isFinite(hBattV) && hBattV >= 0 && hBattV <= 6 &&
-        Number.isFinite(hBattPct) && hBattPct >= 0 && hBattPct <= 100) {
-      saveBatteryState({ v: hBattV, pct: hBattPct, at: Date.now() })
-        .catch(e => console.warn('battery-header save:', e.message));
-    }
 
     res.set('ETag', etagBin);
     res.set('Cache-Control', 'no-store');
@@ -1911,16 +1939,17 @@ app.get('/display-3c.bin', checkDeviceAuth, async (req, res) => {
     const entry = await getCurrentImage(variant);
     const { bin, etag } = await entry.get3c();
 
-    const refresh3c = effectiveRefresh(cfg);
-    res.set('X-Refresh-Rate', String(refresh3c.minutes));
-    res.set('X-Refresh-Seconds', String(refresh3c.seconds));
     const hBattV = parseFloat(req.headers['battery-voltage']);
     const hBattPct = parseInt(req.headers['battery-pct'], 10);
-    if (Number.isFinite(hBattV) && hBattV >= 0 && hBattV <= 6 &&
-        Number.isFinite(hBattPct) && hBattPct >= 0 && hBattPct <= 100) {
+    const battOk = Number.isFinite(hBattV) && hBattV >= 0 && hBattV <= 6 &&
+        Number.isFinite(hBattPct) && hBattPct >= 0 && hBattPct <= 100;
+    if (battOk) {
       saveBatteryState({ v: hBattV, pct: hBattPct, at: Date.now() })
         .catch(e => console.warn('battery-header save:', e.message));
     }
+    const refresh3c = effectiveRefresh(cfg, battOk ? hBattPct : undefined);
+    res.set('X-Refresh-Rate', String(refresh3c.minutes));
+    res.set('X-Refresh-Seconds', String(refresh3c.seconds));
     res.set('ETag', etag);
     res.set('Cache-Control', 'no-store');
     // Conditional GET: identical image → 304, firmware skips the slow
@@ -2007,7 +2036,8 @@ app.get('/sleep', checkDeviceAuth, async (req, res) => {
   const s = pickActiveScreen(cfg);
   const refresh = effectiveRefresh(cfg);
   res.json({
-    minutes: refresh.minutes, seconds: refresh.seconds, fast: refresh.fast,
+    minutes: refresh.minutes, seconds: refresh.seconds,
+    fast: refresh.fast, battSaver: refresh.battSaver,
     screenId: s ? s.id : null, screenName: s ? s.name : null
   });
 });
