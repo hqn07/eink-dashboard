@@ -2966,7 +2966,9 @@ process.on('uncaughtException', (err) => {
 // Railway with no shell access — set the var, redeploy, then REMOVE it and
 // set a fresh PIN immediately.
 async function clearPinIfRequested() {
-  if (!process.env.RESET_PIN) return;
+  // Only an explicit on-value triggers it; "0"/"false"/"no"/empty/unset are
+  // all OFF, so RESET_PIN=0 safely disables instead of clearing.
+  if (!/^(1|true|yes|on)$/i.test(process.env.RESET_PIN || '')) return;
   try {
     const cfg = await loadConfig();
     if (cfg.auth && (cfg.auth.pinHash || cfg.auth.pinSalt)) {
