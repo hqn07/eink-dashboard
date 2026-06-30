@@ -4,6 +4,28 @@ State as of 2026-06-16. Read this + `CLAUDE.md` + memory pointers below before t
 
 ## 2026-06-29 session
 
+### Quality pass (SaaS-readiness, single-tenant)
+
+- **Endpoint tests**: `npm run test:api` (node:test + fetch, zero deps) —
+  boots a server on a temp DATA_DIR, covers auth gating, config-body
+  validation, refresh/battery-aware/quiet/push-now headers, enroll+delete,
+  battery validation. 12 tests ~2s. Separate from deploy `prebuild` (boots
+  Puppeteer). Docs in CONTRIBUTING.
+- **Error visibility**: `console.error` wrapped into a 50-entry ring,
+  surfaced on `/status` (Errors count + Recent errors section). Cleared on
+  restart.
+- **Config guard**: `POST /api/config` rejects non-object body / non-array
+  screens (was spreadable → corruptible).
+- **Visual baseline** rebaselined (was stale since `afbf62e`; guard had
+  been silently failing on dimensions). `test:visual` PASS 0px.
+- **RESET_PIN** lockout-recovery env hatch (clears forgotten PIN on boot;
+  only `1/true/yes/on` trigger, `0/false/unset` = off). `/control-classic`
+  PIN-gate fixed. `/api/setup` token-gated.
+- Remaining quality items (not done): first-run security gate (force
+  PIN+token on fresh deploy).
+
+
+
 ### Multi-tenant / SaaS architecture doc — WRITTEN (not built)
 
 User confirmed the eventual target is SaaS (other people run their own
