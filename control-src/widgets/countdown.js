@@ -24,16 +24,17 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
+    trmnl:   { label: 'TRMNL — title-bar card' },
     big:     { label: 'Big — one number' },
     detail:  { label: 'Detail — days + hours' },
     minimal: { label: 'Minimal — number + unit' }
   },
-  defaultVariant: 'big',
+  defaultVariant: 'trmnl',
   degrade: {
     tiny: ['label', 'hours']
   },
   defaults: () => ({
-    variant: 'big',
+    variant: 'trmnl',
     target: '',          // YYYY-MM-DD or YYYY-MM-DDTHH:MM
     label: '',           // e.g. "until launch"
     title: '',
@@ -86,6 +87,22 @@ export function render(ctx) {
   const title = `<div class="col-title">${escapeHtml(titleLabel)}</div>`;
   const label = (tier !== 'tiny' && labelText)
     ? `<div class="cd-label${od}">${escapeHtml(labelText)}</div>` : '';
+
+  if (variant === 'trmnl') {
+    const redStyle = od ? 'color:var(--face-red);' : '';
+    const stats = (cellH || 0) >= 6
+      ? `<div class="tr-stats">
+           <div class="tr-stat"><div class="tr-sv" style="${redStyle}">${days}</div><div class="tr-sl">${unitWord}</div></div>
+           <div class="tr-stat"><div class="tr-sv" style="${redStyle}">${hours}</div><div class="tr-sl">${hours === 1 ? 'HR' : 'HRS'}</div></div>
+         </div>` : '';
+    return `<div class="tr-card">
+      <div class="tr-titlebar"><span>${escapeHtml(titleLabel)}</span>${labelText ? `<span class="tr-meta">${escapeHtml(labelText)}</span>` : ''}</div>
+      <div class="tr-body" style="justify-content:center">
+        <div class="tr-lv tr-lv-xl"><div class="tr-v" style="${redStyle}">${days}</div><div class="tr-l">${unitWord}${past ? ' since' : ' to go'}</div></div>
+      </div>
+      ${stats}
+    </div>`;
+  }
 
   if (variant === 'minimal') {
     return `

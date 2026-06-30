@@ -67,6 +67,15 @@ export function render(ctx) {
   const by = (variant !== 'minimal' && tier !== 'tiny' && author)
     ? `<div class="quote-by">— ${escapeHtml(author)}</div>` : '';
 
+  if (variant === 'trmnl') {
+    return `<div class="tr-card">
+      <div class="tr-titlebar"><span>Quote</span>${author ? `<span class="tr-meta">${escapeHtml(author)}</span>` : ''}</div>
+      <div class="tr-body" style="justify-content:center">
+        <div class="quote-text autofit multiline" data-min-font="14" data-max-font="32" style="font-family:var(--face-grotesk);font-weight:600;line-height:1.2">${escapeHtml(text)}</div>
+      </div>
+    </div>`;
+  }
+
   if (variant === 'mark') {
     return `
       <div class="quote quote-mark">
@@ -96,16 +105,17 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
+    trmnl:   { label: 'TRMNL — title-bar card' },
     serif:   { label: 'Serif — quote + attribution' },
     mark:    { label: 'Mark — big quote mark' },
     minimal: { label: 'Minimal — quote only' }
   },
-  defaultVariant: 'serif',
+  defaultVariant: 'trmnl',
   degrade: {
     tiny: ['author']
   },
   defaults: () => ({
-    variant: 'serif',
+    variant: 'trmnl',
     quotes: [],          // empty → built-in rotation
     fontScale: 1,
     padding: 14

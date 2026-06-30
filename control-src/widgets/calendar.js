@@ -26,7 +26,7 @@ export const def = {
     strip: { label: 'Strip — 7-day horizontal' },
     month: { label: 'Month — full grid' }
   },
-  defaultVariant: 'list',
+  defaultVariant: 'trmnl',
   // Advisory. strip needs ≥7 cols × 2 rows, month ≥7 × 4; under that
   // the render falls back to the list view regardless of variant.
   degrade: {
@@ -37,7 +37,7 @@ export const def = {
     icalUrls: [],
     disabledFeeds: [],   // URL strings currently muted (server skips fetch)
     title: '',
-    variant: 'list',     // 'list' | 'strip' | 'month'
+    variant: 'trmnl',    // 'trmnl' | 'list' | 'strip' | 'month'
     density: 'auto',     // 'auto' | 'compact' | 'standard' | 'rich'
     showDayLabel: true,
     showTime:     true,

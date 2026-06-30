@@ -32,7 +32,7 @@ export const def = {
     inline:  { label: 'Inline — one-row strip' },
     minimal: { label: 'Minimal — percent only' }
   },
-  defaultVariant: 'gauge',
+  defaultVariant: 'trmnl',
   // Gauge drops downward as the tile shrinks. Battery presets all live
   // in the tiny/compact tier band (even L 8×4 is compact), so the
   // render gates on grid rows directly: ≤2 rows ≈ tiny, 3 ≈ compact.
@@ -42,7 +42,7 @@ export const def = {
     tiny:    ['title', 'volts', 'age']
   },
   defaults: () => ({
-    variant: 'gauge',
+    variant: 'trmnl',
     title: '',
     showVoltage: true,
     showAge:     true,

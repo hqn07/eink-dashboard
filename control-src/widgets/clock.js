@@ -23,16 +23,17 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
+    trmnl:  { label: 'TRMNL — title-bar card' },
     big:    { label: 'Big — chunky serif' },
     thin:   { label: 'Thin — light + airy' },
     banner: { label: 'Banner — time left, date right' }
   },
-  defaultVariant: 'big',
+  defaultVariant: 'trmnl',
   degrade: {
     tiny: ['date']
   },
   defaults: () => ({
-    variant: 'big',
+    variant: 'trmnl',
     format: '12h', showDate: true,
     fontScale: 1,
     padding: 14
@@ -57,6 +58,15 @@ export function render(ctx) {
   const date = dateAllowed && c.dateLine
     ? `<div class="clock-date">${escapeHtml(c.dateLine)}</div>`
     : '';
+  if (variant === 'trmnl') {
+    return `<div class="tr-card">
+      <div class="tr-titlebar"><span>Clock</span>${(dateAllowed && c.dateLine) ? `<span class="tr-meta">${escapeHtml(c.dateLine)}</span>` : ''}</div>
+      <div class="tr-body" style="justify-content:center;align-items:center">
+        <div class="tr-lv" style="text-align:center"><div class="tr-v autofit" data-min-font="28" style="font-size:80px">${c.timeStr}${c.ampm ? `<span class="tr-deg">${c.ampm}</span>` : ''}</div></div>
+      </div>
+    </div>`;
+  }
+
   if (variant === 'banner') {
     return `
       <div class="clock clock-banner clock-big">

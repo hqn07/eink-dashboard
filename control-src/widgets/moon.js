@@ -72,16 +72,17 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
+    trmnl:   { label: 'TRMNL — title-bar card' },
     disc:    { label: 'Disc — moon + phase name' },
     detail:  { label: 'Detail — moon + illumination + age' },
     minimal: { label: 'Minimal — disc + name' }
   },
-  defaultVariant: 'disc',
+  defaultVariant: 'trmnl',
   degrade: {
     tiny: ['name', 'stats']
   },
   defaults: () => ({
-    variant: 'disc',
+    variant: 'trmnl',
     title: '',
     fontScale: 1,
     padding: 14
@@ -101,6 +102,25 @@ export function render(ctx) {
   const pct = Math.round(m.illum * 100);
   const age = Math.round(m.age);
   const name = `<div class="moon-name">${escapeHtml(m.name)}</div>`;
+
+  if (variant === 'trmnl') {
+    const disc = moonSvg(tier === 'tiny' ? 56 : 88, m.illum, m.waxing);
+    const stats = (cellH || 0) >= 6
+      ? `<div class="tr-stats">
+           <div class="tr-stat"><div class="tr-sv">${age}</div><div class="tr-sl">Day of 29</div></div>
+           <div class="tr-stat"><div class="tr-sv">${m.waxing ? 'Waxing' : 'Waning'}</div><div class="tr-sl">Trend</div></div>
+         </div>` : '';
+    return `<div class="tr-card">
+      <div class="tr-titlebar"><span>Moon</span><span class="tr-meta">${escapeHtml(m.name)}</span></div>
+      <div class="tr-body">
+        <div style="display:flex;align-items:center;gap:16px;flex:1">
+          <div style="flex:none">${disc}</div>
+          <div class="tr-lv tr-lv-md"><div class="tr-v">${pct}<span class="tr-deg">%</span></div><div class="tr-l">Illuminated</div></div>
+        </div>
+        ${stats}
+      </div>
+    </div>`;
+  }
 
   if (variant === 'detail') {
     const disc = moonSvg(tier === 'tiny' ? 56 : 96, m.illum, m.waxing);
