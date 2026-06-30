@@ -48,9 +48,27 @@ on a ~2-3s cold Puppeteer render. Verified locally — first `/display.bin`
 hit served warm in ~1.7ms (48000 B). Relies on Hobby always-on; if the
 service ever sleeps the first wake after idle is cold again.
 
+### Push now (fast-refresh window) — DONE (server+UI; firmware optional)
+
+Deep-sleep ESP32 can't be woken remotely, so push-now opens a server
+fast window rather than a true push. `effectiveRefresh()` / `pushNow()` /
+`fastWakeUntil` in server.js: while the window is open the device is told
+to poll every `FAST_INTERVAL_SECONDS` (env `PUSH_INTERVAL_SECONDS`, def
+20) for `PUSH_WINDOW_MS` (def 5 min), then back to normal. Honored by
+`/display.bin`, `/display-3c.bin`, `/sleep`. `POST /api/wake` (admin)
+opens it, re-renders + re-warms, returns `maxLatencyMinutes` (one current
+interval — the device must wake once to enter the window). "Push now"
+button lives in the Settings menu → Device.
+
+**Works today** via the 1-minute `X-Refresh-Rate` floor (no reflash).
+**Follow-up for true sub-minute:** firmware must read the new
+`X-Refresh-Seconds` header instead of minutes — UNVERIFIED, needs a flash
+on hardware. Inherent ceiling: latency to *enter* fast mode = current
+sleep interval; can't beat that on battery deep-sleep without always-on
+radio.
+
 Still-open Hobby options (not done): more Puppeteer RAM/`MAX_PAGES`,
-custom domain baked into firmware, second service for a "push now"
-MQTT/poll wake path.
+custom domain baked into firmware (user wants this LAST).
 
 ## What shipped in the 2026-06-16 session (HEAD on `origin/main`)
 
