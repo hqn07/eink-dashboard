@@ -168,6 +168,9 @@
 .tr-row .tr-row-sub { font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
 /* "now"/active row: solid left accent bar, no fill behind the text. */
 .tr-row.tr-row-now { border-left-color: var(--face-ink); }
-/* Few events → rows grow to share the card height instead of leaving a
- * big empty gap below (space-aware: fill under-full, ladder handles over). */
-.tr-rows-fill .tr-row { flex: 1 1 0; min-height: 0; align-items: center; }
+/* Few events → distribute rows with even vertical space instead of leaving
+ * a big empty gap below the last one. Rows keep their natural (content)
+ * height so the "now" accent bar hugs its text rather than stretching into
+ * a long line. (space-aware: fill under-full; ladder handles over-full.) */
+.tr-rows-fill { justify-content: space-evenly; }
+.tr-rows-fill .tr-row { flex: 0 0 auto; }
