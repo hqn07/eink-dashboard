@@ -2177,16 +2177,33 @@ img.icon { object-fit: contain; }
   display: flex;
   align-items: baseline;
   gap: 10px;
-  padding: 6px 0;
+  padding: 6px 0 6px 10px;
+  /* Every row reserves the accent-bar gutter (transparent) so the "now"
+   * row lighting it up doesn't shift the columns. */
+  border-left: var(--face-rule-heavy) solid transparent;
   border-bottom: var(--face-rule) dashed var(--face-ink);
 }
 .tr-row:last-child { border-bottom: none; }
 .tr-row .tr-row-time { font-weight: 700; font-size: 13px; flex: none; min-width: 52px; font-variant-numeric: tabular-nums; }
 .tr-row .tr-row-main { flex: 1; min-width: 0; }
-.tr-row .tr-row-title { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Title wraps up to 2 lines, then ellipsizes — uses the empty vertical
+ * space instead of clipping at one line the moment it overflows. Dither
+ * behind small text kills legibility on 1-bit, so the "now" row is marked
+ * with a solid left accent bar (not a tone band) and keeps text on white. */
+.tr-row .tr-row-title {
+  font-size: 14px;
+  font-weight: 600;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
 .tr-row .tr-row-sub { font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
-/* "now"/active row gets a tone band */
-.tr-row.tr-row-now { background-color: #fff; padding-left: 8px; }
+/* "now"/active row: solid left accent bar, no fill behind the text. */
+.tr-row.tr-row-now { border-left-color: var(--face-ink); }
+/* Few events → rows grow to share the card height instead of leaving a
+ * big empty gap below (space-aware: fill under-full, ladder handles over). */
+.tr-rows-fill .tr-row { flex: 1 1 0; min-height: 0; align-items: center; }
 
 /* ============ TRMNL GAUGE + HEATMAP COMPONENTS ============
  * Two more reusable primitives from the TRMNL photos, built to the same

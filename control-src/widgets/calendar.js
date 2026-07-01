@@ -85,9 +85,10 @@ function renderTrmnl(all, settings, titleLabel, cellW, cellH, density) {
   const rows = list.map((ev, i) => {
     const time = ev.isAllDay ? 'ALL&nbsp;DAY' : escapeHtml(ev.startLabel || '');
     const day  = showDay ? escapeHtml(ev.dayLabel || '') : '';
-    // Band the soonest non-all-day event as "now/next".
+    // Mark the soonest event "now/next" with a solid left accent bar
+    // (see .tr-row-now — no dither behind text; keeps 1-bit legibility).
     const isNext = i === 0;
-    return `<div class="tr-row${isNext ? ' tr-row-now face-tone-g15' : ''}">
+    return `<div class="tr-row${isNext ? ' tr-row-now' : ''}">
       ${showTime ? `<div class="tr-row-time">${time}</div>` : ''}
       <div class="tr-row-main">
         <div class="tr-row-title">${escapeHtml(ev.title || '')}</div>
@@ -95,9 +96,12 @@ function renderTrmnl(all, settings, titleLabel, cellW, cellH, density) {
       </div>
     </div>`;
   }).join('');
+  // Fewer events than the tier allows → rows grow to fill the card so a
+  // 2-event agenda doesn't leave a big empty gap below the last row.
+  const fill = list.length < maxRows ? ' tr-rows-fill' : '';
   return `<div class="tr-card">
     <div class="tr-titlebar"><span>${escapeHtml(titleLabel)}</span><span class="tr-meta">${all.length} event${all.length === 1 ? '' : 's'}</span></div>
-    <div class="tr-body" style="padding:6px 14px;gap:0"><div class="tr-rows">${rows}</div></div>
+    <div class="tr-body" style="padding:6px 14px;gap:0"><div class="tr-rows${fill}">${rows}</div></div>
   </div>`;
 }
 
