@@ -2059,7 +2059,7 @@ img.icon { object-fit: contain; }
  * Reusable building blocks for the redesigned (flagship) widgets: title-bar
  * card, label+value stack, icon/value/label cells, dithered progress bar,
  * footer, tone chip. Grotesk type (Inter via --face-grotesk). All strokes
- * ≥2px (eink-lint). Dividers are 2px dashed to echo TRMNL's dotted zones
+ * ≥2px (eink-lint). Dividers are 2px dotted to echo TRMNL's dotted zones
  * while staying legible on the panel. See docs/trmnl-inspired-design.md. */
 
 .tr-card {
@@ -2105,7 +2105,7 @@ img.icon { object-fit: contain; }
   justify-content: space-between;
   gap: 8px;
   padding: 5px 12px;
-  border-top: var(--face-rule) dashed var(--face-ink);
+  border-top: var(--face-rule) dotted var(--face-ink);
   font-size: 11px;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -2135,11 +2135,11 @@ img.icon { object-fit: contain; }
 .tr-lv.tr-lv-md .tr-v { font-size: 40px; }
 .tr-lv.tr-lv-xl .tr-v { font-size: 68px; }
 
-/* Icon + value + label cells, 2-col dashed grid. */
+/* Icon + value + label cells, 2-col dotted grid. */
 .tr-cells {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  border-top: var(--face-rule) dashed var(--face-ink);
+  border-top: var(--face-rule) dotted var(--face-ink);
   flex: 1;
   min-height: 0;
 }
@@ -2148,8 +2148,8 @@ img.icon { object-fit: contain; }
   align-items: center;
   gap: 8px;
   padding: 8px 4px;
-  border-right: var(--face-rule) dashed var(--face-ink);
-  border-bottom: var(--face-rule) dashed var(--face-ink);
+  border-right: var(--face-rule) dotted var(--face-ink);
+  border-bottom: var(--face-rule) dotted var(--face-ink);
 }
 .tr-cell:nth-child(2n) { border-right: none; }
 .tr-cells.tr-cells-2 .tr-cell:nth-last-child(-n+2) { border-bottom: none; }
@@ -2168,13 +2168,13 @@ img.icon { object-fit: contain; }
 .tr-bar .tr-bar-fill { height: 100%; }
 .tr-bar .tr-bar-track { flex: 1; height: 100%; }
 
-/* Stat row: equal cells, dashed separators, right of a bar/hero. */
+/* Stat row: equal cells, dotted separators, right of a bar/hero. */
 .tr-stats {
   display: flex;
-  border-top: var(--face-rule) dashed var(--face-ink);
+  border-top: var(--face-rule) dotted var(--face-ink);
   flex: none;
 }
-.tr-stat { flex: 1; padding: 8px 4px; border-right: var(--face-rule) dashed var(--face-ink); }
+.tr-stat { flex: 1; padding: 8px 4px; border-right: var(--face-rule) dotted var(--face-ink); }
 .tr-stat:last-child { border-right: none; }
 .tr-stat .tr-sv { font-size: 24px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
 .tr-stat .tr-sl { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
@@ -2200,7 +2200,7 @@ img.icon { object-fit: contain; }
   display: flex;
   align-items: center;
   padding: 6px 0;
-  border-bottom: var(--face-rule) dashed var(--face-ink);
+  border-bottom: var(--face-rule) dotted var(--face-ink);
 }
 .tr-row:last-child { border-bottom: none; }
 .tr-row-inner {
