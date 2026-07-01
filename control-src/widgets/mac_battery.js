@@ -22,6 +22,7 @@ export const def = {
   },
   defaultSize: 'S',
   variants: {
+    trmnl:   { label: 'TRMNL — card + dithered bar' },
     gauge:   { label: 'Gauge — percent + state' },
     inline:  { label: 'Inline — one-row strip' },
     minimal: { label: 'Minimal — percent only' }
@@ -68,6 +69,24 @@ export function render(ctx) {
   const state = (s.showState !== false)
     ? `<div class="mac-batt-state">${escapeHtml(macBattery.state.toUpperCase())}</div>`
     : '';
+
+  if (variant === 'trmnl') {
+    const pct = Math.max(0, Math.min(100, Number(macBattery.percent) || 0));
+    const fillPct = pct > 0 && pct < 3 ? 3 : pct;
+    const fillTone = low ? 'face-tone-r50' : 'face-tone-g50';
+    const bar = (cellH || 0) >= 3
+      ? `<div class="tr-bar" style="height:22px;flex:none">
+           <div class="tr-bar-fill ${fillTone}" style="width:${fillPct}%"></div>
+           <div class="tr-bar-track face-tone-g15"></div>
+         </div>` : '';
+    return `<div class="tr-card">
+      <div class="tr-titlebar"><span>Mac Battery</span><span class="tr-meta">${escapeHtml(macBattery.state.toLowerCase())}</span></div>
+      <div class="tr-body" style="gap:8px;justify-content:center">
+        <div class="tr-lv tr-lv-md"><div class="tr-v">${pct}<span class="tr-deg">%</span></div></div>
+        ${bar}
+      </div>
+    </div>`;
+  }
 
   if (variant === 'minimal') {
     return `<div class="mac-batt mac-batt-minimal">${pctBlock}</div>`;

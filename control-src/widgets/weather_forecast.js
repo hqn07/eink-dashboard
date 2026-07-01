@@ -23,10 +23,11 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
+    trmnl:   { label: 'TRMNL — title-bar card' },
     rows:    { label: 'Rows — one day per line' },
     columns: { label: 'Columns — horizontal day strip' }
   },
-  defaultVariant: 'rows',
+  defaultVariant: 'trmnl',
   // Advisory: what shrinks away as the tile gets smaller. Day count
   // itself auto-scales with size, so the degrade story is mostly
   // "fewer days", plus precip hiding on narrow tiles in auto mode.
@@ -36,7 +37,7 @@ export const def = {
     tiny:     ['precip', 'days']
   },
   defaults: (ctx) => ({
-    variant: 'rows',
+    variant: 'trmnl',
     city: (ctx && ctx.city) || '',
     lat:  (ctx && Number.isFinite(ctx.lat)) ? ctx.lat : null,
     lon:  (ctx && Number.isFinite(ctx.lon)) ? ctx.lon : null,
@@ -97,6 +98,27 @@ export function render(ctx) {
     ? String(s.title).trim()
     : `${list.length}-DAY OUTLOOK`;
   const title = `<div class="col-title">${escapeHtml(titleLabel)}</div>`;
+
+  if (variant === 'trmnl') {
+    const showPrecip = precipMode === 'always' ? true
+                     : precipMode === 'never'  ? false
+                     :                            cw >= 8;
+    return `<div class="tr-card">
+      <div class="tr-titlebar"><span>Forecast</span><span class="tr-meta">${list.length}-day</span></div>
+      <div class="tr-body" style="padding:4px 14px;gap:0"><div class="tr-rows">
+        ${list.map(f => `<div class="tr-row" style="justify-content:space-between;align-items:center">
+          <div style="display:flex;align-items:center;gap:10px;min-width:0">
+            <span style="font-weight:700;font-size:13px;min-width:42px">${escapeHtml(f.name)}</span>
+            ${showIcons ? `<span style="width:26px;height:26px;flex:none;display:inline-flex">${icon(f.main, 26)}</span>` : ''}
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            ${showPrecip && Number.isFinite(f.precip) && f.precip > 0 ? `<span style="font-size:12px" class="fc-precip${semRed(s, f.precip >= 60)}">${f.precip}%</span>` : ''}
+            <span style="font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap">${f.hi}° <span style="font-weight:400">${f.lo}°</span></span>
+          </div>
+        </div>`).join('')}
+      </div></div>
+    </div>`;
+  }
 
   if (variant === 'columns') {
     // Auto precip in the strip keys off height — every column already

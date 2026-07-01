@@ -29,7 +29,8 @@
   text-transform: uppercase;
   flex: none;
 }
-.tr-titlebar .tr-meta { font-weight: 400; letter-spacing: 1px; }
+.tr-titlebar > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.tr-titlebar .tr-meta { font-weight: 400; letter-spacing: 1px; flex: none; }
 
 .tr-body {
   flex: 1;
