@@ -31,6 +31,7 @@ const {
   isRedPixel, rgbaToPlanes, planesToPng
 } = require('./lib/image');
 const { FW_DIR, FW_NAME_RE, parseSemver, cmpSemver, findNewestFirmware } = require('./lib/firmware');
+const { parseHHMM, hmFormatter, localMinutesNow, scheduleIntervals } = require('./lib/timewin');
 
 // SSR module — per-widget render functions + chrome helpers, no React.
 // Dynamically imported (ESM) at first use and cached. Lets /dashboard
@@ -500,59 +501,10 @@ async function warmActiveImage() {
   }
 }
 
-function parseHHMM(s) {
-  if (typeof s !== 'string') return NaN;
-  const m = s.match(/^(\d{1,2}):(\d{2})$/);
-  if (!m) return NaN;
-  const h = parseInt(m[1], 10), mm = parseInt(m[2], 10);
-  if (h < 0 || h > 23 || mm < 0 || mm > 59) return NaN;
-  return h * 60 + mm;
-}
-
-// Intl.DateTimeFormat construction is surprisingly costly (~ms per call).
-// Cache one formatter per tz string so the per-request hot path is just a
-// `formatToParts(new Date())`.
-const _hmFormatters = new Map();
-function hmFormatter(tz) {
-  let f = _hmFormatters.get(tz);
-  if (f) return f;
-  try {
-    f = new Intl.DateTimeFormat('en-US', {
-      timeZone: tz, hour12: false, hour: '2-digit', minute: '2-digit'
-    });
-  } catch {
-    f = null;
-  }
-  _hmFormatters.set(tz, f);
-  return f;
-}
-
-function localMinutesNow(tz) {
-  const f = hmFormatter(tz);
-  if (!f) {
-    const d = new Date();
-    return d.getHours() * 60 + d.getMinutes();
-  }
-  const parts = f.formatToParts(new Date());
-  let h = 0, m = 0;
-  for (const p of parts) {
-    if (p.type === 'hour') h = parseInt(p.value, 10) % 24;
-    if (p.type === 'minute') m = parseInt(p.value, 10);
-  }
-  return h * 60 + m;
-}
+// parseHHMM/hmFormatter/localMinutesNow/scheduleIntervals moved to
+// ./lib/timewin.js (required at the top).
 
 // ---------- Per-screen schedule resolution ----------
-
-// Each enabled schedule becomes one or two [a,b) minute intervals.
-function scheduleIntervals(sch) {
-  if (!sch || !sch.enabled) return [];
-  const a = parseHHMM(sch.from);
-  const b = parseHHMM(sch.to);
-  if (!Number.isFinite(a) || !Number.isFinite(b) || a === b) return [];
-  if (a < b) return [[a, b]];
-  return [[a, 1440], [0, b]];
-}
 
 let _screenIdSeed = 0;
 function newScreenId() {
