@@ -1176,6 +1176,11 @@ html, body {
   color: #000;
 }
 
+/* The lit disc is a pre-dithered 1-bit moon photo. Nearest-neighbour so
+ * downscaling to the render size keeps pure black/white (no greys for the
+ * panel's threshold(128) to smear). eink-lint-allow: 1-bit raster. */
+.moon-disc image { image-rendering: pixelated; }
+
 /* ============ World Clock widget ============
  * 1-bit safe: serif time, mono caps for zone labels. Tabular feel by
  * using the same type family as the clock widget. Each zone can carry

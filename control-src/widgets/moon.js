@@ -1,4 +1,5 @@
 import { escapeHtml, pickTier, placeholder } from './_shared.js';
+import { MOON_IMAGE } from './_moon-image.js';
 
 // Moon phase — computed from the date, no fetcher. `now` comes from
 // ctx.now when present (frozen demo → deterministic matrix /
@@ -38,20 +39,20 @@ function phaseName(p) {
 }
 
 // Unique-id counter so multiple discs on one page (matrix / preview) don't
-// share <pattern>/<clipPath> ids. Deterministic within a render pass (order
-// is stable), so visual-regression stays byte-stable.
+// share <clipPath> ids. Deterministic within a render pass (order is
+// stable), so visual-regression stays byte-stable.
 let discUid = 0;
 
 // SVG for the illuminated disc. size px square.
 //   Polarity: the moon face is LIGHT, the shadow DARK. On white paper the
-//   shadow is a solid-black region and the lit face is a light dithered
-//   surface — so a full moon reads as a bright cratered disc, a new moon as
-//   a black disc (matches the sky, and fixes the old inverted fill where
-//   99% illuminated came out near-solid black).
-//   Detail: the lit face carries a light ordered-dither surface plus darker
-//   maria and a couple of crater dots (all 1-bit black/white, crisp at
-//   natural size — the disc isn't stretched, unlike the sparkline). Craters
-//   live only on the illuminated side (clipped to the terminator).
+//   shadow is a solid-black region and the lit face shows a real dithered
+//   near-side photo (MOON_IMAGE) — so a full moon reads as a bright
+//   cratered disc, a new moon as a black disc (matches the sky, and fixes
+//   the old inverted fill where 99% came out near-solid black). Only the
+//   illuminated side shows the surface (clipped to the terminator), as in
+//   reality. The photo is a pre-dithered 1-bit PNG rendered with
+//   image-rendering:pixelated (see 036-moon.css) so downscaling stays pure
+//   black/white — no greys for the panel's threshold(128) to mangle.
 // The lit region = a semicircle on the illuminated limb + a half-ellipse
 // terminator whose x-radius shrinks to 0 at the quarters and flips sign
 // through the gibbous phases.
@@ -67,38 +68,15 @@ export function moonSvg(size, illum, waxing) {
     A ${rx} ${R} 0 0 ${termSweep} ${cx} ${cy - R} Z`;
 
   const id = `mn${discUid++}`;
-  // Maria (dark seas) + craters as fractions of the disc — a stylised
-  // near-side layout, rendered in the mare dither as darker grey patches.
-  const mare = (fx, fy, frx, fry) =>
-    `<ellipse cx="${(fx * size).toFixed(1)}" cy="${(fy * size).toFixed(1)}" rx="${(frx * R).toFixed(1)}" ry="${(fry * R).toFixed(1)}" fill="url(#${id}m)"/>`;
-  const crater = (fx, fy, fr) =>
-    `<circle cx="${(fx * size).toFixed(1)}" cy="${(fy * size).toFixed(1)}" r="${(fr * R).toFixed(1)}" fill="url(#${id}m)" stroke="#000" stroke-width="2"/>`;
-  const maria = [
-    mare(0.42, 0.34, 0.20, 0.15),  // Imbrium / Serenitatis
-    mare(0.60, 0.45, 0.14, 0.13),  // Tranquillitatis
-    mare(0.30, 0.46, 0.11, 0.18),  // Procellarum
-    mare(0.40, 0.63, 0.15, 0.11)   // Nubium / Humorum
-  ].join('');
-  const craters = [
-    crater(0.46, 0.76, 0.06),      // Tycho
-    crater(0.40, 0.52, 0.045)      // Copernicus
-  ].join('');
-
-  return `<svg class="moon-disc" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true" shape-rendering="crispEdges">
+  return `<svg class="moon-disc" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true">
     <defs>
-      <pattern id="${id}s" width="4" height="4" patternUnits="userSpaceOnUse">
-        <rect width="4" height="4" fill="#fff"/><rect width="1" height="1" x="0" y="0"/><rect width="1" height="1" x="2" y="2"/>
-      </pattern>
-      <pattern id="${id}m" width="2" height="2" patternUnits="userSpaceOnUse">
-        <rect width="2" height="2" fill="#fff"/><rect width="1" height="1" x="0" y="0"/><rect width="1" height="1" x="1" y="1"/>
-      </pattern>
       <clipPath id="${id}c"><path d="${lit}"/></clipPath>
+      <clipPath id="${id}d"><circle cx="${cx}" cy="${cy}" r="${R - 1}"/></clipPath>
     </defs>
     <circle cx="${cx}" cy="${cy}" r="${R - 1}" fill="#000"/>
     <g clip-path="url(#${id}c)">
-      <circle cx="${cx}" cy="${cy}" r="${R - 1}" fill="url(#${id}s)"/>
-      ${maria}
-      ${craters}
+      <image href="${MOON_IMAGE}" x="0" y="0" width="${size}" height="${size}"
+        clip-path="url(#${id}d)" preserveAspectRatio="xMidYMid slice"/>
     </g>
     <circle cx="${cx}" cy="${cy}" r="${R - 1}" fill="none" stroke="#000" stroke-width="2"/>
   </svg>`;
