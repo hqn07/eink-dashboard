@@ -71,14 +71,18 @@
   grid-template-rows: repeat(var(--heat-rows, 7), 1fr);
   grid-auto-columns: 1fr;
   gap: 2px;
+  /* width fills; height derives from the caller's aspect-ratio so cells stay
+   * square. Clamped to the box + centred by the parent. */
   width: 100%;
-  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  margin: auto;
   min-height: 0;
 }
 .tr-heat-cell {
   border: var(--face-rule) solid var(--face-ink);
-  min-width: 6px;
-  min-height: 6px;
+  min-width: 4px;
+  min-height: 4px;
 }
 /* level 4 (busiest) is solid ink; 0..3 ride the dither tones. */
 .tr-heat-l4 { background: var(--face-ink); }

@@ -1,0 +1,9 @@
+/* Code Activity — the contribution heatmap fills the card body. .tr-heat
+ * (215/225 dither-tone grid) sizes to this box. */
+.ca-grid {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

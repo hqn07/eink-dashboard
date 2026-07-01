@@ -80,6 +80,24 @@ export const DEMO_CLOCK = {
   style: 'big'
 };
 
+// A year of plausible contribution activity (Sun-aligned), for the code
+// activity heatmap in the matrix / visual-regression.
+export const DEMO_CODE_ACTIVITY = (() => {
+  const days = [];
+  const start = Date.UTC(2025, 5, 29); // a Sunday
+  for (let i = 0; i < 371; i++) {
+    // weekdays busier than weekends; a couple of quiet stretches.
+    const dow = i % 7;
+    const wk = Math.floor(i / 7);
+    const busy = (dow >= 1 && dow <= 5) ? 1 : 0;
+    const lull = (wk % 9 === 0) ? 0 : 1;
+    const count = busy * lull * ((i * 7 + 3) % 6);
+    const level = count === 0 ? 0 : count < 2 ? 1 : count < 4 ? 2 : count < 6 ? 3 : 4;
+    days.push({ date: new Date(start + i * 86400000).toISOString().slice(0, 10), count, level });
+  }
+  return { user: 'octocat', days, total: days.reduce((s, d) => s + d.count, 0), stale: false };
+})();
+
 // Returns a render context for the given widget id with demo data
 // plumbed into the slots the widget expects. cellW + cellH come from
 // the size the pool is rendering at so widgets that branch on tier
@@ -97,6 +115,9 @@ export function demoCtxForWidget(id, cellW, cellH) {
     case 'calendar':
       return { ...base, events: DEMO_EVENTS,
         settings: { icalUrls: ['demo'] } };
+    case 'codeactivity':
+      return { ...base, codeActivity: DEMO_CODE_ACTIVITY,
+        settings: { username: 'octocat' } };
     case 'mac_nowplaying':
       return { ...base, macNowPlaying: DEMO_NOWPLAYING, settings: {} };
     case 'mac_battery':

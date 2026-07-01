@@ -134,7 +134,10 @@ export function heatmapHtml({ values, rows = 7, max, level } = {}) {
     const lv = Math.max(0, Math.min(4, toLevel(v)));
     return `<span class="tr-heat-cell ${HEAT_TONE[lv]}"></span>`;
   }).join('');
-  return `<div class="tr-heat" style="--heat-rows:${Math.max(1, rows | 0)}">${cells}</div>`;
+  const r = Math.max(1, rows | 0);
+  const cols = Math.max(1, Math.ceil(vals.length / r));
+  // aspect-ratio keeps the cells square when the grid stretches to width.
+  return `<div class="tr-heat" style="--heat-rows:${r};aspect-ratio:${cols} / ${r}">${cells}</div>`;
 }
 
 // Autofit-grow for under-full agendas: raise row-title font so a few events

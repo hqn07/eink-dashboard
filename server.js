@@ -16,6 +16,7 @@ const sharp = require('sharp');
 
 const { fetchWeather, geocodeCity } = require('./widgets/weather');
 const { fetchAqi } = require('./widgets/aqi');
+const { fetchCodeActivity } = require('./widgets/codeactivity');
 const { fetchOnThisDay } = require('./widgets/onthisday');
 const { fetchEvents } = require('./widgets/calendar');
 const { fetchAlerts } = require('./widgets/alerts');
@@ -1310,6 +1311,9 @@ async function buildWidgetData(cfg, units, layout) {
           break;
         case 'clock':
           slot.clockNow = buildClock(eff, cfg.timezone);
+          break;
+        case 'codeactivity':
+          slot.codeActivity = await fetchCodeActivity(eff.username || cfg.githubUser);
           break;
 
         default:
