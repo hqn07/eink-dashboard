@@ -170,9 +170,9 @@ baseline refreshed each batch; lint + widget guards clean.
     (levels 0..4 → g15/g25/g50/g75/ink), column-major so the last cell is
     "today". Eyeball both through the real pipeline with
     `node scripts/preview-components.mjs`.
-  - Heatmap has **no live consumer yet** — its natural first home is a
-    code-activity widget (GitHub contributions), which needs a data
-    fetcher + the user's username/token. Wire that next.
+  - Heatmap consumer shipped: **code-activity widget** (GitHub contribution
+    graph via the no-token jogruber API, per-tile username). heatmapHtml now
+    sets aspect-ratio so cells stay square.
 
 ## 8. Open / needs user input
 
