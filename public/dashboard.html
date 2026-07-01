@@ -8,39 +8,6 @@
 </head>
 <body class="screen screen--1bit" data-screen="" data-units="">
 <!--__BODY__-->
-<script>
-(function() {
-  // Binary-search the largest font-size that fits each .autofit element
-  // inside its own bounding box. Server-side render lays out the grid;
-  // this just sizes the text after web fonts settle so glyph metrics
-  // match what gets screenshotted. Sets window.__autofitDone so
-  // Puppeteer can wait for the pass.
-  function autofitText(el) {
-    if (!el) return;
-    const maxW = el.clientWidth;
-    const maxH = el.clientHeight;
-    if (maxW <= 0 || maxH <= 0) return;
-    const minFont = Math.max(8, parseInt(el.getAttribute('data-min-font') || '11', 10));
-    const maxFont = Math.max(minFont, parseInt(el.getAttribute('data-max-font') || '260', 10));
-    let lo = minFont, hi = maxFont;
-    while (lo < hi) {
-      const mid = Math.ceil((lo + hi) / 2);
-      el.style.fontSize = mid + 'px';
-      if (el.scrollWidth <= maxW + 1 && el.scrollHeight <= maxH + 1) lo = mid;
-      else hi = mid - 1;
-    }
-    el.style.fontSize = lo + 'px';
-  }
-  const runAutofit = () => requestAnimationFrame(() => {
-    document.querySelectorAll('.autofit').forEach(autofitText);
-    window.__autofitDone = true;
-  });
-  if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(runAutofit);
-  } else {
-    runAutofit();
-  }
-})();
-</script>
+<!--__AUTOFIT__-->
 </body>
 </html>

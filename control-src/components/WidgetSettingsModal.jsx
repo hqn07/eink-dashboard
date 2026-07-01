@@ -7,6 +7,7 @@ import { GRID_COLS, GRID_ROWS, widgetById } from '../widgets.js';
 import {
   renderWidget, typographyCss, cellClasses, scaleWrap
 } from '../widget-render.js';
+import { runAutofit } from '../autofit.js';
 import WidgetForm from './WidgetForm.jsx';
 
 const DASH_W = 800;
@@ -216,23 +217,7 @@ export default function WidgetSettingsModal({
     if (!open) return;
     const el = previewCellRef.current;
     if (!el) return;
-    const raf = requestAnimationFrame(() => {
-      el.querySelectorAll('.autofit').forEach((node) => {
-        const maxW = node.clientWidth;
-        const maxH = node.clientHeight;
-        if (maxW <= 0 || maxH <= 0) return;
-        const minFont = Math.max(8, parseInt(node.getAttribute('data-min-font') || '11', 10));
-        const maxFont = Math.max(minFont, parseInt(node.getAttribute('data-max-font') || '260', 10));
-        let lo = minFont, hi = maxFont;
-        while (lo < hi) {
-          const mid = Math.ceil((lo + hi) / 2);
-          node.style.fontSize = mid + 'px';
-          if (node.scrollWidth <= maxW + 1 && node.scrollHeight <= maxH + 1) lo = mid;
-          else hi = mid - 1;
-        }
-        node.style.fontSize = lo + 'px';
-      });
-    });
+    const raf = requestAnimationFrame(() => runAutofit(el));
     return () => cancelAnimationFrame(raf);
   });
 

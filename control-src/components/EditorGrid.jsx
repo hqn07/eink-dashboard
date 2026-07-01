@@ -6,6 +6,7 @@ import * as HoverCard from '@radix-ui/react-hover-card';
 import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById, makeInstance } from '../widgets.js';
 import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses } from '../widget-render.js';
 import { demoCtxForWidget } from '../widgets/_pool_demo.js';
+import { autofitText } from '../autofit.js';
 import WidgetSettingsModal from './WidgetSettingsModal.jsx';
 
 // Editor cells must align 1:1 with dashboard cells so widget previews
@@ -63,25 +64,6 @@ export default function EditorGrid({ layout, showGrid, readOnly = false, preview
   // 5px drag threshold so a single click (mousedown→up < 5px move) is
   // treated as a select, while a real drag is left for react-grid-layout.
   const downPosRef = useRef(null);
-
-  // autofit runner — matches the helper in dashboard.html. Binary-search
-  // the largest font size that fits inside each .autofit element's box.
-  function autofitText(el) {
-    if (!el) return;
-    const maxW = el.clientWidth;
-    const maxH = el.clientHeight;
-    if (maxW <= 0 || maxH <= 0) return;
-    const minFont = Math.max(8, parseInt(el.getAttribute('data-min-font') || '11', 10));
-    const maxFont = Math.max(minFont, parseInt(el.getAttribute('data-max-font') || '260', 10));
-    let lo = minFont, hi = maxFont;
-    while (lo < hi) {
-      const mid = Math.ceil((lo + hi) / 2);
-      el.style.fontSize = mid + 'px';
-      if (el.scrollWidth <= maxW + 1 && el.scrollHeight <= maxH + 1) lo = mid;
-      else hi = mid - 1;
-    }
-    el.style.fontSize = lo + 'px';
-  }
 
   useEffect(() => {
     if (!wrapRef.current) return;

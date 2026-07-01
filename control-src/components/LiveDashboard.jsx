@@ -1,24 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses } from '../widget-render.js';
 import { widgetById } from '../widgets.js';
-
-// Binary-search a font-size that lets the element's content fit its
-// bounding box. Matches autofitText in public/dashboard.html.
-function autofitText(el) {
-  if (!el) return;
-  const maxW = el.clientWidth;
-  const maxH = el.clientHeight;
-  if (maxW <= 0 || maxH <= 0) return;
-  const minFont = Math.max(8, parseInt(el.getAttribute('data-min-font') || '11', 10));
-  let lo = minFont, hi = 260;
-  while (lo < hi) {
-    const mid = Math.ceil((lo + hi) / 2);
-    el.style.fontSize = mid + 'px';
-    if (el.scrollWidth <= maxW + 1 && el.scrollHeight <= maxH + 1) lo = mid;
-    else hi = mid - 1;
-  }
-  el.style.fontSize = lo + 'px';
-}
+import { autofitText } from '../autofit.js';
 
 // Parse a CSS declaration string ("--w-font:serif;padding:8px;") into a
 // React-style object. Camel-cases standard props; leaves --var keys as-is.

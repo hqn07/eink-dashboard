@@ -263,6 +263,19 @@ loadDevicesSync();
 // on mtime change so editing public/dashboard.html in dev hot-applies.
 let _htmlCache = null; // { mtimeMs, html }
 const DASHBOARD_HTML_PATH = path.join(__dirname, 'public', 'dashboard.html');
+
+// The page's `.autofit` pass = the shared source (control-src/autofit.js,
+// export-stripped) + a tiny orchestrator that runs it after web fonts
+// settle and flags window.__autofitDone for Puppeteer. Injected at
+// <!--__AUTOFIT__-->. Same code the React editor imports, so the panel and
+// the editor size text identically (they used to drift).
+const AUTOFIT_SCRIPT = (() => {
+  const src = fs.readFileSync(path.join(__dirname, 'control-src', 'autofit.js'), 'utf8')
+    .replace(/^export\s+/gm, '');
+  return `<script>(function(){\n${src}\n`
+    + `var __run=function(){requestAnimationFrame(function(){runAutofit(document);window.__autofitDone=true;});};`
+    + `if(document.fonts&&document.fonts.ready){document.fonts.ready.then(__run);}else{__run();}})();</script>`;
+})();
 async function loadDashboardHtml() {
   const st = await fsp.stat(DASHBOARD_HTML_PATH);
   if (_htmlCache && _htmlCache.mtimeMs === st.mtimeMs) return _htmlCache.html;
@@ -1563,6 +1576,7 @@ function renderPage({ payload, shell, ssr, mode }) {
   return shell
     .replace('<!--__BODY__-->', body)
     .replace('<!--__ACCENT__-->', extraStyle)
+    .replace('<!--__AUTOFIT__-->', AUTOFIT_SCRIPT)
     .replace('data-screen=""', `data-screen="${htmlAttr(screen)}"`)
     .replace('data-units=""',  `data-units="${htmlAttr(units)}"`);
 }
