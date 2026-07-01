@@ -126,13 +126,28 @@ seeded). Foundation: Inter (`--face-grotesk`), tone scale incl. g15,
 `220-trmnl-components.css`. Standalone module-render is the quick way to
 verify widgets the /preview harness can't feed (battery has no preview data).
 
-### Next
-- Decide: flip `trmnl` to each widget's **defaultVariant** (changes existing
-  tiles) vs keep opt-in.
-- Roll the language to the rest in batches (forecast, aqi, moon, clock,
-  countdown, quote, world_clock, qr, sparkline, mac_nowplaying, text).
-- Optional: donut/ring gauges + contribution-heatmap components (seen in the
-  TRMNL photos) for aqi/humidity and a code/activity widget.
+### Rollout — DONE (2026-06-30)
+
+`trmnl` is now the **default variant** for: weather_hero, calendar,
+eink_battery, clock, countdown, quote, moon, aqi, onthisday, world_clock,
+sparkline, weather_forecast (12 widgets). Old variants stay available.
+
+- **mac_battery**: `trmnl` variant exists but default stays `gauge` — its
+  4×2 / 6×3 tiles are too short for a full card frame.
+- **Left as purpose-built primitives** (no card): `text` (bar/strip),
+  `qr` (scannable code needs the space), `mac_nowplaying` (its variants
+  drive bookend slots, not layout).
+
+Verified via standalone module renders through the real pipeline; visual
+baseline refreshed each batch; lint + widget guards clean.
+
+### Still open / optional
+- Panel-photo verification on real hardware (set a screen to the new
+  defaults and flash).
+- Minor polish: world_clock long zone names ellipsize; tune row counts.
+- New components seen in the TRMNL photos: **donut/ring gauges** (UV,
+  humidity, precip) + **contribution heatmap** (activity) — would let
+  aqi/weather show gauges and enable a code-activity widget.
 
 ## 8. Open / needs user input
 
