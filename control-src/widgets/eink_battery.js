@@ -16,7 +16,7 @@ import { sparkSvg, niceDomain } from './sparkline.js';
 
 export const def = {
   id: 'eink_battery',
-  label: 'E-Ink · Battery',
+  label: 'Display Battery',
   requires: 'battery',
   minSize: { w: 3, h: 2 },
   sizes: {

@@ -62,7 +62,7 @@ function sideSpaceSlots(variant, { np, elapsedStr, remainStr, stateIcon, titleLa
 
 export const def = {
   id: 'mac_nowplaying',
-  label: 'Mac · Now Playing',
+  label: 'Now Playing',
   requires: 'mac_nowplaying',
   minSize: { w: 8, h: 4 },
   sizes: {

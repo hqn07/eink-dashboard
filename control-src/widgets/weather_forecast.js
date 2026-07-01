@@ -12,7 +12,7 @@ import { icon } from './_weather_shared.js';
 
 export const def = {
   id: 'weather_forecast',
-  label: 'Weather · Forecast',
+  label: 'Forecast',
   requires: 'weather',
   minSize: { w: 6, h: 6 },
   sizes: {

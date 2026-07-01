@@ -12,7 +12,7 @@ import { escapeHtml, placeholder, semRed } from './_shared.js';
 
 export const def = {
   id: 'mac_battery',
-  label: 'Mac · Battery',
+  label: 'Mac Battery',
   requires: 'mac_battery',
   minSize: { w: 3, h: 2 },
   sizes: {

@@ -21,7 +21,7 @@ const DEFAULT_STATS = ['feels', 'humid', 'wind', 'cloud_or_rise'];
 
 export const def = {
   id: 'weather_hero',
-  label: 'Weather · Current',
+  label: 'Current Weather',
   requires: 'weather',
   minSize: { w: 6, h: 4 },
   sizes: {
