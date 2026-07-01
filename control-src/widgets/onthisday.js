@@ -53,10 +53,13 @@ export function render(ctx) {
 
   if (variant === 'trmnl') {
     const byTier = { tiny: 2, compact: 3, standard: 4, extended: 6, full: 7 };
-    const rows = d.events.slice(0, byTier[tier] || 3);
+    const cap = byTier[tier] || 3;
+    const rows = d.events.slice(0, cap);
+    // Under-full → rows grow to fill the card (space-aware fit ladder).
+    const fill = rows.length < cap ? ' tr-rows-fill' : '';
     return `<div class="tr-card">
       <div class="tr-titlebar"><span>On This Day</span><span class="tr-meta">${escapeHtml(d.dateLabel || '')}${d.stale ? ' · old' : ''}</span></div>
-      <div class="tr-body" style="padding:6px 14px;gap:0"><div class="tr-rows">
+      <div class="tr-body" style="padding:6px 14px;gap:0"><div class="tr-rows${fill}">
         ${rows.map(e => `<div class="tr-row">
           <div class="tr-row-time">${e.year}</div>
           <div class="tr-row-main"><div class="tr-row-title" style="white-space:normal">${escapeHtml(e.text)}</div></div>

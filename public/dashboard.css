@@ -2186,18 +2186,23 @@ img.icon { object-fit: contain; }
 .tr-row:last-child { border-bottom: none; }
 .tr-row .tr-row-time { font-weight: 700; font-size: 13px; flex: none; min-width: 52px; font-variant-numeric: tabular-nums; }
 .tr-row .tr-row-main { flex: 1; min-width: 0; }
-/* Title wraps up to 2 lines, then ellipsizes — uses the empty vertical
- * space instead of clipping at one line the moment it overflows. Dither
- * behind small text kills legibility on 1-bit, so the "now" row is marked
- * with a solid left accent bar (not a tone band) and keeps text on white. */
+/* SPACE-AWARE FIT LADDER (generic).
+ * .tr-clamp = "wrap before you clip": wrap to --fit-lines (default 2)
+ * lines, then ellipsize — uses empty vertical space instead of clipping
+ * at one line the instant text overflows. Any text block can add it; row
+ * titles compose it. Pair with .tr-rows-fill (below) so under-full lists
+ * grow to fill instead of leaving a gap. Set --fit-lines per use (a
+ * one-line label wants 1; a wrappy title wants 2–3). */
+.tr-clamp,
 .tr-row .tr-row-title {
-  font-size: 14px;
-  font-weight: 600;
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: var(--fit-lines, 2);
   overflow: hidden;
 }
+/* Dither behind small text kills legibility on 1-bit, so the "now" row is
+ * marked with a solid left accent bar (not a tone band); text stays white. */
+.tr-row .tr-row-title { font-size: 14px; font-weight: 600; }
 .tr-row .tr-row-sub { font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
 /* "now"/active row: solid left accent bar, no fill behind the text. */
 .tr-row.tr-row-now { border-left-color: var(--face-ink); }

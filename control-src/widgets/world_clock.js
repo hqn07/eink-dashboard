@@ -151,9 +151,11 @@ export function render(ctx) {
     const titleRows = 1;
     const maxRows = Math.max(2, Math.min(8, Math.floor(((cellH || 0) - titleRows) / 1.5)));
     const rows = infos.slice(0, maxRows);
+    // Under-full → rows grow to fill the card (space-aware fit ladder).
+    const fill = rows.length < maxRows ? ' tr-rows-fill' : '';
     return `<div class="tr-card">
       <div class="tr-titlebar"><span>${escapeHtml(titleLabel)}</span></div>
-      <div class="tr-body" style="padding:4px 14px;gap:0"><div class="tr-rows">
+      <div class="tr-body" style="padding:4px 14px;gap:0"><div class="tr-rows${fill}">
         ${rows.map(z => `<div class="tr-row" style="justify-content:space-between">
           <div class="tr-row-main"><div class="tr-row-title">${showGlyph ? dnGlyph(z.isDay) + ' ' : ''}${escapeHtml(z.label)}</div>${showMeta ? `<div class="tr-row-sub">${escapeHtml([z.weekday, z.offset].filter(Boolean).join(' · '))}</div>` : ''}</div>
           <div style="font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap">${escapeHtml(z.time)} ${deltaBadge(dayDelta(homeKey, z.dayKey))}</div>

@@ -24,6 +24,24 @@ const calHtml = renderWidget('calendar', {
   settings: { variant: 'trmnl', title: 'UPCOMING', icalUrls: ['demo'] }, variant: 'trmnl'
 });
 
+// Two more row-widgets, under-full + a long label, to check the shared fit
+// ladder (clamp + tr-rows-fill) generalizes past calendar.
+const wcHtml = renderWidget('world_clock', {
+  now: Date.now(), cellW: 12, cellH: 6,
+  settings: {
+    variant: 'trmnl', title: 'WORLD CLOCK',
+    zones: ['Tokyo Metropolitan Prefecture|Asia/Tokyo', 'NYC|America/New_York']
+  }, variant: 'trmnl'
+});
+const otdHtml = renderWidget('onthisday', {
+  cellW: 12, cellH: 6,
+  onThisDay: { dateLabel: 'JUL 4', events: [
+    { year: 1776, text: 'The United States Declaration of Independence is adopted by the Second Continental Congress in Philadelphia.' },
+    { year: 1826, text: 'Thomas Jefferson and John Adams both die.' }
+  ] },
+  settings: { variant: 'trmnl' }, variant: 'trmnl'
+});
+
 const card = (title, body) => `<div style="border:2px solid #000;height:220px;display:flex;flex-direction:column">
   <div class="tr-titlebar"><span>${title}</span></div>
   <div class="tr-body" style="justify-content:center;align-items:center">${body}</div></div>`;
@@ -31,8 +49,14 @@ const card = (title, body) => `<div style="border:2px solid #000;height:220px;di
 const html = `<!doctype html><html><head><meta charset="utf8"><style>${css}
   body{margin:0;background:#fff;width:820px}
   .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:12px}
+  .rowgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 12px}
+  .box{height:190px;border:2px solid #000}
 </style></head><body>
   <div style="padding:12px"><div style="height:200px;border:2px solid #000">${calHtml}</div></div>
+  <div class="rowgrid">
+    <div class="box">${wcHtml}</div>
+    <div class="box">${otdHtml}</div>
+  </div>
   <div class="grid">
     ${card('GAUGE 42/300', gaugeHtml({ value: 42, max: 300, center: 42, label: 'GOOD' }))}
     ${card('GAUGE 168 RED', gaugeHtml({ value: 168, max: 300, center: 168, label: 'UNHEALTHY', red: true, size: 'lg' }))}
@@ -46,7 +70,7 @@ const html = `<!doctype html><html><head><meta charset="utf8"><style>${css}
 
 const browser = await puppeteer.launch({ headless: 'new' });
 const page = await browser.newPage();
-await page.setViewport({ width: 820, height: 900, deviceScaleFactor: 1 });
+await page.setViewport({ width: 820, height: 1120, deviceScaleFactor: 1 });
 await page.setContent(html, { waitUntil: 'networkidle0' });
 await page.evaluate(() => document.fonts.ready);
 const out = join(ROOT, 'test', '_component-preview.png');
