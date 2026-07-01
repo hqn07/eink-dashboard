@@ -37,26 +37,69 @@ function phaseName(p) {
   return 'WANING CRESCENT';
 }
 
-// SVG for the illuminated disc. size px square; lit area filled #000.
-// The lit region = a semicircle on the illuminated limb + a half-
-// ellipse terminator whose x-radius shrinks to 0 at the quarters and
-// flips sign through the gibbous phases.
+// Unique-id counter so multiple discs on one page (matrix / preview) don't
+// share <pattern>/<clipPath> ids. Deterministic within a render pass (order
+// is stable), so visual-regression stays byte-stable.
+let discUid = 0;
+
+// SVG for the illuminated disc. size px square.
+//   Polarity: the moon face is LIGHT, the shadow DARK. On white paper the
+//   shadow is a solid-black region and the lit face is a light dithered
+//   surface — so a full moon reads as a bright cratered disc, a new moon as
+//   a black disc (matches the sky, and fixes the old inverted fill where
+//   99% illuminated came out near-solid black).
+//   Detail: the lit face carries a light ordered-dither surface plus darker
+//   maria and a couple of crater dots (all 1-bit black/white, crisp at
+//   natural size — the disc isn't stretched, unlike the sparkline). Craters
+//   live only on the illuminated side (clipped to the terminator).
+// The lit region = a semicircle on the illuminated limb + a half-ellipse
+// terminator whose x-radius shrinks to 0 at the quarters and flips sign
+// through the gibbous phases.
 export function moonSvg(size, illum, waxing) {
   const R = size / 2, cx = R, cy = R;
   const k = Math.max(0, Math.min(1, illum));
   const rx = R * Math.abs(1 - 2 * k);    // terminator semi-width
   const gibbous = k > 0.5;
-  // Lit limb: waxing lights the right (sweep 1), waning the left (0).
-  const limbSweep = waxing ? 1 : 0;
-  // Terminator curves toward the dark side for a crescent, away for a
-  // gibbous; mirrored for waning.
+  const limbSweep = waxing ? 1 : 0;      // waxing lights the right
   const termSweep = waxing ? (gibbous ? 1 : 0) : (gibbous ? 0 : 1);
   const lit = `M ${cx} ${cy - R}
     A ${R} ${R} 0 0 ${limbSweep} ${cx} ${cy + R}
     A ${rx} ${R} 0 0 ${termSweep} ${cx} ${cy - R} Z`;
-  return `<svg class="moon-disc" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true">
-    <circle cx="${cx}" cy="${cy}" r="${R - 1}" fill="#fff" stroke="#000" stroke-width="2"/>
-    <path d="${lit}" fill="#000"/>
+
+  const id = `mn${discUid++}`;
+  // Maria (dark seas) + craters as fractions of the disc — a stylised
+  // near-side layout, rendered in the mare dither as darker grey patches.
+  const mare = (fx, fy, frx, fry) =>
+    `<ellipse cx="${(fx * size).toFixed(1)}" cy="${(fy * size).toFixed(1)}" rx="${(frx * R).toFixed(1)}" ry="${(fry * R).toFixed(1)}" fill="url(#${id}m)"/>`;
+  const crater = (fx, fy, fr) =>
+    `<circle cx="${(fx * size).toFixed(1)}" cy="${(fy * size).toFixed(1)}" r="${(fr * R).toFixed(1)}" fill="url(#${id}m)" stroke="#000" stroke-width="2"/>`;
+  const maria = [
+    mare(0.42, 0.34, 0.20, 0.15),  // Imbrium / Serenitatis
+    mare(0.60, 0.45, 0.14, 0.13),  // Tranquillitatis
+    mare(0.30, 0.46, 0.11, 0.18),  // Procellarum
+    mare(0.40, 0.63, 0.15, 0.11)   // Nubium / Humorum
+  ].join('');
+  const craters = [
+    crater(0.46, 0.76, 0.06),      // Tycho
+    crater(0.40, 0.52, 0.045)      // Copernicus
+  ].join('');
+
+  return `<svg class="moon-disc" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true" shape-rendering="crispEdges">
+    <defs>
+      <pattern id="${id}s" width="4" height="4" patternUnits="userSpaceOnUse">
+        <rect width="4" height="4" fill="#fff"/><rect width="1" height="1" x="0" y="0"/><rect width="1" height="1" x="2" y="2"/>
+      </pattern>
+      <pattern id="${id}m" width="2" height="2" patternUnits="userSpaceOnUse">
+        <rect width="2" height="2" fill="#fff"/><rect width="1" height="1" x="0" y="0"/><rect width="1" height="1" x="1" y="1"/>
+      </pattern>
+      <clipPath id="${id}c"><path d="${lit}"/></clipPath>
+    </defs>
+    <circle cx="${cx}" cy="${cy}" r="${R - 1}" fill="#000"/>
+    <g clip-path="url(#${id}c)">
+      <circle cx="${cx}" cy="${cy}" r="${R - 1}" fill="url(#${id}s)"/>
+      ${maria}
+      ${craters}
+    </g>
     <circle cx="${cx}" cy="${cy}" r="${R - 1}" fill="none" stroke="#000" stroke-width="2"/>
   </svg>`;
 }
