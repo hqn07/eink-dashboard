@@ -94,7 +94,7 @@ export const def = {
   defaultSize: 'M',
   variants: {
     trmnl:   { label: 'TRMNL — title-bar card' },
-    flow:    { label: 'Flow — phase filmstrip (today centered)' },
+    flow:    { label: 'Cycle — phase timeline (today centered)' },
     disc:    { label: 'Disc — moon + phase name' },
     detail:  { label: 'Detail — moon + illumination + age' },
     minimal: { label: 'Minimal — disc + name' }
@@ -126,34 +126,31 @@ export function render(ctx) {
   const name = `<div class="moon-name">${escapeHtml(m.name)}</div>`;
 
   if (variant === 'flow') {
-    // Cover-flow: today's disc forward + centred; the days before/after
-    // rotated back in 3-D, spaced out, each smaller than the last. The
-    // number of flanking days grows with tile width; disc size is fitted so
-    // the whole spread fits, and each slot scales down by distance.
+    // Phase timeline: flat discs stepping across the whole lunation so each
+    // is a visibly different phase (New→…→Full→…→New), today centred and
+    // largest, size tapering with distance. Cover-flow-style 3-D rotation
+    // was dropped — a rotated *round* disc reads as an edge-on coin, and
+    // ±1-day neighbours were near-identical; stepping across the cycle is
+    // how moon strips are actually shown. Flanking count grows with width.
     const DAY = 86400000;
     const w = cellW || 0;
     const perSide = w >= 23 ? 4 : w >= 19 ? 3 : w >= 14 ? 2 : 1;
-    const SC = 0.78;                          // size falloff per slot outward
-    const GAP = tier === 'tiny' ? 6 : 12;     // px between discs
-    // Fit the base disc to the tile: total width ≈ Σ slot-scales·base + gaps.
+    const SC = 0.82;                          // size falloff per slot outward
+    const GAP = tier === 'tiny' ? 8 : 14;
+    const step = (SYNODIC / (2 * perSide)) * DAY; // span ≈ one full cycle
+    // Fit the base disc to the tile width.
     let span = 1;
     for (let k = 1; k <= perSide; k++) span += 2 * Math.pow(SC, k);
-    const tileW = w * (800 / 24);
-    const budget = tileW * 0.9 - GAP * 2 * perSide;
-    let base = tier === 'tiny' ? 58 : ((cellH || 0) >= 7 ? 132 : 98);
-    base = Math.max(40, Math.min(base, Math.floor(budget / span)));
+    const budget = w * (800 / 24) * 0.92 - GAP * 2 * perSide;
+    let base = tier === 'tiny' ? 60 : ((cellH || 0) >= 7 ? 128 : 100);
+    base = Math.max(34, Math.min(base, Math.floor(budget / span)));
 
-    const offsets = [];
-    for (let o = -perSide; o <= perSide; o++) offsets.push(o);
-    // Size falls off by distance (real px, not CSS scale — so the layout box
-    // shrinks too and the row can't overflow). Centre faces forward; sides
-    // swing on the Y axis. rotateY is visual only (doesn't change the box).
-    const sizeFor = (o) => Math.max(28, Math.round(base * Math.pow(SC, Math.abs(o))));
-    const tf = (o) => o === 0 ? 'none' : `rotateY(${(o < 0 ? 1 : -1) * 46}deg)`;
-    const cells = offsets.map((o) => {
-      const mi = moonInfo(now + o * DAY);
-      return `<div class="moon-flow-cell" style="transform:${tf(o)};z-index:${perSide + 1 - Math.abs(o)}">${moonSvg(sizeFor(o), mi.illum, mi.waxing)}</div>`;
-    }).join('');
+    let cells = '';
+    for (let o = -perSide; o <= perSide; o++) {
+      const mi = moonInfo(now + o * step);
+      const sz = Math.max(30, Math.round(base * Math.pow(SC, Math.abs(o))));
+      cells += `<div class="moon-flow-cell">${moonSvg(sz, mi.illum, mi.waxing)}</div>`;
+    }
     return `<div class="tr-card">
       <div class="tr-titlebar"><span>Moon</span><span class="tr-meta">${escapeHtml(m.name)}</span></div>
       <div class="tr-body" style="justify-content:center;gap:8px">

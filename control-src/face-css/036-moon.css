@@ -48,16 +48,16 @@
  * panel's threshold(128) to smear). eink-lint-allow: 1-bit raster. */
 .moon-disc image { image-rendering: pixelated; }
 
-/* Flow variant — cover-flow: today forward + centred, neighbours rotated
- * back in 3-D and overlapping. The centre disc carries the %/name caption. */
+/* Flow variant — flat phase timeline: discs step across the lunation, today
+ * centred + largest, size tapering outward. The centre carries the %/name
+ * caption. (No 3-D: a rotated round disc reads as an edge-on coin.) */
 .moon-flow {
   display: flex;
   align-items: center;
   justify-content: center;
   flex: none;
-  perspective: 900px;
 }
-.moon-flow-cell { flex: none; transform-style: preserve-3d; }
+.moon-flow-cell { flex: none; display: flex; align-items: center; }
 .moon-flow-cap { text-align: center; font-family: var(--face-grotesk); line-height: 1; }
 .moon-flow-cap .moon-flow-pct { display: block; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .moon-flow-cap .moon-flow-name { display: block; margin-top: 3px; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
