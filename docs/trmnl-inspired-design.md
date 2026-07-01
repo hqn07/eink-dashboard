@@ -151,9 +151,13 @@ baseline refreshed each batch; lint + widget guards clean.
   band — 1-bit legibility). Text follows a *wrap-before-you-clip* ladder:
   `.tr-clamp` + `--fit-lines` (wrap to N lines, then ellipsize) and
   `.tr-rows-fill` (under-full lists grow to fill the card). Shared by
-  calendar / world_clock / onthisday via `.tr-row-title`. Font-fit
-  (autofit binary search) is the separate axis for hero numbers; unifying
-  its 4 mirrored copies is the remaining generalization.
+  calendar / world_clock / onthisday via `.tr-row-title`. The "now" accent
+  bar lives on `.tr-row-inner` so it hugs the text, not the grown band.
+  Grow side: `fillRowFont()` raises row-title size from available height
+  (deterministic — grid is a fixed 24×12, 1 cell-row = 40px; no JS pass)
+  so a couple of events fill a big tile. The `.autofit` binary-search pass
+  (hero numbers) is a separate axis; unifying its 4 mirrored copies is the
+  remaining generalization.
 - New components seen in the TRMNL photos: **donut/ring gauges** (UV,
   humidity, precip) + **contribution heatmap** (activity) — would let
   aqi/weather show gauges and enable a code-activity widget.
