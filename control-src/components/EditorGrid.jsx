@@ -3,7 +3,7 @@ import GridLayout from 'react-grid-layout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gear, X } from '@phosphor-icons/react';
 import * as HoverCard from '@radix-ui/react-hover-card';
-import { WIDGET_REGISTRY, GRID_COLS, GRID_ROWS, widgetById, makeInstance } from '../widgets.js';
+import { WIDGET_REGISTRY, POOL_CATEGORIES, GRID_COLS, GRID_ROWS, widgetById, makeInstance } from '../widgets.js';
 import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses } from '../widget-render.js';
 import { demoCtxForWidget } from '../widgets/_pool_demo.js';
 import { autofitText } from '../autofit.js';
@@ -144,9 +144,13 @@ export default function EditorGrid({ layout, showGrid, readOnly = false, preview
   // each card creates a NEW instance when added.
   const enabled = layout;
   const palette = poolFilter.trim()
-    ? WIDGET_REGISTRY.filter(d =>
-        d.label.toLowerCase().includes(poolFilter.toLowerCase()) ||
-        d.id.toLowerCase().includes(poolFilter.toLowerCase()))
+    ? WIDGET_REGISTRY.filter(d => {
+        const q = poolFilter.toLowerCase();
+        return d.label.toLowerCase().includes(q) ||
+          d.id.toLowerCase().includes(q) ||
+          (d.blurb || '').toLowerCase().includes(q) ||
+          (d.category || '').toLowerCase().includes(q);
+      })
     : WIDGET_REGISTRY;
 
   // Editor canvas is sized to the full dashboard aspect. Header + footer
@@ -525,9 +529,13 @@ export default function EditorGrid({ layout, showGrid, readOnly = false, preview
             &gt; NO WIDGETS MATCH "{poolFilter}"
           </div>
         )}
-        {poolOpen && (
-        <div className="palette-grid">
-          {palette.map(def => {
+        {poolOpen && POOL_CATEGORIES
+          .filter(cat => palette.some(d => d.category === cat))
+          .map(cat => (
+        <div className="palette-section" key={cat}>
+          <div className="palette-section-head">{cat}</div>
+          <div className="palette-grid">
+          {palette.filter(d => d.category === cat).map(def => {
             const sizeKey = smallestSizeKey(def);
             const { w, h } = def.sizes[sizeKey];
             // Pool tiles render with frozen demo data so a brand-new
@@ -591,6 +599,7 @@ export default function EditorGrid({ layout, showGrid, readOnly = false, preview
                     <div className="palette-card-label">
                       {def.label}{count > 0 ? ` · ${count} ON` : ''}
                     </div>
+                    {def.blurb && <div className="palette-card-blurb">{def.blurb}</div>}
                   </motion.div>
                 </HoverCard.Trigger>
                 <HoverCard.Portal>
@@ -627,8 +636,9 @@ export default function EditorGrid({ layout, showGrid, readOnly = false, preview
               </HoverCard.Root>
             );
           })}
+          </div>
         </div>
-        )}
+        ))}
       </div>
 
       <WidgetSettingsModal

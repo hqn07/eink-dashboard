@@ -1765,8 +1765,32 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   font-weight: 700;
   letter-spacing: 2px;
   text-transform: uppercase;
-  padding: 6px 8px;
+  padding: 6px 8px 0;
   color: var(--mute);
+}
+.palette-card-blurb {
+  font-family: var(--font-sans-c);
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--mute);
+  opacity: 0.75;
+  padding: 2px 8px 8px;
+}
+
+/* Pool sections — one band per category (Weather, Time, …). Header is a
+ * quiet uppercase rule so the pool reads as grouped, not one long grid. */
+.palette-section { margin-bottom: 14px; }
+.palette-section:last-child { margin-bottom: 0; }
+.palette-section-head {
+  font-family: var(--font-sans-c);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--mute);
+  margin: 0 0 8px;
+  padding-bottom: 4px;
+  border-bottom: var(--bw-hair) solid var(--line-soft);
 }
 
 /* Trash drop zone between canvas and pool. Collapsed when idle —

@@ -28,6 +28,35 @@ export const SCREENS = [1, 2];
 
 // Sizes are in 24x12 grid units. With body ≈ 800px × 392-452px, cells
 // are ~33px square. h heights match the 12x12 era; only w doubled.
+// Pool taxonomy — client-only metadata for the add-widget pool: which
+// section a widget lands in and the one-line blurb shown on its card.
+// Lives here (not on the def) because SSR never needs it; only the
+// editor pool does. `POOL_CATEGORIES` fixes the section order.
+export const POOL_CATEGORIES = ['Weather', 'Time', 'Calendar', 'Media', 'System', 'Data', 'Text'];
+const POOL_META = {
+  weather_hero:     { category: 'Weather',  blurb: 'Current conditions — big temp + icon' },
+  weather_forecast: { category: 'Weather',  blurb: 'Multi-day / hourly outlook' },
+  aqi:              { category: 'Weather',  blurb: 'Air quality index + category' },
+  clock:            { category: 'Time',     blurb: 'Time + date' },
+  world_clock:      { category: 'Time',     blurb: 'Time across multiple zones' },
+  countdown:        { category: 'Time',     blurb: 'Days until a target date' },
+  moon:             { category: 'Time',     blurb: 'Moon phase + illumination' },
+  calendar:         { category: 'Calendar', blurb: 'Upcoming events agenda' },
+  mac_nowplaying:   { category: 'Media',    blurb: 'Now playing from your Mac' },
+  eink_battery:     { category: 'System',   blurb: 'This display’s battery level' },
+  mac_battery:      { category: 'System',   blurb: 'Your Mac’s battery level' },
+  sparkline:        { category: 'Data',     blurb: 'Trend line from a metric' },
+  codeactivity:     { category: 'Data',     blurb: 'GitHub contribution heatmap' },
+  text:             { category: 'Text',     blurb: 'Token strip or message card' },
+  quote:            { category: 'Text',     blurb: 'Quote + attribution' },
+  onthisday:        { category: 'Text',     blurb: 'Historical events for today' },
+  qr:               { category: 'Text',     blurb: 'QR code + caption' }
+};
+function withPoolMeta(def) {
+  const m = POOL_META[def.id] || { category: 'Text', blurb: '' };
+  return { ...def, category: m.category, blurb: m.blurb };
+}
+
 export const WIDGET_REGISTRY = [
   { ...migratedDef('weather_hero') },
   { ...migratedDef('weather_forecast') },
@@ -51,7 +80,7 @@ export const WIDGET_REGISTRY = [
   { ...migratedDef('qr') },
   { ...migratedDef('sparkline') },
   { ...migratedDef('codeactivity') }
-];
+].map(withPoolMeta);
 
 // Tier resolver lives in widgets/_shared.js (the copy every widget
 // module imports). Re-exported here for back-compat — there used to be
