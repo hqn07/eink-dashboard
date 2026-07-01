@@ -2376,3 +2376,77 @@ img.icon { object-fit: contain; }
   border: var(--face-rule) solid var(--face-ink);
   flex: none;
 }
+
+/* ============ PHOTO WIDGET ============
+ * Shows a user image that the server Floyd–Steinberg dithers to 1-bit at
+ * the tile's pixel size. The <img> is displayed at that same size, so
+ * image-rendering:pixelated keeps the dot grid crisp (no resample blur)
+ * through the panel's threshold pass. Three layouts: full-bleed, framed
+ * (dithered border + caption), and a caption-band overlay.
+ *
+ * eink-lint-allow: the frame's gray is the shared ordered-dither tile
+ * (face-tone-g50), an optical mix of 1-bit pixels — not a real gray. */
+
+.photo {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #fff;
+}
+
+.photo-frame {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.photo-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;             /* render() overrides to contain when picked */
+  image-rendering: pixelated;    /* keep the pre-dithered dots sharp */
+}
+
+/* Full — image owns the whole tile. */
+.photo-full { }
+
+/* Framed — a dithered gutter (padding reveals the g50 tile behind the
+ * image) plus an optional heading above and caption below. */
+.photo-framed { gap: 6px; padding: 10px; }
+.photo-frame-border {
+  padding: 6px;                  /* gutter that shows the dither frame */
+  flex: 1 1 auto;
+}
+.photo-framed .col-title { flex: none; }
+.photo-cap {
+  flex: none;
+  font-family: var(--face-grotesk);
+  font-size: 13px;
+  line-height: 1.2;
+  color: var(--face-ink);
+  text-align: center;
+}
+
+/* Caption — image full-bleed with a solid band across the bottom. Band is
+ * pure black + white text so it survives the 1-bit threshold cleanly. */
+.photo-caption { position: relative; }
+.photo-caption .photo-frame { flex: 1 1 auto; }
+.photo-cap-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 6px 10px;
+  background: #000;
+  color: #fff;
+  font-family: var(--face-grotesk);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.25;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}

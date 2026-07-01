@@ -55,10 +55,14 @@ function floydSteinberg(data, w, h) {
 //
 // Returns the base64 string ready to drop into a `data:image/png;base64,...`
 // URI, or null on failure.
-async function ditherImageToBase64(rawBuf, { size = 320, fit = 'cover' } = {}) {
+async function ditherImageToBase64(rawBuf, { size = 320, width, height, fit = 'cover' } = {}) {
+  // Album art passes `size` (square); the photo widget passes explicit
+  // width/height so the dither grid maps 1:1 to a non-square tile.
+  const rw = Number.isFinite(width)  ? Math.max(1, Math.round(width))  : size;
+  const rh = Number.isFinite(height) ? Math.max(1, Math.round(height)) : size;
   try {
     const { data, info } = await sharp(rawBuf)
-      .resize(size, size, { fit })
+      .resize(rw, rh, { fit })
       .greyscale()
       .normalize()              // stretch 1st/99th percentile to 0-255
       .gamma(1.2)               // gentle midtone lift — darker covers gain detail

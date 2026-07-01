@@ -120,6 +120,12 @@ export function demoCtxForWidget(id, cellW, cellH) {
         settings: { username: 'octocat' } };
     case 'mac_nowplaying':
       return { ...base, macNowPlaying: DEMO_NOWPLAYING, settings: {} };
+    case 'photo':
+      // Reuse the frozen 1-bit demo artwork so the pool card shows a real
+      // dithered image instead of the "Add a photo" placeholder.
+      return { ...base,
+        photo: { src: `data:image/png;base64,${DEMO_ARTWORK_B64}` },
+        settings: { variant: 'framed', caption: 'Sunday market', title: 'PHOTO' } };
     case 'mac_battery':
       return { ...base, macBattery: DEMO_BATTERY, settings: {} };
     case 'eink_battery': {

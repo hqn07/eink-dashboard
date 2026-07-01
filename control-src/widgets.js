@@ -43,6 +43,7 @@ const POOL_META = {
   moon:             { category: 'Time',     blurb: 'Moon phase + illumination' },
   calendar:         { category: 'Calendar', blurb: 'Upcoming events agenda' },
   mac_nowplaying:   { category: 'Media',    blurb: 'Now playing from your Mac' },
+  photo:            { category: 'Media',    blurb: 'Your image, dithered to 1-bit' },
   eink_battery:     { category: 'System',   blurb: 'This display’s battery level' },
   mac_battery:      { category: 'System',   blurb: 'Your Mac’s battery level' },
   sparkline:        { category: 'Data',     blurb: 'Trend line from a metric' },
@@ -77,6 +78,7 @@ export const WIDGET_REGISTRY = [
   { ...migratedDef('world_clock') },
   { ...migratedDef('quote') },
   { ...migratedDef('onthisday') },
+  { ...migratedDef('photo') },
   { ...migratedDef('qr') },
   { ...migratedDef('sparkline') },
   { ...migratedDef('codeactivity') }
