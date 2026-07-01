@@ -42,27 +42,10 @@ function loadSsr() {
   return _ssrPromise;
 }
 
-// ---------- Error ring buffer ----------
-// Production errors otherwise only hit stdout, which is invisible unless you
-// happen to be tailing Railway logs. Capture every console.error into a small
-// in-memory ring so /status can show "what recently broke". Wrapping
-// console.error (vs retrofitting every catch) captures all existing log sites
-// for free; it's lost on restart, which is fine for an at-a-glance signal.
-const ERR_LOG_MAX = 50;
-const _errLog = [];
-const _origConsoleError = console.error.bind(console);
-console.error = (...args) => {
-  try {
-    const msg = args.map(a =>
-      a instanceof Error ? (a.stack || a.message)
-      : typeof a === 'string' ? a
-      : (() => { try { return JSON.stringify(a); } catch { return String(a); } })()
-    ).join(' ');
-    _errLog.push({ at: Date.now(), msg: msg.slice(0, 400) });
-    while (_errLog.length > ERR_LOG_MAX) _errLog.shift();
-  } catch { /* never let logging throw */ }
-  _origConsoleError(...args);
-};
+// Error ring buffer moved to ./lib/errlog.js — requiring it installs the
+// console.error wrapper (side effect) and hands back the shared ring the
+// /status page reads.
+const { errLog: _errLog } = require('./lib/errlog');
 
 const PORT = process.env.PORT || 3000;
 const DEVICE_TOKEN = process.env.DEVICE_TOKEN || '';
