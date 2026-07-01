@@ -114,8 +114,11 @@ export function gaugeHtml({ value, max = 100, label = '', center, red = false, s
 //   { values:number[], rows=7, max, level }
 // `max` fixes the scale (defaults to the data max); pass a custom
 // `level(v)` → 0..4 to override the quartile mapping.
+// Level 0 = empty: plain white (just the cell outline) so idle days read as
+// blank, not a faint dither dot. 1..4 climb the tones to solid ink. At
+// contribution-cell size a 4-step ramp is clearer than the full dither set.
 const HEAT_TONE = [
-  'face-tone-g15', 'face-tone-g25', 'face-tone-g50', 'face-tone-g75', 'tr-heat-l4'
+  'tr-heat-empty', 'face-tone-g50', 'face-tone-g75', 'tr-heat-l4', 'tr-heat-l4'
 ];
 export function heatmapHtml({ values, rows = 7, max, level } = {}) {
   const vals = Array.isArray(values) ? values.map(Number) : [];

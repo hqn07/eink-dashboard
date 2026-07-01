@@ -1,4 +1,4 @@
-// One-off: code-activity heatmap — live hqn07 + dense demo. 1-bit sim.
+// One-off: moon narrow/wide + code-activity heatmap. 1-bit sim.
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -10,34 +10,30 @@ import { DEMO_CODE_ACTIVITY } from '../control-src/widgets/_pool_demo.js';
 
 const require = createRequire(import.meta.url);
 const { fetchCodeActivity } = require('../widgets/codeactivity.js');
-
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const css = await readFile(join(ROOT, 'public', 'dashboard.css'), 'utf8');
-
+const SYN = 29.530588853, REF = Date.UTC(2000, 0, 6, 18, 14, 0);
+const now = REF + 0.6 * SYN * 86400000;
 const live = await fetchCodeActivity('hqn07');
-const card = (data, cw, ch) => renderWidget('codeactivity', {
-  codeActivity: data, cellW: cw, cellH: ch,
-  settings: { variant: 'trmnl', username: data.user }, variant: 'trmnl'
-});
+
+const moon = (cw, ch) => renderWidget('moon', { now, cellW: cw, cellH: ch, settings: { variant: 'flow' }, variant: 'flow' });
+const ca = (data, cw, ch) => renderWidget('codeactivity', { codeActivity: data, cellW: cw, cellH: ch, settings: { variant: 'trmnl', username: data.user }, variant: 'trmnl' });
 
 const rows = [
-  ['LIVE @hqn07 — 20×6', card(live, 20, 6)],
-  ['DEMO (dense) — 20×6', card(DEMO_CODE_ACTIVITY, 20, 6)],
-  ['DEMO — 14×5', card(DEMO_CODE_ACTIVITY, 14, 5)]
-].map(([label, c], i) => {
-  const px = [667, 667, 467][i];
-  return `<div><div style="font:600 12px var(--face-grotesk);margin:0 0 6px 2px">${label}</div>
-    <div style="width:${px}px;height:${i === 2 ? 200 : 240}px;border:2px solid #000">${c}</div></div>`;
-}).join('');
+  ['MOON narrow (±1) — 11×8', moon(11, 8), 380, 300],
+  ['MOON wide (±3) — 20×8', moon(20, 8), 667, 300],
+  ['CODE demo (dense) — 20×6', ca(DEMO_CODE_ACTIVITY, 20, 6), 667, 240],
+  ['CODE live @hqn07 — 20×6', ca(live, 20, 6), 667, 240]
+].map(([label, c, w, h]) => `<div><div style="font:600 12px var(--face-grotesk);margin:0 0 6px 2px">${label}</div>
+  <div style="width:${w}px;height:${h}px;border:2px solid #000">${c}</div></div>`).join('');
 
 const html = `<!doctype html><meta charset=utf8><style>${css}body{margin:0;background:#fff;width:720px}.w{display:flex;flex-direction:column;gap:16px;padding:16px}</style><div class=w>${rows}</div>`;
-
 const b = await puppeteer.launch({ headless: 'new' });
 const p = await b.newPage();
-await p.setViewport({ width: 720, height: 820, deviceScaleFactor: 1 });
+await p.setViewport({ width: 720, height: 1160, deviceScaleFactor: 1 });
 await p.setContent(html, { waitUntil: 'networkidle0' });
 await p.evaluate(() => document.fonts.ready);
 const buf = await p.screenshot();
 await b.close();
 await sharp(buf).greyscale().threshold(128).toFile(join(ROOT, 'test', '_component-preview.png'));
-console.log('live total:', live && live.total, '| days:', live && live.days.length);
+console.log('ok');

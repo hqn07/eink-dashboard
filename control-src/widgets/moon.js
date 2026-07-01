@@ -137,7 +137,11 @@ export function render(ctx) {
     const perSide = w >= 23 ? 4 : w >= 19 ? 3 : w >= 14 ? 2 : 1;
     const SC = 0.82;                          // size falloff per slot outward
     const GAP = tier === 'tiny' ? 8 : 14;
-    const step = (SYNODIC / (2 * perSide)) * DAY; // span ≈ one full cycle
+    // Fixed ~3.7-day step (⅛ cycle) so neighbours are always distinct AND
+    // directional (left = past phases, right = future) — a half-cycle step
+    // made ±1 land on the same near-new phase both sides. Wide tiles (±4)
+    // still span a whole lunation.
+    const step = (SYNODIC / 8) * DAY;
     // Fit the base disc to the tile width.
     let span = 1;
     for (let k = 1; k <= perSide; k++) span += 2 * Math.pow(SC, k);

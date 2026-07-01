@@ -84,8 +84,9 @@
   min-width: 4px;
   min-height: 4px;
 }
-/* level 4 (busiest) is solid ink; 0..3 ride the dither tones. */
+/* busiest = solid ink; idle = plain white (outline only). */
 .tr-heat-l4 { background: var(--face-ink); }
+.tr-heat-empty { background: #fff; }
 
 /* Optional legend row under a heatmap. */
 .tr-heat-legend {
