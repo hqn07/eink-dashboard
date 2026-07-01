@@ -144,7 +144,16 @@ baseline refreshed each batch; lint + widget guards clean.
 ### Still open / optional
 - Panel-photo verification on real hardware (set a screen to the new
   defaults and flash).
-- Minor polish: world_clock long zone names ellipsize; tune row counts.
+- Minor polish: ~~world_clock long zone names ellipsize~~ (DONE — fit
+  ladder wraps them to 2 lines); tune row counts.
+- **Space-aware fit ladder (DONE 2026-06-30):** dither never sits behind
+  small text (the "now" row uses a solid left accent bar, not a tone
+  band — 1-bit legibility). Text follows a *wrap-before-you-clip* ladder:
+  `.tr-clamp` + `--fit-lines` (wrap to N lines, then ellipsize) and
+  `.tr-rows-fill` (under-full lists grow to fill the card). Shared by
+  calendar / world_clock / onthisday via `.tr-row-title`. Font-fit
+  (autofit binary search) is the separate axis for hero numbers; unifying
+  its 4 mirrored copies is the remaining generalization.
 - New components seen in the TRMNL photos: **donut/ring gauges** (UV,
   humidity, precip) + **contribution heatmap** (activity) — would let
   aqi/weather show gauges and enable a code-activity widget.
