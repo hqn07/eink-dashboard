@@ -1,4 +1,4 @@
-import { escapeHtml, pickTier, placeholder, semRed } from './_shared.js';
+import { escapeHtml, pickTier, placeholder, semRed, fillRowFont } from './_shared.js';
 
 // Calendar — three layout variants (contract v2, widgets-refresh W2):
 //   list  — agenda rows (universal; the fallback when a tile is too
@@ -96,12 +96,14 @@ function renderTrmnl(all, settings, titleLabel, cellW, cellH, density) {
       </div>
     </div></div>`;
   }).join('');
-  // Fewer events than the tier allows → rows grow to fill the card so a
-  // 2-event agenda doesn't leave a big empty gap below the last row.
-  const fill = list.length < maxRows ? ' tr-rows-fill' : '';
+  // Fewer events than the tier allows → rows grow to fill the card (no big
+  // gap below) and the title text grows with the space (autofit-grow).
+  const under = list.length < maxRows;
+  const fill = under ? ' tr-rows-fill' : '';
+  const rowsStyle = under ? `--row-font:${fillRowFont(cellH, list.length)}px` : '';
   return `<div class="tr-card">
     <div class="tr-titlebar"><span>${escapeHtml(titleLabel)}</span><span class="tr-meta">${all.length} event${all.length === 1 ? '' : 's'}</span></div>
-    <div class="tr-body" style="padding:6px 14px;gap:0"><div class="tr-rows${fill}">${rows}</div></div>
+    <div class="tr-body" style="padding:6px 14px;gap:0"><div class="tr-rows${fill}" style="${rowsStyle}">${rows}</div></div>
   </div>`;
 }
 

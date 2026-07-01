@@ -137,6 +137,18 @@ export function heatmapHtml({ values, rows = 7, max, level } = {}) {
   return `<div class="tr-heat" style="--heat-rows:${Math.max(1, rows | 0)}">${cells}</div>`;
 }
 
+// Autofit-grow for under-full agendas: raise row-title font so a few events
+// fill a big tile instead of floating as tiny text. Deterministic (no JS
+// measurement pass) because the grid is a fixed 24×12 → one cell-row = 40px.
+// Returns a px size given the tile height (in grid cells) and row count;
+// `chrome` ≈ title bar + body padding to subtract.
+export function fillRowFont(cellH, count, { min = 14, max = 26, chrome = 50 } = {}) {
+  const tilePx = (Number(cellH) || 0) * 40;
+  const avail = Math.max(0, tilePx - chrome);
+  const per = avail / Math.max(1, Number(count) || 1);
+  return Math.max(min, Math.min(max, Math.round(per * 0.28)));
+}
+
 // Resolve a cell size to a layout tier name (matches widgets.js
 // pickTier semantics). Imported by per-widget render functions.
 export function pickTier(cellW, cellH, density) {

@@ -2213,7 +2213,10 @@ img.icon { object-fit: contain; }
 }
 /* Dither behind small text kills legibility on 1-bit, so the "now" row is
  * marked with a solid left accent bar (not a tone band); text stays white. */
-.tr-row .tr-row-title { font-size: 14px; font-weight: 600; }
+/* Title size = --row-font (default 14). The renderer raises it on
+ * under-full agendas so a few events grow to fill a big tile (autofit-grow
+ * side of the ladder) instead of floating as tiny text. */
+.tr-row .tr-row-title { font-size: var(--row-font, 14px); font-weight: 600; line-height: 1.15; }
 .tr-row .tr-row-sub { font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
 /* "now"/active row: solid left accent bar (on the inner, so it hugs the
  * text) — no dither fill behind the words. */
