@@ -33,16 +33,17 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
+    trmnl: { label: 'TRMNL — title-bar rows' },
     stack: { label: 'Stack — label · time rows' },
     big:   { label: 'Big — one zone, large' },
     dual:  { label: 'Dual — two zones side by side' }
   },
-  defaultVariant: 'stack',
+  defaultVariant: 'trmnl',
   degrade: {
     tiny: ['title', 'meta', 'glyph']
   },
   defaults: () => ({
-    variant: 'stack',
+    variant: 'trmnl',
     title: '',
     zones: ['LONDON|Europe/London', 'TOKYO|Asia/Tokyo'],
     format: '12h',
@@ -145,6 +146,21 @@ export function render(ctx) {
   // Resolve every zone once; home = first zone (relative-day anchor).
   const infos = zones.map(z => zoneInfo(z, now, hour12));
   const homeKey = infos[0].dayKey;
+
+  if (variant === 'trmnl') {
+    const titleRows = 1;
+    const maxRows = Math.max(2, Math.min(8, Math.floor(((cellH || 0) - titleRows) / 1.5)));
+    const rows = infos.slice(0, maxRows);
+    return `<div class="tr-card">
+      <div class="tr-titlebar"><span>${escapeHtml(titleLabel)}</span></div>
+      <div class="tr-body" style="padding:4px 14px;gap:0"><div class="tr-rows">
+        ${rows.map(z => `<div class="tr-row" style="justify-content:space-between">
+          <div class="tr-row-main"><div class="tr-row-title">${showGlyph ? dnGlyph(z.isDay) + ' ' : ''}${escapeHtml(z.label)}</div>${showMeta ? `<div class="tr-row-sub">${escapeHtml([z.weekday, z.offset].filter(Boolean).join(' · '))}</div>` : ''}</div>
+          <div style="font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap">${escapeHtml(z.time)} ${deltaBadge(dayDelta(homeKey, z.dayKey))}</div>
+        </div>`).join('')}
+      </div></div>
+    </div>`;
+  }
 
   if (variant === 'big') {
     const z = infos[0];

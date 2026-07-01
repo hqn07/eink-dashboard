@@ -21,16 +21,17 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
+    trmnl:   { label: 'TRMNL — title-bar list' },
     list:    { label: 'List — dated rows' },
     feature: { label: 'Feature — one event, large' },
     compact: { label: 'Compact — dense rows' }
   },
-  defaultVariant: 'list',
+  defaultVariant: 'trmnl',
   degrade: {
     tiny: ['title']
   },
   defaults: () => ({
-    variant: 'list',
+    variant: 'trmnl',
     title: '',
     fontScale: 1,
     padding: 14
@@ -49,6 +50,20 @@ export function render(ctx) {
     ? s.title.trim()
     : `ON THIS DAY${d.dateLabel ? ` · ${d.dateLabel}` : ''}`;
   const stale = d.stale ? ' <span class="otd-stale">OLD</span>' : '';
+
+  if (variant === 'trmnl') {
+    const byTier = { tiny: 2, compact: 3, standard: 4, extended: 6, full: 7 };
+    const rows = d.events.slice(0, byTier[tier] || 3);
+    return `<div class="tr-card">
+      <div class="tr-titlebar"><span>On This Day</span><span class="tr-meta">${escapeHtml(d.dateLabel || '')}${d.stale ? ' · old' : ''}</span></div>
+      <div class="tr-body" style="padding:6px 14px;gap:0"><div class="tr-rows">
+        ${rows.map(e => `<div class="tr-row">
+          <div class="tr-row-time">${e.year}</div>
+          <div class="tr-row-main"><div class="tr-row-title" style="white-space:normal">${escapeHtml(e.text)}</div></div>
+        </div>`).join('')}
+      </div></div>
+    </div>`;
+  }
 
   if (variant === 'feature') {
     const e = d.events[0];

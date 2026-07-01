@@ -23,17 +23,18 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
+    trmnl:   { label: 'TRMNL — title-bar card' },
     big:     { label: 'Big — number + category' },
     bar:     { label: 'Bar — number over a scale' },
     minimal: { label: 'Minimal — number + category only' }
   },
-  defaultVariant: 'big',
+  defaultVariant: 'trmnl',
   degrade: {
     compact: ['pollutants'],
     tiny:    ['pollutants', 'title', 'category']
   },
   defaults: () => ({
-    variant: 'big',
+    variant: 'trmnl',
     title: '',
     showPollutants: true,
     fontScale: 1,
@@ -82,6 +83,23 @@ export function render(ctx) {
     && s.showPollutants !== false && parts.length;
   const sub = showPollutants
     ? `<div class="aqi-sub">${escapeHtml(parts.join(' · '))}</div>` : '';
+
+  if (variant === 'trmnl') {
+    const redStyle = danger ? 'color:var(--face-red);' : '';
+    const stats = (cellH || 0) >= 6 && parts.length
+      ? `<div class="tr-stats">${parts.map(p => {
+          const i = p.lastIndexOf(' ');
+          return `<div class="tr-stat"><div class="tr-sv">${escapeHtml(p.slice(i + 1))}</div><div class="tr-sl">${escapeHtml(p.slice(0, i))}</div></div>`;
+        }).join('')}</div>` : '';
+    return `<div class="tr-card">
+      <div class="tr-titlebar"><span>${escapeHtml(titleLabel)}</span><span class="tr-meta">${escapeHtml(a.label || '')}${a.stale ? ' · old' : ''}</span></div>
+      <div class="tr-body" style="justify-content:center;gap:8px">
+        <div class="tr-lv"><div class="tr-v" style="${redStyle}">${a.aqi}</div><div class="tr-l">US AQI</div></div>
+        ${scaleHtml(a.band, a.bands)}
+      </div>
+      ${stats}
+    </div>`;
+  }
 
   if (variant === 'minimal') {
     return `<div class="aqi aqi-minimal">${num}${tier !== 'tiny' ? cat : ''}</div>`;

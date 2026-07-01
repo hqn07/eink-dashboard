@@ -24,16 +24,17 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
+    trmnl:   { label: 'TRMNL — title-bar card' },
     line:    { label: 'Line — trend + value' },
     dots:    { label: 'Dots — mark latest point' },
     minimal: { label: 'Minimal — line + value' }
   },
-  defaultVariant: 'line',
+  defaultVariant: 'trmnl',
   degrade: {
     tiny: ['title', 'minmax']
   },
   defaults: () => ({
-    variant: 'line',
+    variant: 'trmnl',
     source: 'battery_pct',   // battery_pct | battery_v
     title: '',
     fontScale: 1,
@@ -120,6 +121,16 @@ export function render(ctx) {
   const red = semRed(s, cur <= src.lowAt);
   const domain = niceDomain(values, src.minSpan, src.lo, src.hi);
   const svg = sparkSvg(values, variant === 'dots', domain);
+
+  if (variant === 'trmnl') {
+    return `<div class="tr-card">
+      <div class="tr-titlebar"><span>${escapeHtml(titleLabel)}</span><span class="tr-meta">${fmt(min)}–${fmt(max)}${src.unit}</span></div>
+      <div class="tr-body" style="gap:8px">
+        <div class="tr-lv tr-lv-md"><div class="tr-v">${fmt(cur)}<span class="tr-deg">${src.unit}</span></div></div>
+        <div class="spark-chart" style="flex:1;min-height:0">${svg}</div>
+      </div>
+    </div>`;
+  }
 
   const value = `<span class="spark-value">${fmt(cur)}</span><span class="spark-unit">${src.unit}</span>`;
   const head = (variant !== 'minimal' && tier !== 'tiny')
