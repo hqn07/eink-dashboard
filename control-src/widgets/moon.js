@@ -94,6 +94,7 @@ export const def = {
   defaultSize: 'M',
   variants: {
     trmnl:   { label: 'TRMNL — title-bar card' },
+    flow:    { label: 'Flow — phase filmstrip (today centered)' },
     disc:    { label: 'Disc — moon + phase name' },
     detail:  { label: 'Detail — moon + illumination + age' },
     minimal: { label: 'Minimal — disc + name' }
@@ -123,6 +124,30 @@ export function render(ctx) {
   const pct = Math.round(m.illum * 100);
   const age = Math.round(m.age);
   const name = `<div class="moon-name">${escapeHtml(m.name)}</div>`;
+
+  if (variant === 'flow') {
+    // Phase filmstrip: today's disc big in the middle, the days before/after
+    // shrinking outward — a flat "cover-flow" that reads the cycle at a
+    // glance. Wide tiles get ±2 days, narrower ones ±1.
+    const DAY = 86400000;
+    const big = tier === 'tiny' ? 54 : ((cellH || 0) >= 7 ? 112 : 84);
+    const near = Math.round(big * 0.6);
+    const far = Math.round(big * 0.4);
+    const perSide = (cellW || 0) >= 16 ? 2 : 1;
+    const offsets = perSide === 2 ? [-2, -1, 0, 1, 2] : [-1, 0, 1];
+    const sizeFor = (o) => (o === 0 ? big : Math.abs(o) === 1 ? near : far);
+    const cells = offsets.map((o) => {
+      const mi = moonInfo(now + o * DAY);
+      const cap = o === 0
+        ? `<div class="moon-flow-cap"><span class="moon-flow-pct">${Math.round(mi.illum * 100)}%</span><span class="moon-flow-name">${escapeHtml(mi.name)}</span></div>`
+        : '';
+      return `<div class="moon-flow-cell${o === 0 ? ' moon-flow-now' : ''}">${moonSvg(sizeFor(o), mi.illum, mi.waxing)}${cap}</div>`;
+    }).join('');
+    return `<div class="tr-card">
+      <div class="tr-titlebar"><span>Moon</span><span class="tr-meta">${escapeHtml(m.name)}</span></div>
+      <div class="tr-body" style="justify-content:center"><div class="moon-flow">${cells}</div></div>
+    </div>`;
+  }
 
   if (variant === 'trmnl') {
     const disc = moonSvg(tier === 'tiny' ? 56 : 88, m.illum, m.waxing);

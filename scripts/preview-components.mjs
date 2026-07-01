@@ -1,48 +1,40 @@
 // One-off: eyeball components through the real face stylesheet + Chrome at
 // panel scale (deviceScaleFactor 1). Not wired into npm scripts.
-// Output: test/_component-preview.png
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import puppeteer from 'puppeteer';
-import { moonSvg, moonInfo } from '../control-src/widgets/moon.js';
 import { renderWidget } from '../control-src/widgets/_ssr.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const css = await readFile(join(ROOT, 'public', 'dashboard.css'), 'utf8');
 
-// Moon discs across the cycle (both limbs).
-const phases = [
-  ['NEW', 0.0, true], ['WAX CRESC', 0.25, true], ['FIRST Q', 0.5, true],
-  ['WAX GIBB', 0.8, true], ['FULL', 0.99, true],
-  ['WAN GIBB', 0.8, false], ['LAST Q', 0.5, false], ['WAN CRESC', 0.25, false]
-];
-const discRow = phases.map(([label, illum, wax]) =>
-  `<div style="text-align:center;font-family:var(--face-grotesk);font-size:11px;font-weight:600">
-     ${moonSvg(96, illum, wax)}<div style="margin-top:4px">${label}</div>
-   </div>`).join('');
-
-// Full-moon card through the widget (now = new-moon ref + half a synodic month).
 const SYN = 29.530588853, REF = Date.UTC(2000, 0, 6, 18, 14, 0);
-const fullNow = REF + SYN / 2 * 86400000;
-const moonCard = renderWidget('moon', {
-  now: fullNow, cellW: 12, cellH: 8, settings: { variant: 'trmnl' }, variant: 'trmnl'
+const at = (p) => REF + p * SYN * 86400000 + 3600000;
+const flow = (now, w, h) => renderWidget('moon', {
+  now, cellW: w, cellH: h, settings: { variant: 'flow' }, variant: 'flow'
 });
 
+const rows = [
+  ['Wide (±2), waxing gibbous', flow(at(0.4), 20, 8), 340],
+  ['Wide (±2), waning crescent', flow(at(0.85), 20, 8), 340],
+  ['Medium (±1), first quarter', flow(at(0.25), 12, 6), 260],
+  ['Medium (±1), full', flow(at(0.5), 12, 6), 260]
+].map(([label, card, hpx]) =>
+  `<div><div style="font:600 12px var(--face-grotesk);margin:0 0 6px 2px">${label}</div>
+    <div style="height:${hpx}px;border:2px solid #000">${card}</div></div>`).join('');
+
 const html = `<!doctype html><html><head><meta charset="utf8"><style>${css}
-  body{margin:0;background:#fff;width:820px}
-  .discs{display:flex;justify-content:space-around;flex-wrap:wrap;gap:12px;padding:16px}
-</style></head><body>
-  <div class="discs">${discRow}</div>
-  <div style="padding:16px"><div style="height:320px;border:2px solid #000">${moonCard}</div></div>
-</body></html>`;
+  body{margin:0;background:#fff;width:900px}
+  .wrap{display:flex;flex-direction:column;gap:16px;padding:16px}
+</style></head><body><div class="wrap">${rows}</div></body></html>`;
 
 const browser = await puppeteer.launch({ headless: 'new' });
 const page = await browser.newPage();
-await page.setViewport({ width: 820, height: 760, deviceScaleFactor: 1 });
+await page.setViewport({ width: 900, height: 1360, deviceScaleFactor: 1 });
 await page.setContent(html, { waitUntil: 'networkidle0' });
 await page.evaluate(() => document.fonts.ready);
 const out = join(ROOT, 'test', '_component-preview.png');
 await page.screenshot({ path: out });
 await browser.close();
-console.log('wrote', out, '| full illum =', Math.round(moonInfo(fullNow).illum * 100) + '%');
+console.log('wrote', out);
