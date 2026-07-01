@@ -1,19 +1,50 @@
 # E-Ink Dashboard — Handoff
 
-> ## ▶ RESUME HERE (2026-06-30)
-> Run `/continue` (or just say "continue"). Current thread: **TRMNL-inspired
-> redesign** — DONE and pushed. `trmnl` is the default variant for 12 widgets;
-> foundation = Inter (`--face-grotesk`), dither tones, card components. Left as
-> primitives: text, qr, mac_nowplaying (mac_battery: trmnl opt-in). Full spec +
-> what's left: `docs/trmnl-inspired-design.md`.
+> ## ▶ RESUME HERE (2026-07-01) — handoff to Fable 5
+> Run `/continue`. All work below is on `origin/main`, verified only via
+> the 1-bit sim harness (`node scripts/preview-components.mjs` — a scratch
+> file, rewritten per task; renders a widget through the real face CSS +
+> Chrome, then `sharp.threshold(128)` to fake the panel). **Nothing this
+> session is verified on the physical B panel.**
 >
-> **Next options (ask the user):** (1) panel-photo verify on real hardware,
-> (2) build donut/ring gauges + contribution-heatmap components, (3) minor
-> polish (world_clock ellipsize, row-count tuning). Everything on `origin/main`.
+> **⇒ TOP PRIORITY: panel-photo verify.** ~18 visual changes stacked
+> sim-only. Flash a screen, photo it, confirm they read on the real
+> 3-colour panel before more polish. Product intent = ship one self-unit
+> first, so this gates.
 >
-> Verify widget renders via standalone module render through the real pipeline.
-> After face changes: `build:css` → `lint:eink` → `check:widgets` →
-> `test:visual:update` → `vite build`; server: `test:api`. Commit+push each unit.
+> **This session (all pushed):**
+> - Gauge + heatmap primitives — `gaugeHtml()` / `heatmapHtml()` in
+>   `control-src/widgets/_shared.js`; `225-trmnl-gauge-heatmap.css`. aqi
+>   has a `gauge` variant. heatmap: `orient:'h'|'v'`, empty cells white.
+> - **Space-aware fit ladder** (calendar/world_clock/onthisday): dotted—no,
+>   accent bar on `.tr-row-inner` (hugs text, not the grown band);
+>   `.tr-clamp`+`--fit-lines` wrap-before-clip; `.tr-rows-fill` fills
+>   under-full lists; `fillRowFont()` grows title text to fill big tiles.
+> - **Moon** (`widgets/moon.js`): fixed inverted polarity (lit=light,
+>   shadow=dark); lit face is a real dithered **PD NASA** photo
+>   (`_moon-image.js`, SVS 5187) clipped to the terminator; `flow` variant
+>   = flat **phase timeline** (today centred, ⅛-cycle step so neighbours
+>   are distinct + directional). Cover-flow 3-D was tried + dropped (round
+>   discs → coins).
+> - **Dotted dividers** on TRMNL cards (was dashed).
+> - **Code Activity** widget — GitHub contribution heatmap, no-token
+>   jogruber API, per-tile `username` (user = `hqn07`). Fills portrait
+>   tiles via vertical orientation.
+> - **Editor placement fix** — removed the `<motion.div layout>` FLIP that
+>   fought react-grid-layout (tiles flickered on drop / reverted on resize).
+> - **Autofit unified** — 4 copies → `control-src/autofit.js` (React
+>   imports; server injects at `<!--__AUTOFIT__-->`).
+>
+> **Open (not started):** panel verify (#1); code-activity shows
+> "SETUP NEEDED" in the *editor* (preview-data doesn't fetch GitHub — only
+> the panel does); heatmap 2px cell borders read a bit heavy; bundle-size
+> split (vite >500 kB); transit/commute widget.
+>
+> **Workflow per unit:** `build:css` → `lint:eink` → `check:widgets` →
+> `test:visual` (compare; `:update` only when the drift is intended) →
+> `vite build` (editor changes) → `test:api` (server). Commit + push each
+> unit (auto-push is on). New widget = 5 wiring spots (see
+> `reference_widget_wiring` memory + `scripts/check-widgets.mjs`).
 
 State as of 2026-06-16. Read this + `CLAUDE.md` + memory pointers below before touching anything.
 
