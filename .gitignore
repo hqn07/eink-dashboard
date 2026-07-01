@@ -31,3 +31,6 @@ public/control-app/
 
 # visual-regression diff output (baseline PNG is committed; diff is not)
 test/visual-baseline/*.diff.png
+
+# one-off component preview (scripts/preview-components.mjs)
+test/_component-preview.png

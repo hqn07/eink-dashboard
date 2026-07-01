@@ -2187,3 +2187,107 @@ img.icon { object-fit: contain; }
 .tr-row .tr-row-sub { font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
 /* "now"/active row gets a tone band */
 .tr-row.tr-row-now { background-color: #fff; padding-left: 8px; }
+
+/* ============ TRMNL GAUGE + HEATMAP COMPONENTS ============
+ * Two more reusable primitives from the TRMNL photos, built to the same
+ * rules as 220-trmnl-components.css. See docs/trmnl-inspired-design.md §7.
+ *
+ *   .tr-gauge  — ring gauge: a bold value arc over a hairline track with a
+ *                big number centered. The SVG renders at natural size
+ *                (default preserveAspectRatio = meet), so its strokes stay
+ *                uniform — unlike the stretched sparkline, dither is NOT
+ *                needed or wanted inside it; the arc is a solid ink fill.
+ *   .tr-heat   — contribution heatmap: a weeks×days dot grid. Cells are
+ *                HTML blocks toned with the 215-dither-tones utilities
+ *                (dither on non-stretched blocks is fine — the sparkline
+ *                caveat is SVG-only).
+ *
+ * Emit both via the _shared.js helpers (gaugeHtml / heatmapHtml) so every
+ * widget builds them the same way. */
+
+/* ---- Ring gauge ---- */
+.tr-gauge {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.tr-gauge-svg { width: 100%; height: 100%; display: block; }
+.tr-gauge-track { fill: none; stroke: var(--face-ink); stroke-width: 2px; }
+.tr-gauge-arc {
+  fill: none;
+  stroke: var(--face-ink);
+  stroke-width: 11px;
+  stroke-linecap: butt;
+}
+.tr-gauge-arc.tr-gauge-red { stroke: var(--face-red); }
+
+.tr-gauge-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-family: var(--face-grotesk);
+  color: var(--face-ink);
+}
+.tr-gauge-val {
+  font-weight: 800;
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: -1px;
+  font-variant-numeric: tabular-nums;
+}
+.tr-gauge-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+.tr-gauge-sm .tr-gauge-val { font-size: 22px; }
+.tr-gauge-lg .tr-gauge-val { font-size: 40px; letter-spacing: -1.5px; }
+
+/* ---- Contribution heatmap ---- */
+.tr-heat {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(var(--heat-rows, 7), 1fr);
+  grid-auto-columns: 1fr;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+.tr-heat-cell {
+  border: var(--face-rule) solid var(--face-ink);
+  min-width: 6px;
+  min-height: 6px;
+}
+/* level 4 (busiest) is solid ink; 0..3 ride the dither tones. */
+.tr-heat-l4 { background: var(--face-ink); }
+
+/* Optional legend row under a heatmap. */
+.tr-heat-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--face-grotesk);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+.tr-heat-legend .tr-heat-swatch {
+  width: 11px;
+  height: 11px;
+  border: var(--face-rule) solid var(--face-ink);
+  flex: none;
+}

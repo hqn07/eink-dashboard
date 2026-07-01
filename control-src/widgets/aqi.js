@@ -1,4 +1,4 @@
-import { escapeHtml, pickTier, placeholder, semRed } from './_shared.js';
+import { escapeHtml, pickTier, placeholder, semRed, gaugeHtml } from './_shared.js';
 
 // Air Quality (US AQI). Data comes from widgets/aqi.js (server) on
 // ctx.aqi: { aqi, band, bands, label, pm25, pm10, o3, no2, stale }.
@@ -24,6 +24,7 @@ export const def = {
   defaultSize: 'M',
   variants: {
     trmnl:   { label: 'TRMNL — title-bar card' },
+    gauge:   { label: 'Gauge — ring dial' },
     big:     { label: 'Big — number + category' },
     bar:     { label: 'Bar — number over a scale' },
     minimal: { label: 'Minimal — number + category only' }
@@ -83,6 +84,28 @@ export function render(ctx) {
     && s.showPollutants !== false && parts.length;
   const sub = showPollutants
     ? `<div class="aqi-sub">${escapeHtml(parts.join(' · '))}</div>` : '';
+
+  if (variant === 'gauge') {
+    // Ring dial: arc caps at 300 (the Hazardous threshold) so the sweep
+    // stays meaningful; center = AQI number, band word under it. Danger
+    // bands ride the arc + number on the red plane.
+    const isDanger = !!danger;
+    const gauge = gaugeHtml({
+      value: a.aqi, max: 300, center: a.aqi,
+      label: a.label || '', red: isDanger,
+      size: (cellH || 0) >= 6 ? 'lg' : 'md'
+    });
+    const stats = (cellH || 0) >= 6 && parts.length
+      ? `<div class="tr-stats">${parts.map(p => {
+          const i = p.lastIndexOf(' ');
+          return `<div class="tr-stat"><div class="tr-sv">${escapeHtml(p.slice(i + 1))}</div><div class="tr-sl">${escapeHtml(p.slice(0, i))}</div></div>`;
+        }).join('')}</div>` : '';
+    return `<div class="tr-card">
+      <div class="tr-titlebar"><span>${escapeHtml(titleLabel)}</span><span class="tr-meta">US AQI${a.stale ? ' · old' : ''}</span></div>
+      <div class="tr-body" style="justify-content:center;align-items:center">${gauge}</div>
+      ${stats}
+    </div>`;
+  }
 
   if (variant === 'trmnl') {
     const redStyle = danger ? 'color:var(--face-red);' : '';

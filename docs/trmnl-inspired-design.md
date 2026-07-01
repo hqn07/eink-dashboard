@@ -148,6 +148,18 @@ baseline refreshed each batch; lint + widget guards clean.
 - New components seen in the TRMNL photos: **donut/ring gauges** (UV,
   humidity, precip) + **contribution heatmap** (activity) — would let
   aqi/weather show gauges and enable a code-activity widget.
+  - **DONE (2026-06-30):** both built as reusable primitives —
+    `gaugeHtml()` / `heatmapHtml()` in `control-src/widgets/_shared.js`,
+    styled by `225-trmnl-gauge-heatmap.css`. Gauge = value arc over a
+    hairline track, solid-ink (red-plane opt-in), big centered number;
+    verified live via a new **aqi `gauge` variant** (in the matrix +
+    visual baseline). Heatmap = weeks×days dither-toned dot grid
+    (levels 0..4 → g15/g25/g50/g75/ink), column-major so the last cell is
+    "today". Eyeball both through the real pipeline with
+    `node scripts/preview-components.mjs`.
+  - Heatmap has **no live consumer yet** — its natural first home is a
+    code-activity widget (GitHub contributions), which needs a data
+    fetcher + the user's username/token. Wire that next.
 
 ## 8. Open / needs user input
 

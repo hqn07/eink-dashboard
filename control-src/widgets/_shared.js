@@ -75,6 +75,68 @@ export function md(s) {
     .replace(/`(.+?)`/g, '<code>$1</code>');
 }
 
+// Ring gauge (TRMNL primitive). Emits a bold value arc over a hairline
+// track with a big number centered — styled by .tr-gauge* in
+// 225-trmnl-gauge-heatmap.css. The SVG renders at natural size (meet), so
+// the arc is a crisp solid ink fill; no dither goes inside it. `red` rides
+// the arc on the red plane for accent (an alert / danger value). The arc
+// length = clamp(value / max, 0..1) of the circle.
+//   { value, max=100, label, center, red=false, size='md' }
+// `center` overrides the number shown (e.g. a formatted string); defaults
+// to Math.round(value).
+export function gaugeHtml({ value, max = 100, label = '', center, red = false, size = 'md' } = {}) {
+  const num = Number(value);
+  const m = Number(max) || 1;
+  const frac = Math.max(0, Math.min(1, (Number.isFinite(num) ? num : 0) / m));
+  const R = 44, C = 2 * Math.PI * R;
+  const on = (frac * C).toFixed(2);
+  const off = (C - frac * C).toFixed(2);
+  const mid = center != null ? String(center)
+    : (Number.isFinite(num) ? String(Math.round(num)) : '--');
+  const arcCls = red ? 'tr-gauge-arc tr-gauge-red' : 'tr-gauge-arc';
+  return `<div class="tr-gauge tr-gauge-${size}">`
+    + `<svg viewBox="0 0 100 100" class="tr-gauge-svg" aria-hidden="true">`
+    + `<circle class="tr-gauge-track" cx="50" cy="50" r="${R}"/>`
+    + `<circle class="${arcCls}" cx="50" cy="50" r="${R}" `
+    + `stroke-dasharray="${on} ${off}" transform="rotate(-90 50 50)"/>`
+    + `</svg>`
+    + `<div class="tr-gauge-center">`
+    + `<div class="tr-gauge-val${red ? ' face-red' : ''}">${escapeHtml(mid)}</div>`
+    + (label ? `<div class="tr-gauge-lbl">${escapeHtml(label)}</div>` : '')
+    + `</div></div>`;
+}
+
+// Contribution heatmap (TRMNL primitive). A weeks×days dot grid; cells are
+// HTML blocks toned with the 215-dither-tones utilities (levels 0..3) plus
+// solid ink (4). Styled by .tr-heat* in 225-trmnl-gauge-heatmap.css. Values
+// fill column-major (grid-auto-flow:column) so the last value lands
+// bottom-right = "today", GitHub-style.
+//   { values:number[], rows=7, max, level }
+// `max` fixes the scale (defaults to the data max); pass a custom
+// `level(v)` → 0..4 to override the quartile mapping.
+const HEAT_TONE = [
+  'face-tone-g15', 'face-tone-g25', 'face-tone-g50', 'face-tone-g75', 'tr-heat-l4'
+];
+export function heatmapHtml({ values, rows = 7, max, level } = {}) {
+  const vals = Array.isArray(values) ? values.map(Number) : [];
+  const hi = Number.isFinite(max) && max > 0
+    ? max
+    : Math.max(1, ...vals.filter(Number.isFinite));
+  const toLevel = typeof level === 'function' ? level : (v) => {
+    if (!Number.isFinite(v) || v <= 0) return 0;
+    const f = v / hi;
+    if (f > 0.75) return 4;
+    if (f > 0.5) return 3;
+    if (f > 0.25) return 2;
+    return 1;
+  };
+  const cells = vals.map((v) => {
+    const lv = Math.max(0, Math.min(4, toLevel(v)));
+    return `<span class="tr-heat-cell ${HEAT_TONE[lv]}"></span>`;
+  }).join('');
+  return `<div class="tr-heat" style="--heat-rows:${Math.max(1, rows | 0)}">${cells}</div>`;
+}
+
 // Resolve a cell size to a layout tier name (matches widgets.js
 // pickTier semantics). Imported by per-widget render functions.
 export function pickTier(cellW, cellH, density) {
