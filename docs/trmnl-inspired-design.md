@@ -156,8 +156,9 @@ baseline refreshed each batch; lint + widget guards clean.
   Grow side: `fillRowFont()` raises row-title size from available height
   (deterministic — grid is a fixed 24×12, 1 cell-row = 40px; no JS pass)
   so a couple of events fill a big tile. The `.autofit` binary-search pass
-  (hero numbers) is a separate axis; unifying its 4 mirrored copies is the
-  remaining generalization.
+  (hero numbers) was a separate axis and its 4 mirrored copies are now
+  unified in `control-src/autofit.js` (React imports it; server injects it
+  into the SSR page at `<!--__AUTOFIT__-->`).
 - New components seen in the TRMNL photos: **donut/ring gauges** (UV,
   humidity, precip) + **contribution heatmap** (activity) — would let
   aqi/weather show gauges and enable a code-activity widget.
