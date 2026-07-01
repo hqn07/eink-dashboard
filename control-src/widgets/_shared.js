@@ -120,7 +120,7 @@ export function gaugeHtml({ value, max = 100, label = '', center, red = false, s
 const HEAT_TONE = [
   'tr-heat-empty', 'face-tone-g50', 'face-tone-g75', 'tr-heat-l4', 'tr-heat-l4'
 ];
-export function heatmapHtml({ values, rows = 7, max, level } = {}) {
+export function heatmapHtml({ values, rows = 7, max, level, orient = 'h' } = {}) {
   const vals = Array.isArray(values) ? values.map(Number) : [];
   const hi = Number.isFinite(max) && max > 0
     ? max
@@ -137,10 +137,16 @@ export function heatmapHtml({ values, rows = 7, max, level } = {}) {
     const lv = Math.max(0, Math.min(4, toLevel(v)));
     return `<span class="tr-heat-cell ${HEAT_TONE[lv]}"></span>`;
   }).join('');
-  const r = Math.max(1, rows | 0);
-  const cols = Math.max(1, Math.ceil(vals.length / r));
-  // aspect-ratio keeps the cells square when the grid stretches to width.
-  return `<div class="tr-heat" style="--heat-rows:${r};aspect-ratio:${cols} / ${r}">${cells}</div>`;
+  // `rows` is the fixed short dimension (7 = a week). Horizontal: 7 rows,
+  // weeks run as columns (GitHub). Vertical: 7 weekday columns, weeks run
+  // downward as rows — fills a tall/portrait tile. aspect-ratio keeps cells
+  // square when the grid stretches to the container width.
+  const fixed = Math.max(1, rows | 0);
+  const other = Math.max(1, Math.ceil(vals.length / fixed));
+  if (orient === 'v') {
+    return `<div class="tr-heat tr-heat-v" style="--heat-cols:${fixed};aspect-ratio:${fixed} / ${other}">${cells}</div>`;
+  }
+  return `<div class="tr-heat" style="--heat-rows:${fixed};aspect-ratio:${other} / ${fixed}">${cells}</div>`;
 }
 
 // Autofit-grow for under-full agendas: raise row-title font so a few events

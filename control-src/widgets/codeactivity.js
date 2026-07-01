@@ -43,12 +43,21 @@ export function render(ctx) {
     return placeholder(titleLabel.split(/\s+/)[0] || 'CODE', hint, 'msg', { cellW, cellH });
   }
 
-  // Weeks to show ≈ tile width; each week is ~12px of column budget.
+  // Orient by tile aspect: a portrait tile gets a VERTICAL calendar (7
+  // weekday columns, weeks running down) so it fills the height instead of
+  // floating in a thin band; landscape stays horizontal (GitHub-style).
+  // Week count follows the long axis (~12px per week).
   const tileW = (cellW || 0) * (800 / 24);
-  const weeks = Math.max(8, Math.min(53, Math.round(tileW / 12)));
+  const tileH = (cellH || 0) * 40;
+  const vertical = tileH > tileW * 1.15;
+  const span = vertical ? tileH : tileW;
+  const weeks = Math.max(6, Math.min(53, Math.round((span - 44) / 12)));
   const slice = d.days.slice(-weeks * 7);
   // Use the API's precomputed 0-4 level directly (level(v) → v).
-  const grid = heatmapHtml({ values: slice.map(x => x.level | 0), rows: 7, level: (v) => v });
+  const grid = heatmapHtml({
+    values: slice.map(x => x.level | 0), rows: 7, level: (v) => v,
+    orient: vertical ? 'v' : 'h'
+  });
 
   const total = Number.isFinite(d.total) ? d.total : slice.reduce((a, x) => a + (x.count | 0), 0);
   const meta = `${total} contribution${total === 1 ? '' : 's'}${d.stale ? ' · old' : ''}`;
