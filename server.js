@@ -30,6 +30,7 @@ const {
   preThreshold, rgbaToMono, packMonoBin,
   isRedPixel, rgbaToPlanes, planesToPng
 } = require('./lib/image');
+const { FW_DIR, FW_NAME_RE, parseSemver, cmpSemver, findNewestFirmware } = require('./lib/firmware');
 
 // SSR module — per-widget render functions + chrome helpers, no React.
 // Dynamically imported (ESM) at first use and cached. Lets /dashboard
@@ -2504,40 +2505,8 @@ app.get('/api/alarm/next', checkDeviceAuth, async (req, res) => {
 // hits /api/firmware/manifest with its board + current version; if a
 // newer binary exists, the manifest returns it and the device pulls the
 // raw file from /firmware/<filename> via ESP32 httpUpdate.
-const FW_DIR = path.join(__dirname, 'public', 'firmware');
-const FW_NAME_RE = /^([a-z0-9]+)-(\d+)\.(\d+)\.(\d+)\.bin$/;
-
-function parseSemver(s) {
-  const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(String(s || ''));
-  if (!m) return null;
-  return [parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10)];
-}
-function cmpSemver(a, b) {
-  for (let i = 0; i < 3; i++) {
-    if (a[i] !== b[i]) return a[i] - b[i];
-  }
-  return 0;
-}
-
-async function findNewestFirmware(board) {
-  let entries;
-  try {
-    entries = await fsp.readdir(FW_DIR);
-  } catch (_) {
-    return null;
-  }
-  let best = null;
-  for (const name of entries) {
-    const m = FW_NAME_RE.exec(name);
-    if (!m) continue;
-    if (m[1] !== board) continue;
-    const ver = [parseInt(m[2], 10), parseInt(m[3], 10), parseInt(m[4], 10)];
-    if (!best || cmpSemver(ver, best.ver) > 0) {
-      best = { name, ver, version: `${ver[0]}.${ver[1]}.${ver[2]}` };
-    }
-  }
-  return best;
-}
+// parseSemver/cmpSemver/findNewestFirmware + FW_DIR/FW_NAME_RE moved to
+// ./lib/firmware.js (required at the top).
 
 app.get('/api/firmware/manifest', checkDeviceAuth, async (req, res) => {
   const board = String(req.query.board || '').toLowerCase();
