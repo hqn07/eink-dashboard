@@ -1190,7 +1190,7 @@ html, body {
   flex: none;
   perspective: 900px;
 }
-.moon-flow-cell { flex: none; margin: 0 -18px; transform-style: preserve-3d; }
+.moon-flow-cell { flex: none; transform-style: preserve-3d; }
 .moon-flow-cap { text-align: center; font-family: var(--face-grotesk); line-height: 1; }
 .moon-flow-cap .moon-flow-pct { display: block; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .moon-flow-cap .moon-flow-name { display: block; margin-top: 3px; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
