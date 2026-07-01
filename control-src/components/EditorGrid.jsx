@@ -425,9 +425,7 @@ export default function EditorGrid({ layout, showGrid, readOnly = false, preview
             return (
               <div key={l.id}>
                 <motion.div
-                  layout
                   className={`editor-tile live-tile ${isSelected ? 'selected' : ''}`}
-                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                   style={{ width: '100%', height: '100%' }}
                   onMouseDown={(e) => {
                     // Track pointer-down position so we can distinguish a
