@@ -156,10 +156,10 @@ export function render(ctx) {
     return `<div class="tr-card">
       <div class="tr-titlebar"><span>${escapeHtml(titleLabel)}</span></div>
       <div class="tr-body" style="padding:4px 14px;gap:0"><div class="tr-rows${fill}">
-        ${rows.map(z => `<div class="tr-row" style="justify-content:space-between">
+        ${rows.map(z => `<div class="tr-row"><div class="tr-row-inner" style="justify-content:space-between">
           <div class="tr-row-main"><div class="tr-row-title">${showGlyph ? dnGlyph(z.isDay) + ' ' : ''}${escapeHtml(z.label)}</div>${showMeta ? `<div class="tr-row-sub">${escapeHtml([z.weekday, z.offset].filter(Boolean).join(' · '))}</div>` : ''}</div>
           <div style="font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap">${escapeHtml(z.time)} ${deltaBadge(dayDelta(homeKey, z.dayKey))}</div>
-        </div>`).join('')}
+        </div></div>`).join('')}
       </div></div>
     </div>`;
   }

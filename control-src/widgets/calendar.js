@@ -88,13 +88,13 @@ function renderTrmnl(all, settings, titleLabel, cellW, cellH, density) {
     // Mark the soonest event "now/next" with a solid left accent bar
     // (see .tr-row-now — no dither behind text; keeps 1-bit legibility).
     const isNext = i === 0;
-    return `<div class="tr-row${isNext ? ' tr-row-now' : ''}">
+    return `<div class="tr-row${isNext ? ' tr-row-now' : ''}"><div class="tr-row-inner">
       ${showTime ? `<div class="tr-row-time">${time}</div>` : ''}
       <div class="tr-row-main">
         <div class="tr-row-title">${escapeHtml(ev.title || '')}</div>
         ${day ? `<div class="tr-row-sub">${day}</div>` : ''}
       </div>
-    </div>`;
+    </div></div>`;
   }).join('');
   // Fewer events than the tier allows → rows grow to fill the card so a
   // 2-event agenda doesn't leave a big empty gap below the last row.

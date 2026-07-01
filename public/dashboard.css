@@ -2171,19 +2171,30 @@ img.icon { object-fit: contain; }
   border: var(--face-rule) solid var(--face-ink);
 }
 
-/* List rows (agenda/table). */
+/* List rows (agenda/table).
+ * Structure: .tr-row (the band, owns the divider + vertical growth) >
+ * .tr-row-inner (holds the columns + the accent-bar gutter). The bar lives
+ * on the inner so it hugs the text height even when the band grows to fill
+ * (see .tr-rows-fill) — decoupling bar length from row height. */
 .tr-rows { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 .tr-row {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 6px 0 6px 10px;
-  /* Every row reserves the accent-bar gutter (transparent) so the "now"
-   * row lighting it up doesn't shift the columns. */
-  border-left: var(--face-rule-heavy) solid transparent;
+  align-items: center;
+  padding: 6px 0;
   border-bottom: var(--face-rule) dashed var(--face-ink);
 }
 .tr-row:last-child { border-bottom: none; }
+.tr-row-inner {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-left: 10px;
+  /* Every row reserves the accent-bar gutter (transparent) so the "now"
+   * row lighting it up doesn't shift the columns. */
+  border-left: var(--face-rule-heavy) solid transparent;
+}
 .tr-row .tr-row-time { font-weight: 700; font-size: 13px; flex: none; min-width: 52px; font-variant-numeric: tabular-nums; }
 .tr-row .tr-row-main { flex: 1; min-width: 0; }
 /* SPACE-AWARE FIT LADDER (generic).
@@ -2204,14 +2215,14 @@ img.icon { object-fit: contain; }
  * marked with a solid left accent bar (not a tone band); text stays white. */
 .tr-row .tr-row-title { font-size: 14px; font-weight: 600; }
 .tr-row .tr-row-sub { font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
-/* "now"/active row: solid left accent bar, no fill behind the text. */
-.tr-row.tr-row-now { border-left-color: var(--face-ink); }
-/* Few events → distribute rows with even vertical space instead of leaving
- * a big empty gap below the last one. Rows keep their natural (content)
- * height so the "now" accent bar hugs its text rather than stretching into
- * a long line. (space-aware: fill under-full; ladder handles over-full.) */
-.tr-rows-fill { justify-content: space-evenly; }
-.tr-rows-fill .tr-row { flex: 0 0 auto; }
+/* "now"/active row: solid left accent bar (on the inner, so it hugs the
+ * text) — no dither fill behind the words. */
+.tr-row.tr-row-now .tr-row-inner { border-left-color: var(--face-ink); }
+/* Few events → bands grow to fill the card so there's no big empty gap
+ * below the last row; content stays vertically centered in each band and
+ * the accent bar hugs its text (lives on .tr-row-inner, not the band).
+ * (space-aware: fill under-full; the clamp ladder handles over-full.) */
+.tr-rows-fill .tr-row { flex: 1 1 0; min-height: 0; }
 
 /* ============ TRMNL GAUGE + HEATMAP COMPONENTS ============
  * Two more reusable primitives from the TRMNL photos, built to the same

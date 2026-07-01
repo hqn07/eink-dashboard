@@ -20,7 +20,7 @@ const calEvents = [
   { title: 'Independence Day', dayLabel: 'SAT', startLabel: 'all day', isAllDay: true }
 ];
 const calHtml = renderWidget('calendar', {
-  events: calEvents, cellW: 26, cellH: 6,
+  events: calEvents, cellW: 24, cellH: 12,
   settings: { variant: 'trmnl', title: 'UPCOMING', icalUrls: ['demo'] }, variant: 'trmnl'
 });
 
@@ -52,7 +52,7 @@ const html = `<!doctype html><html><head><meta charset="utf8"><style>${css}
   .rowgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 12px}
   .box{height:190px;border:2px solid #000}
 </style></head><body>
-  <div style="padding:12px"><div style="height:200px;border:2px solid #000">${calHtml}</div></div>
+  <div style="padding:12px"><div style="height:640px;border:2px solid #000">${calHtml}</div></div>
   <div class="rowgrid">
     <div class="box">${wcHtml}</div>
     <div class="box">${otdHtml}</div>
@@ -70,7 +70,7 @@ const html = `<!doctype html><html><head><meta charset="utf8"><style>${css}
 
 const browser = await puppeteer.launch({ headless: 'new' });
 const page = await browser.newPage();
-await page.setViewport({ width: 820, height: 1120, deviceScaleFactor: 1 });
+await page.setViewport({ width: 820, height: 1560, deviceScaleFactor: 1 });
 await page.setContent(html, { waitUntil: 'networkidle0' });
 await page.evaluate(() => document.fonts.ready);
 const out = join(ROOT, 'test', '_component-preview.png');

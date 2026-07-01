@@ -60,10 +60,10 @@ export function render(ctx) {
     return `<div class="tr-card">
       <div class="tr-titlebar"><span>On This Day</span><span class="tr-meta">${escapeHtml(d.dateLabel || '')}${d.stale ? ' · old' : ''}</span></div>
       <div class="tr-body" style="padding:6px 14px;gap:0"><div class="tr-rows${fill}">
-        ${rows.map(e => `<div class="tr-row">
+        ${rows.map(e => `<div class="tr-row"><div class="tr-row-inner">
           <div class="tr-row-time">${e.year}</div>
           <div class="tr-row-main"><div class="tr-row-title" style="white-space:normal">${escapeHtml(e.text)}</div></div>
-        </div>`).join('')}
+        </div></div>`).join('')}
       </div></div>
     </div>`;
   }
