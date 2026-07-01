@@ -126,26 +126,35 @@ export function render(ctx) {
   const name = `<div class="moon-name">${escapeHtml(m.name)}</div>`;
 
   if (variant === 'flow') {
-    // Phase filmstrip: today's disc big in the middle, the days before/after
-    // shrinking outward — a flat "cover-flow" that reads the cycle at a
-    // glance. Wide tiles get ±2 days, narrower ones ±1.
+    // Cover-flow: today's disc forward + centred, the days before/after
+    // rotated back in 3-D and overlapping. Wide tiles get ±2 days, narrower
+    // ±1. Discs are the same base size; the perspective transforms do the
+    // shrinking so the geometry stays a real cover-flow (not a flat strip).
     const DAY = 86400000;
-    const big = tier === 'tiny' ? 54 : ((cellH || 0) >= 7 ? 112 : 84);
-    const near = Math.round(big * 0.6);
-    const far = Math.round(big * 0.4);
+    const base = tier === 'tiny' ? 60 : ((cellH || 0) >= 7 ? 130 : 96);
     const perSide = (cellW || 0) >= 16 ? 2 : 1;
     const offsets = perSide === 2 ? [-2, -1, 0, 1, 2] : [-1, 0, 1];
-    const sizeFor = (o) => (o === 0 ? big : Math.abs(o) === 1 ? near : far);
+    // Per-slot 3-D transform: centre faces forward + lifted; sides swing
+    // away and recede (scale + translateZ) and tuck behind via negative
+    // margin. z-index keeps the centre on top.
+    const tf = (o) => {
+      if (o === 0) return 'translateZ(60px)';
+      const dir = o < 0 ? 1 : -1;              // left swings right-face out
+      const deg = Math.abs(o) === 1 ? 48 : 58;
+      const sc = Math.abs(o) === 1 ? 0.9 : 0.78;
+      return `rotateY(${dir * deg}deg) scale(${sc})`;
+    };
     const cells = offsets.map((o) => {
       const mi = moonInfo(now + o * DAY);
-      const cap = o === 0
-        ? `<div class="moon-flow-cap"><span class="moon-flow-pct">${Math.round(mi.illum * 100)}%</span><span class="moon-flow-name">${escapeHtml(mi.name)}</span></div>`
-        : '';
-      return `<div class="moon-flow-cell${o === 0 ? ' moon-flow-now' : ''}">${moonSvg(sizeFor(o), mi.illum, mi.waxing)}${cap}</div>`;
+      const z = 5 - Math.abs(o);
+      return `<div class="moon-flow-cell" style="transform:${tf(o)};z-index:${z}">${moonSvg(base, mi.illum, mi.waxing)}</div>`;
     }).join('');
     return `<div class="tr-card">
       <div class="tr-titlebar"><span>Moon</span><span class="tr-meta">${escapeHtml(m.name)}</span></div>
-      <div class="tr-body" style="justify-content:center"><div class="moon-flow">${cells}</div></div>
+      <div class="tr-body" style="justify-content:center;gap:8px">
+        <div class="moon-flow">${cells}</div>
+        <div class="moon-flow-cap"><span class="moon-flow-pct">${pct}%</span><span class="moon-flow-name">${escapeHtml(m.name)}</span></div>
+      </div>
     </div>`;
   }
 

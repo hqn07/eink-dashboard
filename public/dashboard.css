@@ -1181,18 +1181,16 @@ html, body {
  * panel's threshold(128) to smear). eink-lint-allow: 1-bit raster. */
 .moon-disc image { image-rendering: pixelated; }
 
-/* Flow variant — phase filmstrip: today centered + big, neighbours smaller.
- * Discs baseline-align at the bottom so the strip reads as a rising/falling
- * arc; the centre disc carries the % + phase-name caption. */
+/* Flow variant — cover-flow: today forward + centred, neighbours rotated
+ * back in 3-D and overlapping. The centre disc carries the %/name caption. */
 .moon-flow {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  gap: 18px;
-  flex: none;          /* natural height so the tr-body centres the strip */
-  min-height: 0;
+  flex: none;
+  perspective: 900px;
 }
-.moon-flow-cell { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.moon-flow-cell { flex: none; margin: 0 -18px; transform-style: preserve-3d; }
 .moon-flow-cap { text-align: center; font-family: var(--face-grotesk); line-height: 1; }
 .moon-flow-cap .moon-flow-pct { display: block; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .moon-flow-cap .moon-flow-name { display: block; margin-top: 3px; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
