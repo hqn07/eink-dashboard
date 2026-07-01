@@ -1,5 +1,20 @@
 # E-Ink Dashboard — Handoff
 
+> ## ▶ RESUME HERE (2026-06-30)
+> Run `/continue` (or just say "continue"). Current thread: **TRMNL-inspired
+> redesign** — DONE and pushed. `trmnl` is the default variant for 12 widgets;
+> foundation = Inter (`--face-grotesk`), dither tones, card components. Left as
+> primitives: text, qr, mac_nowplaying (mac_battery: trmnl opt-in). Full spec +
+> what's left: `docs/trmnl-inspired-design.md`.
+>
+> **Next options (ask the user):** (1) panel-photo verify on real hardware,
+> (2) build donut/ring gauges + contribution-heatmap components, (3) minor
+> polish (world_clock ellipsize, row-count tuning). Everything on `origin/main`.
+>
+> Verify widget renders via standalone module render through the real pipeline.
+> After face changes: `build:css` → `lint:eink` → `check:widgets` →
+> `test:visual:update` → `vite build`; server: `test:api`. Commit+push each unit.
+
 State as of 2026-06-16. Read this + `CLAUDE.md` + memory pointers below before touching anything.
 
 ## 2026-06-29 session
