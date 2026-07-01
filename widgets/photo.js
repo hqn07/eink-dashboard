@@ -6,7 +6,7 @@
 // Dithering is async (sharp), so it runs here in buildWidgetData rather
 // than in the sync render(ctx) template — same pattern as album art.
 
-const { ditherImageToBase64 } = require('./_dither');
+const { ditherPhotoToBase64 } = require('./_dither');
 const { fetchWithTimeout } = require('./_fetch');
 
 // Grid → pixel mapping (24×12 over the 800×480 panel). Cap the long edge
@@ -60,7 +60,12 @@ async function fetchPhoto(settings, item) {
   if (!bytes) return null;
   const { w, h } = targetDims(item);
   const fit = s.fit === 'contain' ? 'contain' : 'cover';
-  const b64 = await ditherImageToBase64(bytes, { width: w, height: h, fit });
+  const algorithm = ['atkinson', 'fs', 'threshold'].includes(s.dither) ? s.dither : 'atkinson';
+  const brightness = Number.isFinite(s.brightness) ? s.brightness : 0;
+  const contrast = Number.isFinite(s.contrast) ? s.contrast : 0;
+  const b64 = await ditherPhotoToBase64(bytes, {
+    width: w, height: h, fit, algorithm, brightness, contrast
+  });
   if (!b64) return null;
   return { src: `data:image/png;base64,${b64}`, w, h };
 }

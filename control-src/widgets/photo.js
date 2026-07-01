@@ -38,6 +38,9 @@ export const def = {
     imageUrl: '',        // remote http(s) image
     imageData: '',       // uploaded base64 data: URI (wins over imageUrl)
     fit: 'cover',        // 'cover' | 'contain'
+    dither: 'atkinson',  // 'atkinson' | 'fs' | 'threshold'
+    brightness: 0,       // -100..100
+    contrast: 0,         // -100..100
     caption: '',
     title: '',
     fontScale: 1,

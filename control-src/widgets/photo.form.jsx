@@ -104,6 +104,38 @@ export function Form({ values, patch, onChange, fields }) {
             <option value="contain">Contain — fit whole image</option>
           </select>
         </label>
+      </FormSection>
+      <FormSection title="Dithering">
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
+          Style
+          <select
+            value={v.dither || 'atkinson'}
+            onChange={(e) => patch({ dither: e.target.value })}
+            style={{ width: 220 }}
+          >
+            <option value="atkinson">Atkinson — clean, TRMNL look (best for photos)</option>
+            <option value="fs">Floyd–Steinberg — fine grain, more detail</option>
+            <option value="threshold">Threshold — hard B/W, no dots (logos)</option>
+          </select>
+        </label>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
+          Brightness ({Number.isFinite(v.brightness) ? v.brightness : 0})
+          <input
+            type="range" min={-100} max={100} step={5}
+            value={Number.isFinite(v.brightness) ? v.brightness : 0}
+            onChange={(e) => patch({ brightness: parseInt(e.target.value, 10) })}
+            style={{ width: 220 }}
+          />
+        </label>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
+          Contrast ({Number.isFinite(v.contrast) ? v.contrast : 0})
+          <input
+            type="range" min={-100} max={100} step={5}
+            value={Number.isFinite(v.contrast) ? v.contrast : 0}
+            onChange={(e) => patch({ contrast: parseInt(e.target.value, 10) })}
+            style={{ width: 220 }}
+          />
+        </label>
         <TextField
           label="Caption"
           value={v.caption || ''}
