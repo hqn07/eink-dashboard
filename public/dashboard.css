@@ -279,10 +279,14 @@ html, body {
 .weather-icon { display: inline-block; line-height: 0; }
 
 .weather-temp {
-  font-family: 'DM Serif Display', serif;
+  /* Grotesk (not DM Serif) so the hero matches the TRMNL cards — one type
+   * voice across the panel. Heavy weight + tight tracking reads like the
+   * card hero numbers (.tr-v). */
+  font-family: var(--face-grotesk);
+  font-weight: 800;
   font-size: 96px;
   line-height: 0.85;
-  letter-spacing: -4px;
+  letter-spacing: -3px;
   margin-top: -8px;
 }
 
@@ -293,10 +297,11 @@ html, body {
 }
 
 .weather-desc {
-  font-family: var(--face-sans);
+  font-family: var(--face-grotesk);
   font-weight: 700;
-  font-size: 18px;
-  letter-spacing: 3px;
+  font-size: 16px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
   margin-top: 4px;
 }
 
@@ -325,7 +330,7 @@ html, body {
   margin-top: 8px;
   margin-bottom: 6px;
   border-top: 2px solid #000;
-  font-family: var(--face-sans);
+  font-family: var(--face-grotesk);
 }
 
 .stat-k {
