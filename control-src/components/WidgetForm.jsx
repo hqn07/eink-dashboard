@@ -645,17 +645,24 @@ function SegmentedField({ label, value, options, onChange, help, defaultValue })
 // column doesn't grow tall when every section is expanded. Active
 // tab persists per-widget in localStorage so reopening the modal
 // lands you back where you left off.
-function TabbedForm({ widgetId, MigratedForm, formProps }) {
+function TabbedForm({ widgetId, MigratedForm, formProps, leadingSections = [], trailingSections = [] }) {
   const tree = MigratedForm(formProps);
   const flat = React.Children.toArray(
     React.isValidElement(tree) && tree.type === React.Fragment
       ? tree.props.children
       : tree
   );
-  const sections = flat.filter(c => React.isValidElement(c) && c.type === FormSection);
-  const extras   = flat.filter(c => !React.isValidElement(c) || c.type !== FormSection);
+  // Normalize the form's FormSection children + the injected leading/trailing
+  // sections (Variant, Color) into one {title, node} list, so they all become
+  // rail items — no floating block above the nav.
+  const formSecs = flat
+    .filter(c => React.isValidElement(c) && c.type === FormSection)
+    .map(s => ({ title: s.props.title, node: s.props.children }));
+  const extras = flat.filter(c => !React.isValidElement(c) || c.type !== FormSection);
+  const sections = [...leadingSections, ...formSecs, ...trailingSections]
+    .filter(s => s && s.title && s.node != null);
 
-  const titles = sections.map(s => s.props.title);
+  const titles = sections.map(s => s.title);
   const storageKey = `${SECTION_STORAGE_PREFIX}${widgetId}`;
 
   // Active tab: persisted preference if present and still valid, else
@@ -684,10 +691,10 @@ function TabbedForm({ widgetId, MigratedForm, formProps }) {
   }, [active, storageKey]);
 
   if (!sections.length) {
-    return <>{tree}</>;
+    return <>{extras}{tree}</>;
   }
 
-  const activeSection = sections.find(s => s.props.title === active) || sections[0];
+  const activeSection = sections.find(s => s.title === active) || sections[0];
 
   return (
     <>
@@ -695,24 +702,23 @@ function TabbedForm({ widgetId, MigratedForm, formProps }) {
       <div className="wsm-formnav">
         <nav className="wsm-nav" role="tablist" aria-label="Settings sections">
           {sections.map(s => {
-            const t = s.props.title;
-            const isActive = t === activeSection.props.title;
+            const isActive = s.title === activeSection.title;
             return (
               <button
-                key={t}
+                key={s.title}
                 type="button"
                 role="tab"
                 aria-selected={isActive}
                 className={`wsm-navitem ${isActive ? 'is-active' : ''}`}
-                onClick={() => setActive(t)}
+                onClick={() => setActive(s.title)}
               >
-                {t}
+                {s.title}
               </button>
             );
           })}
         </nav>
         <div className="wsm-navbody" role="tabpanel">
-          {activeSection.props.children}
+          {activeSection.node}
         </div>
       </div>
     </>
@@ -929,40 +935,50 @@ export default function WidgetForm({ widgetId, values, onChange, item, previewDa
           id, label: (val && val.label) || id, values: { variant: id }
         }))
       : null;
+    // Variant + Color are injected as rail sections (Option A) so everything
+    // lives behind the left nav — no floating block above the tabs. Variant
+    // leads (the primary layout choice); Color trails.
+    const leadingSections = variantPresets ? [{
+      title: 'Variant',
+      node: (
+        <PresetField
+          presets={variantPresets}
+          onApply={patch}
+          thumbSize={def.variantThumb || null}
+        />
+      )
+    }] : [];
+    // Red controls (3-color B panel). Accent = manual tint; Semantic red =
+    // auto-red by meaning (AQI unhealthy, low battery, overdue, today, rain).
+    const trailingSections = [{
+      title: 'Color',
+      node: (
+        <>
+          <SegmentedField
+            label="Accent"
+            value={v.accent || 'none'}
+            defaultValue="none"
+            options={[
+              { value: 'none', label: 'None' },
+              { value: 'red',  label: 'Red' }
+            ]}
+            onChange={(x) => patch({ accent: x })}
+            help="Manual red tint. Shows only on the 3-color panel."
+          />
+          {SEMANTIC_RED_WIDGETS.has(widgetId) && (
+            <ToggleField
+              label="Semantic red"
+              value={v.semanticRed !== false}
+              defaultValue={true}
+              onChange={(x) => patch({ semanticRed: x })}
+              help="Auto-red for alerts/thresholds (AQI, battery, overdue, today, rain)."
+            />
+          )}
+        </>
+      )
+    }];
     return (
       <PresetContext.Provider value={{ widgetId, item, previewData, values: v, onHoverPreset }}>
-        {variantPresets && (
-          <PresetField
-            presets={variantPresets}
-            onApply={patch}
-            title="Variant"
-            thumbSize={def.variantThumb || null}
-          />
-        )}
-        {/* Red controls (3-color B panel). Accent = manual tint of the
-            tile's heading/hero figure. Semantic red = auto-red by meaning
-            (AQI unhealthy, low battery, overdue, today, heavy rain). Both
-            no-op on BW. */}
-        <SegmentedField
-          label="Accent"
-          value={v.accent || 'none'}
-          defaultValue="none"
-          options={[
-            { value: 'none', label: 'None' },
-            { value: 'red',  label: 'Red' }
-          ]}
-          onChange={(x) => patch({ accent: x })}
-          help="Manual red tint. Shows only on the 3-color panel."
-        />
-        {SEMANTIC_RED_WIDGETS.has(widgetId) && (
-          <ToggleField
-            label="Semantic red"
-            value={v.semanticRed !== false}
-            defaultValue={true}
-            onChange={(x) => patch({ semanticRed: x })}
-            help="Auto-red for alerts/thresholds (AQI, battery, overdue, today, rain)."
-          />
-        )}
         <TabbedForm
           widgetId={widgetId}
           MigratedForm={MigratedForm}
@@ -970,6 +986,8 @@ export default function WidgetForm({ widgetId, values, onChange, item, previewDa
             values: v, patch, onChange,
             fields: { ...FIELD_PRIMITIVES, defaults }
           }}
+          leadingSections={leadingSections}
+          trailingSections={trailingSections}
         />
       </PresetContext.Provider>
     );
