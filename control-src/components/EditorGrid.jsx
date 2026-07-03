@@ -53,6 +53,7 @@ function showcaseSizeKey(def) {
 export default function EditorGrid({ layout, showGrid, readOnly = false, previewData, seedCtx, onChange, onError, onCommitItemNow }) {
   const wrapRef = useRef(null);
   const paletteRef = useRef(null);
+  const dupLockRef = useRef(false);
   const [size, setSizeState] = useState({ w: 800, h: 480 });
   const [shake, setShake] = useState(false);
   const [dropHover, setDropHover] = useState(false);
@@ -323,13 +324,23 @@ export default function EditorGrid({ layout, showGrid, readOnly = false, preview
     onChange(layout.filter(l => l.id !== id));
   };
 
-  // Clone a configured tile (settings + size) into a free slot so users
-  // don't re-configure from scratch. Falls back to overlapping the original
-  // if the canvas is full.
+  // Clone a configured tile (settings + size) into a FREE slot so users
+  // don't re-configure from scratch. If the canvas is full there's nowhere
+  // safe to put it — shake + bail rather than stack the clone on top of the
+  // original (which corrupts the layout with overlapping tiles).
   const duplicateTile = (id) => {
+    // A fast double-click fires this twice within one render, so both calls
+    // see the same layout + pick the same free slot → overlapping clones.
+    // Lock briefly so an accidental double-click only duplicates once.
+    if (dupLockRef.current) return;
     const item = enabled.find(l => l.id === id);
     if (!item) return;
-    const slot = findFreeSlot(item.w, item.h, enabled) || { x: item.x, y: item.y };
+    const slot = findFreeSlot(item.w, item.h, enabled);
+    if (!slot) {
+      triggerShake();
+      onError && onError('No room to duplicate — free up space first');
+      return;
+    }
     const clone = {
       ...item,
       id: newInstanceId(item.widgetId),
@@ -338,6 +349,8 @@ export default function EditorGrid({ layout, showGrid, readOnly = false, preview
     };
     onChange([...layout, clone]);
     setSelectedId(clone.id);
+    dupLockRef.current = true;
+    setTimeout(() => { dupLockRef.current = false; }, 350);
   };
 
   // HTML5 drag from pool tile onto canvas.
