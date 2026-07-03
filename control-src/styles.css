@@ -1490,6 +1490,15 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   outline-offset: -2px;
 }
 
+/* The per-tile gear/✕ controls (fixed 22px, unscaled) sit top-right, exactly
+ * where a widget's title-bar meta (location, "6-DAY", "2 EVENTS") is aligned.
+ * They only appear on hover/select, so fade that meta out then to avoid the
+ * overlap — it returns the moment you move off the tile. Editor-only; the
+ * panel has no controls and always shows the meta. */
+.editor-tile .tr-meta { transition: opacity var(--dur-fast) ease; }
+.editor-tile:hover .tr-meta,
+.editor-tile.selected .tr-meta { opacity: 0; }
+
 .tile-remove, .tile-settings {
   width: 22px;
   height: 22px;
