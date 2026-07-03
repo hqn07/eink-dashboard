@@ -48,8 +48,23 @@ function authHeaders(extra) {
 }
 
 async function authFetch(url, opts = {}) {
-  const merged = { ...opts, headers: authHeaders(opts.headers) };
-  const r = await fetch(url, merged);
+  // Hard timeout so a hung/unreachable server surfaces an error instead of
+  // spinning the UI forever. Callers may pass their own signal/timeoutMs.
+  const merged = {
+    ...opts,
+    headers: authHeaders(opts.headers),
+    signal: opts.signal || (typeof AbortSignal !== 'undefined' && AbortSignal.timeout
+      ? AbortSignal.timeout(opts.timeoutMs || 15000) : undefined)
+  };
+  let r;
+  try {
+    r = await fetch(url, merged);
+  } catch (e) {
+    if (e && (e.name === 'TimeoutError' || e.name === 'AbortError')) {
+      throw new Error('Request timed out — server not responding');
+    }
+    throw new Error('Network error — can’t reach the server');
+  }
   if (r.status === 401) {
     // Surface a single, app-wide prompt so the user can paste a token —
     // but only when we don't already have one (a present-yet-rejected token
@@ -82,15 +97,48 @@ export async function fetchConfig() {
   return r.json();
 }
 
+// Retry a request fn on transient failures (rate-limit, 5xx, network/timeout)
+// with a short backoff, so an editing burst that trips the limiter or a
+// momentary blip recovers on its own instead of failing the save.
+async function withRetry(fn, { tries = 3, baseMs = 600 } = {}) {
+  let lastErr;
+  for (let i = 0; i < tries; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      lastErr = e;
+      const transient = (e && e.retryable) || /network|timed out/i.test(e && e.message || '');
+      if (!transient || i === tries - 1) throw e;
+      await new Promise(res => setTimeout(res, baseMs * Math.pow(2, i)));
+    }
+  }
+  throw lastErr;
+}
+
+function friendlySaveError(status, raw) {
+  if (status === 429 || /rate_limited/i.test(raw)) return 'Too many requests — please wait a moment';
+  if (status >= 500) return 'Server error — try again';
+  if (status === 401 || status === 403) return 'Not authorized to save';
+  return raw || `Save failed (${status})`;
+}
+
 export async function saveConfig(cfg) {
-  const r = await authFetch('/api/config', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(cfg)
+  return withRetry(async () => {
+    const r = await authFetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cfg)
+    });
+    if (r.status === 429 || r.status >= 500) {
+      const e = new Error(friendlySaveError(r.status, ''));
+      e.retryable = true;
+      e.status = r.status;
+      throw e;
+    }
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.ok) throw new Error(friendlySaveError(r.status, j.error));
+    return j.config;
   });
-  const j = await r.json();
-  if (!j.ok) throw new Error(j.error || 'save failed');
-  return j.config;
 }
 
 export async function resetConfig() {

@@ -2898,6 +2898,23 @@ async function clearPinIfRequested() {
   }
 }
 
+// Unknown /api path → clean JSON 404 (not the default HTML page).
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: 'not_found', path: req.originalUrl });
+});
+
+// Final backstop error handler. Per-route try/catch handles the common cases;
+// this catches anything a handler throws synchronously or passes to next(err)
+// so a single bad route returns a clean 500 instead of leaking a stack /
+// hanging the request. Logged into the error ring surfaced on /status.
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error('Route error:', req.method, req.originalUrl, err && (err.stack || err.message || err));
+  if (res.headersSent) return next(err);
+  const status = Number.isInteger(err && err.status) ? err.status : 500;
+  res.status(status).json(safeError(err));
+});
+
 app.listen(PORT, () => {
   console.log(`E-ink dashboard listening on http://localhost:${PORT}`);
   console.log(`  Control panel:  http://localhost:${PORT}/control`);
