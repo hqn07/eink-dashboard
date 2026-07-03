@@ -692,26 +692,28 @@ function TabbedForm({ widgetId, MigratedForm, formProps }) {
   return (
     <>
       {extras}
-      <div className="wsm-tabs" role="tablist">
-        {sections.map(s => {
-          const t = s.props.title;
-          const isActive = t === activeSection.props.title;
-          return (
-            <button
-              key={t}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              className={`wsm-tab ${isActive ? 'wsm-tab-active' : ''}`}
-              onClick={() => setActive(t)}
-            >
-              {t}
-            </button>
-          );
-        })}
-      </div>
-      <div className="wsm-tab-panel" role="tabpanel">
-        {activeSection.props.children}
+      <div className="wsm-formnav">
+        <nav className="wsm-nav" role="tablist" aria-label="Settings sections">
+          {sections.map(s => {
+            const t = s.props.title;
+            const isActive = t === activeSection.props.title;
+            return (
+              <button
+                key={t}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                className={`wsm-navitem ${isActive ? 'is-active' : ''}`}
+                onClick={() => setActive(t)}
+              >
+                {t}
+              </button>
+            );
+          })}
+        </nav>
+        <div className="wsm-navbody" role="tabpanel">
+          {activeSection.props.children}
+        </div>
       </div>
     </>
   );

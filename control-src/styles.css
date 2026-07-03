@@ -2202,30 +2202,31 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   padding: 0;
 }
 .wsm-panel-sheet {
-  width: min(720px, 100vw);
+  width: min(1040px, 100vw);
   max-width: 100vw;
   max-height: 100vh;
   height: 100vh;
   border-width: 0 0 0 2px;
   box-shadow: -8px 0 0 var(--ink), -16px 0 32px rgba(0, 0, 0, 0.18);
 }
-.wsm-panel-sheet .wsm-body {
-  grid-template-columns: 1fr;
-}
+/* Narrow screens: stack settings over preview. */
+.wsm-panel-sheet .wsm-body { grid-template-columns: 1fr; }
 .wsm-panel-sheet .wsm-col-settings {
   border-right: 0;
   border-bottom: var(--bw-frame) solid var(--ink);
-  max-height: 55vh;
+  max-height: 52vh;
 }
 .wsm-panel-sheet .wsm-col-preview {
   background: var(--paper, #faf8f3);
   border-bottom: 0;
-  padding-top: 16px;
-  padding-bottom: 16px;
-  min-height: 180px;
+  padding: 20px;
+  min-height: 200px;
 }
-@media (min-width: 1100px) {
-  .wsm-panel-sheet .wsm-body { grid-template-columns: 1fr minmax(260px, 1fr); }
+/* Desktop: controls (with their own nav rail) beside a generous preview. */
+@media (min-width: 860px) {
+  .wsm-panel-sheet .wsm-body {
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
+  }
   .wsm-panel-sheet .wsm-col-settings {
     border-right: var(--bw-frame) solid var(--ink);
     border-bottom: 0;
@@ -2309,8 +2310,8 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
  * (the accordion trigger already labels it). When the form is NOT
  * accordion-wrapped (forms with a single section), the title shows
  * normally. */
-.wsm-tab-panel .wsm-subsection { margin-bottom: 0; }
-.wsm-tab-panel .wsm-subsection > .wsm-subsection-title { display: none; }
+.wsm-navbody .wsm-subsection { margin-bottom: 0; }
+.wsm-navbody .wsm-subsection > .wsm-subsection-title { display: none; }
 .wsm-subsection-title {
   font-family: var(--font-sans-c);
   text-transform: uppercase;
@@ -2381,40 +2382,53 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
  * ink). Only the active section's body is mounted in .wsm-tab-panel
  * so the modal column doesn't grow tall — replaces the previous
  * accordion surface where every expanded section stacked vertically. */
-.wsm-tabs {
+/* Left section rail (replaces pill tabs): a vertical list of sections with
+ * an active marker; the body shows one section at a time so the modal reads
+ * calm instead of dumping every control at once. */
+.wsm-formnav {
   display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  border-bottom: var(--bw-rule) solid var(--ink);
-  padding: 4px 0 8px;
-  margin-bottom: 12px;
+  align-items: stretch;
+  gap: 0;
 }
-.wsm-tab {
+.wsm-nav {
+  flex: none;
+  width: 104px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-right: var(--bw-hair) solid var(--line-soft);
+  padding-right: 12px;
+}
+.wsm-navitem {
   font-family: var(--font-sans-c);
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
   font-size: var(--fs-sm);
   font-weight: 700;
-  color: var(--ink);
+  color: var(--mute);
   background: transparent;
-  border: var(--bw-rule) solid transparent;
-  padding: 5px 12px;
-  border-radius: var(--r-pill);
+  border: 0;
+  border-left: 3px solid transparent;
+  text-align: left;
+  padding: 9px 10px;
   cursor: pointer;
-  line-height: 1;
-  transition: background var(--dur-fast) ease-out, color var(--dur-fast) ease-out;
+  line-height: 1.1;
+  transition: color var(--dur-fast) ease-out, border-color var(--dur-fast) ease-out;
 }
-.wsm-tab:hover { background: rgba(0, 0, 0, 0.06); }
-.wsm-tab:focus-visible {
+.wsm-navitem:hover { color: var(--ink); }
+.wsm-navitem.is-active {
+  color: var(--ink);
+  border-left-color: var(--ink);
+}
+.wsm-navitem:focus-visible {
   outline: var(--bw-frame) dashed var(--ink);
   outline-offset: 2px;
 }
-.wsm-tab-active {
-  background: var(--ink);
-  color: #fff;
+.wsm-navbody {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-left: 18px;
 }
-.wsm-tab-active:hover { background: var(--ink); }
-.wsm-tab-panel { padding: 0 2px 4px; }
 .wsm-row {
   display: flex;
   align-items: center;
