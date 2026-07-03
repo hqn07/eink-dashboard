@@ -4,7 +4,7 @@
 // URL so multiple tiles / refreshes don't re-hit the source.
 
 const { XMLParser } = require('fast-xml-parser');
-const { fetchWithTimeout } = require('./_fetch');
+const { fetchWithTimeout, fetchPublicUrl } = require('./_fetch');
 const status = require('./_status');
 
 const CACHE_MS = 10 * 60 * 1000;
@@ -92,7 +92,10 @@ async function fetchHeadlines(settings) {
 
   const t0 = Date.now();
   try {
-    const res = await fetchWithTimeout(url, { headers: { accept: 'application/rss+xml, application/xml, text/xml, */*' } }, 6000);
+    // hnrss.org (HN) is first-party/public; a custom RSS URL is user input →
+    // guard it against private/loopback/metadata targets.
+    const doFetch = s.source === 'hn' ? fetchWithTimeout : fetchPublicUrl;
+    const res = await doFetch(url, { headers: { accept: 'application/rss+xml, application/xml, text/xml, */*' } }, 6000);
     if (!res.ok) {
       status.record('headlines', { ok: false, ms: Date.now() - t0, err: `HTTP ${res.status}` });
       if (hit) return { ...hit.data, stale: true };

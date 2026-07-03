@@ -7,7 +7,7 @@
 // than in the sync render(ctx) template — same pattern as album art.
 
 const { ditherPhotoToBase64 } = require('./_dither');
-const { fetchWithTimeout } = require('./_fetch');
+const { fetchPublicUrl } = require('./_fetch');
 
 // Grid → pixel mapping (24×12 over the 800×480 panel). Cap the long edge
 // so a full-bleed tile doesn't run FS over 384k px on every render; the
@@ -43,7 +43,7 @@ async function loadBytes(settings) {
   const url = typeof settings.imageUrl === 'string' ? settings.imageUrl.trim() : '';
   if (/^https?:\/\//i.test(url)) {
     try {
-      const res = await fetchWithTimeout(url, {}, 5000);
+      const res = await fetchPublicUrl(url, {}, 5000); // SSRF guard on user URL
       if (!res.ok) return null;
       const buf = Buffer.from(await res.arrayBuffer());
       return buf.length > 100 ? buf : null;

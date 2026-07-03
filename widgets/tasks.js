@@ -4,7 +4,7 @@
 // per source key so multiple tiles / refreshes don't re-hit the API.
 
 const ical = require('node-ical');
-const { fetchWithTimeout } = require('./_fetch');
+const { fetchWithTimeout, fetchPublicUrl } = require('./_fetch');
 const status = require('./_status');
 
 const CACHE_MS = 5 * 60 * 1000;
@@ -50,7 +50,7 @@ async function fetchTodoist(token, limit) {
 }
 
 async function fetchIcalTodos(url, limit) {
-  const res = await fetchWithTimeout(url, {}, 6000);
+  const res = await fetchPublicUrl(url, {}, 6000); // SSRF guard on user URL
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const text = await res.text();
   const parsed = ical.parseICS(text);
