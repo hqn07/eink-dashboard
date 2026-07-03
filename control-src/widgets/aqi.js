@@ -109,6 +109,15 @@ export function render(ctx) {
 
   if (variant === 'trmnl') {
     const redStyle = danger ? 'color:var(--face-red);' : '';
+    // Dithered level bar (same look as the battery card). Caps at 300 (the
+    // Hazardous threshold) so the fill stays meaningful; goes pink on the
+    // red plane when the band is Unhealthy+.
+    const pct = Math.max(3, Math.min(100, (a.aqi / 300) * 100));
+    const fillTone = danger ? 'face-tone-r50' : 'face-tone-g50';
+    const bar = `<div class="tr-bar" style="height:22px;flex:none">
+      <div class="tr-bar-fill ${fillTone}" style="width:${pct}%"></div>
+      <div class="tr-bar-track face-tone-g15"></div>
+    </div>`;
     const stats = (cellH || 0) >= 6 && parts.length
       ? `<div class="tr-stats">${parts.map(p => {
           const i = p.lastIndexOf(' ');
@@ -116,9 +125,9 @@ export function render(ctx) {
         }).join('')}</div>` : '';
     return `<div class="tr-card">
       <div class="tr-titlebar"><span>${escapeHtml(titleLabel)}</span><span class="tr-meta">${escapeHtml(a.label || '')}${a.stale ? ' · old' : ''}</span></div>
-      <div class="tr-body" style="justify-content:center;gap:8px">
+      <div class="tr-body" style="justify-content:center;gap:10px">
         <div class="tr-lv"><div class="tr-v" style="${redStyle}">${a.aqi}</div><div class="tr-l">US AQI</div></div>
-        ${scaleHtml(a.band, a.bands)}
+        ${bar}
       </div>
       ${stats}
     </div>`;

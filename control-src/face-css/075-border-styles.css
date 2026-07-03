@@ -57,6 +57,15 @@
 .tr-card.tr-card--framed.face-frame-g25,
 .tr-card.tr-card--framed.face-frame-r50 { border-color: var(--face-ink); }
 
-/* A .face-frame-* utility applied to a grid cell (per-tile Frame setting)
- * must inset the border so the card doesn't overflow its cell. */
-.cell.face-frame { box-sizing: border-box; }
+/* A .face-frame-* utility applied to a grid cell (per-tile Frame setting):
+ * inset it slightly and drop the grid divider so the dithered border reads
+ * as one floating card. Without the inset, two adjacent framed tiles stack
+ * their borders into a doubled band (4px + 4px); the margin puts a clean
+ * white gutter between them instead. box-sizing keeps the border inside the
+ * cell so the card doesn't overflow. */
+.cell.face-frame {
+  box-sizing: border-box;
+  margin: 3px;
+  border-right-width: 4px;
+  border-bottom-width: 4px;
+}
