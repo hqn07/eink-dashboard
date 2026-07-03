@@ -2743,7 +2743,24 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   font-size: var(--fs-sm);
   font-weight: 700;
   color: #555;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
+.wsm-preview-toggle {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border: var(--bw-hair) solid var(--line-soft);
+  background: #fff;
+  color: var(--ink);
+  padding: 3px 8px;
+  cursor: pointer;
+  flex: none;
+}
+.wsm-preview-toggle:hover { border-color: var(--ink); }
 .wsm-preview-frame {
   background: #fff;
   border: var(--bw-frame) solid var(--ink);

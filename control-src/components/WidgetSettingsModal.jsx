@@ -171,6 +171,9 @@ export default function WidgetSettingsModal({
   // we'd rather under-scale briefly than render a clipped widget.
   const previewColRef = useRef(null);
   const [previewBox, setPreviewBox] = useState({ w: 300, h: 220 });
+  // Actual-size preview: render at 1:1 device px (what the panel really
+  // shows) instead of fit-to-column, so the user can judge real legibility.
+  const [actualSize, setActualSize] = useState(false);
   // Hover-preview state: when a preset card is hovered/focused, it
   // broadcasts its values via PresetContext → the main preview merges
   // them on top of the draft so the user sees the preset's effect
@@ -253,7 +256,7 @@ export default function WidgetSettingsModal({
     previewBox.w / cellPxW,
     previewBox.h / cellPxH
   );
-  const previewScale = Math.max(0.4, fitScale);
+  const previewScale = actualSize ? 1 : Math.max(0.4, fitScale);
   const frameW = cellPxW * previewScale;
   const frameH = cellPxH * previewScale;
 
@@ -346,11 +349,21 @@ export default function WidgetSettingsModal({
 
             <div className="wsm-col wsm-col-preview" ref={previewColRef}>
               <div className="wsm-preview-label">
-                Preview · {Math.round(previewScale * 100)}% · {draft.w}×{draft.h} cells
+                <span>Preview · {Math.round(previewScale * 100)}% · {draft.w}×{draft.h} cells</span>
+                <button
+                  type="button"
+                  className="wsm-preview-toggle"
+                  onClick={() => setActualSize(a => !a)}
+                  title="Toggle 1:1 device pixels vs fit-to-panel"
+                >{actualSize ? 'Fit' : 'Actual size'}</button>
               </div>
               <div
                 className="wsm-preview-frame"
-                style={{ width: frameW, height: frameH, position: 'relative' }}
+                style={{
+                  width: frameW, height: frameH, position: 'relative',
+                  maxWidth: '100%',
+                  overflow: actualSize ? 'auto' : 'hidden'
+                }}
               >
                 <div
                   ref={previewCellRef}
