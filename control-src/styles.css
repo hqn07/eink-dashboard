@@ -989,6 +989,7 @@ main.layout {
   touch-action: none;
   user-select: none;
 }
+.tl-track { cursor: crosshair; }
 .tl-block {
   cursor: grab;
   stroke: var(--ink);

@@ -142,6 +142,19 @@ export default function ScheduleTimeline({
     if (onSelect) onSelect(screenId);
   };
 
+  // Press on the empty track → paint a new schedule window for the selected
+  // screen. Makes the timeline the primary way to schedule (no separate
+  // toggle + time-entry needed first).
+  const onTrackDown = (e) => {
+    if (!activeId) return;
+    e.preventDefault();
+    const startMin = pxToMin(e.clientX);
+    setDrag({ screenId: activeId, edge: 'create', startX: e.clientX, startMin, startFrom: startMin, startTo: startMin });
+    if (e.currentTarget.setPointerCapture) {
+      try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+    }
+  };
+
   const onPointerMove = (e) => {
     if (!drag) return;
     const cur = pxToMin(e.clientX);
@@ -156,6 +169,12 @@ export default function ScheduleTimeline({
       const nf = ((drag.startFrom + delta) % TOTAL_MIN + TOTAL_MIN) % TOTAL_MIN;
       const nt = ((drag.startTo   + delta) % TOTAL_MIN + TOTAL_MIN) % TOTAL_MIN;
       onUpdateSchedule(drag.screenId, { from: fmtHHMM(nf), to: fmtHHMM(nt) });
+    } else if (drag.edge === 'create') {
+      // Paint a new window for the selected screen from the press point to
+      // the cursor; onUpdateSchedule enables the screen's schedule.
+      const from = Math.min(drag.startMin, cur);
+      const to   = Math.max(drag.startMin, cur);
+      if (to - from >= 10) onUpdateSchedule(drag.screenId, { from: fmtHHMM(from), to: fmtHHMM(to) });
     }
   };
 
@@ -183,7 +202,7 @@ export default function ScheduleTimeline({
     <div className="timeline-wrap">
       <div className="timeline-title">
         <span>24-Hour Schedule</span>
-        <span className="timeline-help">DRAG BLOCKS · GRIPPERS RESIZE · 5-MIN SNAP</span>
+        <span className="timeline-help">DRAG EMPTY TO SCHEDULE · DRAG BLOCK TO MOVE · EDGES RESIZE</span>
       </div>
       <svg
         ref={svgRef}
@@ -192,8 +211,13 @@ export default function ScheduleTimeline({
         height={H}
         className="timeline-svg"
       >
-        {/* baseline track */}
-        <rect x="0" y={TOP} width={width} height={BOT - TOP} fill="#fff" stroke="#111" strokeWidth="2" />
+        {/* baseline track — press-drag on empty space paints a new window */}
+        <rect
+          x="0" y={TOP} width={width} height={BOT - TOP}
+          fill="#fff" stroke="#111" strokeWidth="2"
+          className="tl-track"
+          onPointerDown={onTrackDown}
+        />
 
         {/* hour ticks */}
         {HOURS.map(h => {
@@ -233,14 +257,14 @@ export default function ScheduleTimeline({
                 >{s.name}</text>
                 {it.first && (
                   <rect
-                    x={x - 4} y={TOP} width="8" height={BOT - TOP}
+                    x={x - 6} y={TOP} width="12" height={BOT - TOP}
                     className="tl-handle"
                     onPointerDown={(e) => onPointerDown(e, s.id, 'from')}
                   />
                 )}
                 {!it.wraps || !it.first ? (
                   <rect
-                    x={x + w - 4} y={TOP} width="8" height={BOT - TOP}
+                    x={x + w - 6} y={TOP} width="12" height={BOT - TOP}
                     className="tl-handle"
                     onPointerDown={(e) => onPointerDown(e, s.id, 'to')}
                   />

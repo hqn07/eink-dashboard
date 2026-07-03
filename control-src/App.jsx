@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
-import { Star, GridFour, ArrowCounterClockwise, SlidersHorizontal, Trash, Lock } from '@phosphor-icons/react';
+import { Star, ArrowCounterClockwise, SlidersHorizontal, Trash, Lock } from '@phosphor-icons/react';
 import { fetchConfig, saveConfig, fetchPreviewData, onUnauthorized } from './api.js';
 import {
   WIDGET_REGISTRY,
@@ -742,9 +742,6 @@ export default function App() {
                     <Star size={12} weight="bold" /> MAKE DEFAULT
                   </button>
                 )}
-                <button className="btn btn-iconed btn-compact" onClick={() => setShowGrid(g => !g)}>
-                  <GridFour size={12} weight="bold" /> {showGrid ? 'HIDE GRID' : 'SHOW GRID'}
-                </button>
                 <button className="btn btn-ghost btn-iconed btn-compact"
                   title="Remove every widget from this screen (undoable)"
                   onClick={() => clearLayout(editScreen.id)}>
