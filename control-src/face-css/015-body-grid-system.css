@@ -112,11 +112,13 @@
 
 .col:last-child { border-right: none; }
 
+/* Aligned to .tr-titlebar / .widget-title (grotesk, 1.5px, uppercase). */
 .col-title {
-  font-family: var(--face-mono);
+  font-family: var(--face-grotesk);
   font-weight: 700;
   font-size: 11px;
-  letter-spacing: 3px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
   padding-bottom: 8px;
   margin-bottom: 12px;
   border-bottom: 2px solid #000;

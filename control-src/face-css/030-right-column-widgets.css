@@ -5,11 +5,14 @@
   padding: 8px 12px;
 }
 
+/* Matches the .tr-titlebar spec (grotesk, 11px, 1.5px, uppercase) so
+ * non-TRMNL widget variants read with the same title voice as the cards. */
 .widget-title {
-  font-family: var(--face-mono);
+  font-family: var(--face-grotesk);
   font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 3px;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
   padding-bottom: 4px;
   margin-bottom: 6px;
   border-bottom: 2px solid #000;
