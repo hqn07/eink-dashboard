@@ -49,7 +49,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.15.0"
+#define FW_VERSION "1.16.0"
 #define FW_BOARD   "b"
 #define OTA_MIN_BATT_PCT 50
 
@@ -190,6 +190,22 @@ bool g_imageUnchanged = false;
 // next successful refresh so we can pre-wipe the panel and stop the
 // fail-screen ghost from bleeding through.
 RTC_DATA_ATTR bool g_lastRenderWasFail = false;
+
+// Consecutive failed cycles (WiFi down / image fetch failed), surviving deep
+// sleep. Drives an exponential sleep backoff so a prolonged server/WiFi
+// outage doesn't wake + fail every 5 minutes and drain the battery. Reset to
+// 0 on any successful refresh.
+RTC_DATA_ATTR uint8_t g_consecFails = 0;
+
+// Sleep seconds after a failed cycle: 5m, 10m, 20m, 40m, capped at 60m.
+// Increment g_consecFails before calling so the first failure sleeps 5m.
+static int failBackoffSec() {
+  uint8_t n = g_consecFails > 0 ? (uint8_t)(g_consecFails - 1) : 0;
+  if (n > 4) n = 4;
+  long s = 300L << n;         // 300, 600, 1200, 2400, 4800
+  if (s > 3600) s = 3600;     // cap at 1 hour
+  return (int)s;
+}
 
 // Fast-reconnect cache. After the first successful full-scan join we
 // remember the AP's BSSID + channel + the DHCP-leased IP/gateway/mask
@@ -1604,7 +1620,8 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
 
   if (!wifiOk) {
     drawFailScreen("WiFi connection failed");
-    return 300;
+    if (g_consecFails < 255) g_consecFails++;
+    return failBackoffSec();
   }
 
   warmServer();
@@ -1654,6 +1671,7 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
       // refresh entirely, just refresh the clock-keeping state.
       Serial.println("Unchanged — leaving panel as-is");
       g_lastGoodAt = time(nullptr);
+      g_consecFails = 0;
       if (buttonWake) beepChime();
       sleepSec = fetchSleepSeconds();
       Serial.printf("Sleep %d s\n", sleepSec);
@@ -1661,12 +1679,14 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
       pushImage(img);
       free(img);
       g_lastGoodAt = time(nullptr);
+      g_consecFails = 0;
       if (buttonWake) beepChime();
       sleepSec = fetchSleepSeconds();
       Serial.printf("Sleep %d s\n", sleepSec);
     } else {
       drawFailScreen("Could not fetch image");
-      sleepSec = 300;
+      if (g_consecFails < 255) g_consecFails++;
+      sleepSec = failBackoffSec();
     }
     if (refreshRequested) {
       Serial.println("Press during cycle — re-refreshing");
