@@ -380,6 +380,39 @@ html, body {
 }
 .hero-minimal .weather-temp { margin-top: 0; }
 
+/* ----- dithered condition bars (trmnl card) ----- */
+.wx-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: var(--face-rule) dotted var(--face-ink);
+  padding-top: 8px;
+  margin-top: 2px;
+}
+.wx-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--face-grotesk);
+}
+.wx-bar-l {
+  flex: none;
+  min-width: 64px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.wx-bar { flex: 1; height: 12px; min-height: 12px; }
+.wx-bar-v {
+  flex: none;
+  min-width: 36px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ============ FORECAST COLUMN ============ */
 
 .col-mid {
@@ -2333,9 +2366,11 @@ img.icon { object-fit: contain; }
  * side of the ladder) instead of floating as tiny text. */
 .tr-row .tr-row-title { font-size: var(--row-font, 14px); font-weight: 600; line-height: 1.15; }
 .tr-row .tr-row-sub { font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
-/* "now"/active row: solid left accent bar (on the inner, so it hugs the
- * text) — no dither fill behind the words. */
-.tr-row.tr-row-now .tr-row-inner { border-left-color: var(--face-ink); }
+/* "now"/next-up row: solid left accent bar (on the inner, so it hugs the
+ * text) — no dither fill behind the words. Rides the red plane on the
+ * 3-color panel so the soonest event pops; greyscales to black on BW.
+ * eink-lint-allow: 3-color red token. */
+.tr-row.tr-row-now .tr-row-inner { border-left-color: var(--face-red); }
 /* Few events → bands grow to fill the card so there's no big empty gap
  * below the last row; content stays vertically centered in each band and
  * the accent bar hugs its text (lives on .tr-row-inner, not the band).

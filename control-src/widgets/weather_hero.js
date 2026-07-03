@@ -188,6 +188,18 @@ export function render(ctx) {
       ${cell(upK, `${w.tempMax}°`, 'High')}
       ${cell(dnK, `${w.tempMin}°`, 'Low')}
     </div>` : '';
+    // Dithered condition bars (same look as the battery/AQI fill) on tall
+    // cards. Humidity + cloud are natural 0–100 metrics; precip-heavy cloud
+    // reads at a glance without another number.
+    const miniBar = (label, pct) => `<div class="wx-bar-row">
+      <span class="wx-bar-l">${label}</span>
+      <div class="tr-bar wx-bar"><div class="tr-bar-fill face-tone-g50" style="width:${Math.max(2, Math.min(100, pct))}%"></div><div class="tr-bar-track face-tone-g15"></div></div>
+      <span class="wx-bar-v">${Math.round(pct)}%</span>
+    </div>`;
+    const bars = (showFoot && Number.isFinite(w.humidity)) ? `<div class="wx-bars">
+      ${miniBar('Humidity', w.humidity)}
+      ${Number.isFinite(w.cloudCover) ? miniBar('Cloud', w.cloudCover) : ''}
+    </div>` : '';
     return `<div class="tr-card${staleClass}">
       <div class="tr-titlebar"><span>Weather</span><span class="tr-meta">${city || (w.stale ? 'cached' : '')}</span></div>
       <div class="tr-body">
@@ -196,6 +208,7 @@ export function render(ctx) {
           <div class="tr-lv tr-lv-xl"><div class="tr-v">${w.temp}<span class="tr-deg">°${units}</span></div><div class="tr-l">${w.desc || 'Temperature'}</div></div>
         </div>
         ${cells}
+        ${bars}
       </div>
       ${showFoot ? `<div class="tr-foot"><span class="tr-foot-name">${icon(w, 14)} Weather</span><span>${w.stale ? 'cached' : 'now'}</span></div>` : ''}
     </div>`;

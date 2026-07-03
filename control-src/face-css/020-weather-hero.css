@@ -115,3 +115,36 @@
   gap: var(--face-gap-8);
 }
 .hero-minimal .weather-temp { margin-top: 0; }
+
+/* ----- dithered condition bars (trmnl card) ----- */
+.wx-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: var(--face-rule) dotted var(--face-ink);
+  padding-top: 8px;
+  margin-top: 2px;
+}
+.wx-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--face-grotesk);
+}
+.wx-bar-l {
+  flex: none;
+  min-width: 64px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.wx-bar { flex: 1; height: 12px; min-height: 12px; }
+.wx-bar-v {
+  flex: none;
+  min-width: 36px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

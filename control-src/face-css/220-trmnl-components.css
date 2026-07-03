@@ -183,9 +183,11 @@
  * side of the ladder) instead of floating as tiny text. */
 .tr-row .tr-row-title { font-size: var(--row-font, 14px); font-weight: 600; line-height: 1.15; }
 .tr-row .tr-row-sub { font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
-/* "now"/active row: solid left accent bar (on the inner, so it hugs the
- * text) — no dither fill behind the words. */
-.tr-row.tr-row-now .tr-row-inner { border-left-color: var(--face-ink); }
+/* "now"/next-up row: solid left accent bar (on the inner, so it hugs the
+ * text) — no dither fill behind the words. Rides the red plane on the
+ * 3-color panel so the soonest event pops; greyscales to black on BW.
+ * eink-lint-allow: 3-color red token. */
+.tr-row.tr-row-now .tr-row-inner { border-left-color: var(--face-red); }
 /* Few events → bands grow to fill the card so there's no big empty gap
  * below the last row; content stays vertically centered in each band and
  * the accent bar hugs its text (lives on .tr-row-inner, not the band).

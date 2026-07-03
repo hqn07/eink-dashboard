@@ -119,7 +119,7 @@ export function render(ctx) {
            ${ageA ? `<div class="tr-stat"><div class="tr-sv">${escapeHtml(ageA.replace(' ago', ''))}</div><div class="tr-sl">Updated</div></div>` : ''}
          </div>` : '';
     return `<div class="tr-card${low}">
-      <div class="tr-titlebar"><span>Battery</span><span class="tr-meta">${charging ? 'charging' : status.toLowerCase()}</span></div>
+      <div class="tr-titlebar"><span>Battery</span><span class="tr-meta${low}">${charging ? 'charging' : status.toLowerCase()}</span></div>
       <div class="tr-body" style="gap:10px">
         <div style="display:flex;align-items:flex-end;gap:18px">
           <div class="tr-lv tr-lv-md"><div class="tr-v">${pct}<span class="tr-deg">%</span></div><div class="tr-l">Charge</div></div>

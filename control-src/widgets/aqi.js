@@ -124,7 +124,7 @@ export function render(ctx) {
           return `<div class="tr-stat"><div class="tr-sv">${escapeHtml(p.slice(i + 1))}</div><div class="tr-sl">${escapeHtml(p.slice(0, i))}</div></div>`;
         }).join('')}</div>` : '';
     return `<div class="tr-card">
-      <div class="tr-titlebar"><span>${escapeHtml(titleLabel)}</span><span class="tr-meta">${escapeHtml(a.label || '')}${a.stale ? ' · old' : ''}</span></div>
+      <div class="tr-titlebar"><span>${escapeHtml(titleLabel)}</span><span class="tr-meta${danger}">${escapeHtml(a.label || '')}${a.stale ? ' · old' : ''}</span></div>
       <div class="tr-body" style="justify-content:center;gap:10px">
         <div class="tr-lv"><div class="tr-v" style="${redStyle}">${a.aqi}</div><div class="tr-l">US AQI</div></div>
         ${bar}
