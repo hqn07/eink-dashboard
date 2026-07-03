@@ -1003,10 +1003,16 @@ app.use('/static', express.static(path.join(__dirname, 'public')));
 const rateLimit = require('express-rate-limit');
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  limit: 60,
+  // Raised from 60: the editor is chatty — it refetches /api/preview-data on
+  // every edit, so a normal editing burst blew past 60/min and rate-limited
+  // the user's own config save. 300/min still bounds real abuse.
+  limit: 300,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  message: { error: 'rate_limited' }
+  message: { error: 'rate_limited' },
+  // The live-preview read is admin-gated + fires on every keystroke/drag;
+  // don't let it eat the budget that saves need.
+  skip: (req) => req.path === '/preview-data'
 });
 app.use('/api/', apiLimiter);
 
