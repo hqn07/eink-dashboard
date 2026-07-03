@@ -15,6 +15,11 @@ export function cellClasses(s) {
   // BW panels (greyscales to dark). Part of the layered red model with
   // the semantic auto-red rules and the .face-red base utilities.
   if (s && s.accent === 'red') out.push('cell-accent-red');
+  // Optional per-tile frame around the whole card — reuses the tested
+  // .face-frame-* border-image utilities (075-border-styles.css).
+  if (s && s.frame === 'dither')      out.push('face-frame', 'face-frame-g50');
+  if (s && s.frame === 'dither-pink') out.push('face-frame', 'face-frame-r50');
+  if (s && s.frame === 'solid')       out.push('face-frame', 'face-frame-solid');
   return out;
 }
 

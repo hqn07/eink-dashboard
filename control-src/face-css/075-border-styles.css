@@ -56,3 +56,7 @@
 .tr-card.tr-card--framed.face-frame-g50,
 .tr-card.tr-card--framed.face-frame-g25,
 .tr-card.tr-card--framed.face-frame-r50 { border-color: var(--face-ink); }
+
+/* A .face-frame-* utility applied to a grid cell (per-tile Frame setting)
+ * must inset the border so the card doesn't overflow its cell. */
+.cell.face-frame { box-sizing: border-box; }

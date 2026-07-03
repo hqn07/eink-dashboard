@@ -291,6 +291,18 @@ function TypographyFields({ values, onChange }) {
         ]}
         onChange={(x) => patch({ theme: x })}
       />
+      <SelectField
+        label="Frame"
+        value={v.frame || 'none'}
+        options={[
+          { value: 'none',        label: 'None' },
+          { value: 'dither',      label: 'Dithered — gray band' },
+          { value: 'dither-pink', label: 'Dithered — pink band (3-color)' },
+          { value: 'solid',       label: 'Solid rule' }
+        ]}
+        onChange={(x) => patch({ frame: x })}
+        help="A border around the whole tile."
+      />
     </>
   );
 }

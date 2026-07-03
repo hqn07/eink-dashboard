@@ -1587,6 +1587,10 @@ img.icon { object-fit: contain; }
 .tr-card.tr-card--framed.face-frame-g25,
 .tr-card.tr-card--framed.face-frame-r50 { border-color: var(--face-ink); }
 
+/* A .face-frame-* utility applied to a grid cell (per-tile Frame setting)
+ * must inset the border so the card doesn't overflow its cell. */
+.cell.face-frame { box-sizing: border-box; }
+
 /* ============ AUTOFIT TEXT ============
  * Elements with this class are sized by JS (autofitText) to the largest
  * font size that fits their bounding box. They must have an explicit
