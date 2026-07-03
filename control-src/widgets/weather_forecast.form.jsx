@@ -44,16 +44,24 @@ export function Form({ values, patch, onChange, fields }) {
           placeholder="N-DAY OUTLOOK"
           help="Leave blank for the default (varies with day count)."
         />
-        <TextField
-          label="Days to show (1–7 · blank = auto by tile height)"
-          type="number"
-          value={v.forecastDays ?? ''}
-          defaultValue={defaults.forecastDays}
-          onChange={(x) => patch({
-            forecastDays: Number.isFinite(x) ? Math.max(1, Math.min(7, x)) : null
-          })}
-          help="Open-Meteo returns up to 7 days; larger tiles fit more."
+        <SelectField
+          label="Days to show"
+          value={Number.isFinite(v.forecastDays) ? String(v.forecastDays) : 'auto'}
+          onChange={(x) => patch({ forecastDays: x === 'auto' ? null : parseInt(x, 10) })}
+          options={[
+            { value: 'auto', label: 'Auto (fit tile height)' },
+            { value: '3', label: '3 days' },
+            { value: '4', label: '4 days' },
+            { value: '5', label: '5 days' },
+            { value: '6', label: '6 days' },
+            { value: '7', label: '7 days' },
+            { value: '8', label: '8 days (with today)' }
+          ]}
+          help="Auto scales with the tile. 8 needs Include today on."
         />
+        <ToggleField label="Include today"
+          value={v.includeToday === true} defaultValue={defaults.includeToday}
+          onChange={(x) => patch({ includeToday: x })} />
         <ToggleField label="Day name (MON / TUE / …)"
           value={v.showDayName !== false} defaultValue={defaults.showDayName}
           onChange={(x) => patch({ showDayName: x })} />

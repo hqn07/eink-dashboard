@@ -170,7 +170,7 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
     hourly: 'temperature_2m,weather_code,precipitation_probability,cloud_cover',
     daily: 'temperature_2m_max,temperature_2m_min,weather_code,sunrise,sunset,precipitation_probability_max',
     timezone: 'auto',
-    forecast_days: '7',
+    forecast_days: '8',
     temperature_unit: tempUnit,
     wind_speed_unit: windUnitParam
   });
@@ -222,10 +222,13 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
       }
     }
 
-    // Full 7-day forecast (some renderers only show 3; widget can decide).
+    // Full forecast including today at index 0 (isToday flag). The forecast
+    // widget decides whether to show today and how many days; keeping today
+    // in the array lets "include today" be a pure render toggle. We request 8
+    // days so excluding today still leaves 7.
     const forecast = [];
     const dlen = (daily.time || []).length;
-    for (let i = 1; i < Math.min(dlen, 8); i++) {
+    for (let i = 0; i < Math.min(dlen, 8); i++) {
       const f = wmo(daily.weather_code?.[i]);
       const dHi = daily.temperature_2m_max?.[i];
       const dLo = daily.temperature_2m_min?.[i];
@@ -236,7 +239,8 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
         lo: Number.isFinite(dLo) ? Math.round(dLo) : '--',
         precip: Number.isFinite(dPrecip) ? Math.round(dPrecip) : 0,
         main: f.main,
-        desc: f.desc
+        desc: f.desc,
+        isToday: i === 0
       });
     }
 

@@ -43,6 +43,7 @@ export const def = {
     lon:  (ctx && Number.isFinite(ctx.lon)) ? ctx.lon : null,
     unitsOverride: 'inherit',
     forecastDays: null,
+    includeToday: false,
     title: '',
     precipMode: 'auto',     // 'auto' | 'always' | 'never'
     hiloStyle:  'stack',    // 'stack' | 'inline' | 'arrows'
@@ -87,13 +88,18 @@ export function render(ctx) {
     ? (cw < 8 ? 2 : cw < 12 ? 3 : cw < 16 ? 4 : cw < 20 ? 5 : cw < 24 ? 6 : 7)
     : (ch < 4 ? 1 : ch < 6 ? 2 : ch < 8 ? 3 : ch < 10 ? 4 : ch < 12 ? 5 : 7);
   const days = Number.isFinite(userDays)
-    ? Math.max(1, Math.min(7, userDays))
+    ? Math.max(1, Math.min(8, userDays))
     : autoDays;
   const precipMode = s.precipMode || 'auto';
   const hiloStyle = s.hiloStyle || 'stack';
   const showIcons   = s.showIcons   !== false;
   const showDayName = s.showDayName !== false;
-  const list = w.forecast.slice(0, days);
+  // Today lives at forecast[0] (isToday). Drop it unless the tile opts in;
+  // when shown, relabel it "TODAY".
+  const includeToday = s.includeToday === true;
+  let source = Array.isArray(w.forecast) ? w.forecast : [];
+  if (!includeToday) source = source.filter(f => !f.isToday);
+  const list = source.slice(0, days).map(f => (f.isToday ? { ...f, name: 'TODAY' } : f));
   const titleLabel = (s.title && String(s.title).trim())
     ? String(s.title).trim()
     : `${list.length}-DAY OUTLOOK`;
@@ -106,15 +112,12 @@ export function render(ctx) {
     return `<div class="tr-card">
       <div class="tr-titlebar"><span>Forecast</span><span class="tr-meta">${list.length}-day</span></div>
       <div class="tr-body" style="padding:4px 14px;gap:0"><div class="tr-rows">
-        ${list.map(f => `<div class="tr-row" style="justify-content:space-between;align-items:center">
-          <div style="display:flex;align-items:center;gap:10px;min-width:0">
-            <span style="font-weight:700;font-size:13px;min-width:42px">${escapeHtml(f.name)}</span>
-            ${showIcons ? `<span style="width:26px;height:26px;flex:none;display:inline-flex">${icon(f.main, 26)}</span>` : ''}
-          </div>
-          <div style="display:flex;align-items:center;gap:12px">
-            ${showPrecip && Number.isFinite(f.precip) && f.precip > 0 ? `<span style="font-size:12px" class="fc-precip${semRed(s, f.precip >= 60)}">${f.precip}%</span>` : ''}
-            <span style="font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap">${f.hi}° <span style="font-weight:400">${f.lo}°</span></span>
-          </div>
+        ${list.map(f => `<div class="tr-row" style="align-items:center;gap:10px">
+          <span style="font-weight:700;font-size:13px;flex:none;min-width:42px">${escapeHtml(f.name)}</span>
+          ${showIcons ? `<span class="fc-tr-icon" style="width:26px;height:26px;flex:none;display:inline-flex;overflow:hidden">${icon(f.main, 26)}</span>` : ''}
+          <span style="flex:1 1 auto"></span>
+          ${showPrecip && Number.isFinite(f.precip) && f.precip > 0 ? `<span style="font-size:12px;flex:none" class="fc-precip${semRed(s, f.precip >= 60)}">${f.precip}%</span>` : ''}
+          <span style="font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;flex:none">${f.hi}° <span style="font-weight:400">${f.lo}°</span></span>
         </div>`).join('')}
       </div></div>
     </div>`;
