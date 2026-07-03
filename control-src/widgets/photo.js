@@ -54,7 +54,7 @@ export function render(ctx) {
   const src = photo && photo.src;
   if (!src) {
     const hasSource = (s.imageUrl && s.imageUrl.trim()) || (s.imageData && s.imageData.trim());
-    return placeholder('PHOTO', hasSource ? 'Image failed' : 'Add a photo', 'msg', { cellW, cellH });
+    return placeholder('PHOTO', hasSource ? 'Image failed' : 'Add a photo', 'msg', { cellW, cellH }, hasSource ? 'nodata' : 'setup');
   }
 
   const variant = ctx.variant || (def.variants[s.variant] ? s.variant : 'full');

@@ -71,7 +71,7 @@ export function render(ctx) {
     const hasLoc =
       (settings && Number.isFinite(settings.lat) && Number.isFinite(settings.lon)) ||
       (cfg && Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon));
-    return placeholder('FORECAST', hasLoc ? 'Data unavailable' : 'Set your location in settings', 'weather', { cellW, cellH });
+    return placeholder('FORECAST', hasLoc ? 'Forecast unavailable' : 'Set your location', 'weather', { cellW, cellH }, hasLoc ? 'nodata' : 'setup');
   }
   const s = settings || {};
   const ch = cellH || 0, cw = cellW || 0;

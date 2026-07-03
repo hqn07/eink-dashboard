@@ -42,7 +42,7 @@ export function render(ctx) {
   const { onThisDay: d, settings, cellW, cellH, density } = ctx;
   const s = settings || {};
   if (!d || !Array.isArray(d.events) || !d.events.length) {
-    return placeholder('ON THIS DAY', 'No data', 'msg', { cellW, cellH });
+    return placeholder('ON THIS DAY', 'No data', 'msg', { cellW, cellH }, 'nodata');
   }
   const variant = ctx.variant || (def.variants[s.variant] ? s.variant : 'list');
   const tier = pickTier(cellW || 0, cellH || 0, density);

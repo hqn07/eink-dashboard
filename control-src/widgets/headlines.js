@@ -1,4 +1,4 @@
-import { escapeHtml, pickTier, placeholder } from './_shared.js';
+import { escapeHtml, pickTier, placeholder, staleMark } from './_shared.js';
 
 // Headlines — recent items from an RSS/Atom feed or Hacker News. The feed
 // is fetched + parsed server-side (widgets/headlines.js) and arrives as
@@ -54,7 +54,7 @@ export function render(ctx) {
     ? s.title.trim()
     : (headlines && headlines.source) || 'HEADLINES';
   if (!headlines || !Array.isArray(headlines.items) || !headlines.items.length) {
-    return placeholder('HEADLINES', headlines ? 'No items' : 'Add a feed', 'msg', { cellW, cellH });
+    return placeholder('HEADLINES', headlines ? 'No headlines' : 'Add a feed', 'msg', { cellW, cellH }, headlines ? 'empty' : 'setup');
   }
 
   const tier = pickTier(cellW || 0, cellH || 0, density);
@@ -63,7 +63,7 @@ export function render(ctx) {
   const items = headlines.items.slice(0, maxRows);
   const showAge = s.showAge !== false && tier !== 'tiny';
   const variant = ctx.variant || (def.variants[s.variant] ? s.variant : 'trmnl');
-  const stale = headlines.stale ? ' <span class="hl-stale">·stale</span>' : '';
+  const stale = staleMark(headlines.stale);
 
   const ageEl = (it) => (showAge && it.age) ? `<span class="hl-age">${escapeHtml(it.age)}</span>` : '';
 

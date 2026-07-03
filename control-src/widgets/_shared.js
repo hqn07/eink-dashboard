@@ -34,26 +34,36 @@ export const PLACEHOLDER_ICONS = {
   msg:      '<svg viewBox="0 0 64 64"><rect x="8" y="14" width="48" height="36" fill="none" stroke="#000" stroke-width="4"/><line x1="16" y1="26" x2="48" y2="26" stroke="#000" stroke-width="4"/><line x1="16" y1="34" x2="48" y2="34" stroke="#000" stroke-width="4"/><line x1="16" y1="42" x2="36" y2="42" stroke="#000" stroke-width="4"/></svg>'
 };
 
-// "Setup needed" placeholder shared by every widget that can render
-// in a not-yet-configured state. Pass the render ctx (cellW/cellH) so
-// tiny tiles degrade gracefully instead of colliding: a 4×2 battery
-// tile can't fit icon + hint + badge, so it gets title-only; small
-// tiles keep the icon but drop the hint/badge.
-export function placeholder(title, hint, iconKey, ctx) {
+// Empty-state placeholder shared by every widget. `kind` picks the badge so
+// the panel tells the truth: a not-yet-configured tile says SETUP NEEDED, a
+// configured tile whose upstream is down says NO DATA / OFFLINE, and a valid
+// empty result (no events, all tasks done) shows no badge. Pass the render
+// ctx (cellW/cellH) so tiny tiles degrade gracefully: a 4×2 tile gets
+// title-only; small tiles keep the icon but drop the hint/badge.
+const PLACEHOLDER_TAGS = { setup: 'SETUP NEEDED', nodata: 'NO DATA', offline: 'OFFLINE', empty: '' };
+export function placeholder(title, hint, iconKey, ctx, kind = 'setup') {
   const w = (ctx && Number.isFinite(ctx.cellW)) ? ctx.cellW : 99;
   const h = (ctx && Number.isFinite(ctx.cellH)) ? ctx.cellH : 99;
   const xs = h <= 2 || w <= 4;          // title only
   const sm = !xs && (h <= 3 || w <= 6); // icon + title, no hint/badge
   const cls = xs ? ' ph-xs' : sm ? ' ph-sm' : '';
   const ic = !xs && iconKey && PLACEHOLDER_ICONS[iconKey];
+  const tag = PLACEHOLDER_TAGS[kind] != null ? PLACEHOLDER_TAGS[kind] : PLACEHOLDER_TAGS.setup;
   return `
     <div class="widget widget-placeholder${cls}">
       ${ic ? `<div class="ph-icon">${ic}</div>` : ''}
       <div class="ph-title">${title}</div>
       ${xs || sm ? '' : `<div class="ph-hint">${hint}</div>
-      <div class="ph-tag">SETUP NEEDED</div>`}
+      ${tag ? `<div class="ph-tag">${tag}</div>` : ''}`}
     </div>
   `;
+}
+
+// Uniform "stale" marker — one class so every widget's cached-data badge
+// looks the same (replaces the per-widget aqi-stale/hl-stale/… variants).
+// Returns a leading-space fragment ready to drop into a title/meta line.
+export function staleMark(isStale) {
+  return isStale ? ' <span class="face-stale">stale</span>' : '';
 }
 
 // Semantic auto-red helper. Returns ' face-red' (a leading-space class

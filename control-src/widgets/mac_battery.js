@@ -46,7 +46,7 @@ export function render(ctx) {
   const titleLabel = (typeof s.title === 'string' && s.title.trim())
     ? s.title.trim()
     : 'MAC BATTERY';
-  if (!macBattery) return placeholder(titleLabel.split(/\s+/)[0] || 'MAC', 'OFFLINE', 'msg', { cellW, cellH });
+  if (!macBattery) return placeholder(titleLabel.split(/\s+/)[0] || 'MAC', 'Mac offline', 'msg', { cellW, cellH }, 'offline');
   const variant = ctx.variant
     || (def.variants[s.variant] ? s.variant : 'gauge');
   const charging = /charg/i.test(macBattery.state);

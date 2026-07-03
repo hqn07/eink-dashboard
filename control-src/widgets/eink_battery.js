@@ -71,7 +71,7 @@ export function render(ctx) {
   const titleLabel = (typeof s.title === 'string' && s.title.trim())
     ? s.title.trim() : 'E-INK BATTERY';
   if (!battery || !Number.isFinite(battery.pct)) {
-    return placeholder(titleLabel.split(/\s+/)[0] || 'BATTERY', 'NO DATA', 'msg', { cellW, cellH });
+    return placeholder(titleLabel.split(/\s+/)[0] || 'BATTERY', 'No data', 'msg', { cellW, cellH }, 'nodata');
   }
   const variant = ctx.variant
     || (def.variants[s.variant] ? s.variant : 'gauge');

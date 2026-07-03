@@ -1,4 +1,4 @@
-import { escapeHtml, pickTier, placeholder, semRed } from './_shared.js';
+import { escapeHtml, pickTier, placeholder, semRed, staleMark } from './_shared.js';
 
 // Transit — NYC MTA subway real-time arrivals. Fetched + decoded
 // server-side (widgets/transit.js) to ctx.transit = { stop, items:[{line,
@@ -53,8 +53,9 @@ export function render(ctx) {
   const s = settings || {};
   const titleLabel = (typeof s.title === 'string' && s.title.trim()) ? s.title.trim() : 'TRANSIT';
   if (!transit || !Array.isArray(transit.items) || !transit.items.length) {
-    const hint = transit ? 'No trains' : (s.stopId ? 'No data' : 'Add a stop');
-    return placeholder('TRANSIT', hint, 'msg', { cellW, cellH });
+    const hint = transit ? 'No trains soon' : (s.stopId ? 'No data' : 'Add a stop');
+    const kind = transit ? 'empty' : (s.stopId ? 'nodata' : 'setup');
+    return placeholder('TRANSIT', hint, 'msg', { cellW, cellH }, kind);
   }
 
   const tier = pickTier(cellW || 0, cellH || 0, density);
@@ -62,7 +63,7 @@ export function render(ctx) {
   const maxRows = Math.min(wantCount, ROWS_BY_TIER[tier] || 4, transit.items.length);
   const items = transit.items.slice(0, maxRows);
   const variant = ctx.variant || (def.variants[s.variant] ? s.variant : 'trmnl');
-  const stale = transit.stale ? ' <span class="tr-t-stale">·stale</span>' : '';
+  const stale = staleMark(transit.stale);
   const dir = (transit.stop || '').slice(-1);
   const dirLabel = dir === 'N' ? 'northbound' : dir === 'S' ? 'southbound' : '';
 

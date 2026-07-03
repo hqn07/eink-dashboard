@@ -120,7 +120,7 @@ export function render(ctx) {
     const hasLoc =
       (settings && Number.isFinite(settings.lat) && Number.isFinite(settings.lon)) ||
       (cfg && Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon));
-    return placeholder('WEATHER', hasLoc ? 'Data unavailable' : 'Set your location in settings', 'weather', { cellW, cellH });
+    return placeholder('WEATHER', hasLoc ? 'Weather unavailable' : 'Set your location', 'weather', { cellW, cellH }, hasLoc ? 'nodata' : 'setup');
   }
   const w = weather;
   const s = settings || {};

@@ -120,7 +120,7 @@ export function render(ctx) {
   const titleLabel = (settings && typeof settings.title === 'string' && settings.title.trim())
     ? settings.title.trim()
     : 'NOW PLAYING';
-  if (!macNowPlaying) return placeholder(titleLabel, 'MAC OFFLINE', 'msg', { cellW, cellH });
+  if (!macNowPlaying) return placeholder(titleLabel, 'Mac offline', 'msg', { cellW, cellH }, 'offline');
   const np = macNowPlaying;
   const tier = pickTier(cellW || 0, cellH || 0, density);
   // Inline SVG instead of Unicode glyphs so the 1-bit threshold pass

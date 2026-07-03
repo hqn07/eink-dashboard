@@ -1,4 +1,4 @@
-import { escapeHtml, pickTier, placeholder, semRed } from './_shared.js';
+import { escapeHtml, pickTier, placeholder, semRed, staleMark } from './_shared.js';
 
 // Tasks — a to-do list from Todoist or an iCal VTODO feed. Fetched +
 // normalized server-side (widgets/tasks.js) to ctx.tasks = { items:[{title,
@@ -56,7 +56,7 @@ export function render(ctx) {
   const titleLabel = (typeof s.title === 'string' && s.title.trim()) ? s.title.trim() : 'TASKS';
   if (!tasks || !Array.isArray(tasks.items) || !tasks.items.length) {
     const hint = tasks ? 'All clear' : (s.source === 'ical' ? 'Add a feed' : 'Add a token');
-    return placeholder('TASKS', hint, 'msg', { cellW, cellH });
+    return placeholder('TASKS', hint, 'msg', { cellW, cellH }, tasks ? 'empty' : 'setup');
   }
 
   const tier = pickTier(cellW || 0, cellH || 0, density);
@@ -65,7 +65,7 @@ export function render(ctx) {
   const items = tasks.items.slice(0, maxRows);
   const showDue = s.showDue !== false && tier !== 'tiny' && tier !== 'compact';
   const variant = ctx.variant || (def.variants[s.variant] ? s.variant : 'trmnl');
-  const stale = tasks.stale ? ' <span class="task-stale">·stale</span>' : '';
+  const stale = staleMark(tasks.stale);
 
   const row = (it) => {
     const urgent = it.priority === 1 || it.due === 'overdue';

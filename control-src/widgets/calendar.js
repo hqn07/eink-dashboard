@@ -53,9 +53,9 @@ export function render(ctx) {
   const titleLabel = (typeof s.title === 'string' && s.title.trim())
     ? s.title.trim()
     : 'UPCOMING';
-  if (!urls.length) return placeholder(titleLabel, 'Paste an iCal URL in settings', 'calendar', { cellW, cellH });
+  if (!urls.length) return placeholder(titleLabel, 'Add a calendar feed', 'calendar', { cellW, cellH }, 'setup');
   const all = events || [];
-  if (!all.length) return placeholder(titleLabel, 'No events in the next 14 days', 'calendar', { cellW, cellH });
+  if (!all.length) return placeholder(titleLabel, 'No events in the next 14 days', 'calendar', { cellW, cellH }, 'empty');
   // variant wins; legacy tiles fall back to settings.viewMode, then the
   // ctx-resolved default. (buildTileCtx already maps settings.variant →
   // ctx.variant, but viewMode-only tiles need the explicit forward map.)

@@ -62,7 +62,7 @@ export function render(ctx) {
   const titleLabel = (typeof s.title === 'string' && s.title.trim())
     ? s.title.trim() : 'AIR QUALITY';
   if (!a || !Number.isFinite(a.aqi)) {
-    return placeholder(titleLabel.split(/\s+/)[0] || 'AQI', 'NO DATA', 'msg', { cellW, cellH });
+    return placeholder(titleLabel.split(/\s+/)[0] || 'AQI', 'No data', 'msg', { cellW, cellH }, 'nodata');
   }
   const variant = ctx.variant || (def.variants[s.variant] ? s.variant : 'big');
   const tier = pickTier(cellW || 0, cellH || 0, density);

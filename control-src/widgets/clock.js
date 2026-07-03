@@ -43,7 +43,7 @@ export const def = {
 export function render(ctx) {
   const { clockNow, settings, cellW, cellH, density } = ctx;
   if (!clockNow) {
-    return placeholder('CLOCK', 'Waiting for time', 'msg', { cellW, cellH });
+    return placeholder('CLOCK', 'Waiting for time', 'msg', { cellW, cellH }, 'nodata');
   }
   const c = clockNow;
   const s = settings || {};

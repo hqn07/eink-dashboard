@@ -191,3 +191,12 @@
  * the accent bar hugs its text (lives on .tr-row-inner, not the band).
  * (space-aware: fill under-full; the clamp ladder handles over-full.) */
 .tr-rows-fill .tr-row { flex: 1 1 0; min-height: 0; }
+
+/* Uniform stale-data marker (staleMark() in _shared) — one look for every
+ * widget's cached-data badge, replacing the per-widget *-stale variants.
+ * No opacity (dithers to noise); reads secondary via size + tracking. */
+.face-stale {
+  font-size: 0.8em;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+}
