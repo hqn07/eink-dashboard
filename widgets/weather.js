@@ -5,7 +5,16 @@
 const { fetchWithTimeout } = require('./_fetch');
 const status = require('./_status');
 const CACHE_MS = 10 * 60 * 1000;
-const cacheMap = new Map(); // key: "lat,lon|F" → { at, data }
+// After a failed/aborted fetch we cache the stub for a short window so an
+// Open-Meteo outage doesn't make EVERY render re-wait the timeout — that
+// stacks two fetch phases past Puppeteer's 15 s navigation budget and 500s
+// the display. With this, one render per minute retries; the rest serve the
+// cached stub instantly and render "NO DATA" gracefully.
+const NEG_CACHE_MS = 60 * 1000;
+// Hard cap the upstream wait well under the render budget so even a retry
+// leaves room for the screenshot.
+const FETCH_MS = 5000;
+const cacheMap = new Map(); // key: "lat,lon|F" → { at, data, neg? }
 
 const WIND_DIRS = ['N','NE','E','SE','S','SW','W','NW'];
 function windDir(deg) {
@@ -113,7 +122,7 @@ async function geocodeCity(city) {
     // to nail it down with lat/lon.
     const cleanName = city.split(',')[0].trim();
     const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cleanName)}&count=1&language=en&format=json`;
-    const r = await fetchWithTimeout(url);
+    const r = await fetchWithTimeout(url, {}, FETCH_MS);
     if (!r.ok) return null;
     const data = await r.json();
     const first = data && data.results && data.results[0];
@@ -155,7 +164,8 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
 
   const cacheKey = `${lat.toFixed(3)},${lon.toFixed(3)}|${u}`;
   const cached = cacheMap.get(cacheKey);
-  if (cached && (Date.now() - cached.at) < CACHE_MS) {
+  const ttl = cached && cached.neg ? NEG_CACHE_MS : CACHE_MS;
+  if (cached && (Date.now() - cached.at) < ttl) {
     status.cacheHit('weather');
     return cached.data;
   }
@@ -176,13 +186,15 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
   });
 
   try {
-    const r = await fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?${params}`);
+    const r = await fetchWithTimeout(`https://api.open-meteo.com/v1/forecast?${params}`, {}, FETCH_MS);
     if (!r.ok) {
       console.warn('Open-Meteo fetch non-OK:', r.status);
       status.record('weather', { ok: false, ms: Date.now() - t0, err: `HTTP ${r.status}` });
-      // Same stale-marking as the catch path below — expired cache is
-      // better than NO DATA, but renderers should know it's old.
-      return cached?.data ? { ...cached.data, stale: true } : stubData(u);
+      // Expired cache is better than NO DATA, but mark it stale. Negative-
+      // cache so we don't re-hammer a failing upstream on every render.
+      const fail = cached?.data ? { ...cached.data, stale: true } : stubData(u);
+      cacheMap.set(cacheKey, { at: Date.now(), data: fail, neg: true });
+      return fail;
     }
     const data = await r.json();
     const cur = data.current || {};
@@ -278,7 +290,9 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
   } catch (err) {
     console.error('Open-Meteo error:', err.message);
     status.record('weather', { ok: false, ms: Date.now() - t0, err: err.message || String(err) });
-    return cached?.data ? { ...cached.data, stale: true } : stubData(u);
+    const fail = cached?.data ? { ...cached.data, stale: true } : stubData(u);
+    cacheMap.set(cacheKey, { at: Date.now(), data: fail, neg: true });
+    return fail;
   }
 }
 
