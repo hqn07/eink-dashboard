@@ -67,6 +67,19 @@ export function semRed(s, condition) {
   return (condition && (!s || s.semanticRed !== false)) ? ' face-red' : '';
 }
 
+// Tidy a raw geocoded place string for display: normalize comma spacing and
+// drop a trailing country token so "GAINESVILLE,FLORIDA,US" reads as
+// "Gainesville, Florida". Only strips an explicit country (US/USA/UK/…) so
+// state/territory abbreviations like "DC" survive.
+// Note: no bare 2-letter codes that collide with US state abbrevs (CA=California,
+// GB is safe, CA/DC left alone). Keep this list to unambiguous country names.
+const COUNTRY_TOKENS = /^(us|usa|u\.s\.a?\.?|united states|uk|u\.k\.|united kingdom)$/i;
+export function tidyPlace(str) {
+  const parts = String(str || '').split(',').map(p => p.trim()).filter(Boolean);
+  if (parts.length > 1 && COUNTRY_TOKENS.test(parts[parts.length - 1])) parts.pop();
+  return parts.join(', ');
+}
+
 // Minimal inline markdown: caller must escapeHtml first to keep this safe.
 export function md(s) {
   return String(s || '')

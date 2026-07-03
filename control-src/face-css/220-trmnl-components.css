@@ -30,7 +30,10 @@
   flex: none;
 }
 .tr-titlebar > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.tr-titlebar .tr-meta { font-weight: 400; letter-spacing: 1px; flex: none; }
+/* Label takes the room; meta (location / count / "6-DAY") ellipsizes and is
+ * capped so a long city name truncates instead of overflowing the card. */
+.tr-titlebar > span:first-child { flex: 1 1 auto; }
+.tr-titlebar .tr-meta { font-weight: 400; letter-spacing: 1px; flex: 0 1 auto; max-width: 62%; }
 
 .tr-body {
   flex: 1;

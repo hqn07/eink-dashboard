@@ -14,7 +14,7 @@
 // doesn't expose it). Default keeps the original feels/humid/wind/
 // cloud-or-rise behavior so old tiles look unchanged.
 
-import { pickTier, placeholder } from './_shared.js';
+import { pickTier, placeholder, tidyPlace } from './_shared.js';
 import { icon, alertBanner, sunBar, hourlyStrip } from './_weather_shared.js';
 
 const DEFAULT_STATS = ['feels', 'humid', 'wind', 'cloud_or_rise'];
@@ -171,7 +171,7 @@ export function render(ctx) {
     // TRMNL-inspired title-bar card: label/value hero + icon, a 2×2 cell
     // grid, and a footer. Uses the shared .tr-* components (Inter grotesk,
     // dashed dividers, dither chips). See docs/trmnl-inspired-design.md.
-    const city = (s.city || (cfg && cfg.city) || '').toString();
+    const city = tidyPlace((s.city || (cfg && cfg.city) || '').toString());
     const showCells = (cellH || 0) >= 6 && tier !== 'tiny';
     const showFoot  = (cellH || 0) >= 8;
     const heroPx = { tiny: 0, compact: 56, standard: 72, extended: 84, full: 84 }[tier] || 72;
