@@ -4,7 +4,7 @@ import React from 'react';
 // of the settings panel (above shared widget config like message,
 // todos, calendar). The DELETE action lives in the preview header
 // next to CLEAR/GRID so it's adjacent to the canvas it acts on.
-export default function ScreenPanel({ screen, isOverlap, onUpdate }) {
+export default function ScreenPanel({ screen, isOverlap, onUpdate, onOpenTimeline }) {
   const sch = screen.schedule || { enabled: false, from: '07:00', to: '22:00' };
   const setSch = (patch) => onUpdate({ schedule: { ...sch, ...patch } });
 
@@ -48,38 +48,31 @@ export default function ScreenPanel({ screen, isOverlap, onUpdate }) {
         />
       </label>
 
-      <div className="toggle-row">
-        <span className="toggle-label">Schedule this screen</span>
-        <div className={`toggle ${sch.enabled ? 'on' : ''}`} onClick={() => setSch({ enabled: !sch.enabled })} />
-      </div>
-
-      <div className={`sched-group ${sch.enabled ? '' : 'disabled'}`}>
-        <label className="field">
-          <span className="label">Active window (24h HH:MM)</span>
-          <div className="btn-row" style={{ marginTop: 0 }}>
-            <input
-              type="text"
-              value={sch.from || '07:00'}
-              onChange={e => setSch({ from: e.target.value })}
-              style={{ flex: 1 }}
-              placeholder="07:00"
-            />
-            <span style={{ alignSelf: 'center', color: 'var(--mute)' }}>→</span>
-            <input
-              type="text"
-              value={sch.to || '22:00'}
-              onChange={e => setSch({ to: e.target.value })}
-              style={{ flex: 1 }}
-              placeholder="22:00"
-            />
+      {/* Schedule is edited on the 24-hour timeline (single source of truth);
+          here we show a compact read-only summary + a jump to it. */}
+      <div className="field">
+        <span className="label">Schedule</span>
+        <div className="screen-sched-summary">
+          <span className="screen-sched-state">
+            {sch.enabled
+              ? (sch.from && sch.to && sch.from > sch.to
+                  ? `${sch.from}→24:00 · 00:00→${sch.to}`
+                  : `${sch.from} → ${sch.to}`)
+              : 'Always on (default fallback)'}
+          </span>
+          <div className="btn-row" style={{ marginTop: 0, gap: 6 }}>
+            <button type="button" className="btn btn-ghost btn-compact"
+              onClick={() => onOpenTimeline && onOpenTimeline()}>
+              Edit on timeline
+            </button>
+            {sch.enabled && (
+              <button type="button" className="btn btn-ghost btn-compact"
+                title="Unschedule — this screen falls back to the default"
+                onClick={() => setSch({ enabled: false })}>
+                Clear
+              </button>
+            )}
           </div>
-        </label>
-        <div className="terminal-line" style={{ fontSize: 10, marginTop: 4 }}>
-          {sch.enabled
-            ? (sch.from && sch.to && sch.from > sch.to
-                ? `> WRAPS_MIDNIGHT — ACTIVE ${sch.from} → 24:00 + 00:00 → ${sch.to}`
-                : `> ACTIVE ${sch.from} → ${sch.to}`)
-            : '> SCHEDULE_DISABLED'}
         </div>
         {isOverlap && (
           <div className="terminal-line invalid" style={{ marginTop: 4, color: 'var(--accent)' }}>

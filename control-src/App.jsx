@@ -722,6 +722,7 @@ export default function App() {
               screen={editScreen}
               isOverlap={overlapIds.has(editScreen.id)}
               onUpdate={(patch) => updateScreen(editScreen.id, patch)}
+              onOpenTimeline={() => setTimelineOpen(true)}
             />
           )}
         </aside>

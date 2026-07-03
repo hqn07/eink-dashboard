@@ -3537,3 +3537,15 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   cursor: pointer;
 }
 .wsm-secret-toggle:hover { border-color: var(--ink); }
+
+/* ---------- Screen schedule summary (declutter: timeline is the editor) ---------- */
+.screen-sched-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.screen-sched-state {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--ink);
+}
