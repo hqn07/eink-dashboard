@@ -158,7 +158,7 @@ function renderList(all, settings, titleLabel, cellW, cellH, density) {
     <div class="widget widget-cal">
       <div class="widget-title">${escapeHtml(titleLabel)}</div>
       ${order.map(s => `
-        <div class="cal-section-title">${s}</div>
+        <div class="cal-section-title${s === 'TODAY' ? semRed(settings, true) : ''}">${s}</div>
         ${groups[s].map(row).join('')}
       `).join('')}
     </div>

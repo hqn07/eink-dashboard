@@ -108,7 +108,7 @@ export function hourlyStrip(w) {
           ${icon(h.main, 22)}
           <div class="hr-temp">${h.temp}°</div>
           ${Number.isFinite(h.precip) && h.precip >= 10
-            ? `<div class="hr-precip-pct">${h.precip}%</div>`
+            ? `<div class="hr-precip-pct${h.precip >= 60 ? ' face-red' : ''}">${h.precip}%</div>`
             : ''}
         </div>
       `).join('')}

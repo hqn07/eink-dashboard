@@ -2,8 +2,11 @@
 .weather-alert {
   margin: 6px 0 4px;
   padding: 4px 8px;
-  border: 2px solid #000;
-  background: #000;
+  /* Semantic red: lands on the red plane (B panel), falls back to solid
+   * black on a BW panel (the classifier reads #d32f2f as black). White
+   * text stays white on both. eink-lint-allow: 3-color red token. */
+  border: 2px solid var(--face-red);
+  background: var(--face-red);
   color: #fff;
   display: flex;
   gap: var(--face-gap-8);
