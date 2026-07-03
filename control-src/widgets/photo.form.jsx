@@ -1,6 +1,12 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { renderDitherPreview } from '../dither-preview.js';
 
+// IMPORTANT: the top-level `Form` must stay a PURE function (no hooks) —
+// TabbedForm calls it directly to introspect its FormSection children. Any
+// state/refs/effects live in the nested components below, which React renders
+// normally, so hooks are legal there. (Calling a hook in `Form` itself throws
+// "Invalid hook call" and blanks the editor.)
+
 // Downscale an uploaded image to a modest max edge before storing it as a
 // base64 data URI in the tile settings. Config.json holds this string, so
 // keeping it small (max 640px, JPEG q0.82) avoids bloating the config with
@@ -29,17 +35,54 @@ function downscaleToDataURL(file, maxEdge = 640) {
   });
 }
 
-export function Form({ values, patch, onChange, fields }) {
-  const v = values || {};
-  const { TextField, TypographyFields, FormSection, defaults = {} } = fields;
+// Upload button + hidden file input (hooks live here, not in Form).
+function PhotoUpload({ v, patch }) {
   const fileRef = useRef(null);
-  const canvasRef = useRef(null);
   const [busy, setBusy] = useState(false);
+  const hasUpload = !!(v.imageData && v.imageData.trim());
+
+  const onFile = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setBusy(true);
+    try {
+      const dataURL = await downscaleToDataURL(file);
+      patch({ imageData: dataURL, imageUrl: '' }); // uploaded wins over URL
+    } catch {
+      /* ignore — user can retry */
+    } finally {
+      setBusy(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <button type="button" onClick={() => fileRef.current && fileRef.current.click()} disabled={busy} style={{ width: 220 }}>
+        {busy ? 'Processing…' : hasUpload ? 'Replace uploaded image' : 'Upload image…'}
+      </button>
+      <input ref={fileRef} type="file" accept="image/*" onChange={onFile} style={{ display: 'none' }} />
+      {hasUpload && (
+        <button type="button" onClick={() => patch({ imageData: '' })} style={{ width: 220 }}>
+          Remove uploaded image
+        </button>
+      )}
+      <span style={{ fontSize: 11, opacity: 0.7 }}>
+        {hasUpload
+          ? 'Using an uploaded image. It is dithered to 1-bit on the panel.'
+          : 'Upload a file, or paste an image URL below.'}
+      </span>
+    </div>
+  );
+}
+
+// Live 1-bit canvas preview (hooks live here).
+function DitherPreview({ v }) {
+  const canvasRef = useRef(null);
   const [previewOk, setPreviewOk] = useState(true);
   const hasUpload = !!(v.imageData && v.imageData.trim());
   const src = hasUpload ? v.imageData : (v.imageUrl && v.imageUrl.trim());
 
-  // Live 1-bit preview — re-dither on any image/tone/algorithm change.
   useEffect(() => {
     let cancelled = false;
     if (!canvasRef.current || !src) { setPreviewOk(false); return; }
@@ -52,56 +95,34 @@ export function Form({ values, patch, onChange, fields }) {
     return () => { cancelled = true; };
   }, [src, v.dither, v.brightness, v.contrast, v.fit]);
 
-  const onFile = async (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    setBusy(true);
-    try {
-      const dataURL = await downscaleToDataURL(file);
-      // Uploaded image wins over a URL, so clear the URL to avoid ambiguity.
-      patch({ imageData: dataURL, imageUrl: '' });
-    } catch {
-      /* ignore — user can retry */
-    } finally {
-      setBusy(false);
-      if (fileRef.current) fileRef.current.value = '';
-    }
-  };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <canvas
+        ref={canvasRef}
+        width={224}
+        height={140}
+        style={{ width: 224, height: 140, border: '2px solid #000', imageRendering: 'pixelated', background: '#fff', display: src ? 'block' : 'none' }}
+      />
+      {src && !previewOk && (
+        <span style={{ fontSize: 11, opacity: 0.7 }}>
+          Live preview unavailable for this URL (no cross-origin access). It will still dither correctly on the panel.
+        </span>
+      )}
+      {src && previewOk && (
+        <span style={{ fontSize: 11, opacity: 0.7 }}>Live 1-bit preview — approximates the panel.</span>
+      )}
+    </div>
+  );
+}
 
+export function Form({ values, patch, onChange, fields }) {
+  const v = values || {};
+  const { TextField, TypographyFields, FormSection, defaults = {} } = fields;
+  const hasUpload = !!(v.imageData && v.imageData.trim());
   return (
     <>
       <FormSection title="Image">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <button
-            type="button"
-            onClick={() => fileRef.current && fileRef.current.click()}
-            disabled={busy}
-            style={{ width: 220 }}
-          >
-            {busy ? 'Processing…' : hasUpload ? 'Replace uploaded image' : 'Upload image…'}
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            onChange={onFile}
-            style={{ display: 'none' }}
-          />
-          {hasUpload && (
-            <button
-              type="button"
-              onClick={() => patch({ imageData: '' })}
-              style={{ width: 220 }}
-            >
-              Remove uploaded image
-            </button>
-          )}
-          <span style={{ fontSize: 11, opacity: 0.7 }}>
-            {hasUpload
-              ? 'Using an uploaded image. It is dithered to 1-bit on the panel.'
-              : 'Upload a file, or paste an image URL below.'}
-          </span>
-        </div>
+        <PhotoUpload v={v} patch={patch} />
         <TextField
           label="Image URL"
           value={v.imageUrl || ''}
@@ -112,47 +133,17 @@ export function Form({ values, patch, onChange, fields }) {
         />
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
           Fit
-          <select
-            value={v.fit || 'cover'}
-            onChange={(e) => patch({ fit: e.target.value })}
-            style={{ width: 220 }}
-          >
+          <select value={v.fit || 'cover'} onChange={(e) => patch({ fit: e.target.value })} style={{ width: 220 }}>
             <option value="cover">Cover — fill tile, crop edges</option>
             <option value="contain">Contain — fit whole image</option>
           </select>
         </label>
       </FormSection>
       <FormSection title="Dithering">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <canvas
-            ref={canvasRef}
-            width={224}
-            height={140}
-            style={{
-              width: 224, height: 140,
-              border: '2px solid #000',
-              imageRendering: 'pixelated',
-              background: '#fff',
-              display: src ? 'block' : 'none'
-            }}
-          />
-          {src && !previewOk && (
-            <span style={{ fontSize: 11, opacity: 0.7 }}>
-              Live preview unavailable for this URL (no cross-origin access). It will still
-              dither correctly on the panel.
-            </span>
-          )}
-          {src && previewOk && (
-            <span style={{ fontSize: 11, opacity: 0.7 }}>Live 1-bit preview — approximates the panel.</span>
-          )}
-        </div>
+        <DitherPreview v={v} />
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
           Style
-          <select
-            value={v.dither || 'atkinson'}
-            onChange={(e) => patch({ dither: e.target.value })}
-            style={{ width: 220 }}
-          >
+          <select value={v.dither || 'atkinson'} onChange={(e) => patch({ dither: e.target.value })} style={{ width: 220 }}>
             <option value="atkinson">Atkinson — clean, TRMNL look (best for photos)</option>
             <option value="fs">Floyd–Steinberg — fine grain, more detail</option>
             <option value="threshold">Threshold — hard B/W, no dots (logos)</option>
@@ -160,38 +151,16 @@ export function Form({ values, patch, onChange, fields }) {
         </label>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
           Brightness ({Number.isFinite(v.brightness) ? v.brightness : 0})
-          <input
-            type="range" min={-100} max={100} step={5}
+          <input type="range" min={-100} max={100} step={5}
             value={Number.isFinite(v.brightness) ? v.brightness : 0}
-            onChange={(e) => patch({ brightness: parseInt(e.target.value, 10) })}
-            style={{ width: 220 }}
-          />
+            onChange={(e) => patch({ brightness: parseInt(e.target.value, 10) })} style={{ width: 220 }} />
         </label>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
           Contrast ({Number.isFinite(v.contrast) ? v.contrast : 0})
-          <input
-            type="range" min={-100} max={100} step={5}
+          <input type="range" min={-100} max={100} step={5}
             value={Number.isFinite(v.contrast) ? v.contrast : 0}
-            onChange={(e) => patch({ contrast: parseInt(e.target.value, 10) })}
-            style={{ width: 220 }}
-          />
+            onChange={(e) => patch({ contrast: parseInt(e.target.value, 10) })} style={{ width: 220 }} />
         </label>
-        <TextField
-          label="Caption"
-          value={v.caption || ''}
-          defaultValue={defaults.caption}
-          onChange={(x) => patch({ caption: x })}
-          placeholder="Optional caption"
-          help="Shown in Framed / Caption layouts."
-        />
-        <TextField
-          label="Tile heading"
-          value={v.title || ''}
-          defaultValue={defaults.title}
-          onChange={(x) => patch({ title: x })}
-          placeholder="Photo"
-          help="Framed layout only. Leave blank for none."
-        />
       </FormSection>
       <FormSection title="Style">
         <TypographyFields values={v} onChange={onChange} />

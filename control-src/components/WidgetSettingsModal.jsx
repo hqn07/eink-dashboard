@@ -9,6 +9,7 @@ import {
 } from '../widget-render.js';
 import { runAutofit } from '../autofit.js';
 import WidgetForm from './WidgetForm.jsx';
+import ErrorBoundary from './ErrorBoundary.jsx';
 
 const DASH_W = 800;
 const DASH_H = 480;
@@ -319,16 +320,27 @@ export default function WidgetSettingsModal({
           <div className="wsm-body">
             <div className="wsm-col wsm-col-settings">
               <section className="wsm-section">
-                <PerInstanceDataBlock
-                  widgetId={draft.widgetId}
-                  itemId={draft.id}
-                  layout={layout}
-                  settings={draft.settings}
-                  onSettingsChange={(next) => setDraft(prev => ({ ...prev, settings: next }))}
-                  item={draft}
-                  previewData={previewData}
-                  onHoverPreset={setHoveredPresetValues}
-                />
+                <ErrorBoundary
+                  resetKeys={[draft.widgetId, draft.id]}
+                  fallback={(err, retry) => (
+                    <div className="error-boundary-fallback">
+                      <div className="eb-title">This widget’s settings couldn’t load</div>
+                      <div className="eb-msg">{String(err.message || err)}</div>
+                      <button type="button" className="eb-retry" onClick={retry}>Retry</button>
+                    </div>
+                  )}
+                >
+                  <PerInstanceDataBlock
+                    widgetId={draft.widgetId}
+                    itemId={draft.id}
+                    layout={layout}
+                    settings={draft.settings}
+                    onSettingsChange={(next) => setDraft(prev => ({ ...prev, settings: next }))}
+                    item={draft}
+                    previewData={previewData}
+                    onHoverPreset={setHoveredPresetValues}
+                  />
+                </ErrorBoundary>
               </section>
             </div>
 

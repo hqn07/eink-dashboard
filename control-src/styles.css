@@ -3421,3 +3421,39 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   margin-bottom: 2px;
 }
 .gdm-modal-panel { max-width: 640px; }
+
+/* ---------- Error boundary fallback ---------- */
+.error-boundary-fallback {
+  padding: 16px;
+  border: var(--bw-frame) solid var(--ink);
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+.error-boundary-root {
+  max-width: 480px;
+  margin: 48px auto;
+}
+.error-boundary-fallback .eb-title {
+  font-family: var(--font-sans-c);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
+  font-size: var(--fs-lg);
+}
+.error-boundary-fallback .eb-msg {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--mute);
+  word-break: break-word;
+}
+.error-boundary-fallback .eb-retry {
+  border: var(--bw-frame) solid var(--ink);
+  background: #fff;
+  padding: 6px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.error-boundary-fallback .eb-retry:hover { background: var(--ink); color: #fff; }
