@@ -1742,9 +1742,16 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   font-size: var(--fs-sm);
   font-weight: 700;
   color: var(--mute);
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   padding-bottom: 6px;
   border-bottom: 1px dashed var(--mute);
+}
+.palette-hover-blurb {
+  font-family: var(--font-sans-c);
+  font-size: var(--fs-md);
+  color: var(--ink);
+  margin: 0 0 8px;
+  line-height: 1.35;
 }
 .palette-hover-preview {
   position: relative;
@@ -3479,3 +3486,22 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   cursor: pointer;
 }
 .error-boundary-fallback .eb-retry:hover { background: var(--ink); color: #fff; }
+
+/* ---------- Secret (token) field: input + reveal toggle ---------- */
+.wsm-secret { position: relative; display: block; }
+.wsm-secret > input { width: 100%; padding-right: 56px; }
+.wsm-secret-toggle {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: var(--bw-hair) solid var(--line-soft);
+  background: #fff;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.wsm-secret-toggle:hover { border-color: var(--ink); }

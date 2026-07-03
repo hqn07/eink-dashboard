@@ -635,8 +635,9 @@ export default function EditorGrid({ layout, showGrid, readOnly = false, preview
                     collisionPadding={16}
                   >
                     <div className="palette-hover-label">
-                      {def.label} · {showcaseKey} · {sw}×{sh}
+                      {def.category ? `${def.category} · ` : ''}{def.label} · {showcaseKey} · {sw}×{sh}
                     </div>
+                    {def.blurb && <div className="palette-hover-blurb">{def.blurb}</div>}
                     <div
                       className="palette-hover-preview"
                       style={{

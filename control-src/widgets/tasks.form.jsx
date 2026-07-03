@@ -24,6 +24,7 @@ export function Form({ values, patch, onChange, fields }) {
             value={v.token || ''}
             onChange={(x) => patch({ token: x })}
             placeholder="paste token"
+            secret
             help="Todoist → Settings → Integrations → Developer → API token."
           />
         )}

@@ -103,19 +103,32 @@ function FieldLabel({ label, suffix, value, defaultValue, onReset }) {
   );
 }
 
-function TextField({ label, value, onChange, placeholder, type = 'text', help, defaultValue }) {
+function TextField({ label, value, onChange, placeholder, type = 'text', help, defaultValue, secret }) {
+  const [reveal, setReveal] = useState(false);
+  const inputType = secret && !reveal ? 'password' : type;
   return (
     <label className="wsm-field">
       <FieldLabel label={label} value={value} defaultValue={defaultValue}
         onReset={() => onChange(defaultValue)} />
-      <input
-        type={type}
-        value={value ?? ''}
-        onChange={e => onChange(type === 'number'
-          ? (e.target.value === '' ? null : Number(e.target.value))
-          : e.target.value)}
-        placeholder={placeholder || ''}
-      />
+      <span className={secret ? 'wsm-secret' : undefined}>
+        <input
+          type={inputType}
+          value={value ?? ''}
+          autoComplete={secret ? 'off' : undefined}
+          spellCheck={secret ? false : undefined}
+          onChange={e => onChange(type === 'number'
+            ? (e.target.value === '' ? null : Number(e.target.value))
+            : e.target.value)}
+          placeholder={placeholder || ''}
+        />
+        {secret && (
+          <button type="button" className="wsm-secret-toggle"
+            onClick={() => setReveal(r => !r)}
+            aria-label={reveal ? 'Hide' : 'Show'}>
+            {reveal ? 'Hide' : 'Show'}
+          </button>
+        )}
+      </span>
       {help && <span className="wsm-field-help">{help}</span>}
     </label>
   );
