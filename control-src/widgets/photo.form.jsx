@@ -1,4 +1,5 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
+import { renderDitherPreview } from '../dither-preview.js';
 
 // Downscale an uploaded image to a modest max edge before storing it as a
 // base64 data URI in the tile settings. Config.json holds this string, so
@@ -32,8 +33,24 @@ export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
   const { TextField, TypographyFields, FormSection, defaults = {} } = fields;
   const fileRef = useRef(null);
+  const canvasRef = useRef(null);
   const [busy, setBusy] = useState(false);
+  const [previewOk, setPreviewOk] = useState(true);
   const hasUpload = !!(v.imageData && v.imageData.trim());
+  const src = hasUpload ? v.imageData : (v.imageUrl && v.imageUrl.trim());
+
+  // Live 1-bit preview — re-dither on any image/tone/algorithm change.
+  useEffect(() => {
+    let cancelled = false;
+    if (!canvasRef.current || !src) { setPreviewOk(false); return; }
+    renderDitherPreview(canvasRef.current, src, {
+      algorithm: v.dither || 'atkinson',
+      brightness: Number.isFinite(v.brightness) ? v.brightness : 0,
+      contrast: Number.isFinite(v.contrast) ? v.contrast : 0,
+      fit: v.fit || 'cover'
+    }).then(ok => { if (!cancelled) setPreviewOk(ok); });
+    return () => { cancelled = true; };
+  }, [src, v.dither, v.brightness, v.contrast, v.fit]);
 
   const onFile = async (e) => {
     const file = e.target.files && e.target.files[0];
@@ -106,6 +123,29 @@ export function Form({ values, patch, onChange, fields }) {
         </label>
       </FormSection>
       <FormSection title="Dithering">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <canvas
+            ref={canvasRef}
+            width={224}
+            height={140}
+            style={{
+              width: 224, height: 140,
+              border: '2px solid #000',
+              imageRendering: 'pixelated',
+              background: '#fff',
+              display: src ? 'block' : 'none'
+            }}
+          />
+          {src && !previewOk && (
+            <span style={{ fontSize: 11, opacity: 0.7 }}>
+              Live preview unavailable for this URL (no cross-origin access). It will still
+              dither correctly on the panel.
+            </span>
+          )}
+          {src && previewOk && (
+            <span style={{ fontSize: 11, opacity: 0.7 }}>Live 1-bit preview — approximates the panel.</span>
+          )}
+        </div>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
           Style
           <select
