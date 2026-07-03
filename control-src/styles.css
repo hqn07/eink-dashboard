@@ -645,9 +645,9 @@ main.layout {
 }
 .preview-pane-title {
   font-family: var(--font-sans-c);
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  font-size: var(--fs-sm);
+  text-transform: none;
+  letter-spacing: 0.3px;
+  font-size: var(--fs-lg);
   font-weight: 700;
 }
 .preview-pane-toggle {
@@ -700,11 +700,11 @@ main.layout {
   border-top: var(--bw-hair) solid var(--line);
 }
 .device-status-title {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
+  font-family: var(--font-sans-c);
+  font-size: var(--fs-lg);
   font-weight: 700;
-  letter-spacing: 2.5px;
-  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  text-transform: none;
   margin-bottom: 10px;
 }
 .device-status-row {
@@ -713,10 +713,10 @@ main.layout {
   align-items: baseline;
   gap: 12px;
   padding: 5px 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  font-family: var(--font-sans-c);
+  font-size: var(--fs-md);
+  letter-spacing: 0.2px;
+  text-transform: none;
 }
 .device-status-row + .device-status-row {
   border-top: 1px dashed var(--line);
@@ -1108,11 +1108,11 @@ section.card {
 }
 
 .section-title {
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
+  font-family: var(--font-sans-c);
+  font-size: var(--fs-lg);
   font-weight: 700;
-  letter-spacing: 3px;
-  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  text-transform: none;
   padding-bottom: 8px;
   margin-bottom: 12px;
   border-bottom: var(--bw-hair) solid var(--line);
@@ -1175,11 +1175,11 @@ section.card {
 .field { display: block; margin-bottom: 12px; }
 .field .label {
   display: block;
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
+  font-family: var(--font-sans-c);
+  font-size: var(--fs-sm);
   font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  text-transform: none;
   margin-bottom: 4px;
   color: var(--mute);
 }

@@ -46,19 +46,19 @@ export default function DeviceStatusCard({ refreshMinutes }) {
   const hasBattery = battery && Number.isFinite(battery.pct);
   const rows = [
     {
-      k: 'E-INK BATTERY',
+      k: 'E-ink battery',
       v: hasBattery
         ? `${battery.pct}%${Number.isFinite(battery.v) ? ` · ${battery.v.toFixed(2)}V` : ''}`
         : 'no data',
       sub: hasBattery ? ago(battery.at, now) : null
     },
     {
-      k: 'REFRESH',
+      k: 'Refresh',
       v: Number.isFinite(refreshMinutes) ? `every ${refreshMinutes}m` : '—',
       sub: null
     },
     {
-      k: 'MAC AGENT',
+      k: 'Mac agent',
       v: macAt ? ago(macAt, now) : 'never',
       sub: null
     }
