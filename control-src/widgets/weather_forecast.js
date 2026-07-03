@@ -111,14 +111,21 @@ export function render(ctx) {
                      :                            cw >= 8;
     return `<div class="tr-card">
       <div class="tr-titlebar"><span>Forecast</span><span class="tr-meta">${list.length}-day</span></div>
-      <div class="tr-body" style="padding:4px 14px;gap:0"><div class="tr-rows">
-        ${list.map(f => `<div class="tr-row" style="align-items:center;gap:10px">
-          <span style="font-weight:700;font-size:13px;flex:none;min-width:42px">${escapeHtml(f.name)}</span>
-          ${showIcons ? `<span class="fc-tr-icon" style="width:26px;height:26px;flex:none;display:inline-flex;overflow:hidden">${icon(f.main, 26)}</span>` : ''}
-          <span style="flex:1 1 auto"></span>
+      <div class="tr-body" style="padding:4px 12px;gap:0"><div class="tr-rows">
+        ${(() => {
+          // Scale the hi/lo font + icon to the tile width so the low temp
+          // never clips at the right edge on a narrow (6-col) forecast.
+          const tempPx = cw < 8 ? 15 : cw < 12 ? 17 : 19;
+          const icPx   = cw < 8 ? 22 : 26;
+          const gap    = cw < 8 ? 7 : 10;
+          return list.map(f => `<div class="tr-row" style="align-items:center;gap:${gap}px">
+          <span style="font-weight:700;font-size:13px;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(f.name)}</span>
+          ${showIcons ? `<span class="fc-tr-icon" style="width:${icPx}px;height:${icPx}px;flex:none;display:inline-flex;overflow:hidden">${icon(f.main, icPx)}</span>` : ''}
+          <span style="flex:1 1 auto;min-width:4px"></span>
           ${showPrecip && Number.isFinite(f.precip) && f.precip > 0 ? `<span style="font-size:12px;flex:none" class="fc-precip${semRed(s, f.precip >= 60)}">${f.precip}%</span>` : ''}
-          <span style="font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;flex:none">${f.hi}° <span style="font-weight:400">${f.lo}°</span></span>
-        </div>`).join('')}
+          <span style="font-size:${tempPx}px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;flex:none">${f.hi}° <span style="font-weight:400">${f.lo}°</span></span>
+        </div>`).join('');
+        })()}
       </div></div>
     </div>`;
   }
