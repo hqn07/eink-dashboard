@@ -15,7 +15,7 @@ import { escapeHtml, pickTier, placeholder, semRed } from './_shared.js';
 
 export const def = {
   id: 'sparkline',
-  label: 'Sparkline',
+  label: 'Trend',
   minSize: { w: 6, h: 3 },
   sizes: {
     S: { w: 6, h: 3 },
@@ -44,9 +44,12 @@ export const def = {
 };
 
 const SOURCES = {
-  // minSpan/lo/hi shape the sparkline's y-domain so flat data reads as flat.
-  battery_pct: { label: 'BATTERY', unit: '%', key: 'pct', lowAt: 20, dp: 0, minSpan: 20, lo: 0, hi: 100 },
-  battery_v:   { label: 'VOLTAGE', unit: 'V', key: 'v',  lowAt: 3.4, dp: 2, minSpan: 0.4, lo: 3.0, hi: 4.3 }
+  // minSpan/lo/hi shape the y-domain so flat data reads as flat.
+  // `weather` sources chart ctx.weather.hourly; the rest chart batteryHistory.
+  battery_pct:    { label: 'BATTERY', unit: '%', key: 'pct',    lowAt: 20,  dp: 0, minSpan: 20,  lo: 0, hi: 100 },
+  battery_v:      { label: 'VOLTAGE', unit: 'V', key: 'v',      lowAt: 3.4, dp: 2, minSpan: 0.4, lo: 3.0, hi: 4.3 },
+  weather_temp:   { label: 'TEMPERATURE', unit: '°', key: 'temp',   dp: 0, minSpan: 6,  weather: true },
+  weather_precip: { label: 'PRECIPITATION', unit: '%', key: 'precip', dp: 0, minSpan: 20, lo: 0, hi: 100, weather: true }
 };
 
 // Pick a sensible y-domain so a nearly-flat series (e.g. battery sitting at
@@ -102,13 +105,18 @@ export function render(ctx) {
   const titleLabel = (typeof s.title === 'string' && s.title.trim())
     ? s.title.trim() : src.label;
 
-  const hist = Array.isArray(ctx.batteryHistory) ? ctx.batteryHistory : [];
-  const values = hist
+  // Weather sources chart the coming hours (ctx.weather.hourly); battery
+  // sources chart the rolling push history (ctx.batteryHistory).
+  const rawSeries = src.weather
+    ? ((ctx.weather && Array.isArray(ctx.weather.hourly)) ? ctx.weather.hourly : [])
+    : (Array.isArray(ctx.batteryHistory) ? ctx.batteryHistory : []);
+  const values = rawSeries
     .map(p => (p && Number.isFinite(p[src.key])) ? p[src.key] : null)
     .filter(v => v !== null);
 
   if (values.length < 2) {
-    return placeholder(titleLabel.split(/\s+/)[0] || 'TREND', 'Collecting data…', 'msg', { cellW, cellH });
+    const hint = src.weather ? 'Set a location' : 'Collecting data…';
+    return placeholder(titleLabel.split(/\s+/)[0] || 'TREND', hint, 'msg', { cellW, cellH });
   }
 
   const variant = ctx.variant || (def.variants[s.variant] ? s.variant : 'line');

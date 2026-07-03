@@ -2,7 +2,8 @@ import React from 'react';
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, SelectField, TypographyFields, FormSection, defaults = {} } = fields;
+  const { TextField, SelectField, LocationFields, TypographyFields, FormSection, defaults = {} } = fields;
+  const isWeather = v.source === 'weather_temp' || v.source === 'weather_precip';
   return (
     <>
       <FormSection title="Data">
@@ -11,12 +12,22 @@ export function Form({ values, patch, onChange, fields }) {
           value={v.source || 'battery_pct'}
           defaultValue={defaults.source}
           options={[
-            { value: 'battery_pct', label: 'E-ink battery %' },
-            { value: 'battery_v',   label: 'E-ink battery voltage' }
+            { value: 'weather_temp',   label: 'Weather — hourly temperature' },
+            { value: 'weather_precip', label: 'Weather — hourly precipitation' },
+            { value: 'battery_pct',    label: 'E-ink battery %' },
+            { value: 'battery_v',      label: 'E-ink battery voltage' }
           ]}
           onChange={(x) => patch({ source: x })}
-          help="Trend is built from the readings the device pushes each refresh."
+          help={isWeather
+            ? 'Charts the coming hours from the forecast.'
+            : 'Built from the readings the device pushes each refresh.'}
         />
+        {isWeather && (
+          <LocationFields
+            values={v}
+            onChange={(loc) => onChange({ ...v, ...loc })}
+          />
+        )}
       </FormSection>
       <FormSection title="Content">
         <TextField
@@ -24,7 +35,7 @@ export function Form({ values, patch, onChange, fields }) {
           value={v.title || ''}
           defaultValue={defaults.title}
           onChange={(x) => patch({ title: x })}
-          placeholder="BATTERY"
+          placeholder={isWeather ? 'TEMPERATURE' : 'BATTERY'}
           help="Leave blank to use the source name."
         />
       </FormSection>

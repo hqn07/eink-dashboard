@@ -139,14 +139,13 @@ export function demoCtxForWidget(id, cellW, cellH) {
     case 'clock':
       return { ...base, clockNow: DEMO_CLOCK, settings: {} };
     case 'sparkline': {
-      // A plausible day of battery discharge so the trend reads at a glance.
-      const t0 = Date.now() - 24 * 3600 * 1000;
-      const pcts = [98, 95, 92, 90, 86, 83, 80, 78, 74, 71, 68, 66, 61, 58, 55, 52, 49, 45, 42, 39, 35, 31, 28, 24];
+      // Show the weather-temperature trend in the pool so the card reads as
+      // a general metric chart, not a battery-only sparkline. A believable
+      // daytime warm-up-then-cool hourly curve.
+      const temps = [74, 75, 77, 80, 83, 86, 88, 90, 91, 90, 88, 85, 82, 80, 78, 77];
       return { ...base,
-        batteryHistory: pcts.map((pct, i) => ({
-          pct, v: 3.4 + (pct / 100) * 0.8, at: t0 + i * 3600 * 1000
-        })),
-        settings: {} };
+        weather: { hourly: temps.map((temp, i) => ({ label: `${i}`, temp, precip: 10 })) },
+        settings: { source: 'weather_temp', title: 'TEMPERATURE' } };
     }
     case 'aqi':
       return { ...base, aqi: DEMO_AQI, settings: {} };

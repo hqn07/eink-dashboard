@@ -49,7 +49,7 @@ const POOL_META = {
   headlines:        { category: 'News',     blurb: 'RSS or Hacker News headlines' },
   eink_battery:     { category: 'System',   blurb: 'This display’s battery level' },
   mac_battery:      { category: 'System',   blurb: 'Your Mac’s battery level' },
-  sparkline:        { category: 'Data',     blurb: 'Trend line from a metric' },
+  sparkline:        { category: 'Data',     blurb: 'Weather or battery trend line' },
   codeactivity:     { category: 'Data',     blurb: 'GitHub contribution heatmap' },
   text:             { category: 'Text',     blurb: 'Token strip or message card' },
   quote:            { category: 'Text',     blurb: 'Quote + attribution' },

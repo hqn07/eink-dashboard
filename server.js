@@ -1191,6 +1191,18 @@ async function buildWidgetData(cfg, units, layout) {
         case 'transit':
           slot.transit = await fetchTransit(eff);
           break;
+        case 'sparkline': {
+          // Battery sources use the globally-injected batteryHistory; only
+          // the weather-hourly sources need a per-tile weather fetch.
+          if (eff.source === 'weather_temp' || eff.source === 'weather_precip') {
+            const loc = resolveLoc(eff);
+            const effUnits = (eff.unitsOverride === 'F' || eff.unitsOverride === 'C')
+              ? eff.unitsOverride : units;
+            slot.units = effUnits;
+            slot.weather = await fetchWeather(loc, process.env.OPENWEATHER_API_KEY, effUnits);
+          }
+          break;
+        }
 
         default:
           break;
