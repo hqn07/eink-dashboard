@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
-import { Star, ArrowCounterClockwise, SlidersHorizontal, Trash, Lock } from '@phosphor-icons/react';
+import { Star, ArrowCounterClockwise, SlidersHorizontal, Trash, Lock, Cards } from '@phosphor-icons/react';
 import { fetchConfig, saveConfig, fetchPreviewData, onUnauthorized } from './api.js';
 import {
   WIDGET_REGISTRY,
@@ -291,9 +291,10 @@ export default function App() {
 
   // Splice live cfg edits + the current screen's layout into the
   // preview data so editor tiles update instantly while typing.
+  const editCardStyle = (editScreen && editScreen.cardStyle) || 'grid';
   const livePreviewData = previewData
-    ? { ...previewData, cfg, layout: editScreen ? editScreen.layout : [], chrome: editScreen ? editScreen.chrome : null }
-    : { cfg, weather: null, events: [], units: (editScreen && editScreen.units) || 'F', layout: editScreen ? editScreen.layout : [], chrome: editScreen ? editScreen.chrome : null };
+    ? { ...previewData, cfg, layout: editScreen ? editScreen.layout : [], chrome: editScreen ? editScreen.chrome : null, cardStyle: editCardStyle }
+    : { cfg, weather: null, events: [], units: (editScreen && editScreen.units) || 'F', layout: editScreen ? editScreen.layout : [], chrome: editScreen ? editScreen.chrome : null, cardStyle: editCardStyle };
 
 
   // Toast supports an optional action button ({ label, onClick }) for
@@ -740,6 +741,15 @@ export default function App() {
                     onClick={() => setDefaultScreen(editScreen.id)}
                   >
                     <Star size={12} weight="bold" /> MAKE DEFAULT
+                  </button>
+                )}
+                {editScreen && (
+                  <button
+                    className={`btn btn-iconed btn-compact ${editCardStyle === 'cards' ? '' : 'btn-ghost'}`}
+                    title="Prototype: float each widget as a bordered card with gaps (vs abutting grid)"
+                    onClick={() => updateScreen(editScreen.id, { cardStyle: editCardStyle === 'cards' ? 'grid' : 'cards' })}
+                  >
+                    <Cards size={12} weight="bold" /> {editCardStyle === 'cards' ? 'CARDS ON' : 'CARDS'}
                   </button>
                 )}
                 <button className="btn btn-ghost btn-iconed btn-compact"

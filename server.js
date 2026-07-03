@@ -1302,7 +1302,8 @@ function htmlAttr(s) {
 // tile gets its own context (overrides global where set).
 function buildPageBodyHtml({ payload, ssr, mode }) {
   const { cfg, weather, events, aqi, onThisDay, units, resolvedMessage,
-          perItem, battery, batteryHistory, layout: rawLayout, devWidgetId } = payload;
+          perItem, battery, batteryHistory, layout: rawLayout, devWidgetId, cardStyle } = payload;
+  const bodyClass = `body body-grid${cardStyle === 'cards' ? ' body-cards' : ''}`;
 
   const defs = ssr.DEFS;
   const layout = expandLayout(rawLayout, defs);
@@ -1421,7 +1422,7 @@ function buildPageBodyHtml({ payload, ssr, mode }) {
     ? cells.join('')
     : `<div class="empty terminal-empty" style="grid-column:1 / span ${GRID_COLS};grid-row:1 / span ${GRID_ROWS}">&gt; NO_WIDGETS_ENABLED</div>`;
 
-  return `<div class="page" id="page" style="grid-template-rows:0px minmax(0, 1fr) 0px"><div class="hdr-stub"></div><main class="body body-grid" style="grid-template-columns:repeat(${GRID_COLS}, minmax(0, 1fr));grid-template-rows:repeat(${GRID_ROWS}, minmax(0, 1fr))">${bodyInner}</main><div class="ftr-stub"></div></div>`;
+  return `<div class="page" id="page" style="grid-template-rows:0px minmax(0, 1fr) 0px"><div class="hdr-stub"></div><main class="${bodyClass}" style="grid-template-columns:repeat(${GRID_COLS}, minmax(0, 1fr));grid-template-rows:repeat(${GRID_ROWS}, minmax(0, 1fr))">${bodyInner}</main><div class="ftr-stub"></div></div>`;
 }
 
 function escapeHtmlServer(s) {
@@ -1471,6 +1472,7 @@ app.get('/dashboard', checkDeviceAuth, async (req, res) => {
     const batteryHistory = await loadBatteryHistory();
     const payload = {
       cfg, units, screen, layout, battery, batteryHistory,
+      cardStyle: (activeScreen && activeScreen.cardStyle) || 'grid',
       ...data,
       generatedAt: new Date().toISOString()
     };

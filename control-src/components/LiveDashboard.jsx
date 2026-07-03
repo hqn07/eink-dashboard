@@ -153,7 +153,7 @@ export default function LiveDashboard({
   return (
     <div className="page" style={pageStyle} ref={rootRef}>
       <div className="hdr-stub" />
-      <main className="body body-grid" style={bodyStyle}>
+      <main className={`body body-grid${(data && data.cardStyle === 'cards') ? ' body-cards' : ''}`} style={bodyStyle}>
         {tiles.length > 0 ? tiles : (
           <div className="empty terminal-empty" style={{ gridColumn: `1 / span ${GRID_COLS}`, gridRow: `1 / span ${GRID_ROWS}` }}>
             &gt; NO_WIDGETS_ENABLED

@@ -1,0 +1,22 @@
+/* ============ CARD MODE (P1 prototype) ============
+ * Opt-in "TRMNL mashup" look: every widget floats as its own bordered card
+ * with a gap between them, instead of tiles abutting on shared grid lines.
+ * Toggled per screen (screen.cardStyle === 'cards' → .body-cards on the grid).
+ *
+ * Each cell insets with a margin (the gap) and draws a full 2px border in
+ * place of the grid's right/bottom dividers; box-sizing keeps the border
+ * inside the grid area so the card doesn't overflow. Gaps read as white on
+ * the panel — cards defined purely by their borders. */
+
+.body-cards { padding: 5px; }
+
+.body-cards .cell,
+.body-cards .cell.cell-edge-right,
+.body-cards .cell.cell-edge-bottom {
+  box-sizing: border-box;
+  margin: 4px;
+  border: 2px solid #000;
+}
+
+/* A per-tile dithered frame still wins over the plain card border. */
+.body-cards .cell.face-frame { border-width: 4px; }

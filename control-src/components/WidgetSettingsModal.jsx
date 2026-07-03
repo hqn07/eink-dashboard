@@ -288,7 +288,8 @@ export default function WidgetSettingsModal({
     `grid-column:${draft.x + 1} / span ${draft.w};grid-row:${draft.y + 1} / span ${draft.h};${typoStyle}`;
   const cellHtml = `<div class="${classes.join(' ')}" style="${cellStyle}">${previewHtml}</div>`;
 
-  const pageHtml = `<div class="page" style="grid-template-rows:0px minmax(0,1fr) 0px;width:${DASH_W}px;height:${DASH_H}px"><div class="hdr-stub"></div><main class="body body-grid" style="grid-template-columns:repeat(${GRID_COLS},minmax(0,1fr));grid-template-rows:repeat(${GRID_ROWS},minmax(0,1fr))">${cellHtml}</main><div class="ftr-stub"></div></div>`;
+  const bodyGridCls = `body body-grid${(data && data.cardStyle === 'cards') ? ' body-cards' : ''}`;
+  const pageHtml = `<div class="page" style="grid-template-rows:0px minmax(0,1fr) 0px;width:${DASH_W}px;height:${DASH_H}px"><div class="hdr-stub"></div><main class="${bodyGridCls}" style="grid-template-columns:repeat(${GRID_COLS},minmax(0,1fr));grid-template-rows:repeat(${GRID_ROWS},minmax(0,1fr))">${cellHtml}</main><div class="ftr-stub"></div></div>`;
 
   const density = draft.density || '';
   const previewLoading = !previewData;
