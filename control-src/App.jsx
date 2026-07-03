@@ -625,15 +625,6 @@ export default function App() {
       <header className="app-header">
         <div className="app-header-left">
           <h1>Dashboard Control</h1>
-          <a
-            className="app-header-link"
-            href="/dashboard"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Open the live dashboard render in a new tab"
-          >
-            View display →
-          </a>
         </div>
         <div className="app-header-center">
           <SyncPill status={status} lastSavedAt={lastSavedAt} statusMsg={statusMsg} />
