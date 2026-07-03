@@ -192,7 +192,12 @@ export default function App() {
   const [previewKey, setPreviewKey] = useState(Date.now());
   const [previewData, setPreviewData] = useState(null);
   const [toast, setToast] = useState(null);
-  const [undoCfg, setUndoCfg] = useState(null);
+  // Undo/redo history stacks of whole-cfg snapshots. Every mutateCfg pushes
+  // the prior cfg onto undoStack and clears redoStack; undo/redo shuttle
+  // between them. Capped so a long editing session doesn't grow unbounded.
+  const [undoStack, setUndoStack] = useState([]);
+  const [redoStack, setRedoStack] = useState([]);
+  const HISTORY_MAX = 50;
   // Timestamp of the last successful sync — drives the header SyncPill's
   // "N min ago" readout. The existing 60s nowTick (further down) gives
   // us a re-render every minute so the pill ages without an explicit
@@ -309,7 +314,8 @@ export default function App() {
   // Wrap every cfg mutation so we can snapshot the previous state for undo.
   const mutateCfg = (fn) => {
     setCfg(prev => {
-      setUndoCfg(prev);
+      setUndoStack(st => [...st, prev].slice(-HISTORY_MAX));
+      setRedoStack([]);
       return fn(prev);
     });
     markDirty();
@@ -385,14 +391,27 @@ export default function App() {
   }));
 
   const undo = () => {
-    if (!undoCfg) {
-      showToast('Nothing to undo');
-      return;
-    }
-    setCfg(undoCfg);
-    setUndoCfg(null);
-    markDirty();
-    showToast('Undone');
+    setUndoStack(st => {
+      if (!st.length) { showToast('Nothing to undo'); return st; }
+      const prev = st[st.length - 1];
+      setRedoStack(rs => [...rs, cfg].slice(-HISTORY_MAX));
+      setCfg(prev);
+      markDirty();
+      showToast('Undone');
+      return st.slice(0, -1);
+    });
+  };
+
+  const redo = () => {
+    setRedoStack(rs => {
+      if (!rs.length) { showToast('Nothing to redo'); return rs; }
+      const next = rs[rs.length - 1];
+      setUndoStack(st => [...st, cfg].slice(-HISTORY_MAX));
+      setCfg(next);
+      markDirty();
+      showToast('Redone');
+      return rs.slice(0, -1);
+    });
   };
 
   // Pre-save validation pass — DOM-scoped, no per-field registry. We
@@ -526,6 +545,12 @@ export default function App() {
         undo();
         return;
       }
+      // cmd+shift+z or cmd+y — redo
+      if (mod && ((e.key.toLowerCase() === 'z' && e.shiftKey) || e.key.toLowerCase() === 'y')) {
+        e.preventDefault();
+        redo();
+        return;
+      }
       if (inField || mod) return;
       // ? — open shortcuts help
       if (e.key === '?') { e.preventDefault(); setShortcutsOpen(true); return; }
@@ -562,7 +587,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [canSave, cfg, undoCfg, status, screens, editScreenId]);
+  }, [canSave, cfg, undoStack, redoStack, status, screens, editScreenId]);
 
   if (!cfg) {
     return (
@@ -642,9 +667,7 @@ export default function App() {
           if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
           const [moved] = arr.splice(fromIdx, 1);
           arr.splice(toIdx, 0, moved);
-          setUndoCfg(cfg);
-          setCfg({ ...cfg, screens: arr });
-          markDirty();
+          mutateCfg(prev => ({ ...prev, screens: arr }));
         }}
         canAdd={screens.length < MAX_SCREENS}
       />
@@ -679,7 +702,7 @@ export default function App() {
         {timelineOpen && (
           <QuietHours
             value={cfg.quietHours}
-            onChange={(next) => { setUndoCfg(cfg); setCfg({ ...cfg, quietHours: next }); markDirty(); }}
+            onChange={(next) => mutateCfg(prev => ({ ...prev, quietHours: next }))}
           />
         )}
       </div>
@@ -784,7 +807,7 @@ export default function App() {
               : `BLOCKED · ${validationErrors[0]}`
           }
           onSave={handleSave}
-          onDiscard={undoCfg ? undo : null}
+          onDiscard={undoStack.length ? undo : null}
           disabled={!canSave}
         />
       )}

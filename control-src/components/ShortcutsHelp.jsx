@@ -10,7 +10,8 @@ import { X } from '@phosphor-icons/react';
 const SHORTCUTS = [
   { keys: ['?'],             desc: 'Show this shortcuts overlay' },
   { keys: ['⌘', 'S'],        desc: 'Save & push current changes' },
-  { keys: ['⌘', 'Z'],        desc: 'Undo last action' },
+  { keys: ['⌘', 'Z'],        desc: 'Undo' },
+  { keys: ['⌘', '⇧', 'Z'],   desc: 'Redo' },
   { keys: ['['],             desc: 'Previous screen tab' },
   { keys: [']'],             desc: 'Next screen tab' },
   { keys: ['G'],             desc: 'Toggle grid overlay on canvas' },
