@@ -465,6 +465,22 @@ main.layout {
 }
 
 .schedule-collapsible { margin-bottom: 16px; }
+/* Boxed scheduling: timeline + quiet hours read as one bounded card when
+ * open, instead of two loose full-width rows. */
+.schedule-card.is-open {
+  border: var(--bw-hair) solid var(--line);
+  border-radius: var(--r-sm);
+  background: #fff;
+}
+.schedule-card.is-open .schedule-collapsible-trigger {
+  border-bottom: var(--bw-hair) solid var(--line);
+}
+.schedule-card-body { padding: 14px 16px 16px; }
+.schedule-card-sub {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: var(--bw-hair) dashed var(--line);
+}
 .quiet-hours {
   display: flex;
   align-items: center;
@@ -505,12 +521,12 @@ main.layout {
   width: 100%;
   background: transparent;
   border: 0;
-  padding: 6px 0;
+  padding: 10px 12px;
   cursor: pointer;
   font-family: var(--font-sans-c);
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  font-size: var(--fs-sm);
+  text-transform: none;
+  letter-spacing: 0.3px;
+  font-size: var(--fs-lg);
   font-weight: 700;
   color: var(--ink);
   text-align: left;

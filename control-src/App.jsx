@@ -673,7 +673,7 @@ export default function App() {
         canAdd={screens.length < MAX_SCREENS}
       />
 
-      <div className="schedule-collapsible">
+      <div className={`schedule-collapsible schedule-card ${timelineOpen ? 'is-open' : ''}`}>
         <button
           type="button"
           className="schedule-collapsible-trigger"
@@ -681,7 +681,7 @@ export default function App() {
           aria-expanded={timelineOpen}
         >
           <span className="schedule-collapsible-caret">{timelineOpen ? '▾' : '▸'}</span>
-          <span>Schedule timeline</span>
+          <span>Schedule</span>
           <span className="schedule-collapsible-summary">
             {/* "none" instead of 0 — JetBrains Mono's dotted zero reads
                 as an 8 at this size. */}
@@ -689,22 +689,24 @@ export default function App() {
           </span>
         </button>
         {timelineOpen && (
-          <ScheduleTimeline
-            screens={screens}
-            activeId={editScreenId}
-            overlapIds={overlapIds}
-            timezone={cfg.timezone || 'UTC'}
-            onSelect={setEditScreenId}
-            onUpdateSchedule={(id, patch) => updateScreen(id, {
-              schedule: { ...(screens.find(s => s.id === id)?.schedule || { enabled: false }), ...patch, enabled: true }
-            })}
-          />
-        )}
-        {timelineOpen && (
-          <QuietHours
-            value={cfg.quietHours}
-            onChange={(next) => mutateCfg(prev => ({ ...prev, quietHours: next }))}
-          />
+          <div className="schedule-card-body">
+            <ScheduleTimeline
+              screens={screens}
+              activeId={editScreenId}
+              overlapIds={overlapIds}
+              timezone={cfg.timezone || 'UTC'}
+              onSelect={setEditScreenId}
+              onUpdateSchedule={(id, patch) => updateScreen(id, {
+                schedule: { ...(screens.find(s => s.id === id)?.schedule || { enabled: false }), ...patch, enabled: true }
+              })}
+            />
+            <div className="schedule-card-sub">
+              <QuietHours
+                value={cfg.quietHours}
+                onChange={(next) => mutateCfg(prev => ({ ...prev, quietHours: next }))}
+              />
+            </div>
+          </div>
         )}
       </div>
 
