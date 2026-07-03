@@ -27,6 +27,7 @@ const { fetchMacBattery } = require('./widgets/macbattery');
 const { buildClock } = require('./widgets/clock');
 const { computeNextAlarm, normalizeAlarmList } = require('./widgets/alarms');
 const { fetchPhoto } = require('./widgets/photo');
+const { fetchHeadlines } = require('./widgets/headlines');
 const {
   preThreshold, rgbaToMono, packMonoBin,
   isRedPixel, rgbaToPlanes, planesToPng
@@ -1178,6 +1179,9 @@ async function buildWidgetData(cfg, units, layout) {
           break;
         case 'photo':
           slot.photo = await fetchPhoto(eff, item);
+          break;
+        case 'headlines':
+          slot.headlines = await fetchHeadlines(eff);
           break;
 
         default:

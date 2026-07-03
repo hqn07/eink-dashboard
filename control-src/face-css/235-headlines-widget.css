@@ -1,0 +1,50 @@
+/* ============ HEADLINES WIDGET ============
+ * RSS / Hacker News list. Grotesk type, dotted row dividers to echo the
+ * TRMNL card zones. Titles clamp to 2 lines via .tr-clamp (--fit-lines). */
+
+.widget-headlines { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+
+.hl-list { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.hl-list--trmnl { padding: 2px 0; }
+
+.hl-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: var(--face-rule) dotted var(--face-ink);
+  font-family: var(--face-grotesk);
+}
+.hl-list--trmnl .hl-row:last-child,
+.widget-headlines .hl-row:last-child { border-bottom: none; }
+
+.hl-num {
+  flex: none;
+  font-weight: 800;
+  font-size: 13px;
+  min-width: 1.4em;
+  font-variant-numeric: tabular-nums;
+  color: var(--face-ink);
+}
+
+.hl-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.25;
+  font-weight: 600;
+  color: var(--face-ink);
+}
+
+/* No opacity — it dithers to gray noise on 1-bit. Age/stale read as
+ * secondary via smaller size + tracking, staying pure black. */
+.hl-age {
+  flex: none;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--face-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.hl-stale { font-size: 0.85em; font-weight: 400; }

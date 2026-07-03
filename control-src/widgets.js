@@ -32,7 +32,7 @@ export const SCREENS = [1, 2];
 // section a widget lands in and the one-line blurb shown on its card.
 // Lives here (not on the def) because SSR never needs it; only the
 // editor pool does. `POOL_CATEGORIES` fixes the section order.
-export const POOL_CATEGORIES = ['Weather', 'Time', 'Calendar', 'Media', 'System', 'Data', 'Text'];
+export const POOL_CATEGORIES = ['Weather', 'Time', 'Calendar', 'Media', 'News', 'System', 'Data', 'Text'];
 const POOL_META = {
   weather_hero:     { category: 'Weather',  blurb: 'Current conditions — big temp + icon' },
   weather_forecast: { category: 'Weather',  blurb: 'Multi-day / hourly outlook' },
@@ -44,6 +44,7 @@ const POOL_META = {
   calendar:         { category: 'Calendar', blurb: 'Upcoming events agenda' },
   mac_nowplaying:   { category: 'Media',    blurb: 'Now playing from your Mac' },
   photo:            { category: 'Media',    blurb: 'Your image, dithered to 1-bit' },
+  headlines:        { category: 'News',     blurb: 'RSS or Hacker News headlines' },
   eink_battery:     { category: 'System',   blurb: 'This display’s battery level' },
   mac_battery:      { category: 'System',   blurb: 'Your Mac’s battery level' },
   sparkline:        { category: 'Data',     blurb: 'Trend line from a metric' },
@@ -78,6 +79,7 @@ export const WIDGET_REGISTRY = [
   { ...migratedDef('world_clock') },
   { ...migratedDef('quote') },
   { ...migratedDef('onthisday') },
+  { ...migratedDef('headlines') },
   { ...migratedDef('photo') },
   { ...migratedDef('qr') },
   { ...migratedDef('sparkline') },

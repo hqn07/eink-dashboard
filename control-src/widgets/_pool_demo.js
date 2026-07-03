@@ -150,6 +150,18 @@ export function demoCtxForWidget(id, cellW, cellH) {
     }
     case 'aqi':
       return { ...base, aqi: DEMO_AQI, settings: {} };
+    case 'headlines':
+      return { ...base, headlines: {
+        source: 'Hacker News',
+        items: [
+          { title: 'Show HN: I built an e-ink dashboard that runs for months', age: '1h' },
+          { title: 'The quiet comeback of RSS', age: '3h' },
+          { title: 'A deep dive into Floyd–Steinberg dithering', age: '5h' },
+          { title: 'Why 1-bit displays are having a moment', age: '7h' },
+          { title: 'Ask HN: favorite low-power side projects?', age: '9h' },
+          { title: 'Building a paper-like reading device from scratch', age: '11h' }
+        ], stale: false
+      }, settings: { source: 'hn' } };
     case 'onthisday':
       return { ...base, onThisDay: {
         dateLabel: 'JUNE 16',
