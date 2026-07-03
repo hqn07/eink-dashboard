@@ -190,7 +190,14 @@ export function render(ctx) {
       <div class="tr-body">
         <div style="display:flex;align-items:center;gap:16px;flex:1">
           <div style="flex:none">${disc}</div>
-          <div class="tr-lv tr-lv-md"><div class="tr-v">${pct}<span class="tr-deg">%</span></div><div class="tr-l">Illuminated</div></div>
+          <div class="tr-lv tr-lv-md" style="flex:1;min-width:0">
+            <div class="tr-v">${pct}<span class="tr-deg">%</span></div>
+            <div class="tr-l">Illuminated</div>
+            <div class="tr-bar" style="height:14px;flex:none;margin-top:10px">
+              <div class="tr-bar-fill face-tone-g50" style="width:${Math.max(2, pct)}%"></div>
+              <div class="tr-bar-track face-tone-g15"></div>
+            </div>
+          </div>
         </div>
         ${stats}
       </div>
