@@ -31,6 +31,7 @@ import * as photo            from './photo.js';
 import * as qr               from './qr.js';
 import * as quote            from './quote.js';
 import * as sparkline        from './sparkline.js';
+import * as tasks            from './tasks.js';
 import * as text             from './text.js';
 import * as weather_forecast from './weather_forecast.js';
 import * as weather_hero     from './weather_hero.js';
@@ -51,6 +52,7 @@ import { Form as photoForm }           from './photo.form.jsx';
 import { Form as qrForm }              from './qr.form.jsx';
 import { Form as quoteForm }           from './quote.form.jsx';
 import { Form as sparklineForm }       from './sparkline.form.jsx';
+import { Form as tasksForm }           from './tasks.form.jsx';
 import { Form as textForm }            from './text.form.jsx';
 import { Form as weatherForecastForm } from './weather_forecast.form.jsx';
 import { Form as weatherHeroForm }     from './weather_hero.form.jsx';
@@ -58,7 +60,7 @@ import { Form as worldClockForm }      from './world_clock.form.jsx';
 
 const MODULES = [
   aqi, calendar, codeactivity, clock, countdown, eink_battery, mac_battery, mac_nowplaying,
-  headlines, moon, onthisday, photo, qr, quote, sparkline, text, weather_forecast, weather_hero, world_clock
+  headlines, moon, onthisday, photo, qr, quote, sparkline, tasks, text, weather_forecast, weather_hero, world_clock
 ];
 
 const FORMS = {
@@ -77,6 +79,7 @@ const FORMS = {
   qr:               qrForm,
   quote:            quoteForm,
   sparkline:        sparklineForm,
+  tasks:            tasksForm,
   text:             textForm,
   weather_forecast: weatherForecastForm,
   weather_hero:     weatherHeroForm,

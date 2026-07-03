@@ -42,6 +42,7 @@ const POOL_META = {
   countdown:        { category: 'Time',     blurb: 'Days until a target date' },
   moon:             { category: 'Time',     blurb: 'Moon phase + illumination' },
   calendar:         { category: 'Calendar', blurb: 'Upcoming events agenda' },
+  tasks:            { category: 'Calendar', blurb: 'Todoist / iCal to-do list' },
   mac_nowplaying:   { category: 'Media',    blurb: 'Now playing from your Mac' },
   photo:            { category: 'Media',    blurb: 'Your image, dithered to 1-bit' },
   headlines:        { category: 'News',     blurb: 'RSS or Hacker News headlines' },
@@ -83,6 +84,7 @@ export const WIDGET_REGISTRY = [
   { ...migratedDef('photo') },
   { ...migratedDef('qr') },
   { ...migratedDef('sparkline') },
+  { ...migratedDef('tasks') },
   { ...migratedDef('codeactivity') }
 ].map(withPoolMeta);
 

@@ -150,6 +150,17 @@ export function demoCtxForWidget(id, cellW, cellH) {
     }
     case 'aqi':
       return { ...base, aqi: DEMO_AQI, settings: {} };
+    case 'tasks':
+      return { ...base, tasks: {
+        items: [
+          { title: 'Submit expense report', due: 'today', priority: 1 },
+          { title: 'Call the dentist', due: 'TOMORROW', priority: 4 },
+          { title: 'Review Q3 roadmap', due: 'THU', priority: 2 },
+          { title: 'Water the plants', due: '', priority: 4 },
+          { title: 'Renew domain', due: 'overdue', priority: 1 },
+          { title: 'Book flights', due: 'JUL 12', priority: 3 }
+        ], stale: false
+      }, settings: { source: 'todoist' } };
     case 'headlines':
       return { ...base, headlines: {
         source: 'Hacker News',

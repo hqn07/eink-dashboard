@@ -28,6 +28,7 @@ const { buildClock } = require('./widgets/clock');
 const { computeNextAlarm, normalizeAlarmList } = require('./widgets/alarms');
 const { fetchPhoto } = require('./widgets/photo');
 const { fetchHeadlines } = require('./widgets/headlines');
+const { fetchTasks } = require('./widgets/tasks');
 const {
   preThreshold, rgbaToMono, packMonoBin,
   isRedPixel, rgbaToPlanes, planesToPng
@@ -1182,6 +1183,9 @@ async function buildWidgetData(cfg, units, layout) {
           break;
         case 'headlines':
           slot.headlines = await fetchHeadlines(eff);
+          break;
+        case 'tasks':
+          slot.tasks = await fetchTasks(eff);
           break;
 
         default:
