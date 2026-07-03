@@ -1,9 +1,9 @@
 import React, { useRef, useEffect, useState } from 'react';
 import GridLayout from 'react-grid-layout';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Gear, X } from '@phosphor-icons/react';
+import { Gear, X, Copy } from '@phosphor-icons/react';
 import * as HoverCard from '@radix-ui/react-hover-card';
-import { WIDGET_REGISTRY, POOL_CATEGORIES, GRID_COLS, GRID_ROWS, widgetById, makeInstance } from '../widgets.js';
+import { WIDGET_REGISTRY, POOL_CATEGORIES, GRID_COLS, GRID_ROWS, widgetById, makeInstance, newInstanceId } from '../widgets.js';
 import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses } from '../widget-render.js';
 import { demoCtxForWidget } from '../widgets/_pool_demo.js';
 import { autofitText } from '../autofit.js';
@@ -323,6 +323,23 @@ export default function EditorGrid({ layout, showGrid, readOnly = false, preview
     onChange(layout.filter(l => l.id !== id));
   };
 
+  // Clone a configured tile (settings + size) into a free slot so users
+  // don't re-configure from scratch. Falls back to overlapping the original
+  // if the canvas is full.
+  const duplicateTile = (id) => {
+    const item = enabled.find(l => l.id === id);
+    if (!item) return;
+    const slot = findFreeSlot(item.w, item.h, enabled) || { x: item.x, y: item.y };
+    const clone = {
+      ...item,
+      id: newInstanceId(item.widgetId),
+      x: slot.x, y: slot.y,
+      settings: item.settings ? { ...item.settings } : undefined
+    };
+    onChange([...layout, clone]);
+    setSelectedId(clone.id);
+  };
+
   // HTML5 drag from pool tile onto canvas.
   const onPoolDragStart = (e, id) => {
     e.dataTransfer.effectAllowed = 'copy';
@@ -436,6 +453,13 @@ export default function EditorGrid({ layout, showGrid, readOnly = false, preview
                       onClick={(e) => { e.stopPropagation(); setModalForId(l.id); }}
                     ><Gear size={14} weight="bold" /></button>
                     <button
+                      className="tile-settings"
+                      title="Duplicate"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onClick={(e) => { e.stopPropagation(); duplicateTile(l.id); }}
+                    ><Copy size={14} weight="bold" /></button>
+                    <button
                       className="tile-remove"
                       title="Remove"
                       onMouseDown={(e) => e.stopPropagation()}
@@ -475,8 +499,9 @@ export default function EditorGrid({ layout, showGrid, readOnly = false, preview
         </div>
 
         {enabled.length === 0 && (
-          <div className="editor-empty terminal-line">
-            <div>&gt; CANVAS_EMPTY</div>
+          <div className="editor-empty">
+            <div className="editor-empty-title">This screen is empty</div>
+            <div className="editor-empty-sub">Add widgets to build your dashboard — drag them onto the grid or click to drop.</div>
             <button
               type="button"
               className="btn btn-primary editor-empty-cta"

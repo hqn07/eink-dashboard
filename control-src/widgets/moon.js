@@ -23,7 +23,7 @@ export function moonInfo(now) {
   let p = (days % SYNODIC) / SYNODIC;    // phase fraction 0..1
   if (p < 0) p += 1;
   const illum = (1 - Math.cos(2 * Math.PI * p)) / 2; // 0..1
-  return { p, age: p * SYNODIC, illum, waxing: p < 0.5, name: phaseName(p) };
+  return { p, age: p * SYNODIC, illum, waxing: p < 0.5, name: phaseName(p), short: phaseShort(p) };
 }
 
 function phaseName(p) {
@@ -36,6 +36,20 @@ function phaseName(p) {
   if (p < 0.7155) return 'WANING GIBBOUS';
   if (p < 0.7845) return 'LAST QUARTER';
   return 'WANING CRESCENT';
+}
+
+// Compact phase for the title-bar meta (which truncates): the shape word
+// only, since the body already shows the Waxing/Waning trend. Avoids
+// "WANING GIBBO…" clipping.
+function phaseShort(p) {
+  if (p < 0.0345 || p >= 0.9655) return 'NEW';
+  if (p < 0.2155) return 'CRESCENT';
+  if (p < 0.2845) return 'FIRST QTR';
+  if (p < 0.4655) return 'GIBBOUS';
+  if (p < 0.5345) return 'FULL';
+  if (p < 0.7155) return 'GIBBOUS';
+  if (p < 0.7845) return 'LAST QTR';
+  return 'CRESCENT';
 }
 
 // Unique-id counter so multiple discs on one page (matrix / preview) don't
@@ -156,7 +170,7 @@ export function render(ctx) {
       cells += `<div class="moon-flow-cell">${moonSvg(sz, mi.illum, mi.waxing)}</div>`;
     }
     return `<div class="tr-card">
-      <div class="tr-titlebar"><span>Moon</span><span class="tr-meta">${escapeHtml(m.name)}</span></div>
+      <div class="tr-titlebar"><span>Moon</span><span class="tr-meta">${escapeHtml(m.short)}</span></div>
       <div class="tr-body" style="justify-content:center;gap:8px">
         <div class="moon-flow" style="gap:${GAP}px">${cells}</div>
         <div class="moon-flow-cap"><span class="moon-flow-pct">${pct}%</span><span class="moon-flow-name">${escapeHtml(m.name)}</span></div>
@@ -172,7 +186,7 @@ export function render(ctx) {
            <div class="tr-stat"><div class="tr-sv">${m.waxing ? 'Waxing' : 'Waning'}</div><div class="tr-sl">Trend</div></div>
          </div>` : '';
     return `<div class="tr-card">
-      <div class="tr-titlebar"><span>Moon</span><span class="tr-meta">${escapeHtml(m.name)}</span></div>
+      <div class="tr-titlebar"><span>Moon</span><span class="tr-meta">${escapeHtml(m.short)}</span></div>
       <div class="tr-body">
         <div style="display:flex;align-items:center;gap:16px;flex:1">
           <div style="flex:none">${disc}</div>
