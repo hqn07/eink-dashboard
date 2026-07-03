@@ -3565,3 +3565,14 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   font-size: var(--fs-sm);
   color: var(--ink);
 }
+
+/* ---------- Cards mode on the editor canvas (WYSIWYG w/ the panel) ---------- */
+/* RGL margin already gaps the tiles; give each tile's cell a full card border
+ * (replacing the abutting grid dividers) so the drag surface matches the
+ * cards-mode preview + panel. */
+.editor-wrap.cards .live-tile .cell,
+.editor-wrap.cards .live-tile .cell.cell-edge-right,
+.editor-wrap.cards .live-tile .cell.cell-edge-bottom {
+  box-sizing: border-box;
+  border: 2px solid #000;
+}

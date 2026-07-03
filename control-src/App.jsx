@@ -760,6 +760,7 @@ export default function App() {
             <EditorGrid
               layout={layout}
               showGrid={showGrid}
+              cardStyle={editCardStyle}
               readOnly={readOnly}
               previewData={livePreviewData}
               seedCtx={{

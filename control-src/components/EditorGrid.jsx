@@ -50,7 +50,8 @@ function showcaseSizeKey(def) {
   return def.defaultSize;
 }
 
-export default function EditorGrid({ layout, showGrid, readOnly = false, previewData, seedCtx, onChange, onError, onCommitItemNow }) {
+export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = false, previewData, seedCtx, onChange, onError, onCommitItemNow }) {
+  const cardsMode = cardStyle === 'cards';
   const wrapRef = useRef(null);
   const paletteRef = useRef(null);
   const dupLockRef = useRef(false);
@@ -162,7 +163,10 @@ export default function EditorGrid({ layout, showGrid, readOnly = false, preview
   const BODY_H = DASH_H;
   const scale = size.w > 0 ? size.w / DASH_W : 1;
   const bodyHeight = size.h * (BODY_H / DASH_H);
-  const rowHeight = bodyHeight / GRID_ROWS;
+  // Cards mode: give tiles a gap (scaled to the canvas) and shrink rowHeight
+  // so the gapped grid still fits the fixed 800×480 aspect box.
+  const tileMargin = cardsMode ? Math.max(2, Math.round(4 * scale)) : MARGIN;
+  const rowHeight = (bodyHeight - (GRID_ROWS - 1) * tileMargin) / GRID_ROWS;
   const innerW = size.w;
 
   const rglLayout = enabled.map(l => {
@@ -381,7 +385,7 @@ export default function EditorGrid({ layout, showGrid, readOnly = false, preview
     <div>
       <motion.div
         ref={wrapRef}
-        className={`editor-wrap ${showGrid ? 'show-grid' : ''} ${dropHover ? 'drop-target' : ''}`}
+        className={`editor-wrap ${showGrid ? 'show-grid' : ''} ${dropHover ? 'drop-target' : ''} ${cardsMode ? 'cards' : ''}`}
         animate={shake ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
         transition={{ duration: 0.45 }}
         onDragOver={onCanvasDragOver}
@@ -415,7 +419,7 @@ export default function EditorGrid({ layout, showGrid, readOnly = false, preview
           isDraggable={!readOnly}
           isResizable={!readOnly}
           resizeHandles={['se', 'sw', 'nw']}
-          margin={[MARGIN, MARGIN]}
+          margin={[tileMargin, tileMargin]}
           containerPadding={[PAD, PAD]}
           layout={rglLayout}
           onLayoutChange={handleLayoutChange}
