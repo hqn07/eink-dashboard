@@ -29,6 +29,7 @@ const { computeNextAlarm, normalizeAlarmList } = require('./widgets/alarms');
 const { fetchPhoto } = require('./widgets/photo');
 const { fetchHeadlines } = require('./widgets/headlines');
 const { fetchTasks } = require('./widgets/tasks');
+const { fetchTransit } = require('./widgets/transit');
 const {
   preThreshold, rgbaToMono, packMonoBin,
   isRedPixel, rgbaToPlanes, planesToPng
@@ -1186,6 +1187,9 @@ async function buildWidgetData(cfg, units, layout) {
           break;
         case 'tasks':
           slot.tasks = await fetchTasks(eff);
+          break;
+        case 'transit':
+          slot.transit = await fetchTransit(eff);
           break;
 
         default:

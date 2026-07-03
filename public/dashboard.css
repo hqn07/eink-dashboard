@@ -2600,3 +2600,57 @@ img.icon { object-fit: contain; }
 }
 
 .task-stale { font-size: 0.85em; font-weight: 400; }
+
+/* ============ TRANSIT WIDGET ============
+ * NYC MTA arrivals board. Route bullet (bordered circle) + minutes-away.
+ * Grotesk, dotted dividers. Imminent trains lean on .face-red. */
+
+.widget-transit { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+
+.tr-t-list { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.tr-t-list--trmnl { padding: 2px 0; }
+
+.tr-t-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-bottom: var(--face-rule) dotted var(--face-ink);
+  font-family: var(--face-grotesk);
+}
+.tr-t-row:last-child { border-bottom: none; }
+
+.tr-bullet {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7em;
+  height: 1.7em;
+  border: 2px solid var(--face-ink);
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--face-ink);
+}
+
+.tr-t-min {
+  margin-left: auto;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--face-ink);
+  font-variant-numeric: tabular-nums;
+}
+.tr-t-unit {
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tr-t-list--board .tr-t-min { font-size: 30px; }
+
+.tr-t-stale { font-size: 0.85em; font-weight: 400; }

@@ -161,6 +161,17 @@ export function demoCtxForWidget(id, cellW, cellH) {
           { title: 'Book flights', due: 'JUL 12', priority: 3 }
         ], stale: false
       }, settings: { source: 'todoist' } };
+    case 'transit':
+      return { ...base, transit: {
+        stop: 'L06N',
+        items: [
+          { line: 'L', minutes: 2 },
+          { line: 'L', minutes: 7 },
+          { line: 'L', minutes: 12 },
+          { line: 'L', minutes: 18 },
+          { line: 'L', minutes: 24 }
+        ], stale: false
+      }, settings: { line: 'L', direction: 'N' } };
     case 'headlines':
       return { ...base, headlines: {
         source: 'Hacker News',
