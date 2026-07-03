@@ -35,13 +35,10 @@
 /* Full — image owns the whole tile. */
 .photo-full { }
 
-/* Framed — a dithered gutter (padding reveals the g50 tile behind the
- * image) plus an optional heading above and caption below. */
+/* Framed — a dithered border band (.face-frame-g50) plus an optional
+ * heading above and caption below. */
 .photo-framed { gap: 6px; padding: 10px; }
-.photo-frame-border {
-  padding: 6px;                  /* gutter that shows the dither frame */
-  flex: 1 1 auto;
-}
+.photo-frame-border { flex: 1 1 auto; }
 .photo-framed .col-title { flex: none; }
 .photo-cap {
   flex: none;

@@ -1,1 +1,58 @@
-/* ============ BORDER STYLES ============ */
+/* ============ BORDER STYLES ============
+ * Dithered frame utilities. The panel has three solid inks (black, white,
+ * red); a dithered border band fakes a gray/pink rule the same way the
+ * tone-tile backgrounds fake gray/pink fills. Built with border-image from
+ * a checkerboard SVG tile + image-rendering:pixelated, so every pixel in
+ * the band is pure black/white/red and survives the server's threshold(128)
+ * / red-plane split crisply (render is pixel-exact at 800×480, dsf 1).
+ *
+ * Use on any block (cards, tiles, chips, photo frames). Pair a frame width
+ * ≥4px so the dither band reads as texture, not a fuzzy line.
+ *
+ * eink-lint-allow: the tiles below are intentionally 1-bit (black/white or
+ * red #d32f2f); the gray/pink is an optical dot mix, not a real color. */
+
+.face-frame {
+  border-style: solid;
+  border-width: 4px;
+  border-color: var(--face-ink);   /* fallback if border-image unsupported */
+  image-rendering: pixelated;
+}
+.face-frame-thin  { border-width: 2px; }
+.face-frame-thick { border-width: 6px; }
+
+/* Solid ink frame — the standard TRMNL 2px card rule (no dither). */
+.face-frame-solid {
+  border-width: 2px;
+  border-image: none;
+  border-color: var(--face-ink);
+}
+
+/* border-image slice math: the middle (repeating) band = tileSize − 2·slice,
+ * so the tile must be > 2·slice or the edges collapse to a stretched line.
+ * A 12×12 tile with slice 4 leaves a 4px middle band that repeats the 2px
+ * checker cleanly at the 4px border width. */
+
+/* Gray 50% — 2px checkerboard band. */
+.face-frame-g50 {
+  border-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' shape-rendering='crispEdges'%3E%3Cdefs%3E%3Cpattern id='c' width='4' height='4' patternUnits='userSpaceOnUse'%3E%3Crect width='2' height='2' x='0' y='0'/%3E%3Crect width='2' height='2' x='2' y='2'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='12' height='12' fill='url(%23c)'/%3E%3C/svg%3E") 4 repeat;
+}
+/* Gray 25% — one black dot per 2×2 (sparser band). */
+.face-frame-g25 {
+  border-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' shape-rendering='crispEdges'%3E%3Cdefs%3E%3Cpattern id='c' width='2' height='2' patternUnits='userSpaceOnUse'%3E%3Crect width='1' height='1' x='0' y='0'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='12' height='12' fill='url(%23c)'/%3E%3C/svg%3E") 4 repeat;
+}
+/* Pink — red checkerboard band (B panel: red plane; BW: mid gray). */
+.face-frame-r50 {
+  border-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' shape-rendering='crispEdges'%3E%3Cdefs%3E%3Cpattern id='c' width='4' height='4' patternUnits='userSpaceOnUse'%3E%3Crect width='2' height='2' x='0' y='0' fill='%23d32f2f'/%3E%3Crect width='2' height='2' x='2' y='2' fill='%23d32f2f'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='12' height='12' fill='url(%23c)'/%3E%3C/svg%3E") 4 repeat;
+}
+
+/* Card modifier: wrap a .tr-card in a dithered frame. The frame sits
+ * outside the title-bar/body, so inner rules stay crisp black. */
+.tr-card.tr-card--framed {
+  border-width: 4px;
+  border-style: solid;
+  image-rendering: pixelated;
+}
+.tr-card.tr-card--framed.face-frame-g50,
+.tr-card.tr-card--framed.face-frame-g25,
+.tr-card.tr-card--framed.face-frame-r50 { border-color: var(--face-ink); }

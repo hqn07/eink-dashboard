@@ -77,7 +77,7 @@ export function render(ctx) {
       ? s.title.trim() : '';
     return `<div class="photo photo-framed">
       ${titleLabel ? `<div class="col-title">${escapeHtml(titleLabel)}</div>` : ''}
-      <div class="photo-frame photo-frame-border face-tone-g50">${img}</div>
+      <div class="photo-frame photo-frame-border face-frame face-frame-g50">${img}</div>
       ${capText ? `<div class="photo-cap">${escapeHtml(capText)}</div>` : ''}
     </div>`;
   }
