@@ -26,58 +26,59 @@ function labelFor(tz) {
   return tz.split('/').pop().replace(/_/g, ' ').toUpperCase();
 }
 
-export function Form({ values, patch, onChange, fields }) {
-  const v = values || {};
-  const { TextField, ListEditor, SegmentedField, ToggleField, TypographyFields, FormSection, defaults = {} } = fields;
+// Zone search (hooks live here, not in the pure Form — TabbedForm calls
+// Form directly to introspect sections, so it must be hook-free).
+function ZoneAdder({ v, patch }) {
   const zones = Array.isArray(v.zones) ? v.zones : [];
   const [query, setQuery] = React.useState('');
-
   const addTz = (tz) => {
     const clean = (tz || '').trim();
     if (!clean) return;
     patch({ zones: [...zones, `${labelFor(clean)}|${clean}`] });
     setQuery('');
   };
-
   const onSearchKey = (e) => {
     if (e.key !== 'Enter') return;
     e.preventDefault();
-    // Accept an exact zone, else the first datalist match.
     const exact = ALL_ZONES.find(z => z.toLowerCase() === query.toLowerCase());
     const match = exact || ALL_ZONES.find(z => z.toLowerCase().includes(query.toLowerCase()));
     if (match) addTz(match);
   };
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div className="wsm-field-label">Add a zone</div>
+      <input
+        className="wsm-input"
+        type="text"
+        list="wclock-all-zones"
+        value={query}
+        placeholder="Search any city / region… (e.g. Berlin)"
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={onSearchKey}
+        aria-label="Search timezone"
+      />
+      <datalist id="wclock-all-zones">
+        {ALL_ZONES.map(tz => <option key={tz} value={tz} />)}
+      </datalist>
+      <div className="wsm-field-help">Pick from the list or type then press Enter. {ALL_ZONES.length} zones.</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+        {FAVES.map(([label, tz]) => (
+          <button key={tz} type="button" className="wsm-chip" onClick={() => addTz(tz)}>+ {label}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function Form({ values, patch, onChange, fields }) {
+  const v = values || {};
+  const { TextField, ListEditor, SegmentedField, ToggleField, TypographyFields, FormSection, defaults = {} } = fields;
+  const zones = Array.isArray(v.zones) ? v.zones : [];
 
   return (
     <>
       <FormSection title="Zones">
-        <div style={{ marginBottom: 8 }}>
-          <div className="wsm-field-label">Add a zone</div>
-          <input
-            className="wsm-input"
-            type="text"
-            list="wclock-all-zones"
-            value={query}
-            placeholder="Search any city / region… (e.g. Berlin)"
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={onSearchKey}
-            aria-label="Search timezone"
-          />
-          <datalist id="wclock-all-zones">
-            {ALL_ZONES.map(tz => <option key={tz} value={tz} />)}
-          </datalist>
-          <div className="wsm-field-help">Pick from the list or type then press Enter. {ALL_ZONES.length} zones.</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-            {FAVES.map(([label, tz]) => (
-              <button
-                key={tz}
-                type="button"
-                className="wsm-chip"
-                onClick={() => addTz(tz)}
-              >+ {label}</button>
-            ))}
-          </div>
-        </div>
+        <ZoneAdder v={v} patch={patch} />
         <ListEditor
           label="Zones (LABEL | IANA timezone)"
           items={zones}

@@ -17,47 +17,52 @@ const PRESETS = [
     values: { variant: 'month', density: 'auto',     showDayLabel: true,  showTime: true } }
 ];
 
+// Preset picker (hooks live here, not in the pure Form — see the photo/
+// TabbedForm note: Form is called directly to introspect its sections, so
+// it must not call hooks).
+function PresetAdder({ v, patch }) {
+  const [presetPick, setPresetPick] = useState('');
+  const addPreset = (url) => {
+    if (!url) { setPresetPick(''); return; }
+    const existing = Array.isArray(v.icalUrls) ? v.icalUrls : [];
+    if (!existing.includes(url)) patch({ icalUrls: [...existing, url] });
+    setPresetPick('');
+  };
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div className="wsm-field-label">Add from preset</div>
+      <div className="wsm-field-help" style={{ marginBottom: 4 }}>
+        Public iCal feeds — search or pick one to append below.
+      </div>
+      <SearchableSelect
+        value={presetPick}
+        onChange={addPreset}
+        groups={ICAL_PRESETS.map(g => ({
+          label: g.group,
+          items: g.items.map(it => ({ value: it.url, label: it.name, hint: g.group }))
+        }))}
+        placeholder="— Pick a preset —"
+        ariaLabel="Add iCal preset"
+      />
+    </div>
+  );
+}
+
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
   const { TextField, ListEditor, SelectField, ToggleField, TypographyFields, FormSection, PresetField, defaults = {} } = fields;
   const urls = Array.isArray(v.icalUrls) ? v.icalUrls.filter(Boolean) : [];
   const disabled = Array.isArray(v.disabledFeeds) ? v.disabledFeeds : [];
-  const [presetPick, setPresetPick] = useState('');
   const toggleFeed = (url, on) => {
     const next = on
       ? disabled.filter(u => u !== url)
       : disabled.includes(url) ? disabled : [...disabled, url];
     patch({ disabledFeeds: next });
   };
-  const addPreset = (url) => {
-    if (!url) return;
-    const existing = Array.isArray(v.icalUrls) ? v.icalUrls : [];
-    if (existing.includes(url)) {
-      setPresetPick('');
-      return;
-    }
-    patch({ icalUrls: [...existing, url] });
-    setPresetPick('');
-  };
   return (
     <>
       <FormSection title="Data">
-        <div style={{ marginBottom: 10 }}>
-          <div className="wsm-field-label">Add from preset</div>
-          <div className="wsm-field-help" style={{ marginBottom: 4 }}>
-            Public iCal feeds — search or pick one to append below.
-          </div>
-          <SearchableSelect
-            value={presetPick}
-            onChange={(url) => addPreset(url)}
-            groups={ICAL_PRESETS.map(g => ({
-              label: g.group,
-              items: g.items.map(it => ({ value: it.url, label: it.name, hint: g.group }))
-            }))}
-            placeholder="— Pick a preset —"
-            ariaLabel="Add iCal preset"
-          />
-        </div>
+        <PresetAdder v={v} patch={patch} />
         <ListEditor
           label="iCal feed URLs"
           items={v.icalUrls}
