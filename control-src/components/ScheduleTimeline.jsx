@@ -201,8 +201,7 @@ export default function ScheduleTimeline({
   return (
     <div className="timeline-wrap">
       <div className="timeline-title">
-        <span>24-Hour Schedule</span>
-        <span className="timeline-help">DRAG EMPTY TO SCHEDULE · DRAG BLOCK TO MOVE · EDGES RESIZE</span>
+        <span className="timeline-help">Drag empty to schedule · drag block to move · edges resize</span>
       </div>
       <svg
         ref={svgRef}

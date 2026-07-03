@@ -732,9 +732,6 @@ export default function App() {
               <span>{editScreen?.name || 'Screen'}</span>
               <div className="btn-row" style={{ marginTop: 0, gap: 6 }}>
                 <span className="badge">{GRID_COLS}×{GRID_ROWS}</span>
-                {editScreen && editScreen.isDefault && (
-                  <span className="badge" title="Active when no schedule matches the current time">DEFAULT</span>
-                )}
                 {editScreen && !editScreen.isDefault && (
                   <button
                     className="btn btn-ghost btn-iconed btn-compact"
