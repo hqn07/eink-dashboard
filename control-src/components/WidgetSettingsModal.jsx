@@ -104,6 +104,7 @@ export default function WidgetSettingsModal({
   // Save commits the working draft to onSave().
   const [draft, setDraft] = useState(item || null);
   const initialRef = useRef(null);
+  const panelRef = useRef(null);
   const [showDiscardPrompt, setShowDiscardPrompt] = useState(false);
 
   useEffect(() => {
@@ -141,6 +142,39 @@ export default function WidgetSettingsModal({
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [open, dirty]);
+
+  // Focus trap: aria-modal alone doesn't stop Tab from reaching the editor
+  // behind the sheet. Keep Tab cycling inside the panel, move initial focus
+  // in, and restore focus to whatever was focused when the modal closes.
+  useEffect(() => {
+    if (!open) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const prevFocus = document.activeElement;
+    const sel = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+    const onKey = (e) => {
+      if (e.key !== 'Tab') return;
+      const items = panel.querySelectorAll(sel);
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault(); last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus();
+      }
+    };
+    // Move focus into the panel if it isn't already there.
+    if (!panel.contains(document.activeElement)) {
+      const firstFocusable = panel.querySelector(sel);
+      if (firstFocusable) firstFocusable.focus();
+    }
+    panel.addEventListener('keydown', onKey);
+    return () => {
+      panel.removeEventListener('keydown', onKey);
+      if (prevFocus && typeof prevFocus.focus === 'function') prevFocus.focus();
+    };
+  }, [open]);
 
   // Lock the page scroll while the modal is open so wheel / touch
   // gestures don't drift the editor underneath. Restore the prior
@@ -307,6 +341,7 @@ export default function WidgetSettingsModal({
         }}
       >
         <motion.div
+          ref={panelRef}
           className="wsm-panel wsm-panel-sheet"
           role="dialog"
           aria-modal="true"
