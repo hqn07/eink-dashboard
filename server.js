@@ -9,59 +9,31 @@ require('dotenv').config();
 const express = require('express');
 const compression = require('compression');
 const path = require('path');
-const fs = require('fs');
-const fsp = require('fs/promises');
 const crypto = require('crypto');
-const puppeteer = require('puppeteer');
-const sharp = require('sharp');
 
-const { fetchWeather, geocodeCity } = require('./widgets/weather');
-const { fetchAqi } = require('./widgets/aqi');
-const { fetchCodeActivity } = require('./widgets/codeactivity');
-const { fetchOnThisDay } = require('./widgets/onthisday');
-const { fetchEvents } = require('./widgets/calendar');
-const { fetchAlerts } = require('./widgets/alerts');
-const widgetStatus = require('./widgets/_status');
-const { resolveMessage, renderInlineMarkdown } = require('./widgets/message');
-const { fetchMacNowPlaying } = require('./widgets/macnowplaying');
-const { fetchMacBattery } = require('./widgets/macbattery');
-const { buildClock } = require('./widgets/clock');
-const { computeNextAlarm, normalizeAlarmList } = require('./widgets/alarms');
-const { fetchPhoto } = require('./widgets/photo');
-const { fetchHeadlines } = require('./widgets/headlines');
-const { fetchTasks } = require('./widgets/tasks');
-const { fetchTransit } = require('./widgets/transit');
-const {
-  preThreshold, rgbaToMono, packMonoBin,
-  isRedPixel, rgbaToPlanes, planesToPng
-} = require('./lib/image');
-const { FW_DIR, FW_NAME_RE, parseSemver, cmpSemver, findNewestFirmware } = require('./lib/firmware');
-const { parseHHMM, hmFormatter, localMinutesNow, scheduleIntervals } = require('./lib/timewin');
-const { relAge, dur, batteryTrend, sparkline } = require('./lib/statusfmt');
-const { htmlAttr, escapeHtmlServer, strongEtag, decodeSettingsParam } = require('./lib/htmlutil');
-const { sizeFor, expandLayout, withinVisibility } = require('./lib/layout');
-const { jsonFetch } = require('./lib/geo');
-
-// SSR module — per-widget render functions + chrome helpers, no React.
-// Dynamically imported (ESM) at first use and cached. Lets /dashboard
-// produce the full page HTML server-side instead of shipping a
-// duplicate widget render block to the browser.
-const { loadSsr, loadDashboardHtml } = require('./lib/ssr-shell');
-
-// Error ring buffer moved to ./lib/errlog.js — requiring it installs the
-// console.error wrapper (side effect) and hands back the shared ring the
-// /status page reads.
-const { errLog: _errLog } = require('./lib/errlog');
+// Requiring errlog installs a console.error wrapper (side effect) that feeds
+// the ring buffer the /status page reads. Required early so startup errors
+// are captured.
+require('./lib/errlog');
 
 const PORT = process.env.PORT || 3000;
 const { DEVICE_TOKEN, IS_PROD } = require('./lib/env');
-// On-disk state paths + atomic write live in lib/store.js (single source of
-// truth for DATA_DIR). The reset route still needs a couple of them.
-const { CONFIG_PATH, DEFAULT_CONFIG_PATH, atomicWriteFile } = require('./lib/store');
 
-// Loud warning when no DEVICE_TOKEN is set in production: the control
-// panel + config API end up wide-open. Local dev intentionally allows
-// missing token so first-run friction stays low.
+// server.js is the composition root: it wires middleware + mounts the routers
+// under routes/. Nearly all logic lives in lib/ modules; the only pieces used
+// directly here are the startup warmer, the PIN-reset recovery, the config
+// migrator wiring, and a couple of middleware deps.
+const { loadConfig, saveConfig, setMigrator: _setConfigMigrator } = require('./lib/config-store');
+const { migrateConfigToScreens } = require('./lib/screens');
+const {
+  invalidateImage, warmActiveImage, PRERENDER_ENABLED, PRERENDER_INTERVAL_MS,
+} = require('./lib/render');
+const { gateControlHtml } = require('./lib/auth');
+const { safeError } = require('./lib/http');
+
+// Loud warning when no DEVICE_TOKEN is set in production: the control panel +
+// config API end up wide-open. Local dev intentionally allows a missing token
+// so first-run friction stays low.
 if (!DEVICE_TOKEN) {
   const msg = '[security] DEVICE_TOKEN env var is not set — /api/* config endpoints are PUBLIC.';
   if (IS_PROD) {
@@ -71,60 +43,9 @@ if (!DEVICE_TOKEN) {
   }
 }
 
-const SCREEN_W = 800;
-const SCREEN_H = 480;
-
-// ---------- Config persistence ----------
-
-// Persistence stores (each owns its own cache/lock state; see lib/*-store.js).
-// config-store's loadConfig runs the migrator wired below, once it's defined.
-const {
-  loadConfig, saveConfig, withConfigLock, invalidateConfigCache,
-  setMigrator: _setConfigMigrator,
-} = require('./lib/config-store');
-const {
-  loadBatteryState, saveBatteryState, currentBatteryState,
-  loadBatteryHistory, appendBatteryHistory,
-} = require('./lib/battery-store');
-const {
-  loadDevicesSync, saveDevices, findDeviceByKey, genApiKey, genFriendlyId,
-} = require('./lib/devices-store');
-const { buildWidgetData } = require('./lib/widget-data');
-const { renderPage } = require('./lib/ssr');
-const {
-  resolveScreenLayout, migrateConfigToScreens, pickActiveScreen,
-  resolveVariant, resolveRefreshMinutes,
-} = require('./lib/screens');
-const {
-  getBrowser, tryAcquirePage, releasePage,
-  getCurrentImage, invalidateImage, warmActiveImage, imageCache,
-  PRERENDER_ENABLED, PRERENDER_INTERVAL_MS,
-} = require('./lib/render');
-const {
-  pushNow, effectiveRefresh, getFastWakeUntil,
-  FAST_WINDOW_MS, FAST_INTERVAL_SECONDS,
-} = require('./lib/refresh');
-// Wire the config-store to migrate loaded configs to the current screen
-// schema. Injected (not imported by config-store) to avoid a require cycle.
+// Wire the config-store to migrate loaded configs to the current screen schema.
+// Injected (not imported by config-store) to avoid a require cycle.
 _setConfigMigrator(migrateConfigToScreens);
-
-// loadDashboardHtml + loadSsr (the SSR shell + compiled widget bundle) live in
-// ./lib/ssr-shell.js — imported at the top.
-
-// parseHHMM/hmFormatter/localMinutesNow/scheduleIntervals moved to
-// ./lib/timewin.js (required at the top).
-
-// ---------- Auth ----------
-
-// Auth (device token + api-key, control-panel PIN, sessions, gates) lives in
-// lib/auth.js. It reads config via config-store and devices via devices-store.
-const {
-  checkDeviceAuth, gateControlHtml, checkAdminAuth,
-  authBlock, pinConfigured, verifyPin, setPinInConfig,
-  makeSession, sessionValid, setSessionCookie, clearSessionCookie,
-} = require('./lib/auth');
-
-const { safeError } = require('./lib/http');
 
 // ---------- App ----------
 
