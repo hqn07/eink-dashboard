@@ -41,6 +41,7 @@ import * as transit          from './transit.js';
 import * as weather_forecast from './weather_forecast.js';
 import * as weather_hero     from './weather_hero.js';
 import * as world_clock      from './world_clock.js';
+import * as wordofday        from './wordofday.js';
 
 import { Form as aqiForm }             from './aqi.form.jsx';
 import { Form as calendarForm }        from './calendar.form.jsx';
@@ -67,10 +68,11 @@ import { Form as transitForm }         from './transit.form.jsx';
 import { Form as weatherForecastForm } from './weather_forecast.form.jsx';
 import { Form as weatherHeroForm }     from './weather_hero.form.jsx';
 import { Form as worldClockForm }      from './world_clock.form.jsx';
+import { Form as wordofdayForm }       from './wordofday.form.jsx';
 
 const MODULES = [
   aqi, calendar, codeactivity, clock, countdown, eink_battery, mac_battery, mac_nowplaying,
-  headlines, moon, onthisday, photo, progress, qr, fx, crypto, quote, sparkline, sun, tasks, text, transit, weather_forecast, weather_hero, world_clock
+  headlines, moon, onthisday, photo, progress, qr, fx, crypto, quote, sparkline, sun, tasks, text, transit, weather_forecast, weather_hero, world_clock, wordofday
 ];
 
 const FORMS = {
@@ -98,7 +100,8 @@ const FORMS = {
   transit:          transitForm,
   weather_forecast: weatherForecastForm,
   weather_hero:     weatherHeroForm,
-  world_clock:      worldClockForm
+  world_clock:      worldClockForm,
+  wordofday:        wordofdayForm
 };
 
 export const MIGRATED_DEFS = Object.fromEntries(
