@@ -1,4 +1,14 @@
-# server.js split — plan (for review, no code moved yet)
+# server.js split — plan
+
+> **STATUS: DONE (2026-07-04).** All phases shipped. server.js went
+> 2935 → 220 lines (a composition root). Logic now lives in 17 `lib/`
+> modules + 11 `routes/` routers. Every phase was committed separately
+> with `npm run check` + `test:api` green; render output verified
+> byte-identical. See git log `refactor(server): …` for the per-phase
+> commits. The section below is the original plan, kept for reference.
+
+---
+
 
 `server.js` is ~2989 lines / 44 routes / one file. Goal: shrink it to a thin
 composition root (`require` modules, wire middleware, mount routers, listen)
