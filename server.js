@@ -59,21 +59,9 @@ const { errLog: _errLog } = require('./lib/errlog');
 
 const PORT = process.env.PORT || 3000;
 const DEVICE_TOKEN = process.env.DEVICE_TOKEN || '';
-// Mutable state (config, battery, devices) lives under DATA_DIR. Set it
-// to a persistent volume mount on hosts with an ephemeral filesystem
-// (Railway/Fly/Render wipe the container FS on every redeploy — without
-// a volume the dashboard resets to defaults each deploy). Defaults to the
-// in-repo ./data for local dev.
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
-// A fresh volume mount is an empty directory — make sure it exists before
-// the first config/battery write.
-try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) { /* exists */ }
-const CONFIG_PATH = path.join(DATA_DIR, 'config.json');
-// Seed config lives outside DATA_DIR so a persistent volume taking over
-// that directory can't hide the baked-in defaults shipped with the image.
-const DEFAULT_CONFIG_PATH = path.join(__dirname, 'data-defaults', 'config.default.json');
-const BATTERY_PATH = path.join(DATA_DIR, 'battery.json');
-const DEVICES_PATH = path.join(DATA_DIR, 'devices.json');
+// On-disk state paths + atomic write live in lib/store.js (single source of
+// truth for DATA_DIR). The reset route still needs a couple of them.
+const { CONFIG_PATH, DEFAULT_CONFIG_PATH, atomicWriteFile } = require('./lib/store');
 
 // Loud warning when no DEVICE_TOKEN is set in production: the control
 // panel + config API end up wide-open. Local dev intentionally allows
@@ -96,166 +84,19 @@ const SCREEN_H = 480;
 
 // ---------- Config persistence ----------
 
-// In-memory config cache. Invalidated by saveConfig() and skipped when
-// the file's mtime advances (covers out-of-process edits to config.json).
-let _configCache = null; // { mtimeMs, cfg }
-async function loadConfig() {
-  try {
-    const st = await fsp.stat(CONFIG_PATH);
-    if (_configCache && _configCache.mtimeMs === st.mtimeMs) {
-      return _configCache.cfg;
-    }
-    const raw = await fsp.readFile(CONFIG_PATH, 'utf8');
-    const cfg = migrateConfigToScreens(JSON.parse(raw));
-    _configCache = { mtimeMs: st.mtimeMs, cfg };
-    return cfg;
-  } catch (err) {
-    // Seed from defaults ONLY when the file doesn't exist yet. Any
-    // other failure (corrupted JSON, transient fs error) must NOT
-    // clobber the user's config with defaults — surface the error
-    // instead so the bad file can be inspected/repaired.
-    if (err.code !== 'ENOENT') {
-      console.error('config.json unreadable (NOT overwriting):', err.message);
-      throw err;
-    }
-    const raw = await fsp.readFile(DEFAULT_CONFIG_PATH, 'utf8');
-    await atomicWriteFile(CONFIG_PATH, raw);
-    const cfg = migrateConfigToScreens(JSON.parse(raw));
-    const st = await fsp.stat(CONFIG_PATH).catch(() => null);
-    _configCache = { mtimeMs: st ? st.mtimeMs : 0, cfg };
-    return cfg;
-  }
-}
-
-// Atomic write: temp file + rename. Prevents partial/truncated config
-// if the process dies mid-write, and avoids two concurrent first-run
-// cold reads from clobbering each other.
-async function atomicWriteFile(target, data) {
-  const tmp = `${target}.${process.pid}.${Date.now()}.tmp`;
-  await fsp.writeFile(tmp, data);
-  await fsp.rename(tmp, target);
-}
-
-async function saveConfig(cfg) {
-  await atomicWriteFile(CONFIG_PATH, JSON.stringify(cfg, null, 2));
-  _configCache = null;
-}
-
-// Serialize all read-merge-write transactions on config.json. Two
-// concurrent POSTs (e.g. control panel saving alarms while another tab
-// saves message text) would otherwise both load the same baseline,
-// merge their own patches, and the second write would silently
-// clobber the first. Each caller runs inside fn(); the next caller
-// awaits until the previous resolves.
-let _configWriteChain = Promise.resolve();
-function withConfigLock(fn) {
-  const run = _configWriteChain.then(fn, fn);
-  _configWriteChain = run.catch(() => {}); // swallow rejections in the chain so one error doesn't permanently break the lock
-  return run;
-}
-
-// Battery state from the ESP32. ESP32 POSTs once per wake; we persist to
-// disk so the value survives server restart (panel only POSTs every
-// ~30min so an in-memory-only value would be stale after every redeploy).
-let _batteryState = null; // { v, pct, at } or null until first POST
-async function loadBatteryState() {
-  if (_batteryState !== null) return _batteryState;
-  try {
-    const raw = await fsp.readFile(BATTERY_PATH, 'utf8');
-    const obj = JSON.parse(raw);
-    if (obj && Number.isFinite(obj.v) && Number.isFinite(obj.pct) && Number.isFinite(obj.at)) {
-      _batteryState = obj;
-    } else {
-      _batteryState = null;
-    }
-  } catch {
-    _batteryState = null;
-  }
-  return _batteryState;
-}
-async function saveBatteryState(state) {
-  _batteryState = state;
-  try {
-    // Atomic write (tmp + rename) — same pattern as config — so a
-    // crash mid-write or a concurrent reader never sees half a file.
-    await atomicWriteFile(BATTERY_PATH, JSON.stringify(state));
-  } catch (err) {
-    console.warn('Battery persist failed:', err.message);
-  }
-  // Append to the rolling history (for the sparkline widget). Best-effort,
-  // de-duped on `at`, capped — a failure here must never block the save.
-  appendBatteryHistory(state).catch(e => console.warn('battery-history:', e.message));
-}
-
-// ---------- Battery history (rolling, for the sparkline) ----------
-const BATTERY_HISTORY_PATH = path.join(DATA_DIR, 'battery-history.json');
-const BATTERY_HISTORY_MAX = 96;       // ~2 days at a 30-min refresh
-let _batteryHistory = null;           // [{ pct, v, at }] oldest→newest
-
-async function loadBatteryHistory() {
-  if (_batteryHistory !== null) return _batteryHistory;
-  try {
-    const arr = JSON.parse(await fsp.readFile(BATTERY_HISTORY_PATH, 'utf8'));
-    _batteryHistory = Array.isArray(arr) ? arr : [];
-  } catch { _batteryHistory = []; }
-  return _batteryHistory;
-}
-
-let _batHistChain = Promise.resolve();
-function appendBatteryHistory(state) {
-  // Serialize so two near-simultaneous pushes can't clobber the file.
-  _batHistChain = _batHistChain.then(async () => {
-    if (!state || !Number.isFinite(state.pct) || !Number.isFinite(state.at)) return;
-    const hist = await loadBatteryHistory();
-    const last = hist[hist.length - 1];
-    if (last && last.at === state.at) return;   // dedupe identical timestamp
-    hist.push({ pct: state.pct, v: state.v, at: state.at });
-    while (hist.length > BATTERY_HISTORY_MAX) hist.shift();
-    _batteryHistory = hist;
-    await atomicWriteFile(BATTERY_HISTORY_PATH, JSON.stringify(hist));
-  }, () => {});
-  return _batHistChain;
-}
-
-// ---------- Device registry ----------
-//
-// Keyed by lowercased MAC. Each record holds the long-lived api_key
-// the device sends as X-API-Key, a human-friendly id for the control
-// UI, and the most recent telemetry (fw_version, board, last_seen).
-//
-// Loaded once at startup so checkDeviceAuth can do a synchronous
-// lookup; saveDevices() updates both the cache and the on-disk file.
-let _devicesCache = null;
-function loadDevicesSync() {
-  if (_devicesCache) return _devicesCache;
-  try {
-    const raw = fs.readFileSync(DEVICES_PATH, 'utf8');
-    const obj = JSON.parse(raw);
-    _devicesCache = obj && typeof obj === 'object' ? obj : {};
-  } catch (_) {
-    _devicesCache = {};
-  }
-  return _devicesCache;
-}
-async function saveDevices(d) {
-  _devicesCache = d;
-  try {
-    await atomicWriteFile(DEVICES_PATH, JSON.stringify(d, null, 2));
-  } catch (err) {
-    console.warn('Devices persist failed:', err.message);
-  }
-}
-function findDeviceByKey(apiKey) {
-  const all = loadDevicesSync();
-  for (const mac of Object.keys(all)) {
-    if (all[mac].api_key === apiKey) return all[mac];
-  }
-  return null;
-}
-function genApiKey()     { return crypto.randomBytes(24).toString('hex'); }
-function genFriendlyId() { return crypto.randomBytes(3).toString('hex').toUpperCase(); }
-// Seed the cache so the first auth call doesn't hit a sync read.
-loadDevicesSync();
+// Persistence stores (each owns its own cache/lock state; see lib/*-store.js).
+// config-store's loadConfig runs the migrator wired below, once it's defined.
+const {
+  loadConfig, saveConfig, withConfigLock, invalidateConfigCache,
+  setMigrator: _setConfigMigrator,
+} = require('./lib/config-store');
+const {
+  loadBatteryState, saveBatteryState, currentBatteryState,
+  loadBatteryHistory, appendBatteryHistory,
+} = require('./lib/battery-store');
+const {
+  loadDevicesSync, saveDevices, findDeviceByKey, genApiKey, genFriendlyId,
+} = require('./lib/devices-store');
 
 // Dashboard HTML template — read once, then cached. We refresh from disk
 // on mtime change so editing public/dashboard.html in dev hot-applies.
@@ -683,6 +524,11 @@ function migrateConfigToScreens(cfg) {
   return { ...cfg, screens, gridVersion: GRID_VERSION, firstRunSeeded: true };
 }
 
+// Wire the config-store to migrate loaded configs to the current screen
+// schema. Injected (not imported) to avoid a require cycle. Runs during
+// module eval, well before the server starts handling requests.
+_setConfigMigrator(migrateConfigToScreens);
+
 // Returns the active screen for the given cfg + current time. Falls
 // back to the default screen when no schedule matches.
 function pickActiveScreen(cfg) {
@@ -809,8 +655,9 @@ function effectiveRefresh(cfg, battPct) {
   if (Date.now() < fastWakeUntil) {
     return { minutes: 1, seconds: FAST_INTERVAL_SECONDS, fast: true, battSaver: false, quiet: false };
   }
+  const batt = currentBatteryState();
   const pct = Number.isFinite(battPct) ? battPct
-    : (_batteryState && Number.isFinite(_batteryState.pct) ? _batteryState.pct : -1);
+    : (batt && Number.isFinite(batt.pct) ? batt.pct : -1);
   const base = resolveRefreshMinutes(cfg);
   const battFloor = batteryRefreshFloor(pct);
   const quiet = quietMinutesRemaining(cfg);
@@ -1500,7 +1347,7 @@ app.post('/api/config/reset', checkAdminAuth, async (req, res) => {
     const cfg = await withConfigLock(async () => {
       const raw = await fsp.readFile(DEFAULT_CONFIG_PATH, 'utf8');
       await atomicWriteFile(CONFIG_PATH, raw);
-      _configCache = null;
+      invalidateConfigCache();
       invalidateImage();
       return migrateConfigToScreens(JSON.parse(raw));
     });
