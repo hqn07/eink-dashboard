@@ -33,7 +33,8 @@ export const def = {
   },
   defaults: () => ({
     variant: 'trmnl',
-    source: 'hn',        // 'hn' | 'rss'
+    source: 'hn',        // 'news' | 'hn' | 'rss'
+    newsSource: 'bbc',   // source=news (bbc|bbc_world|nyt|guardian|npr|aljazeera)
     hnFeed: 'top',       // 'top' | 'best' | 'new'
     feedUrl: '',         // source=rss
     count: 6,

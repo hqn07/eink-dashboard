@@ -3,7 +3,7 @@ import React from 'react';
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
   const { TextField, TypographyFields, FormSection, defaults = {} } = fields;
-  const source = v.source === 'rss' ? 'rss' : 'hn';
+  const source = (v.source === 'rss' || v.source === 'news') ? v.source : 'hn';
   return (
     <>
       <FormSection title="Feed">
@@ -14,10 +14,28 @@ export function Form({ values, patch, onChange, fields }) {
             onChange={(e) => patch({ source: e.target.value })}
             style={{ width: 220 }}
           >
+            <option value="news">News outlet</option>
             <option value="hn">Hacker News</option>
             <option value="rss">Custom RSS / Atom feed</option>
           </select>
         </label>
+        {source === 'news' && (
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
+            Outlet
+            <select
+              value={v.newsSource || 'bbc'}
+              onChange={(e) => patch({ newsSource: e.target.value })}
+              style={{ width: 220 }}
+            >
+              <option value="bbc">BBC News</option>
+              <option value="bbc_world">BBC World</option>
+              <option value="nyt">New York Times</option>
+              <option value="guardian">The Guardian</option>
+              <option value="npr">NPR News</option>
+              <option value="aljazeera">Al Jazeera</option>
+            </select>
+          </label>
+        )}
         {source === 'hn' && (
           <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
             Which stories

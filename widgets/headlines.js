@@ -16,6 +16,24 @@ const HN_FEEDS = {
   new:  'https://hnrss.org/newest'
 };
 
+// Curated news sources so the user picks an outlet instead of hunting for an
+// RSS URL. All public, long-stable feeds. Keep in sync with NEWS_LABELS and
+// the picker in control-src/widgets/headlines.form.jsx.
+const NEWS_FEEDS = {
+  bbc:       'https://feeds.bbci.co.uk/news/rss.xml',
+  bbc_world: 'https://feeds.bbci.co.uk/news/world/rss.xml',
+  nyt:       'https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml',
+  guardian:  'https://www.theguardian.com/international/rss',
+  npr:       'https://feeds.npr.org/1001/rss.xml',
+  aljazeera: 'https://www.aljazeera.com/xml/rss/all.xml'
+};
+// Friendlier labels than some feeds' raw channel titles (e.g. NYT's
+// "NYT > Top Stories"). Falls back to the parsed feed title when unmapped.
+const NEWS_LABELS = {
+  bbc: 'BBC News', bbc_world: 'BBC World', nyt: 'New York Times',
+  guardian: 'The Guardian', npr: 'NPR News', aljazeera: 'Al Jazeera'
+};
+
 const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
 
 // Coerce a possibly-array / possibly-object XML node into an array.
@@ -76,12 +94,14 @@ function parseFeed(xml) {
   return { source: source.trim(), items: items.filter(i => i.title) };
 }
 
-// settings: { source: 'rss'|'hn', feedUrl, hnFeed: 'top'|'best'|'new' }
+// settings: { source: 'news'|'rss'|'hn', newsSource, feedUrl, hnFeed }
 async function fetchHeadlines(settings) {
   const s = settings || {};
   let url;
   if (s.source === 'hn') {
     url = HN_FEEDS[s.hnFeed] || HN_FEEDS.top;
+  } else if (s.source === 'news') {
+    url = NEWS_FEEDS[s.newsSource] || NEWS_FEEDS.bbc;
   } else {
     url = typeof s.feedUrl === 'string' ? s.feedUrl.trim() : '';
     if (!/^https?:\/\//i.test(url)) return null;
@@ -103,8 +123,9 @@ async function fetchHeadlines(settings) {
     }
     const xml = await res.text();
     const parsed = parseFeed(xml);
-    // Hacker News source label is friendlier than the raw feed title.
+    // Friendlier source labels than some raw feed titles.
     if (s.source === 'hn') parsed.source = 'Hacker News';
+    else if (s.source === 'news') parsed.source = NEWS_LABELS[s.newsSource] || parsed.source;
     const data = { ...parsed, stale: false };
     cache.set(url, { at: Date.now(), data });
     status.record('headlines', { ok: true, ms: Date.now() - t0 });
