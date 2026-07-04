@@ -723,27 +723,8 @@ app.post('/api/config', checkAdminAuth, async (req, res) => {
   }
 });
 
-// Battery report from the ESP32. Stored to disk so it survives a server
-// restart (panel only POSTs once per wake — every ~30min — so an
-// in-memory-only value would frequently be missing).
-app.post('/api/battery', checkDeviceAuth, async (req, res) => {
-  const v = parseFloat(req.body && req.body.v);
-  const pct = parseInt(req.body && req.body.pct, 10);
-  if (!Number.isFinite(v) || v < 0 || v > 6) {
-    return res.status(400).json({ error: 'bad voltage' });
-  }
-  if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
-    return res.status(400).json({ error: 'bad pct' });
-  }
-  await saveBatteryState({ v, pct, at: Date.now() });
-  invalidateImage(); // so the next render shows the fresh value
-  res.json({ ok: true });
-});
-
-app.get('/api/battery', checkDeviceAuth, async (req, res) => {
-  const b = await loadBatteryState();
-  res.json(b || { v: null, pct: null, at: null });
-});
+// Battery report/read (ESP32).
+app.use(require('./routes/battery'));
 
 // ---------- Mac state (pushed from the Mac-side agent) ----------
 //
