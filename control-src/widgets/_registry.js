@@ -22,6 +22,7 @@ import * as codeactivity     from './codeactivity.js';
 import * as clock            from './clock.js';
 import * as countdown        from './countdown.js';
 import * as eink_battery     from './eink_battery.js';
+import * as fx               from './fx.js';
 import * as headlines        from './headlines.js';
 import * as mac_battery      from './mac_battery.js';
 import * as mac_nowplaying   from './mac_nowplaying.js';
@@ -45,6 +46,7 @@ import { Form as codeActivityForm }    from './codeactivity.form.jsx';
 import { Form as clockForm }           from './clock.form.jsx';
 import { Form as countdownForm }       from './countdown.form.jsx';
 import { Form as einkBatteryForm }     from './eink_battery.form.jsx';
+import { Form as fxForm }              from './fx.form.jsx';
 import { Form as headlinesForm }       from './headlines.form.jsx';
 import { Form as macBatteryForm }      from './mac_battery.form.jsx';
 import { Form as macNowPlayingForm }   from './mac_nowplaying.form.jsx';
@@ -64,7 +66,7 @@ import { Form as worldClockForm }      from './world_clock.form.jsx';
 
 const MODULES = [
   aqi, calendar, codeactivity, clock, countdown, eink_battery, mac_battery, mac_nowplaying,
-  headlines, moon, onthisday, photo, progress, qr, quote, sparkline, tasks, text, transit, weather_forecast, weather_hero, world_clock
+  headlines, moon, onthisday, photo, progress, qr, fx, quote, sparkline, tasks, text, transit, weather_forecast, weather_hero, world_clock
 ];
 
 const FORMS = {
@@ -74,6 +76,7 @@ const FORMS = {
   clock:            clockForm,
   countdown:        countdownForm,
   eink_battery:     einkBatteryForm,
+  fx:               fxForm,
   mac_battery:      macBatteryForm,
   mac_nowplaying:   macNowPlayingForm,
   moon:             moonForm,

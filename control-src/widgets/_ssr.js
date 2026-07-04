@@ -9,6 +9,7 @@ import * as codeactivity     from './codeactivity.js';
 import * as clock            from './clock.js';
 import * as countdown        from './countdown.js';
 import * as eink_battery     from './eink_battery.js';
+import * as fx               from './fx.js';
 import * as headlines        from './headlines.js';
 import * as mac_battery      from './mac_battery.js';
 import * as mac_nowplaying   from './mac_nowplaying.js';
@@ -28,7 +29,7 @@ import * as world_clock      from './world_clock.js';
 
 const MODULES = [
   aqi, calendar, codeactivity, clock, countdown, eink_battery, mac_battery, mac_nowplaying,
-  headlines, moon, onthisday, photo, progress, qr, quote, sparkline, tasks, text, transit, weather_forecast, weather_hero, world_clock
+  headlines, moon, onthisday, photo, progress, qr, fx, quote, sparkline, tasks, text, transit, weather_forecast, weather_hero, world_clock
 ];
 
 export const DEFS = Object.fromEntries(MODULES.map(m => [m.def.id, m.def]));
