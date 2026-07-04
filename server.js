@@ -988,33 +988,7 @@ app.post('/api/config/reset', checkAdminAuth, async (req, res) => {
 //
 // Gated to non-production so Railway doesn't expose the watcher.
 
-const devSSEClients = new Set();
-let devWatchersStarted = false;
-
-function broadcastDevReload() {
-  for (const r of devSSEClients) {
-    try { r.write('event: reload\ndata: 1\n\n'); } catch (_) { /* drop */ }
-  }
-}
-
-function startDevWatchers() {
-  if (devWatchersStarted) return;
-  devWatchersStarted = true;
-  let pending = null;
-  const onChange = () => {
-    if (pending) clearTimeout(pending);
-    pending = setTimeout(() => { pending = null; broadcastDevReload(); }, 200);
-  };
-  const dirs = ['public', 'control-src', 'widgets', 'data-defaults'];
-  for (const d of dirs) {
-    try {
-      fs.watch(path.join(__dirname, d), { recursive: true }, onChange);
-    } catch (e) {
-      console.warn('[dev] watch skipped', d, e.message);
-    }
-  }
-  console.log('[dev] file watchers started');
-}
+const dev = require('./lib/dev');
 
 app.get('/dev/events', (req, res) => {
   if (IS_PROD) return res.status(404).end();
@@ -1025,9 +999,9 @@ app.get('/dev/events', (req, res) => {
   });
   res.flushHeaders();
   res.write(': connected\n\n');
-  devSSEClients.add(res);
-  startDevWatchers();
-  req.on('close', () => devSSEClients.delete(res));
+  dev.addClient(res);
+  dev.startDevWatchers();
+  req.on('close', () => dev.removeClient(res));
 });
 
 app.get('/dev/widget/:id', checkAdminAuth, async (req, res) => {
