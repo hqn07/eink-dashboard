@@ -46,11 +46,7 @@ const { jsonFetch } = require('./lib/geo');
 // Dynamically imported (ESM) at first use and cached. Lets /dashboard
 // produce the full page HTML server-side instead of shipping a
 // duplicate widget render block to the browser.
-let _ssrPromise = null;
-function loadSsr() {
-  if (!_ssrPromise) _ssrPromise = import('./control-src/widgets/_ssr.js');
-  return _ssrPromise;
-}
+const { loadSsr, loadDashboardHtml } = require('./lib/ssr-shell');
 
 // Error ring buffer moved to ./lib/errlog.js — requiring it installs the
 // console.error wrapper (side effect) and hands back the shared ring the
@@ -112,24 +108,8 @@ const {
 // schema. Injected (not imported by config-store) to avoid a require cycle.
 _setConfigMigrator(migrateConfigToScreens);
 
-// Dashboard HTML template — read once, then cached. We refresh from disk
-// on mtime change so editing public/dashboard.html in dev hot-applies.
-let _htmlCache = null; // { mtimeMs, html }
-const DASHBOARD_HTML_PATH = path.join(__dirname, 'public', 'dashboard.html');
-
-// The page's `.autofit` pass = the shared source (control-src/autofit.js,
-// export-stripped) + a tiny orchestrator that runs it after web fonts
-// settle and flags window.__autofitDone for Puppeteer. Injected at
-// <!--__AUTOFIT__-->. Same code the React editor imports, so the panel and
-// the editor size text identically (they used to drift).
-async function loadDashboardHtml() {
-  const st = await fsp.stat(DASHBOARD_HTML_PATH);
-  if (_htmlCache && _htmlCache.mtimeMs === st.mtimeMs) return _htmlCache.html;
-  const html = await fsp.readFile(DASHBOARD_HTML_PATH, 'utf8');
-  _htmlCache = { mtimeMs: st.mtimeMs, html };
-  return html;
-}
-
+// loadDashboardHtml + loadSsr (the SSR shell + compiled widget bundle) live in
+// ./lib/ssr-shell.js — imported at the top.
 
 // parseHHMM/hmFormatter/localMinutesNow/scheduleIntervals moved to
 // ./lib/timewin.js (required at the top).
@@ -144,13 +124,7 @@ const {
   makeSession, sessionValid, setSessionCookie, clearSessionCookie,
 } = require('./lib/auth');
 
-// Generic error body so we don't leak internals (e.g. file paths,
-// upstream API failure URLs) to anyone hitting the public endpoints.
-// Full error stays in the server log via the caller's console.error.
-function safeError(err) {
-  if (IS_PROD) return { error: 'internal_error' };
-  return { error: err && err.message ? err.message : String(err) };
-}
+const { safeError } = require('./lib/http');
 
 // ---------- App ----------
 
