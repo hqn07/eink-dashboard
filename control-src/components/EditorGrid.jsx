@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import GridLayout from 'react-grid-layout';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { Gear, X, Copy } from '@phosphor-icons/react';
 import * as HoverCard from '@radix-ui/react-hover-card';
 import { WIDGET_REGISTRY, POOL_CATEGORIES, GRID_COLS, GRID_ROWS, widgetById, makeInstance, newInstanceId } from '../widgets.js';
@@ -383,7 +383,7 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
 
   return (
     <div>
-      <motion.div
+      <m.div
         ref={wrapRef}
         className={`editor-wrap ${showGrid ? 'show-grid' : ''} ${dropHover ? 'drop-target' : ''} ${cardsMode ? 'cards' : ''}`}
         animate={shake ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
@@ -444,7 +444,7 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
             const isSelected = selectedId === l.id;
             return (
               <div key={l.id}>
-                <motion.div
+                <m.div
                   className={`editor-tile live-tile ${isSelected ? 'selected' : ''}`}
                   style={{ width: '100%', height: '100%' }}
                   onMouseDown={(e) => {
@@ -494,7 +494,7 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
                       dangerouslySetInnerHTML={{ __html: cellHtml }}
                     />
                   </div>
-                </motion.div>
+                </m.div>
               </div>
             );
           })}
@@ -536,7 +536,7 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
           </div>
         )}
 
-      </motion.div>
+      </m.div>
 
       <div
         ref={trashRef}
@@ -615,7 +615,7 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
             return (
               <HoverCard.Root key={def.id} openDelay={250} closeDelay={100}>
                 <HoverCard.Trigger asChild>
-                  <motion.div
+                  <m.div
                     layout
                     className="palette-card"
                     draggable
@@ -642,7 +642,7 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
                       {def.label}{count > 0 ? ` · ${count} ON` : ''}
                     </div>
                     {def.blurb && <div className="palette-card-blurb">{def.blurb}</div>}
-                  </motion.div>
+                  </m.div>
                 </HoverCard.Trigger>
                 <HoverCard.Portal>
                   <HoverCard.Content

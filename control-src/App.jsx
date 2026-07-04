@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
+import { LazyMotion, domAnimation, m, AnimatePresence, MotionConfig } from 'framer-motion';
 import { Star, ArrowCounterClockwise, SlidersHorizontal, Trash, Lock, Cards } from '@phosphor-icons/react';
 import { fetchConfig, saveConfig, fetchPreviewData, onUnauthorized } from './api.js';
 import {
@@ -602,6 +602,7 @@ export default function App() {
   const layout = editScreen ? editScreen.layout : [];
 
   return (
+    <LazyMotion features={domAnimation} strict>
     <MotionConfig reducedMotion="user">
     <div className="shell">
       {/* SVG filter used by the 1-BIT preview toggle. feComponentTransfer
@@ -826,14 +827,14 @@ export default function App() {
        *  overlay + bottom-sliding sheet animated via framer. */}
       <AnimatePresence>
         {mobileDrawerOpen && (
-          <motion.div
+          <m.div
             className="mobile-drawer-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setMobileDrawerOpen(false)}
           >
-            <motion.div
+            <m.div
               className="mobile-drawer"
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
@@ -860,8 +861,8 @@ export default function App() {
                   />
                 )}
               </div>
-            </motion.div>
-          </motion.div>
+            </m.div>
+          </m.div>
         )}
       </AnimatePresence>
 
@@ -869,7 +870,7 @@ export default function App() {
 
       <AnimatePresence>
         {toast && (
-          <motion.div
+          <m.div
             key={toast.msg}
             className={`toast ${toast.action ? 'toast-actionable' : ''}`}
             initial={{ y: 24, opacity: 0, scale: 0.96 }}
@@ -887,7 +888,7 @@ export default function App() {
                 {toast.action.label}
               </button>
             )}
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 
@@ -917,5 +918,6 @@ export default function App() {
       )}
     </div>
     </MotionConfig>
+    </LazyMotion>
   );
 }

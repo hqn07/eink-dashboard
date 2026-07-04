@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import {
   geocode,
   reverseGeocode,
@@ -188,7 +188,7 @@ export default function LocationPanel({ cfg, onPatch }) {
         />
         <AnimatePresence>
           {showResults && results && results.length > 0 && (
-            <motion.div
+            <m.div
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
@@ -206,7 +206,7 @@ export default function LocationPanel({ cfg, onPatch }) {
                   <span className="ac-country">{p.country || ''}</span>
                 </button>
               ))}
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       </label>
@@ -267,7 +267,7 @@ export default function LocationPanel({ cfg, onPatch }) {
         />
         <AnimatePresence>
           {tzOpen && (
-            <motion.div
+            <m.div
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
@@ -286,7 +286,7 @@ export default function LocationPanel({ cfg, onPatch }) {
               {!tzFiltered.length && (
                 <div className="autocomplete-row" style={{ color: 'var(--mute)' }}>No match</div>
               )}
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
         <div className="terminal-line" style={{ fontSize: 10, marginTop: 4, display: 'flex', justifyContent: 'space-between', gap: 8 }}>

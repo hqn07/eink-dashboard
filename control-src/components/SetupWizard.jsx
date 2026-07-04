@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { Check, Crosshair, Lock } from '@phosphor-icons/react';
 import { geocode, reverseGeocode, flagEmoji, setPin as apiSetPin } from '../api.js';
 import { SCREEN_PRESETS, inflatePresetLayout } from '../widgets.js';
@@ -119,9 +119,9 @@ export default function SetupWizard({ cfg, onPatch, onApplyPreset, onClose }) {
   // ---- Location step ----
   if (step === 'location') {
     return (
-      <motion.div className="wizard-overlay"
+      <m.div className="wizard-overlay"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-        <motion.div className="wizard-modal"
+        <m.div className="wizard-modal"
           initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}>
           <StepIndicator currentStep={1} steps={WIZARD_STEPS} />
           <header>
@@ -146,7 +146,7 @@ export default function SetupWizard({ cfg, onPatch, onApplyPreset, onClose }) {
 
           <AnimatePresence>
             {results.length > 0 && (
-              <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              <m.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 className="wizard-results">
                 {results.map((p, i) => (
                   <button key={i}
@@ -158,7 +158,7 @@ export default function SetupWizard({ cfg, onPatch, onApplyPreset, onClose }) {
                     <span className="ac-country">{p.country}</span>
                   </button>
                 ))}
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>
 
@@ -185,17 +185,17 @@ export default function SetupWizard({ cfg, onPatch, onApplyPreset, onClose }) {
               NEXT →
             </button>
           </div>
-        </motion.div>
-      </motion.div>
+        </m.div>
+      </m.div>
     );
   }
 
   // ---- Preset step ----
   if (step === 'preset') {
     return (
-      <motion.div className="wizard-overlay"
+      <m.div className="wizard-overlay"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-        <motion.div className="wizard-modal preset-modal"
+        <m.div className="wizard-modal preset-modal"
           initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}>
           <StepIndicator currentStep={2} steps={WIZARD_STEPS} />
           <header>
@@ -213,16 +213,16 @@ export default function SetupWizard({ cfg, onPatch, onApplyPreset, onClose }) {
             <button className="btn btn-ghost" onClick={() => setStep('location')}>← BACK</button>
             <button className="btn btn-ghost" onClick={() => setStep('pin')}>SKIP — KEEP CURRENT</button>
           </div>
-        </motion.div>
-      </motion.div>
+        </m.div>
+      </m.div>
     );
   }
 
   // ---- PIN step (optional) ----
   return (
-    <motion.div className="wizard-overlay"
+    <m.div className="wizard-overlay"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      <motion.div className="wizard-modal"
+      <m.div className="wizard-modal"
         initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}>
         <StepIndicator currentStep={3} steps={WIZARD_STEPS} />
         <header>
@@ -256,8 +256,8 @@ export default function SetupWizard({ cfg, onPatch, onApplyPreset, onClose }) {
             </button>
           </div>
         </div>
-      </motion.div>
-    </motion.div>
+      </m.div>
+    </m.div>
   );
 }
 

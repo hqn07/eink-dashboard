@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { DotsSixVertical } from '@phosphor-icons/react';
 
 // Tab bar listing every screen. Click to switch which screen the
@@ -45,7 +45,7 @@ export default function ScreenTabs({
           onDragEnd: () => { setDragId(null); setOverId(null); }
         } : {};
         return (
-          <motion.button
+          <m.button
             key={s.id}
             whileTap={{ scale: 0.97 }}
             className={`screen-tab ${active ? 'active' : ''} ${overlap ? 'overlap' : ''} ${isDragging ? 'is-dragging' : ''} ${isOver ? 'is-over' : ''}`}
@@ -63,7 +63,7 @@ export default function ScreenTabs({
             {s.schedule?.enabled && (
               <span className="screen-tab-time">{s.schedule.from}–{s.schedule.to}</span>
             )}
-          </motion.button>
+          </m.button>
         );
       })}
       <button

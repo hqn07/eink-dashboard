@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { ArrowCounterClockwise, FloppyDisk } from '@phosphor-icons/react';
 
 // Sticky bottom save bar — Figma + Notion DB idiom: stays hidden when
@@ -25,7 +25,7 @@ export default function SaveBar({ status, label, onSave, onDiscard, disabled }) 
   return (
     <AnimatePresence>
       {visible && (
-        <motion.div
+        <m.div
           key="save-bar"
           className={`save-bar save-bar-${status}`}
           initial={{ y: 80, opacity: 0 }}
@@ -54,7 +54,7 @@ export default function SaveBar({ status, label, onSave, onDiscard, disabled }) 
               <FloppyDisk size={12} weight="bold" /> {status === 'saving' ? 'SAVING…' : status === 'saved' ? 'SAVED' : 'SAVE & PUSH'}
             </button>
           </div>
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

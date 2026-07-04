@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { X } from '@phosphor-icons/react';
 import Skeleton, { SkeletonTheme } from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
@@ -330,7 +330,7 @@ export default function WidgetSettingsModal({
 
   return (
     <AnimatePresence>
-      <motion.div
+      <m.div
         className="wsm-backdrop wsm-backdrop-sheet"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -340,7 +340,7 @@ export default function WidgetSettingsModal({
           if (e.target === e.currentTarget) attemptClose();
         }}
       >
-        <motion.div
+        <m.div
           ref={panelRef}
           className="wsm-panel wsm-panel-sheet"
           role="dialog"
@@ -461,8 +461,8 @@ export default function WidgetSettingsModal({
               </div>
             </div>
           )}
-        </motion.div>
-      </motion.div>
+        </m.div>
+      </m.div>
     </AnimatePresence>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { SCREEN_PRESETS, inflatePresetLayout } from '../widgets.js';
 import LiveDashboard from './LiveDashboard.jsx';
 
@@ -50,14 +50,14 @@ export default function ScreenPresetPicker({ onPick, onClose, previewData }) {
   }, [onClose]);
 
   return (
-    <motion.div
+    <m.div
       className="wizard-overlay"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       onClick={onClose}
     >
-      <motion.div
+      <m.div
         className="wizard-modal preset-modal"
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -88,7 +88,7 @@ export default function ScreenPresetPicker({ onPick, onClose, previewData }) {
         <div className="btn-row" style={{ justifyContent: 'flex-end', marginTop: 16 }}>
           <button className="btn btn-ghost" onClick={onClose}>CANCEL</button>
         </div>
-      </motion.div>
-    </motion.div>
+      </m.div>
+    </m.div>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { X } from '@phosphor-icons/react';
 
 // Help modal listing every global keyboard shortcut. Opened by
@@ -28,14 +28,14 @@ export default function ShortcutsHelp({ open, onClose }) {
   return (
     <AnimatePresence>
       {open && (
-        <motion.div
+        <m.div
           className="wizard-overlay"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
         >
-          <motion.div
+          <m.div
             className="shortcuts-modal"
             initial={{ y: 24, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -67,8 +67,8 @@ export default function ShortcutsHelp({ open, onClose }) {
             <div className="shortcuts-footer terminal-line">
               &gt; SHORTCUTS IGNORED WHILE TYPING IN A TEXT FIELD
             </div>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

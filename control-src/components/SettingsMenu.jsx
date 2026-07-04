@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import {
   Gear, MagicWand, Keyboard, Broadcast, Bell, Archive, CaretRight,
 } from '@phosphor-icons/react';
@@ -53,7 +53,7 @@ export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcut
       </button>
       <AnimatePresence>
         {open && (
-          <motion.div
+          <m.div
             className="gdm-menu settings-menu"
             role="menu"
             initial={{ opacity: 0, y: -4 }}
@@ -115,7 +115,7 @@ export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcut
                 <BackupPanel cfg={cfg} onReplaceConfig={onReplaceConfig} />
               </div>
             )}
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>
