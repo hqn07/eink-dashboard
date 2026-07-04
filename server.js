@@ -40,6 +40,7 @@ const { parseHHMM, hmFormatter, localMinutesNow, scheduleIntervals } = require('
 const { relAge, dur, batteryTrend, sparkline } = require('./lib/statusfmt');
 const { htmlAttr, escapeHtmlServer, strongEtag, decodeSettingsParam } = require('./lib/htmlutil');
 const { sizeFor, expandLayout, withinVisibility } = require('./lib/layout');
+const { jsonFetch } = require('./lib/geo');
 
 // SSR module — per-widget render functions + chrome helpers, no React.
 // Dynamically imported (ESM) at first use and cached. Lets /dashboard
@@ -2136,14 +2137,6 @@ function trimGeoCache() {
   }
 }
 
-async function jsonFetch(url, opts = {}) {
-  // Node fetch has no built-in timeout — a slow upstream (Open-Meteo,
-  // Nominatim) would hang the request indefinitely. 10s covers normal
-  // latency with generous headroom.
-  const r = await fetch(url, { signal: AbortSignal.timeout(10000), ...opts });
-  if (!r.ok) throw new Error(`${url.split('?')[0]} → ${r.status}`);
-  return r.json();
-}
 
 app.get('/api/geocode', checkAdminAuth, async (req, res) => {
   const q = (req.query.q || '').trim();
