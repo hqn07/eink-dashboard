@@ -38,6 +38,7 @@ const {
 const { FW_DIR, FW_NAME_RE, parseSemver, cmpSemver, findNewestFirmware } = require('./lib/firmware');
 const { parseHHMM, hmFormatter, localMinutesNow, scheduleIntervals } = require('./lib/timewin');
 const { relAge, dur, batteryTrend, sparkline } = require('./lib/statusfmt');
+const { htmlAttr, escapeHtmlServer, strongEtag, decodeSettingsParam } = require('./lib/htmlutil');
 
 // SSR module — per-widget render functions + chrome helpers, no React.
 // Dynamically imported (ESM) at first use and cached. Lets /dashboard
@@ -1343,9 +1344,6 @@ function withinVisibility(vis, nowM) {
   return nowM >= a || nowM < b;
 }
 
-function htmlAttr(s) {
-  return String(s == null ? '' : s).replace(/"/g, '&quot;');
-}
 
 // Build the inner page HTML — body grid only (no chrome). Per-tile
 // rendering pulls the per-item slot data via `perItem[item.id]` so each
@@ -1475,11 +1473,6 @@ function buildPageBodyHtml({ payload, ssr, mode }) {
   return `<div class="page" id="page" style="grid-template-rows:0px minmax(0, 1fr) 0px"><div class="hdr-stub"></div><main class="${bodyClass}" style="grid-template-columns:repeat(${GRID_COLS}, minmax(0, 1fr));grid-template-rows:repeat(${GRID_ROWS}, minmax(0, 1fr))">${bodyInner}</main><div class="ftr-stub"></div></div>`;
 }
 
-function escapeHtmlServer(s) {
-  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-  }[c]));
-}
 
 function renderPage({ payload, shell, ssr, mode }) {
   const body = buildPageBodyHtml({ payload, ssr, mode });
@@ -1670,16 +1663,6 @@ app.get('/dev/widget/:id', checkAdminAuth, async (req, res) => {
 // fetcher (buildWidgetData) so live data + per-tile overrides all
 // flow through normally.
 
-function decodeSettingsParam(raw) {
-  if (!raw) return null;
-  try {
-    const json = Buffer.from(String(raw), 'base64').toString('utf8');
-    const parsed = JSON.parse(json);
-    return parsed && typeof parsed === 'object' ? parsed : null;
-  } catch {
-    return null;
-  }
-}
 
 async function buildPreviewPayload({ widgetId, w, h, settings, units, density }) {
   const cfg = await loadConfig();
@@ -1982,10 +1965,6 @@ const BODY_H_ROWS = SCREEN_H - HEADER_H_ROWS;   // 420
 const HEADER_BYTES = (SCREEN_W * HEADER_H_ROWS) / 8;  // 6000
 const BODY_BYTES   = (SCREEN_W * BODY_H_ROWS) / 8;    // 42000
 
-function strongEtag(buf) {
-  // Strong ETag — bytes-exact match. Quotes per RFC 7232.
-  return `"${crypto.createHash('sha1').update(buf).digest('hex')}"`;
-}
 
 function sendBinSlice(req, res, slice) {
   const etag = strongEtag(slice);
