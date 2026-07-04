@@ -3,7 +3,7 @@
 // in-memory-only value would frequently be missing). Note: firmware also
 // sends battery over headers on /display.bin; this POST stays for compat.
 const router = require('express').Router();
-const { checkDeviceAuth } = require('../lib/auth');
+const { checkDeviceAuth, checkAdminAuth } = require('../lib/auth');
 const { loadBatteryState, saveBatteryState } = require('../lib/battery-store');
 const { invalidateImage } = require('../lib/render');
 
@@ -21,7 +21,12 @@ router.post('/api/battery', checkDeviceAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
-router.get('/api/battery', checkDeviceAuth, async (req, res) => {
+// Editor/status read — admin-gated (accepts the PIN session cookie OR the
+// device token). Was checkDeviceAuth, which ignored the PIN cookie: a
+// PIN-authed editor (no token) 401'd here and got forced into read-only even
+// though every other editor endpoint accepted its session. The device only
+// POSTs battery; it never GETs it, so no device path regresses.
+router.get('/api/battery', checkAdminAuth, async (req, res) => {
   const b = await loadBatteryState();
   res.json(b || { v: null, pct: null, at: null });
 });
