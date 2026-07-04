@@ -949,40 +949,8 @@ app.use(require('./routes/alarms'));
 // parseSemver/cmpSemver/findNewestFirmware + FW_DIR/FW_NAME_RE moved to
 // ./lib/firmware.js (required at the top).
 
-app.get('/api/firmware/manifest', checkDeviceAuth, async (req, res) => {
-  const board = String(req.query.board || '').toLowerCase();
-  if (!/^[a-z0-9]+$/.test(board)) {
-    return res.status(400).json({ error: 'bad_board' });
-  }
-  const from = parseSemver(req.query.from);
-  const best = await findNewestFirmware(board);
-  if (!best) return res.status(204).end();
-  if (from && cmpSemver(best.ver, from) <= 0) return res.status(204).end();
-
-  let size = null;
-  try {
-    const st = await fsp.stat(path.join(FW_DIR, best.name));
-    size = st.size;
-  } catch (_) { /* ignore */ }
-
-  const proto = (req.headers['x-forwarded-proto'] || req.protocol).split(',')[0].trim();
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
-  let url = `${proto}://${host}/firmware/${best.name}`;
-  if (DEVICE_TOKEN) url += `?token=${encodeURIComponent(DEVICE_TOKEN)}`;
-  res.json({ version: best.version, board, url, size });
-});
-
-// Serve the raw .bin. Filename is strict-validated against the same regex
-// the manifest uses, so a malicious `?file=../../etc/passwd` style request
-// can't escape the firmware directory.
-app.get('/firmware/:file', checkDeviceAuth, (req, res) => {
-  const name = req.params.file;
-  if (!FW_NAME_RE.test(name)) return res.status(400).send('bad name');
-  const full = path.join(FW_DIR, name);
-  res.sendFile(full, (err) => {
-    if (err && !res.headersSent) res.status(404).send('not found');
-  });
-});
+// Firmware OTA manifest + raw .bin serving.
+app.use(require('./routes/firmware'));
 
 // ---------- Device enrollment ----------
 //
