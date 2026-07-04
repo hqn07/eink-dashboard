@@ -34,6 +34,7 @@ import * as progress         from './progress.js';
 import * as qr               from './qr.js';
 import * as quote            from './quote.js';
 import * as sparkline        from './sparkline.js';
+import * as sun              from './sun.js';
 import * as tasks            from './tasks.js';
 import * as text             from './text.js';
 import * as transit          from './transit.js';
@@ -59,6 +60,7 @@ import { Form as progressForm }        from './progress.form.jsx';
 import { Form as qrForm }              from './qr.form.jsx';
 import { Form as quoteForm }           from './quote.form.jsx';
 import { Form as sparklineForm }       from './sparkline.form.jsx';
+import { Form as sunForm }             from './sun.form.jsx';
 import { Form as tasksForm }           from './tasks.form.jsx';
 import { Form as textForm }            from './text.form.jsx';
 import { Form as transitForm }         from './transit.form.jsx';
@@ -68,7 +70,7 @@ import { Form as worldClockForm }      from './world_clock.form.jsx';
 
 const MODULES = [
   aqi, calendar, codeactivity, clock, countdown, eink_battery, mac_battery, mac_nowplaying,
-  headlines, moon, onthisday, photo, progress, qr, fx, crypto, quote, sparkline, tasks, text, transit, weather_forecast, weather_hero, world_clock
+  headlines, moon, onthisday, photo, progress, qr, fx, crypto, quote, sparkline, sun, tasks, text, transit, weather_forecast, weather_hero, world_clock
 ];
 
 const FORMS = {
@@ -90,6 +92,7 @@ const FORMS = {
   qr:               qrForm,
   quote:            quoteForm,
   sparkline:        sparklineForm,
+  sun:              sunForm,
   tasks:            tasksForm,
   text:             textForm,
   transit:          transitForm,

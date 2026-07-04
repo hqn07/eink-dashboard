@@ -37,6 +37,7 @@ const POOL_META = {
   weather_hero:     { category: 'Weather',  blurb: 'Current conditions — big temp + icon' },
   weather_forecast: { category: 'Weather',  blurb: 'Multi-day / hourly outlook' },
   aqi:              { category: 'Weather',  blurb: 'Air quality index + category' },
+  sun:              { category: 'Weather',  blurb: 'Sunrise / sunset + daylight (no key)' },
   clock:            { category: 'Time',     blurb: 'Time + date' },
   world_clock:      { category: 'Time',     blurb: 'Time across multiple zones' },
   countdown:        { category: 'Time',     blurb: 'Days until a target date' },
@@ -79,6 +80,7 @@ export const WIDGET_REGISTRY = [
   // source of truth — a widget missing here renders server-side but
   // never shows in the add-widget pool. Keep in sync with _registry.js.
   { ...migratedDef('aqi') },
+  { ...migratedDef('sun') },
   { ...migratedDef('countdown') },
   { ...migratedDef('progress') },
   { ...migratedDef('fx') },

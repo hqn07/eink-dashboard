@@ -21,6 +21,7 @@ import * as progress         from './progress.js';
 import * as qr               from './qr.js';
 import * as quote            from './quote.js';
 import * as sparkline        from './sparkline.js';
+import * as sun              from './sun.js';
 import * as tasks            from './tasks.js';
 import * as text             from './text.js';
 import * as transit          from './transit.js';
@@ -30,7 +31,7 @@ import * as world_clock      from './world_clock.js';
 
 const MODULES = [
   aqi, calendar, codeactivity, clock, countdown, eink_battery, mac_battery, mac_nowplaying,
-  headlines, moon, onthisday, photo, progress, qr, fx, crypto, quote, sparkline, tasks, text, transit, weather_forecast, weather_hero, world_clock
+  headlines, moon, onthisday, photo, progress, qr, fx, crypto, quote, sparkline, sun, tasks, text, transit, weather_forecast, weather_hero, world_clock
 ];
 
 export const DEFS = Object.fromEntries(MODULES.map(m => [m.def.id, m.def]));
