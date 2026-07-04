@@ -68,7 +68,7 @@ export function TokenPicker({ onInsert, title = 'Insert token' }) {
                 }}
               >
                 <code style={{ color: '#06f' }}>{`{{${t.name}}}`}</code>
-                <span style={{ float: 'right', color: '#888', fontSize: 11 }}>{t.example}</span>
+                <span style={{ float: 'right', color: '#767676', fontSize: 11 }}>{t.example}</span>
               </button>
               {t.formats.map(f => (
                 <button
@@ -92,7 +92,7 @@ export function TokenPicker({ onInsert, title = 'Insert token' }) {
               ))}
             </div>
           ))}
-          <div style={{ padding: '6px 8px', fontSize: 10, color: '#888', lineHeight: 1.4 }}>
+          <div style={{ padding: '6px 8px', fontSize: 10, color: '#767676', lineHeight: 1.4 }}>
             Missing data shows <code>—</code>.<br />
             Override per-spot: <code>{'{{temp|default:N/A}}'}</code>
           </div>

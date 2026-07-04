@@ -65,7 +65,7 @@ export default function PanelPreview({ block = false }) {
               border: '1px solid #ccc', background: '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
-              {loading && <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#888' }}>Rendering…</span>}
+              {loading && <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#767676' }}>Rendering…</span>}
               {src && (
                 <img
                   src={src}

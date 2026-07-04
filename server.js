@@ -994,6 +994,17 @@ const app = express();
 // X-Forwarded-For. Without this, express-rate-limit refuses to use the
 // header and crashes the process when it sees it.
 app.set('trust proxy', 1);
+// Baseline security headers. Deliberately no CSP: the control app relies on
+// inline styles / React-injected style tags, and the SSR face uses inline
+// accent styles, so a strict policy would break rendering with no real gain
+// on a PIN-gated single-tenant tool. These four are safe and free.
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('X-DNS-Prefetch-Control', 'off');
+  next();
+});
 // gzip text responses (the ~380KB control bundle, SSR HTML, JSON APIs).
 // Skip the raw device image endpoints: the ESP32's HTTP client fetches the
 // exact 48000-byte body and does not negotiate/decode gzip.
