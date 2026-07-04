@@ -39,6 +39,7 @@ const { FW_DIR, FW_NAME_RE, parseSemver, cmpSemver, findNewestFirmware } = requi
 const { parseHHMM, hmFormatter, localMinutesNow, scheduleIntervals } = require('./lib/timewin');
 const { relAge, dur, batteryTrend, sparkline } = require('./lib/statusfmt');
 const { htmlAttr, escapeHtmlServer, strongEtag, decodeSettingsParam } = require('./lib/htmlutil');
+const { sizeFor, expandLayout, withinVisibility } = require('./lib/layout');
 
 // SSR module — per-widget render functions + chrome helpers, no React.
 // Dynamically imported (ESM) at first use and cached. Lets /dashboard
@@ -1301,48 +1302,11 @@ function mergeEvents(list) {
 const GRID_COLS = 24;
 const GRID_ROWS = 12;
 
-function sizeFor(def, sizeKey) {
-  if (!def) return null;
-  const sizes = def.sizes || {};
-  const k = sizeKey && sizes[sizeKey] ? sizeKey : def.defaultSize;
-  return sizes[k] || null;
-}
 
 // Resolve a raw layout item to one with explicit w/h. Stored geometry
 // always wins; size preset is the fallback. Drops items pointing at
 // unknown widget ids.
-function expandLayout(rawLayout, defs) {
-  const out = [];
-  for (const raw of (rawLayout || [])) {
-    if (raw && raw.enabled === false) continue;
-    const widgetId = raw.widgetId || raw.id;
-    const def = defs[widgetId];
-    if (!def) continue;
-    const sz = sizeFor(def, raw.size) || { w: 8, h: 4 };
-    out.push({
-      id: raw.id || widgetId,
-      widgetId,
-      x: Number.isFinite(raw.x) ? raw.x : 0,
-      y: Number.isFinite(raw.y) ? raw.y : 0,
-      w: Number.isFinite(raw.w) ? raw.w : sz.w,
-      h: Number.isFinite(raw.h) ? raw.h : sz.h,
-      flush: !!raw.flush,
-      density: raw.density,
-      visibility: raw.visibility,
-      settings: raw.settings
-    });
-  }
-  return out;
-}
 
-function withinVisibility(vis, nowM) {
-  if (!vis || !vis.enabled) return true;
-  const a = parseHHMM(vis.from), b = parseHHMM(vis.to);
-  if (!Number.isFinite(a) || !Number.isFinite(b)) return true;
-  if (a === b) return true;
-  if (a < b) return nowM >= a && nowM < b;
-  return nowM >= a || nowM < b;
-}
 
 
 // Build the inner page HTML — body grid only (no chrome). Per-tile
