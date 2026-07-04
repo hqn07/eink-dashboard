@@ -40,6 +40,7 @@ const POOL_META = {
   clock:            { category: 'Time',     blurb: 'Time + date' },
   world_clock:      { category: 'Time',     blurb: 'Time across multiple zones' },
   countdown:        { category: 'Time',     blurb: 'Days until a target date' },
+  progress:         { category: 'Time',     blurb: 'Day / week / month / year % bars' },
   moon:             { category: 'Time',     blurb: 'Moon phase + illumination' },
   calendar:         { category: 'Calendar', blurb: 'Upcoming events agenda' },
   tasks:            { category: 'Calendar', blurb: 'Todoist / iCal to-do list' },
@@ -77,6 +78,7 @@ export const WIDGET_REGISTRY = [
   // never shows in the add-widget pool. Keep in sync with _registry.js.
   { ...migratedDef('aqi') },
   { ...migratedDef('countdown') },
+  { ...migratedDef('progress') },
   { ...migratedDef('moon') },
   { ...migratedDef('world_clock') },
   { ...migratedDef('quote') },

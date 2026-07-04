@@ -28,6 +28,7 @@ import * as mac_nowplaying   from './mac_nowplaying.js';
 import * as moon             from './moon.js';
 import * as onthisday        from './onthisday.js';
 import * as photo            from './photo.js';
+import * as progress         from './progress.js';
 import * as qr               from './qr.js';
 import * as quote            from './quote.js';
 import * as sparkline        from './sparkline.js';
@@ -50,6 +51,7 @@ import { Form as macNowPlayingForm }   from './mac_nowplaying.form.jsx';
 import { Form as moonForm }            from './moon.form.jsx';
 import { Form as onThisDayForm }       from './onthisday.form.jsx';
 import { Form as photoForm }           from './photo.form.jsx';
+import { Form as progressForm }        from './progress.form.jsx';
 import { Form as qrForm }              from './qr.form.jsx';
 import { Form as quoteForm }           from './quote.form.jsx';
 import { Form as sparklineForm }       from './sparkline.form.jsx';
@@ -62,7 +64,7 @@ import { Form as worldClockForm }      from './world_clock.form.jsx';
 
 const MODULES = [
   aqi, calendar, codeactivity, clock, countdown, eink_battery, mac_battery, mac_nowplaying,
-  headlines, moon, onthisday, photo, qr, quote, sparkline, tasks, text, transit, weather_forecast, weather_hero, world_clock
+  headlines, moon, onthisday, photo, progress, qr, quote, sparkline, tasks, text, transit, weather_forecast, weather_hero, world_clock
 ];
 
 const FORMS = {
@@ -78,6 +80,7 @@ const FORMS = {
   headlines:        headlinesForm,
   onthisday:        onThisDayForm,
   photo:            photoForm,
+  progress:         progressForm,
   qr:               qrForm,
   quote:            quoteForm,
   sparkline:        sparklineForm,
