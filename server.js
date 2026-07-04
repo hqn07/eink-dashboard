@@ -7,6 +7,7 @@
 
 require('dotenv').config();
 const express = require('express');
+const compression = require('compression');
 const path = require('path');
 const fs = require('fs');
 const fsp = require('fs/promises');
@@ -993,8 +994,29 @@ const app = express();
 // X-Forwarded-For. Without this, express-rate-limit refuses to use the
 // header and crashes the process when it sees it.
 app.set('trust proxy', 1);
+// gzip text responses (the ~380KB control bundle, SSR HTML, JSON APIs).
+// Skip the raw device image endpoints: the ESP32's HTTP client fetches the
+// exact 48000-byte body and does not negotiate/decode gzip.
+app.use(compression({
+  filter(req, res) {
+    if (req.path === '/display.bin' || req.path.endsWith('.bin')) return false;
+    return compression.filter(req, res);
+  }
+}));
 app.use(express.json({ limit: '10mb' })); // photo widget can carry a base64 image
-app.use('/static', express.static(path.join(__dirname, 'public')));
+// Cache policy for /static: fonts + icons have stable names and rarely
+// change, so let the browser hold them for a week (dashboard.css is busted
+// via ?v= query, fonts via filename churn on the rare occasion they change).
+// HTML must never be held — it references versioned assets and is edited live.
+app.use('/static', express.static(path.join(__dirname, 'public'), {
+  setHeaders(res, filePath) {
+    if (/\.(woff2?|ttf|otf|png|svg|ico)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=604800'); // 7 days
+    } else if (/\.html$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
 
 // Rate limit only the proxy + write endpoints. The display.png/.bin
 // fetch is intentionally uncapped so the ESP32 isn't blocked. Anything
@@ -1019,7 +1041,18 @@ app.use('/api/', apiLimiter);
 // React control panel build output (built by Vite via `npm run build`).
 const CONTROL_APP_DIR = path.join(__dirname, 'public', 'control-app');
 const CONTROL_APP_INDEX = path.join(CONTROL_APP_DIR, 'index.html');
-app.use('/control-app', gateControlHtml, express.static(CONTROL_APP_DIR));
+// Vite emits content-hashed filenames under /assets, so those are safe to
+// cache forever (immutable). index.html references them and must stay fresh
+// on every deploy, so it is explicitly never cached.
+app.use('/control-app', gateControlHtml, express.static(CONTROL_APP_DIR, {
+  setHeaders(res, filePath) {
+    if (/[\\/]assets[\\/].+\.(js|css|woff2?)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else if (/\.html$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
 
 // Gather all widget data needed by the dashboard. Each fetch only runs
 // if at least one instance of that widget is on the active layout (or
