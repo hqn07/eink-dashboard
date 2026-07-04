@@ -125,110 +125,21 @@ app.use('/control-app', gateControlHtml, express.static(CONTROL_APP_DIR, {
   }
 }));
 
-// ============ SSR PIPELINE ============
-//
-// Renders the full dashboard HTML server-side from the widget render
-// functions under control-src/widgets/<id>.js. The dashboard.html shell
-// is now just chrome (CSS link + autofit script); the body grid is
-// inlined as a static string the browser doesn't have to recompute.
-// Puppeteer still loads /dashboard via headless Chrome to snap the PNG,
-// but it only runs the autofit pass + font wait, not a widget loop.
-
-
-
-// Resolve a raw layout item to one with explicit w/h. Stored geometry
-// always wins; size preset is the fallback. Drops items pointing at
-// unknown widget ids.
-
-
-
-// SSR dashboard + dev/preview/matrix render surfaces.
-app.use(require('./routes/render-pages'));
-
-// Config CRUD + editor preview-data.
-app.use(require('./routes/config'));
-
-// Device-facing render + sleep/wake endpoints.
-app.use(require('./routes/display'));
-
-// Control panel
+// ---------- Routers ----------
+// Each group lives in routes/*.js and pulls its own deps from lib/. See the
+// header comment in each router for what it owns.
+app.use(require('./routes/render-pages')); // /dashboard SSR + /dev + /preview + /widgets-matrix
+app.use(require('./routes/config'));       // /api/config* + /api/preview-data
+app.use(require('./routes/display'));      // /display.* + /sleep + /api/wake (device-facing)
 app.get('/', (req, res) => res.redirect('/control'));
-
-// ---------- Control-panel PIN auth ----------
-// Login page: editorial-styled, no webfonts/JS deps, posts the PIN and
-// redirects on success. Served unauthenticated (it's the unlock door).
-// Control-panel PIN auth pages + API + /control SPA entry.
-app.use(require('./routes/auth'));
-
-// ---------- Geocoding / weather-check (Open-Meteo, no API key) ----------
-// React fetches these instead of calling Open-Meteo directly so that
-// (a) we can cache responses on the server and (b) the path is stable
-// if we ever switch providers.
-
-// Geocode / reverse-geocode / weather-check (setup UI helpers).
-app.use(require('./routes/geocode'));
-
-// Returns the full payload the dashboard would render — minus the
-// HTML. The React editor uses this to render live widget tiles locally.
-
-// Battery report/read (ESP32).
-app.use(require('./routes/battery'));
-
-// ---------- Mac state (pushed from the Mac-side agent) ----------
-//
-// `mac-agent.js` running on the user's Mac periodically POSTs the
-// latest nowplaying + battery snapshot here. Cloud renderers read it
-// via the shared widgets/_mac_state cache. Payload shape:
-//   {
-//     nowplaying: { title, artist, album, isPlaying, durationSec,
-//                   elapsedSec, sourceLabel, artworkBase64 } | null,
-//     battery:    { percent, state } | null,
-//     trackKey:   <optional hash>
-//   }
-//
-// The agent dedupes artwork by track key — when the trackKey matches
-// what the server already has it can omit `artworkBase64` and we keep
-// the previous frame's image. Keeps bandwidth bounded (~50MB/mo).
-// Mac-agent push endpoints (now-playing + battery).
-app.use(require('./routes/mac-state'));
-
-// ---------- Alarms ----------
-//
-// Stored at cfg.alarms — see widgets/alarms.js for the shape. Time
-// math runs in the server's local timezone; set the TZ env var on
-// Railway to match your real timezone or alarms will misfire by the
-// offset.
-
-// Alarm CRUD + device next-alarm lookup.
-app.use(require('./routes/alarms'));
-
-// ---------- Firmware OTA ----------
-//
-// Layout: drop compiled `.bin` files into `public/firmware/` named
-// `<board>-<semver>.bin` (e.g. `bw-1.2.0.bin`, `b-1.0.3.bin`). The device
-// hits /api/firmware/manifest with its board + current version; if a
-// newer binary exists, the manifest returns it and the device pulls the
-// raw file from /firmware/<filename> via ESP32 httpUpdate.
-// parseSemver/cmpSemver/findNewestFirmware + FW_DIR/FW_NAME_RE moved to
-// ./lib/firmware.js (required at the top).
-
-// Firmware OTA manifest + raw .bin serving.
-app.use(require('./routes/firmware'));
-
-// ---------- Device enrollment ----------
-//
-// First-boot handshake: device POSTs its MAC; server returns a
-// long-lived api_key + a short friendly_id ("A3F2B7") for the
-// control UI. Idempotent — re-enrolling the same MAC returns the
-// existing record so a re-flashed device that lost NVS can recover.
-//
-// No auth: this is the bootstrap path. Rate-limited at the global
-// /api/* middleware to keep abuse from filling the device store.
-// Device enrollment + roster.
-app.use(require('./routes/devices'));
-
-// Ops status page + health probes.
-app.use(require('./routes/status'));
+app.use(require('./routes/auth'));         // /control* + /api/auth* (PIN login/setup)
+app.use(require('./routes/geocode'));      // /api/geocode + reverse + weather-check
+app.use(require('./routes/battery'));      // /api/battery report/read
+app.use(require('./routes/mac-state'));    // /api/mac-state (mac-agent push)
+app.use(require('./routes/alarms'));       // /api/alarms + /api/alarm/next
+app.use(require('./routes/firmware'));     // /api/firmware/manifest + /firmware/:file
+app.use(require('./routes/devices'));      // /api/setup + /api/devices + /api/device/:id
+app.use(require('./routes/status'));       // /status + /health + /health/widgets
 
 // Node 15+ exits on unhandled rejections by default. Log first so we
 // can see what went wrong, then let the platform restart us (Railway,
