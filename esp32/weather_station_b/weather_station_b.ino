@@ -49,7 +49,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.17.0"
+#define FW_VERSION "1.18.0"
 #define FW_BOARD   "b"
 #define OTA_MIN_BATT_PCT 50
 
@@ -133,8 +133,14 @@ SPIClass hspi(HSPI);
 // segment. We bypass the page buffer entirely via epd2.writeImage() for
 // the main render (pushImage); only the text screens use paged drawing,
 // and 60 rows (HEIGHT/8 = 12 KB) is plenty for a few lines.
-GxEPD2_3C<GxEPD2_750c_GDEY075Z08, GxEPD2_750c_GDEY075Z08::HEIGHT / 8>
-  display(GxEPD2_750c_GDEY075Z08(EPD_CS, EPD_DC, EPD_RST, EPD_BUSY));
+// Panel class = the controller's RAM→pixel mapping. GDEY075Z08 (UC8179, Good
+// Display) is the wrong origin for a Waveshare 7.5" B panel and leaves the
+// image shifted right ~1.5 columns (rightmost strip wraps to the left). The
+// Waveshare 7.5" B panel is GDEW075Z08 (GD7965/EK79655) → GxEPD2_750c_Z08.
+// If the offset persists or inverts, the panel is the UC8179 GDEW variant —
+// try GxEPD2_750c_GDEW075Z08 instead.
+GxEPD2_3C<GxEPD2_750c_Z08, GxEPD2_750c_Z08::HEIGHT / 8>
+  display(GxEPD2_750c_Z08(EPD_CS, EPD_DC, EPD_RST, EPD_BUSY));
 
 // =================== BUZZER ===================
 
