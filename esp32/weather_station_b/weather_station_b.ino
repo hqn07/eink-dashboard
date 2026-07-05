@@ -49,7 +49,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.18.0"
+#define FW_VERSION "1.19.0"
 #define FW_BOARD   "b"
 #define OTA_MIN_BATT_PCT 50
 
@@ -896,6 +896,17 @@ bool enrollDevice() {
 // failure (caller frees on success).
 uint8_t* downloadImage() {
   g_imageUnchanged = false;
+
+  // Reserve the 96000-byte image buffer BEFORE opening the TLS connection.
+  // The handshake allocates ~40 KB, so a 96000 contiguous malloc AFTER it
+  // often fails on the no-PSRAM ESP32-WROOM (heap fragments). Allocating
+  // while the heap is still fresh fixes the intermittent "malloc FAILED".
+  // ps_malloc uses PSRAM when the board has it; falls back to heap.
+  const int WANT = 2 * IMG_BYTES;   // black plane + red plane = 96000
+  uint8_t* buf = (uint8_t*)ps_malloc(WANT);
+  if (!buf) buf = (uint8_t*)malloc(WANT);
+  if (!buf) { Serial.println("malloc FAILED"); return nullptr; }
+
   String url = addToken(String(activeServerBase) + "/display-3c.bin");
   Serial.printf("GET %s\n", url.c_str());
 
@@ -934,12 +945,14 @@ uint8_t* downloadImage() {
       if (rs >= 10 && rs <= 86400) g_serverRefreshSec = rs;
     }
     http.end();
+    free(buf);
     return nullptr;
   }
   if (code != 200) {
     Serial.printf("HTTP %d\n", code);
     g_lastHttpCode = code;
     http.end();
+    free(buf);
     return nullptr;
   }
 
@@ -956,19 +969,11 @@ uint8_t* downloadImage() {
     if (rs >= 10 && rs <= 86400) g_serverRefreshSec = rs;
   }
 
-  const int WANT = 2 * IMG_BYTES;   // black plane + red plane = 96000
   int len = http.getSize();
   if (len > 0 && len != WANT) {
     Serial.printf("Unexpected size %d (expected %d)\n", len, WANT);
     http.end();
-    return nullptr;
-  }
-
-  uint8_t* buf = (uint8_t*)ps_malloc(WANT);
-  if (!buf) buf = (uint8_t*)malloc(WANT);
-  if (!buf) {
-    Serial.println("malloc FAILED");
-    http.end();
+    free(buf);
     return nullptr;
   }
 
