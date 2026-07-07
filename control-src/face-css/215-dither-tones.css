@@ -16,10 +16,18 @@
 
 .face-tone-g15,
 .face-tone-g25,
+.face-tone-g37,
 .face-tone-g50,
+.face-tone-g62,
 .face-tone-g75,
+.face-tone-g87,
 .face-tone-r25,
-.face-tone-r50 {
+.face-tone-r50,
+.face-tone-diag,
+.face-tone-rdiag,
+.face-tone-hlines,
+.face-tone-vlines,
+.face-tone-cross {
   image-rendering: pixelated;
   background-size: 2px 2px;
 }
@@ -36,15 +44,35 @@
   background-color: #fff;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' x='0' y='0'/%3E%3C/svg%3E");
 }
+/* gray 37% — Bayer step between g25 and g50: the 2×2 dot grid plus two
+ * in-between dots per 4×4 (6/16 ink). Fills the gap when a ramp needs a
+ * readable step under the checkerboard. */
+.face-tone-g37 {
+  background-color: #fff;
+  background-size: 4px 4px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' x='0' y='0'/%3E%3Crect width='1' height='1' x='2' y='0'/%3E%3Crect width='1' height='1' x='0' y='2'/%3E%3Crect width='1' height='1' x='2' y='2'/%3E%3Crect width='1' height='1' x='1' y='1'/%3E%3Crect width='1' height='1' x='3' y='3'/%3E%3C/svg%3E");
+}
 /* gray 50% — checkerboard */
 .face-tone-g50 {
   background-color: #fff;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' x='0' y='0'/%3E%3Crect width='1' height='1' x='1' y='1'/%3E%3C/svg%3E");
 }
+/* gray 62% — inverse of g37: white dots 6/16 on black */
+.face-tone-g62 {
+  background-color: #000;
+  background-size: 4px 4px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' x='0' y='0' fill='%23fff'/%3E%3Crect width='1' height='1' x='2' y='0' fill='%23fff'/%3E%3Crect width='1' height='1' x='0' y='2' fill='%23fff'/%3E%3Crect width='1' height='1' x='2' y='2' fill='%23fff'/%3E%3Crect width='1' height='1' x='1' y='1' fill='%23fff'/%3E%3Crect width='1' height='1' x='3' y='3' fill='%23fff'/%3E%3C/svg%3E");
+}
 /* gray 75% — one white dot per 2×2 on black */
 .face-tone-g75 {
   background-color: #000;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' x='1' y='0' fill='%23fff'/%3E%3C/svg%3E");
+}
+/* gray 87% — inverse of g15: one white dot per 4×4 on black (near-solid) */
+.face-tone-g87 {
+  background-color: #000;
+  background-size: 4px 4px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' x='0' y='0' fill='%23fff'/%3E%3Crect width='1' height='1' x='2' y='2' fill='%23fff'/%3E%3C/svg%3E");
 }
 /* pink — one red dot per 2×2 on white (B panel: red plane; BW: mid gray) */
 .face-tone-r25 {
@@ -55,4 +83,41 @@
 .face-tone-r50 {
   background-color: #fff;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2' shape-rendering='crispEdges'%3E%3Crect width='1' height='1' x='0' y='0' fill='%23d32f2f'/%3E%3Crect width='1' height='1' x='1' y='1' fill='%23d32f2f'/%3E%3C/svg%3E");
+}
+
+/* ---- TEXTURE tiles ----
+ * Same ink coverage ballpark as g50 but a different weave, so two adjacent
+ * fills (e.g. stacked bars) stay tellable-apart at a glance without
+ * relying on tone alone. All strokes are 2px so the pattern survives the
+ * 1-bit threshold as texture, not noise. */
+
+/* 45° diagonal stripes, 2px on / 2px off (50% ink) */
+.face-tone-diag {
+  background-color: #fff;
+  background-size: 4px 4px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Crect width='2' height='1' x='0' y='0'/%3E%3Crect width='1' height='1' x='0' y='1'/%3E%3Crect width='1' height='1' x='3' y='1'/%3E%3Crect width='2' height='1' x='2' y='2'/%3E%3Crect width='2' height='1' x='1' y='3'/%3E%3C/svg%3E");
+}
+/* red diagonal weave — B panel accent variant of diag (BW: reads mid-gray) */
+.face-tone-rdiag {
+  background-color: #fff;
+  background-size: 4px 4px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Crect width='2' height='1' x='0' y='0' fill='%23d32f2f'/%3E%3Crect width='1' height='1' x='0' y='1' fill='%23d32f2f'/%3E%3Crect width='1' height='1' x='3' y='1' fill='%23d32f2f'/%3E%3Crect width='2' height='1' x='2' y='2' fill='%23d32f2f'/%3E%3Crect width='2' height='1' x='1' y='3' fill='%23d32f2f'/%3E%3C/svg%3E");
+}
+/* horizontal stripes, 2px on / 2px off */
+.face-tone-hlines {
+  background-color: #fff;
+  background-size: 2px 4px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='4' shape-rendering='crispEdges'%3E%3Crect width='2' height='2' x='0' y='0'/%3E%3C/svg%3E");
+}
+/* vertical stripes, 2px on / 2px off */
+.face-tone-vlines {
+  background-color: #fff;
+  background-size: 4px 2px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='2' shape-rendering='crispEdges'%3E%3Crect width='2' height='2' x='0' y='0'/%3E%3C/svg%3E");
+}
+/* cross-hatch grid — 2px lines both ways on an 8px cell (~44% ink) */
+.face-tone-cross {
+  background-color: #fff;
+  background-size: 8px 8px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' shape-rendering='crispEdges'%3E%3Crect width='8' height='2' x='0' y='0'/%3E%3Crect width='2' height='8' x='0' y='0'/%3E%3C/svg%3E");
 }

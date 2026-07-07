@@ -190,15 +190,17 @@ export function render(ctx) {
     </div>` : '';
     // Dithered condition bars (same look as the battery/AQI fill) on tall
     // cards. Humidity + cloud are natural 0–100 metrics; precip-heavy cloud
-    // reads at a glance without another number.
-    const miniBar = (label, pct) => `<div class="wx-bar-row">
+    // reads at a glance without another number. Each bar gets its own weave
+    // (checkerboard vs diagonal) so the stacked pair is tellable-apart by
+    // texture, not just position.
+    const miniBar = (label, pct, tone = 'face-tone-g50') => `<div class="wx-bar-row">
       <span class="wx-bar-l">${label}</span>
-      <div class="tr-bar wx-bar"><div class="tr-bar-fill face-tone-g50" style="width:${Math.max(2, Math.min(100, pct))}%"></div><div class="tr-bar-track face-tone-g15"></div></div>
+      <div class="tr-bar wx-bar"><div class="tr-bar-fill ${tone}" style="width:${Math.max(2, Math.min(100, pct))}%"></div><div class="tr-bar-track face-tone-g15"></div></div>
       <span class="wx-bar-v">${Math.round(pct)}%</span>
     </div>`;
     const bars = (showFoot && Number.isFinite(w.humidity)) ? `<div class="wx-bars">
       ${miniBar('Humidity', w.humidity)}
-      ${Number.isFinite(w.cloudCover) ? miniBar('Cloud', w.cloudCover) : ''}
+      ${Number.isFinite(w.cloudCover) ? miniBar('Cloud', w.cloudCover, 'face-tone-diag') : ''}
     </div>` : '';
     return `<div class="tr-card${staleClass}">
       <div class="tr-titlebar"><span>Weather</span><span class="tr-meta">${city || (w.stale ? 'cached' : '')}</span></div>
