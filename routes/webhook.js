@@ -21,11 +21,12 @@ router.post('/api/webhook/:key', checkDeviceAuth, async (req, res) => {
   if (JSON.stringify(body).length > MAX_PAYLOAD_BYTES) {
     return res.status(413).json({ error: 'payload_too_large', max: MAX_PAYLOAD_BYTES });
   }
-  await saveWebhook(key, body);
+  const changed = await saveWebhook(key, body);
   // Bust the render cache so the next device wake picks the new payload up
-  // (and the ETag changes, so an unchanged panel isn't force-refreshed).
-  invalidateImage();
-  res.json({ ok: true, key });
+  // — but only when the payload actually changed. A script re-POSTing the
+  // same JSON on a timer shouldn't trigger a Puppeteer re-render per POST.
+  if (changed) invalidateImage();
+  res.json({ ok: true, key, changed });
 });
 
 // Admin: inspect the stored payload for a key (debugging aid).

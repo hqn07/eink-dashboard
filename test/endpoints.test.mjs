@@ -250,6 +250,18 @@ test('webhook: validation + store + read-back', async () => {
   const back = await (await fetch(tok('/api/webhook/steps'))).json();
   assert.equal(back.data.steps, 8432);
   assert.ok(back.at > 0);
+  // Re-POST of the identical payload reports changed:false (no re-render)
+  const dup = await fetch(tok('/api/webhook/steps'), {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ steps: 8432, goal: 10000 }),
+  });
+  assert.equal((await dup.json()).changed, false);
+  // A different payload flips it back
+  const diff = await fetch(tok('/api/webhook/steps'), {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ steps: 9000, goal: 10000 }),
+  });
+  assert.equal((await diff.json()).changed, true);
   // Unknown key → 404
   assert.equal((await fetch(tok('/api/webhook/nothing'))).status, 404);
 });

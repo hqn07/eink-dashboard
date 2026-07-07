@@ -82,17 +82,20 @@ function fractions(now, tz) {
   };
 }
 
+// Head styles are inlined — `.tr-l` / `.tr-v` are only styled inside a
+// `.tr-lv` stack, so bare class use here silently fell back to the 16px
+// body font and fattened every row by ~10px (found via box measurement).
 function bar(spanKey, frac, showPct) {
   const pct = Math.max(0, Math.min(100, Math.round(frac * 100)));
-  const head = `<div style="display:flex;justify-content:space-between;align-items:baseline">`
-    + `<span class="tr-l">${SPAN_LABELS[spanKey]}</span>`
-    + (showPct ? `<span class="tr-v" style="font-size:16px">${pct}%</span>` : '')
+  const head = `<div style="display:flex;justify-content:space-between;align-items:baseline;line-height:1">`
+    + `<span style="font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase">${SPAN_LABELS[spanKey]}</span>`
+    + (showPct ? `<span style="font-size:16px;font-weight:800;font-variant-numeric:tabular-nums">${pct}%</span>` : '')
     + `</div>`;
   const track = `<div class="tr-bar" style="height:16px;flex:none;margin-top:4px">`
     + `<div class="tr-bar-fill ${SPAN_TONES[spanKey] || 'face-tone-g50'}" style="width:${pct}%"></div>`
     + `<div class="tr-bar-track face-tone-g15"></div>`
     + `</div>`;
-  return `<div style="margin-bottom:12px">${head}${track}</div>`;
+  return `<div>${head}${track}</div>`;
 }
 
 export function render(ctx) {
@@ -107,18 +110,30 @@ export function render(ctx) {
   const showPct = tier !== 'tiny';
 
   const fr = fractions(now, tz);
-  const spans = (Array.isArray(s.spans) && s.spans.length ? s.spans : ['day', 'year'])
+  let spans = (Array.isArray(s.spans) && s.spans.length ? s.spans : ['day', 'year'])
     .filter(k => SPAN_ORDER.includes(k))
     .sort((a, b) => SPAN_ORDER.indexOf(a) - SPAN_ORDER.indexOf(b));
 
+  // Degrade: drop trailing spans that can't fit the tile instead of
+  // clipping mid-bar. Measured (headless box metrics, M tile): grid rows
+  // are 40px; a bar block is ~43px (19px head + 4px + 20px bordered
+  // track) + 12px stack gap; chrome = cell padding 30 + title bar 27 +
+  // body padding 24 ≈ 81px (plain skips the card chrome).
+  const pxH = (cellH || 0) * 40;
+  const chromePx = variant === 'plain' ? 34 : 81;
+  const maxBars = Math.max(1, Math.floor((pxH - chromePx + 12) / 55));
+  if (spans.length > maxBars) spans = spans.slice(0, maxBars);
+
   const bars = spans.map(k => bar(k, fr[k], showPct)).join('');
+  const stack = (pad) =>
+    `<div style="display:flex;flex-direction:column;justify-content:center;gap:12px;height:100%;overflow:hidden;${pad}">${bars}</div>`;
 
   if (variant === 'plain') {
-    return `<div class="widget" style="padding:2px 0">${bars}</div>`;
+    return `<div class="widget" style="height:100%">${stack('padding:2px 0')}</div>`;
   }
 
   return `<div class="tr-card">
     <div class="tr-titlebar"><span>${escapeHtml(titleLabel)}</span></div>
-    <div class="tr-body" style="flex-direction:column;justify-content:center">${bars}</div>
+    <div class="tr-body" style="flex-direction:column;justify-content:center">${stack('')}</div>
   </div>`;
 }
