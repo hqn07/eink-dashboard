@@ -1,5 +1,15 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-07-07 — open-sourcing POSTPONED (user call)
+> Prep done + kept: CI builds secret-free bins (empty wifi/token — captive
+> portal + per-device api keys), 40 token-bearing bins removed from tip,
+> github.com/hqn07 profile live w/ showcase. NOT done: history scrub
+> (wifi pass `REDACTED` + two fleet tokens still in old commits —
+> bins in history too), visibility still PRIVATE, local secrets.h reverted
+> to match Railway. To resume: mirror clone → git-filter-repo
+> (--invert-paths --path public/firmware + --replace-text) → force push →
+> rotate DEVICE_TOKEN (Railway + secrets.h) → flip public. ~30 min.
+>
 > ## 2026-07-06 session (Fable 5) — all pushed
 > - **Panel offset bug FIXED (server-side):** B panel displays image rotated
 >   right ~64px (hardware trait — GDEY075Z08 vs Z08 class swap changed
