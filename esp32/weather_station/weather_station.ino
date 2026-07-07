@@ -44,7 +44,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.14.1"
+#define FW_VERSION "1.14.2"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -154,6 +154,10 @@ int         g_serverRefreshMin = -1;
 // 0 on every cycle entry so a fail screen always shows the *current*
 // cycle's failure, not a stale one from before.
 int         g_lastHttpCode = 0;
+// Consecutive WiFi-failure count, surviving deep sleep. Drives the
+// buttonless portal recovery below (this board retries every 5 min, no
+// exponential backoff).
+RTC_DATA_ATTR uint8_t g_consecWifiFails = 0;
 // Survives deep sleep — `time_t` of the last successful download
 // (set immediately after pushImage). 0 = never. drawFailScreen shows
 // "Last good: Nm ago" so the user knows whether this is a fresh
@@ -1591,9 +1595,23 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
 
   if (!wifiOk) {
     queueDeviceLog("WiFi connection failed", 0);
+    if (g_consecWifiFails < 255) g_consecWifiFails++;
+    // Buttonless recovery. The portal normally opens via a button hold, but
+    // on hardware without the button a changed router SSID/password would
+    // otherwise brick WiFi until a USB reflash. Open the portal on the 3rd
+    // consecutive failure (~15 min), then every 72nd (~6 h at the fixed
+    // 5-minute retry) so a plain power outage doesn't burn battery running
+    // an AP nobody is joining.
+    if (g_consecWifiFails == 3 || (g_consecWifiFails > 3 && (g_consecWifiFails - 3) % 72 == 0)) {
+      Serial.printf("WiFi fail #%u — opening recovery portal\n", g_consecWifiFails);
+      drawSetupScreen();
+      openCaptivePortal();   // blocks up to 5 min
+      ESP.restart();         // retry immediately with whatever was saved
+    }
     drawFailScreen("WiFi connection failed");
     return 5;
   }
+  g_consecWifiFails = 0;
 
   warmServer();
   // First-boot enrollment. enrollDevice() is a no-op when g_apiKey is

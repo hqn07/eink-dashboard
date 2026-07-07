@@ -49,7 +49,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.20.1"
+#define FW_VERSION "1.20.2"
 #define FW_BOARD   "b"
 #define OTA_MIN_BATT_PCT 50
 
@@ -1688,8 +1688,21 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
 
   if (!wifiOk) {
     queueDeviceLog("WiFi connection failed", 0);
-    drawFailScreen("WiFi connection failed");
     if (g_consecFails < 255) g_consecFails++;
+    // Buttonless recovery. The portal normally opens via a button hold, but
+    // on hardware without the button a changed router SSID/password would
+    // otherwise brick WiFi until a USB reflash. After the 3rd consecutive
+    // failure (~15+ min of outage, past the transient-blip window) open the
+    // portal for one 5-minute window, then roughly once a day at the 60-min
+    // backoff cap (every 12th failure) so a plain power outage doesn't burn
+    // battery running an AP nobody is joining.
+    if (g_consecFails == 3 || (g_consecFails > 3 && (g_consecFails - 3) % 12 == 0)) {
+      Serial.printf("WiFi fail #%u — opening recovery portal\n", g_consecFails);
+      drawSetupScreen();
+      openCaptivePortal();   // blocks up to 5 min
+      ESP.restart();         // retry immediately with whatever was saved
+    }
+    drawFailScreen("WiFi connection failed");
     return failBackoffSec();
   }
 
