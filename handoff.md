@@ -1,5 +1,28 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-07-06 session (Fable 5) — all pushed
+> - **Panel offset bug FIXED (server-side):** B panel displays image rotated
+>   right ~64px (hardware trait — GDEY075Z08 vs Z08 class swap changed
+>   nothing, both reverted). `/display-3c.bin` now pre-rotates left by
+>   `PANEL_SHIFT_3C_PX` env (bit-accurate row rotation in `lib/image.js`
+>   `shiftPlanesLeft`; etag suffixed so recalibration busts 304s). **Set
+>   `PANEL_SHIFT_3C_PX=64` in Railway, photo panel, tune ±8. No reflash.**
+> - **Dither tiles:** ramp g37/g62/g87 + textures diag/hlines/vlines/cross
+>   + rdiag (`215-dither-tones.css`). weather_hero bars: humidity=checker,
+>   cloud=diag. progress bars: per-span weave (day/week/month/year =
+>   checker/diag/vlines/cross).
+> - **Remote firmware log:** fw 1.20.0 (needs flash) buffers last failure in
+>   RTC, POSTs /api/log on recovery; GET /api/logs (admin) reads. 
+> - **Per-device screens:** PATCH /api/device/:id {screen} → that device
+>   renders the assigned screen (query param still wins).
+> - **Webhook widget:** POST JSON → /api/webhook/<key> (device token auth)
+>   → widget renders payload; template mode `{{path}}` per line or auto
+>   key/value grid. New widget wired all 5 spots; 20 api tests green.
+> - Visual baseline refreshed (was stale since the 5-widget batch).
+> - Two GxEPD2 copies on disk (libraries/GxEPD2 1.6.5 + misnested
+>   libraries/libraries/GxEPD2 1.6.9) — cleanup candidate, not urgent.
+
+
 > ## ▶ RESUME HERE (2026-07-01) — handoff to Fable 5
 > Run `/continue`. All work below is on `origin/main`, verified only via
 > the 1-bit sim harness (`node scripts/preview-components.mjs` — a scratch
