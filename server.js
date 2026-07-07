@@ -138,7 +138,8 @@ app.use(require('./routes/battery'));      // /api/battery report/read
 app.use(require('./routes/mac-state'));    // /api/mac-state (mac-agent push)
 app.use(require('./routes/alarms'));       // /api/alarms + /api/alarm/next
 app.use(require('./routes/firmware'));     // /api/firmware/manifest + /firmware/:file
-app.use(require('./routes/devices'));      // /api/setup + /api/devices + /api/device/:id
+app.use(require('./routes/devices'));      // /api/setup + /api/devices + /api/device/:id + /api/log(s)
+app.use(require('./routes/webhook'));      // /api/webhook/:key (push JSON -> webhook widget)
 app.use(require('./routes/status'));       // /status + /health + /health/widgets
 
 // Node 15+ exits on unhandled rejections by default. Log first so we

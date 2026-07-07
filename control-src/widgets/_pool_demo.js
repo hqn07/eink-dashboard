@@ -118,6 +118,11 @@ export function demoCtxForWidget(id, cellW, cellH) {
     case 'codeactivity':
       return { ...base, codeActivity: DEMO_CODE_ACTIVITY,
         settings: { username: 'octocat' } };
+    case 'webhook':
+      return { ...base,
+        webhook: { data: { steps: 8432, goal: 10000, note: 'Morning run done' },
+                   at: Date.now() - 5 * 60000 },
+        settings: { key: 'demo' } };
     case 'mac_nowplaying':
       return { ...base, macNowPlaying: DEMO_NOWPLAYING, settings: {} };
     case 'photo':

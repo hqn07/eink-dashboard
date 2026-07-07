@@ -58,6 +58,7 @@ const POOL_META = {
   text:             { category: 'Text',     blurb: 'Token strip or message card' },
   quote:            { category: 'Text',     blurb: 'Quote + attribution' },
   wordofday:        { category: 'Text',     blurb: 'Daily vocabulary word + definition' },
+  webhook:          { category: 'Data',     blurb: 'Push any JSON, see it on the panel' },
   onthisday:        { category: 'Text',     blurb: 'Historical events for today' },
   qr:               { category: 'Text',     blurb: 'QR code + caption' }
 };
@@ -90,6 +91,7 @@ export const WIDGET_REGISTRY = [
   { ...migratedDef('world_clock') },
   { ...migratedDef('quote') },
   { ...migratedDef('wordofday') },
+  { ...migratedDef('webhook') },
   { ...migratedDef('onthisday') },
   { ...migratedDef('headlines') },
   { ...migratedDef('photo') },

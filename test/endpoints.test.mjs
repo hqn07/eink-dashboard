@@ -174,3 +174,82 @@ test('POST /api/battery validates input', async () => {
   });
   assert.equal(good.status, 200);
 });
+
+test('device log: POST /api/log + admin read-back', async () => {
+  const noMsg = await fetch(tok('/api/log'), {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ level: 'error' }),
+  });
+  assert.equal(noMsg.status, 400);
+  const ok = await fetch(tok('/api/log'), {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ level: 'error', msg: 'Could not fetch image (x3)', code: -11 }),
+  });
+  assert.equal(ok.status, 200);
+  const r = await fetch(tok('/api/logs'));
+  assert.equal(r.status, 200);
+  const { logs } = await r.json();
+  assert.ok(logs.length >= 1);
+  assert.equal(logs[0].msg, 'Could not fetch image (x3)');
+  assert.equal(logs[0].code, -11);
+  assert.equal(logs[0].level, 'error');
+});
+
+test('per-device screen assignment roundtrip', async () => {
+  const mac = 'aa:bb:cc:dd:ee:02';
+  const enroll = await fetch(tok('/api/setup'), {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ mac, board: 'b', fw_version: '1.20.0' }),
+  });
+  const dev = await enroll.json();
+  // Assign a screen by friendly_id
+  const set = await fetch(tok('/api/device/' + dev.friendly_id), {
+    method: 'PATCH', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ screen: 'screen-2' }),
+  });
+  assert.equal(set.status, 200);
+  assert.equal((await set.json()).screen, 'screen-2');
+  // Roster shows it
+  const roster = await (await fetch(tok('/api/devices'))).json();
+  const row = roster.devices.find(d => d.mac === mac);
+  assert.equal(row.screen, 'screen-2');
+  // Clear it
+  const clear = await fetch(tok('/api/device/' + dev.friendly_id), {
+    method: 'PATCH', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ screen: null }),
+  });
+  assert.equal((await clear.json()).screen, null);
+  // Missing body key → 400
+  const bad = await fetch(tok('/api/device/' + dev.friendly_id), {
+    method: 'PATCH', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+  assert.equal(bad.status, 400);
+  await fetch(tok('/api/device/' + dev.friendly_id), { method: 'DELETE' });
+});
+
+test('webhook: validation + store + read-back', async () => {
+  // Bad key (illegal chars) → 400
+  const badKey = await fetch(tok('/api/webhook/no%20spaces'), {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ a: 1 }),
+  });
+  assert.equal(badKey.status, 400);
+  // Array body → 400
+  const badBody = await fetch(tok('/api/webhook/steps'), {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify([1, 2, 3]),
+  });
+  assert.equal(badBody.status, 400);
+  // Valid → 200, admin read-back returns the payload
+  const ok = await fetch(tok('/api/webhook/steps'), {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ steps: 8432, goal: 10000 }),
+  });
+  assert.equal(ok.status, 200);
+  const back = await (await fetch(tok('/api/webhook/steps'))).json();
+  assert.equal(back.data.steps, 8432);
+  assert.ok(back.at > 0);
+  // Unknown key → 404
+  assert.equal((await fetch(tok('/api/webhook/nothing'))).status, 404);
+});

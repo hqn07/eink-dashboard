@@ -38,6 +38,7 @@ import * as sun              from './sun.js';
 import * as tasks            from './tasks.js';
 import * as text             from './text.js';
 import * as transit          from './transit.js';
+import * as webhook          from './webhook.js';
 import * as weather_forecast from './weather_forecast.js';
 import * as weather_hero     from './weather_hero.js';
 import * as world_clock      from './world_clock.js';
@@ -65,6 +66,7 @@ import { Form as sunForm }             from './sun.form.jsx';
 import { Form as tasksForm }           from './tasks.form.jsx';
 import { Form as textForm }            from './text.form.jsx';
 import { Form as transitForm }         from './transit.form.jsx';
+import { Form as webhookForm }         from './webhook.form.jsx';
 import { Form as weatherForecastForm } from './weather_forecast.form.jsx';
 import { Form as weatherHeroForm }     from './weather_hero.form.jsx';
 import { Form as worldClockForm }      from './world_clock.form.jsx';
@@ -72,7 +74,7 @@ import { Form as wordofdayForm }       from './wordofday.form.jsx';
 
 const MODULES = [
   aqi, calendar, codeactivity, clock, countdown, eink_battery, mac_battery, mac_nowplaying,
-  headlines, moon, onthisday, photo, progress, qr, fx, crypto, quote, sparkline, sun, tasks, text, transit, weather_forecast, weather_hero, world_clock, wordofday
+  headlines, moon, onthisday, photo, progress, qr, fx, crypto, quote, sparkline, sun, tasks, text, transit, webhook, weather_forecast, weather_hero, world_clock, wordofday
 ];
 
 const FORMS = {
@@ -98,6 +100,7 @@ const FORMS = {
   tasks:            tasksForm,
   text:             textForm,
   transit:          transitForm,
+  webhook:          webhookForm,
   weather_forecast: weatherForecastForm,
   weather_hero:     weatherHeroForm,
   world_clock:      worldClockForm,
