@@ -49,7 +49,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.20.0"
+#define FW_VERSION "1.20.1"
 #define FW_BOARD   "b"
 #define OTA_MIN_BATT_PCT 50
 
@@ -919,11 +919,20 @@ uint8_t* downloadImage() {
   // Conditional GET — if the last image's ETag still matches, the server
   // returns 304 and we skip the slow color refresh.
   if (g_lastEtag[0]) http.addHeader("If-None-Match", g_lastEtag);
-  // Retain the response headers we care about: refresh hint + ETag.
-  const char* keepHeaders[] = { "X-Refresh-Rate", "ETag", "X-Refresh-Seconds" };
-  http.collectHeaders(keepHeaders, 3);
+  // Retain the response headers we care about: refresh hint + ETag +
+  // stale-enrollment flag.
+  const char* keepHeaders[] = { "X-Refresh-Rate", "ETag", "X-Refresh-Seconds", "X-Enroll-Stale" };
+  http.collectHeaders(keepHeaders, 4);
 
   int code = http.GET();
+  // Server didn't recognize our api_key (roster lost / re-provisioned
+  // server). Clear the NVS identity so the next cycle re-enrolls via
+  // /api/setup — otherwise we'd ride the fleet token forever and never
+  // reappear in the device roster.
+  if (http.hasHeader("X-Enroll-Stale") && g_apiKey.length() > 0) {
+    Serial.println("Server flagged stale enrollment — clearing api_key, re-enroll next cycle");
+    saveAuthToNVS("", "");
+  }
   // 304 Not Modified — image identical to what's already on the panel.
   // Skip the redraw entirely; caller leaves the screen as-is and sleeps.
   if (code == 304) {

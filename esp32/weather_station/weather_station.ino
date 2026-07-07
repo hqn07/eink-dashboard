@@ -44,7 +44,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.14.0"
+#define FW_VERSION "1.14.1"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -861,12 +861,20 @@ uint8_t* downloadImage() {
   http.addHeader("RSSI",       String(WiFi.RSSI()));
   http.addHeader("FW-Version", FW_VERSION);
   http.addHeader("FW-Board",   FW_BOARD);
-  // Ask HTTPClient to retain the one response header we care about.
-  // X-Refresh-Rate is set by the server on every /display.bin reply.
-  const char* keepHeaders[] = { "X-Refresh-Rate" };
-  http.collectHeaders(keepHeaders, 1);
+  // Retain the response headers we care about: refresh hint +
+  // stale-enrollment flag.
+  const char* keepHeaders[] = { "X-Refresh-Rate", "X-Enroll-Stale" };
+  http.collectHeaders(keepHeaders, 2);
 
   int code = http.GET();
+  // Server didn't recognize our api_key (roster lost / re-provisioned
+  // server). Clear the NVS identity so the next cycle re-enrolls via
+  // /api/setup — otherwise we'd ride the fleet token forever and never
+  // reappear in the device roster.
+  if (http.hasHeader("X-Enroll-Stale") && g_apiKey.length() > 0) {
+    Serial.println("Server flagged stale enrollment — clearing api_key, re-enroll next cycle");
+    saveAuthToNVS("", "");
+  }
   if (code != 200) {
     Serial.printf("HTTP %d\n", code);
     g_lastHttpCode = code;

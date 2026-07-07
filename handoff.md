@@ -18,6 +18,15 @@
 > - **Webhook widget:** POST JSON → /api/webhook/<key> (device token auth)
 >   → widget renders payload; template mode `{{path}}` per line or auto
 >   key/value grid. New widget wired all 5 spots; 20 api tests green.
+> - **Stale-enrollment fix (gap found in prod):** roster was empty with a
+>   live panel — device NVS held an api_key the server lost, auth fell
+>   through to fleet token forever. Server now sends `X-Enroll-Stale: 1`
+>   on unknown keys; fw 1.20.1 (b) / 1.14.1 (bw) clear NVS + re-enroll.
+>   CI auto-ships bins; B panel OTAs itself, roster repopulates on its own.
+> - Polish: webhook cache-bust only on changed payload; progress bars
+>   degrade to fit (S=1/M=3/L=4, .tr-l/.tr-v unstyled-outside-.tr-lv bug
+>   fixed); visual-regression harness no longer orphans its server.
+> - `PANEL_SHIFT_3C_PX=64` LIVE on Railway (etag `-s64` confirmed).
 > - Visual baseline refreshed (was stale since the 5-widget batch).
 > - Two GxEPD2 copies on disk (libraries/GxEPD2 1.6.5 + misnested
 >   libraries/libraries/GxEPD2 1.6.9) — cleanup candidate, not urgent.

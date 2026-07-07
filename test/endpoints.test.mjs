@@ -228,6 +228,24 @@ test('per-device screen assignment roundtrip', async () => {
   await fetch(tok('/api/device/' + dev.friendly_id), { method: 'DELETE' });
 });
 
+test('stale api_key gets flagged for re-enrollment', async () => {
+  // Bogus key + valid fleet token → request succeeds but carries the
+  // stale-enrollment flag (firmware >=1.20.1/1.14.1 clears NVS on it).
+  const r = await fetch(tok('/sleep'), { headers: { 'x-api-key': 'not-a-real-key' } });
+  assert.equal(r.status, 200);
+  assert.equal(r.headers.get('x-enroll-stale'), '1');
+  // A properly enrolled key does NOT get the flag.
+  const mac = 'aa:bb:cc:dd:ee:03';
+  const dev = await (await fetch(tok('/api/setup'), {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ mac, board: 'b', fw_version: '1.20.1' }),
+  })).json();
+  const ok = await fetch(url('/sleep'), { headers: { 'x-api-key': dev.api_key } });
+  assert.equal(ok.status, 200);
+  assert.equal(ok.headers.get('x-enroll-stale'), null);
+  await fetch(tok('/api/device/' + dev.friendly_id), { method: 'DELETE' });
+});
+
 test('webhook: validation + store + read-back', async () => {
   // Bad key (illegal chars) → 400
   const badKey = await fetch(tok('/api/webhook/no%20spaces'), {

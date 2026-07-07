@@ -45,16 +45,31 @@ function log(...a) { console.log('[visual-regression]', ...a); }
 
 async function exists(p) { try { await access(p); return true; } catch { return false; } }
 
+// Track the spawned server so it dies with this script no matter how the
+// script exits — a killed/timed-out harness run used to orphan the server,
+// which then held the port and made every later run fail with EADDRINUSE.
+let _serverChild = null;
+for (const sig of ['exit', 'SIGINT', 'SIGTERM']) {
+  process.on(sig, () => {
+    if (_serverChild) { try { _serverChild.kill('SIGKILL'); } catch { /* gone */ } }
+    if (sig !== 'exit') process.exit(1);
+  });
+}
+
 function startServer() {
   const env = { ...process.env, PORT: String(PORT), NODE_ENV: 'test' };
   const child = spawn('node', ['server.js'], { cwd: ROOT, env, stdio: ['ignore', 'pipe', 'pipe'] });
+  _serverChild = child;
   return new Promise((resolve, reject) => {
-    const to = setTimeout(() => reject(new Error('server did not start in 30s')), 30000);
+    const to = setTimeout(() => {
+      child.kill('SIGKILL');
+      reject(new Error('server did not start in 30s'));
+    }, 30000);
     child.stdout.on('data', (b) => {
       if (b.toString().includes('listening')) { clearTimeout(to); resolve(child); }
     });
     child.stderr.on('data', (b) => process.stderr.write(b));
-    child.on('exit', (c) => { clearTimeout(to); reject(new Error(`server exited early (${c})`)); });
+    child.on('exit', (c) => { clearTimeout(to); _serverChild = null; reject(new Error(`server exited early (${c})`)); });
   });
 }
 
