@@ -9,7 +9,7 @@ const { resolveVariant, pickActiveScreen, resolveRefreshMinutes } = require('../
 const { getCurrentImage } = require('../lib/render');
 const { effectiveRefresh, pushNow, FAST_INTERVAL_SECONDS, FAST_WINDOW_MS } = require('../lib/refresh');
 const { saveBatteryState } = require('../lib/battery-store');
-const { planesToPng } = require('../lib/image');
+const { planesToPng, shiftPlanesLeft } = require('../lib/image');
 const { strongEtag } = require('../lib/htmlutil');
 const { safeError } = require('../lib/http');
 
@@ -100,6 +100,16 @@ router.get('/display.bin', checkDeviceAuth, async (req, res) => {
   }
 });
 
+// Panel column-offset compensation for the B panel (hardware trait: the
+// panel displays the image rotated right by a fixed number of columns, the
+// rightmost strip wrapping to the left edge). The server pre-rotates the
+// 3c binary LEFT by the same amount so the two cancel on glass. Applied
+// here — NOT in the render cache — so /display-3c.png keeps previewing the
+// true image and the BW endpoints are untouched. Calibrate via the
+// PANEL_SHIFT_3C_PX env var (px); 0/unset = off.
+const PANEL_SHIFT_3C_PX =
+  (((parseInt(process.env.PANEL_SHIFT_3C_PX, 10) || 0) % SCREEN_W) + SCREEN_W) % SCREEN_W;
+
 // Raw two-plane packed binary for the 3-color (B) panel.
 // 96000 bytes = black plane (48000) + red plane (48000), each MSB-first.
 router.get('/display-3c.bin', checkDeviceAuth, async (req, res) => {
@@ -107,7 +117,14 @@ router.get('/display-3c.bin', checkDeviceAuth, async (req, res) => {
     const cfg = await loadConfig();
     const variant = resolveVariant(req, cfg);
     const entry = await getCurrentImage(variant);
-    const { bin, etag } = await entry.get3c();
+    let { bin, etag } = await entry.get3c();
+    if (PANEL_SHIFT_3C_PX) {
+      bin = shiftPlanesLeft(bin, PANEL_SHIFT_3C_PX);
+      // Deterministic transform → still a strong ETag; suffixing the shift
+      // makes a recalibration invalidate the device's cached ETag so it
+      // redraws instead of 304-ing the stale alignment.
+      etag = etag.replace(/"$/, `-s${PANEL_SHIFT_3C_PX}"`);
+    }
 
     const battPct = captureBatteryHeaders(req);
     const refresh3c = effectiveRefresh(cfg, battPct);
