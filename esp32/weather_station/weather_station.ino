@@ -44,7 +44,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.13.2"
+#define FW_VERSION "1.14.0"
 #define FW_BOARD   "bw"
 #define OTA_MIN_BATT_PCT 50
 
@@ -1021,6 +1021,60 @@ int batteryPctFromVoltage(float v) {
   return 0;
 }
 
+// =================== DEVICE EVENT LOG ===================
+//
+// A failed cycle can't report itself (that's what failing means), so the
+// failure is buffered in RTC memory — it survives deep sleep — and POSTed
+// to /api/log on the next cycle that gets a connection. One slot, latest
+// failure wins; a repeat counter records how many failures the slot ate so
+// a long outage shows up as "... (x12)" instead of 12 entries. This makes
+// outages debuggable from the server (GET /api/logs) without a serial
+// cable or panel photos.
+RTC_DATA_ATTR char     g_pendingLogMsg[120] = {0};
+RTC_DATA_ATTR int32_t  g_pendingLogCode  = 0;
+RTC_DATA_ATTR uint16_t g_pendingLogCount = 0;
+
+void queueDeviceLog(const char* msg, int code) {
+  strncpy(g_pendingLogMsg, msg, sizeof(g_pendingLogMsg) - 1);
+  g_pendingLogMsg[sizeof(g_pendingLogMsg) - 1] = '\0';
+  g_pendingLogCode = code;
+  if (g_pendingLogCount < 65535) g_pendingLogCount++;
+  Serial.printf("Log queued: \"%s\" code=%d (x%u)\n", msg, code, g_pendingLogCount);
+}
+
+// Fire-and-forget like postBattery — a lost log POST just stays queued for
+// the next cycle (only cleared on HTTP 200).
+void flushDeviceLog() {
+  if (!g_pendingLogMsg[0]) return;
+  String url = addToken(String(activeServerBase) + "/api/log");
+  HTTPClient http;
+  WiFiClientSecure tls;
+  http.setTimeout(5000);
+  httpBegin(http, tls, url);
+  addAuth(http);
+  http.addHeader("Content-Type", "application/json");
+  char msg[140];
+  if (g_pendingLogCount > 1) {
+    snprintf(msg, sizeof(msg), "%s (x%u)", g_pendingLogMsg, g_pendingLogCount);
+  } else {
+    snprintf(msg, sizeof(msg), "%s", g_pendingLogMsg);
+  }
+  StaticJsonDocument<256> doc;
+  doc["level"] = "error";
+  doc["msg"]   = msg;
+  if (g_pendingLogCode != 0) doc["code"] = g_pendingLogCode;
+  String body;
+  serializeJson(doc, body);
+  int rc = http.POST(body);
+  http.end();
+  Serial.printf("Log flush: HTTP %d\n", rc);
+  if (rc == 200) {
+    g_pendingLogMsg[0]  = '\0';
+    g_pendingLogCode    = 0;
+    g_pendingLogCount   = 0;
+  }
+}
+
 // Fire-and-forget POST. Battery telemetry is non-critical — short timeout,
 // don't block the image refresh if the endpoint is slow.
 void postBattery(float v, int pct) {
@@ -1528,6 +1582,7 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
   }
 
   if (!wifiOk) {
+    queueDeviceLog("WiFi connection failed", 0);
     drawFailScreen("WiFi connection failed");
     return 5;
   }
@@ -1539,6 +1594,7 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
   // ?token= fleet credential until enrollment succeeds.
   if (g_apiKey.length() == 0) enrollDevice();
   postBattery(battV, battPct);
+  flushDeviceLog();   // report any failure buffered from a previous cycle
   checkForUpdate(battPct, buttonWake);   // may not return (reboots on success)
   syncTime();
 
@@ -1577,6 +1633,7 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
       sleepMin = fetchSleepMinutes();
       Serial.printf("Sleep %d min\n", sleepMin);
     } else {
+      queueDeviceLog("Could not fetch image", g_lastHttpCode);
       drawFailScreen("Could not fetch image");
       sleepMin = 5;
     }
