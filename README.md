@@ -8,11 +8,20 @@ The server renders your dashboard as HTML, screenshots it to an 800×480 1-bit i
 
 No API keys required — weather comes from Open-Meteo (free, keyless).
 
+![Dashboard render — battery, headlines, world clock, word of the day](docs/images/panel-3c.png)
+
+<p align="center">
+  <img src="docs/images/screen-weather.png" width="49%" alt="Weather screen — current conditions + 7-day outlook with dithered condition bars">
+  <img src="docs/images/screen-3.png" width="49%" alt="Word-of-the-day quote card screen">
+</p>
+
+*Panel-accurate renders straight from the server (`/display-3c.png`) — what you see is what the e-paper draws.*
+
 ---
 
 ## What you get
 
-- **16 widgets**: weather (current + forecast), clock, calendar (multi-iCal), to-dos, message, quote (static / rotating list / daily-API), countdown, photo slideshow, WiFi QR, news (RSS), stocks / crypto (with sparklines), air quality, moon + sun, GitHub contribution heatmap, custom message, divider.
+- **27 widgets**: weather (current + forecast), clock, world clock, calendar (multi-iCal), tasks (Todoist/iCal), transit, headlines, quote, word of the day, countdown, day/week/month/year progress bars, photo (Floyd–Steinberg dithered), WiFi QR, stocks / crypto / FX sparklines, air quality, moon (real dithered NASA photo), sunrise/sunset, GitHub contribution heatmap, battery, Mac now-playing, text/token bar, **webhook** (POST any JSON, it renders on the panel — TRMNL-private-plugin style).
 - **Unlimited screens** with per-screen layout, schedule, and chrome (header / footer).
 - **Live editor** — drag-resize widgets directly on the preview, no mode toggle.
 - **Tier-aware layouts** — every widget has a deliberate compact / standard / extended / full layout. Resize freely; the widget always picks a layout that fits.
@@ -20,6 +29,10 @@ No API keys required — weather comes from Open-Meteo (free, keyless).
 - **Per-tile customization** — border style, visibility schedule, flush-edge mode.
 - **Self-hosted fonts** — no Google Fonts dependency at runtime.
 - **All-1-bit** — pure black/white render path tuned for the actual physical panel, not just the browser preview.
+- **3-color (B/W/red) panel support** — two-plane binary, red-accent classifier, panel-accurate preview.
+- **Dither system** — ordered-dither tone ramp (7 grays from 1-bit ink) + equal-darkness texture weaves (diagonal / lines / cross-hatch) so adjacent fills read apart on paper.
+- **Fleet-ready device API** — per-device enrollment + API keys, per-device screen assignment, OTA firmware updates from CI, RTC-buffered device event log (failures report themselves on recovery).
+- **Zero-touch WiFi setup** — captive portal on first boot (multi-network store), warm-boot fast reconnect (~700 ms), exponential failure backoff, battery telemetry.
 
 ---
 
@@ -81,50 +94,46 @@ Optional environment variables:
 
 ## Flash the firmware
 
-1. Open `esp32/weather_station.ino` in Arduino IDE.
-2. Update three lines:
-   ```cpp
-   const char* ssid       = "YOUR_WIFI";
-   const char* password   = "YOUR_PASS";
-   const char* serverBase = "https://<your-app>.up.railway.app";
-   ```
+1. Copy `esp32/weather_station/secrets.h.example` to `secrets.h`, set your server URL + device token (WiFi is NOT hardcoded — see step 4).
+2. Open `esp32/weather_station/weather_station.ino` (BW panel) or `esp32/weather_station_b/` (3-color) in Arduino IDE.
 3. Upload to the ESP32 driver board (ESP32 Dev Module, 115200 baud).
-4. Open Serial Monitor. Look for `Got 48000 bytes` + `Sleep N min`.
+4. On first boot the device opens a captive-portal AP named `eink-setup` — join it from your phone and pick your WiFi. Credentials persist; the portal never shows again.
+5. Done. The device enrolls itself against the server, downloads the image, and deep-sleeps between refreshes. Firmware updates arrive over the air from CI builds.
 
-The display refreshes on its next wake cycle. To force an immediate refresh, press the EN button on the driver board (or wire a manual refresh button — see `BOM.md`).
+Button gestures: tap = refresh now · hold 2–7 s = reopen WiFi portal · hold 10 s = factory reset.
 
 ---
 
 ## File map
 
 ```
-server.js                Express + Puppeteer + Sharp. Renders /dashboard → PNG/BIN.
-package.json             Node deps.
-nixpacks.toml            Railway build config (installs Chromium).
+server.js                Composition root: middleware + mounts routes/*.js.
+lib/                     Server modules — render (Puppeteer + image cache),
+                         image (1-bit + 3-color plane pipeline), screens,
+                         auth, refresh cadence, SSR, widget-data fan-out,
+                         config/battery/devices/logs/webhook stores.
+routes/                  Express routers, one per group: display, config,
+                         devices, firmware, webhook, alarms, battery, auth…
+widgets/                 Server-side data fetchers (one file per widget).
+
+control-src/             React control panel source (Vite).
+  widgets/               Per-widget module pairs: <id>.js (def + render,
+                         shared with server SSR) + <id>.form.jsx (settings).
+  face-css/              Numbered partials → built into public/dashboard.css.
+  components/            Editor primitives.
 
 public/
-  dashboard.html         The 800×480 page Puppeteer screenshots. Inlines WIDGET_REGISTRY.
-  dashboard.css          Editorial e-ink styling (pure black + white).
+  dashboard.css          GENERATED from control-src/face-css/ — don't hand-edit.
   fonts/                 Self-hosted WOFF2s.
-  control-app/           Built React control panel (output of `npm run build`).
-
-control-src/             React control panel source. Edit + `npm run build` to ship.
-  App.jsx                Main editor app.
-  widgets.js             Widget registry + pickTier() + screen presets.
-  widget-render.js       Mirror of dashboard.html renderers, for live editor previews.
-  components/            UI pieces.
-
-widgets/                 Server-side fetchers (one file per data widget).
-  weather.js calendar.js news.js stocks.js github.js aqi.js
-  countdown.js moonsun.js photo.js quote.js message.js clock.js wifi.js todos.js
-  alerts.js              NWS severe weather alerts (US).
-
-data/
-  config.default.json    Shipped defaults.
-  config.json            Live config (auto-generated; gitignored).
+  control-app/           Built React editor (Vite output).
+  firmware/              CI-built OTA binaries (bw-x.y.z.bin / b-x.y.z.bin).
 
 esp32/
-  weather_station.ino    Firmware: wake → WiFi → /display.bin → render → sleep.
+  weather_station/       BW panel firmware (captive portal, OTA, deep sleep).
+  weather_station_b/     3-color panel firmware (two-plane image path).
+
+scripts/                 build-face-css, eink-lint, check-widgets,
+                         visual-regression (1-bit snapshot of every widget).
 ```
 
 ---
@@ -146,13 +155,13 @@ When in doubt, photograph the physical panel before declaring a render "fine".
 
 ## Adding a widget
 
-A widget lives in three places:
+A widget is one module pair in `control-src/widgets/`:
 
-1. **Registry** in `control-src/widgets.js` — declare `id`, `label`, `sizes`, `minSize`, `defaultSize`.
-2. **Server-side fetcher** (optional) in `widgets/<id>.js` — exports an async function called from `buildWidgetData()` in `server.js`.
-3. **Renderer** in BOTH `public/dashboard.html` (`WIDGET_REGISTRY`) and `control-src/widget-render.js` (`RENDERERS`). Keep them in sync.
+1. **`<id>.js`** — exports `def` (sizes, defaults, variants) + `render(ctx)` (pure JS string template). The same render runs in the editor, the preview, and the server SSR — one source of truth, no drift.
+2. **`<id>.form.jsx`** — the React settings form for the widget modal.
+3. Register it in `_registry.js`, `_ssr.js`, and the palette (`control-src/widgets.js`); add a server-side data fetcher in `widgets/<id>.js` + a `perItem` case in `lib/widget-data.js` if it needs data.
 
-Use `pickTier(cellW, cellH)` in the renderer and branch on `tiny / compact / standard / extended / full`. Set `minSize` so the editor can't shrink your widget below a known-good floor.
+`npm run check:widgets` statically verifies all wiring spots — a widget can't half-exist. Use `pickTier(cellW, cellH)` and branch on `tiny / compact / standard / extended / full`; set `minSize` so the editor can't shrink below a known-good floor.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for more.
 
