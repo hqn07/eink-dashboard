@@ -35,6 +35,16 @@ export const def = {
 
 const SPAN_LABELS = { day: 'DAY', week: 'WEEK', month: 'MONTH', year: 'YEAR' };
 const SPAN_ORDER = ['day', 'week', 'month', 'year'];
+// Each span keeps its own fill weave (finer = shorter span) so stacked bars
+// read apart by texture, not just label — same trick as the weather-hero
+// humidity/cloud pair. Keyed by span, not row index, so identity is stable
+// no matter which spans the user has enabled.
+const SPAN_TONES = {
+  day:   'face-tone-g50',    // checkerboard
+  week:  'face-tone-diag',   // 45° weave
+  month: 'face-tone-vlines', // vertical ticks
+  year:  'face-tone-cross'   // coarse hatch
+};
 
 function isLeap(y) { return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0; }
 function daysInMonth(y, mo) { return new Date(y, mo, 0).getDate(); }
@@ -79,7 +89,7 @@ function bar(spanKey, frac, showPct) {
     + (showPct ? `<span class="tr-v" style="font-size:16px">${pct}%</span>` : '')
     + `</div>`;
   const track = `<div class="tr-bar" style="height:16px;flex:none;margin-top:4px">`
-    + `<div class="tr-bar-fill face-tone-g50" style="width:${pct}%"></div>`
+    + `<div class="tr-bar-fill ${SPAN_TONES[spanKey] || 'face-tone-g50'}" style="width:${pct}%"></div>`
     + `<div class="tr-bar-track face-tone-g15"></div>`
     + `</div>`;
   return `<div style="margin-bottom:12px">${head}${track}</div>`;
