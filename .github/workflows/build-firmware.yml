@@ -60,28 +60,24 @@ jobs:
           # the ESP32 Arduino core. WiFiManager 2.0.17 was incompatible
           # with arduino-esp32 core 3.1.0+ (tzapu/WiFiManager#1797).
 
-      - name: Generate secrets.h from GitHub Secrets
+      - name: Generate secrets.h
         env:
-          # WIFI_SSID / WIFI_PASSWORD intentionally not consumed for the
-          # bw sketch: 1.8.0+ uses captive-portal provisioning. They
-          # remain available for the b sketch, which is still on the
-          # baked-in-creds path.
-          WIFI_SSID:         ${{ secrets.WIFI_SSID }}
-          WIFI_PASSWORD:     ${{ secrets.WIFI_PASSWORD }}
-          DEVICE_TOKEN:      ${{ secrets.DEVICE_TOKEN }}
           SERVER_BASE_LAN:   ${{ secrets.SERVER_BASE_LAN }}
           SERVER_BASE_CLOUD: ${{ secrets.SERVER_BASE_CLOUD }}
         run: |
-          # Both sketches share secrets.h schema. The bw sketch ignores
-          # ssid/password at runtime (WiFiManager loads from NVS); the b
-          # sketch still references them.
+          # OTA bins are committed to the (public) repo, so they must be
+          # secret-free. WiFi creds come from the captive portal (NVS) on
+          # both sketches, and enrolled devices authenticate with their
+          # per-device X-API-Key — the fleet token is only needed to gate
+          # FIRST enrollment, so it stays out of CI builds. A factory-reset
+          # device needs one local reflash with a filled-in secrets.h.
           cat > ${{ matrix.sketch }}/secrets.h <<EOF
           #pragma once
-          const char* ssid            = "${WIFI_SSID}";
-          const char* password        = "${WIFI_PASSWORD}";
+          const char* ssid            = "";
+          const char* password        = "";
           const char* serverBaseLan   = "${SERVER_BASE_LAN}";
           const char* serverBaseCloud = "${SERVER_BASE_CLOUD}";
-          const char* deviceToken     = "${DEVICE_TOKEN}";
+          const char* deviceToken     = "";
           EOF
 
       - name: Read FW_VERSION
