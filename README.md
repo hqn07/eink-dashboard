@@ -21,7 +21,7 @@ No API keys required — weather comes from Open-Meteo (free, keyless).
 
 ## What you get
 
-- **27 widgets**: weather (current + forecast), clock, world clock, calendar (multi-iCal), tasks (Todoist/iCal), transit, headlines, quote, word of the day, countdown, day/week/month/year progress bars, photo (Floyd–Steinberg dithered), WiFi QR, stocks / crypto / FX sparklines, air quality, moon (real dithered NASA photo), sunrise/sunset, GitHub contribution heatmap, battery, Mac now-playing, text/token bar, **webhook** (POST any JSON, it renders on the panel — TRMNL-private-plugin style).
+- **28 widgets**: weather (current + forecast), UV index (WHO bands as a dither ramp), clock, world clock, calendar (multi-iCal), tasks (Todoist/iCal), transit, headlines, quote, word of the day, countdown, day/week/month/year progress (bars / dots / year-pixel grid), photo (Floyd–Steinberg dithered), WiFi QR, stocks / crypto / FX sparklines, air quality, moon (real dithered NASA photo), sunrise/sunset, GitHub contribution heatmap, battery, Mac now-playing, text/token bar, **webhook** (POST any JSON, it renders on the panel — TRMNL-private-plugin style).
 - **Unlimited screens** with per-screen layout, schedule, and chrome (header / footer).
 - **Live editor** — drag-resize widgets directly on the preview, no mode toggle.
 - **Tier-aware layouts** — every widget has a deliberate compact / standard / extended / full layout. Resize freely; the widget always picks a layout that fits.

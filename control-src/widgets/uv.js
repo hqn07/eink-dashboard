@@ -82,8 +82,9 @@ export function render(ctx) {
   const uv = uvData.uv;
   const band = bandFor(uv);
   const uvTxt = uv < 10 ? uv.toFixed(1) : String(Math.round(uv));
-  const peak = Number.isFinite(uvData.uvMax)
-    ? `peak today ${uvData.uvMax < 10 ? uvData.uvMax.toFixed(1) : Math.round(uvData.uvMax)}` : '';
+  const peakNum = Number.isFinite(uvData.uvMax)
+    ? (uvData.uvMax < 10 ? uvData.uvMax.toFixed(1) : String(Math.round(uvData.uvMax))) : '';
+  const peak = peakNum ? `peak today ${peakNum}` : '';
   const showFoot = tier !== 'tiny' && (cellH || 0) >= 5;
 
   let body, bodyStyle;
@@ -106,8 +107,14 @@ export function render(ctx) {
     });
   }
 
+  // The peak lives in the foot; on short tiles (foot hidden — including
+  // the default S) it moves to the title-bar meta so a nighttime "0.0"
+  // still tells you what the day holds.
+  const meta = showFoot
+    ? (uvData.stale ? 'cached' : 'now')
+    : (peakNum ? `peak ${peakNum}` : (uvData.stale ? 'cached' : 'now'));
   return `<div class="tr-card">
-    <div class="tr-titlebar"><span>${escapeHtml(titleLabel)}</span><span class="tr-meta">${uvData.stale ? 'cached' : 'now'}</span></div>
+    <div class="tr-titlebar"><span>${escapeHtml(titleLabel)}</span><span class="tr-meta">${escapeHtml(meta)}</span></div>
     <div class="tr-body" style="${bodyStyle}">${body}</div>
     ${showFoot ? `<div class="tr-foot"><span class="tr-foot-name">UV</span><span>${escapeHtml(peak || 'Open-Meteo')}</span></div>` : ''}
   </div>`;

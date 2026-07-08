@@ -1,5 +1,16 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-07-07 (later) — hardware slim-down + widget batch
+> - HW: user cutting buzzer + button. fw 1.20.2/1.14.2 add buttonless WiFi
+>   recovery (portal self-opens on 3rd consecutive fail, then ~daily/6-hourly).
+>   Desolder only AFTER roster shows 1.20.2. Alarms now pointless (no buzzer).
+> - NEW widget `uv` (28th): Open-Meteo keyless, gauge + WHO-band scale
+>   variants; peak-today in foot, moves to titlebar meta on short tiles.
+> - `progress` variants: `dots` (10 steps/span, step follows rounded pct)
+>   + `pixels` (year day-grid, portrait→vertical orient, compact meta <8w).
+> - Gap fixes: gauge must sit DIRECTLY in .tr-body (aspect-ratio chain);
+>   WHO band on rounded uv; ▼ literal not &#9660; (eink-lint hex-color FP).
+>
 > ## 2026-07-07 — open-sourcing POSTPONED (user call)
 > Prep done + kept: CI builds secret-free bins (empty wifi/token — captive
 > portal + per-device api keys), 40 token-bearing bins removed from tip,

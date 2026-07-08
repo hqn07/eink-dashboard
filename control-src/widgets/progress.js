@@ -137,9 +137,9 @@ export function render(ctx) {
       (_, i) => (i + 1 < doy ? 3 : i + 1 === doy ? 4 : 0));
     const pct = Math.round((fr.year * 100));
     return `<div class="tr-card">
-      <div class="tr-titlebar"><span>${escapeHtml(titleLabel)}</span><span class="tr-meta">DAY ${doy} · ${pct}%</span></div>
+      <div class="tr-titlebar"><span>${escapeHtml(titleLabel)}</span><span class="tr-meta">${(cellW || 0) >= 8 ? `DAY ${doy} · ${pct}%` : `${pct}%`}</span></div>
       <div class="tr-body" style="justify-content:center">
-        ${heatmapHtml({ values, rows: 7, level: (v) => v })}
+        ${heatmapHtml({ values, rows: 7, level: (v) => v, orient: (cellH || 0) > (cellW || 0) ? 'v' : 'h' })}
       </div>
     </div>`;
   }
@@ -149,17 +149,20 @@ export function render(ctx) {
   // faint track — severity-free, reads at a glance from across a room.
   if (variant === 'dots') {
     const dotRow = (k) => {
-      const step = Math.min(9, Math.floor(fr[k] * 10));
+      // Step count follows the ROUNDED percent shown next to it — a span at
+      // 99.9% displays "100%", so it must also show all ten dots filled.
+      const pctK = Math.round(fr[k] * 100);
+      const step = pctK >= 100 ? 10 : Math.min(9, Math.floor(fr[k] * 10));
       const dots = Array.from({ length: 10 }, (_, i) => {
         const tone = i < step ? 'background:#000'
           : i === step ? '' : '';
-        const cls = i < step ? '' : (i === step ? SPAN_TONES[k] || 'face-tone-g50' : 'face-tone-g15');
+        const cls = i < step ? '' : (i === step ? 'face-tone-g50' : 'face-tone-g15');
         return `<span class="${cls}" style="width:14px;height:14px;border:2px solid #000;border-radius:50%;${tone}"></span>`;
       }).join('');
       return `<div>
         <div style="display:flex;justify-content:space-between;align-items:baseline;line-height:1;margin-bottom:5px">
           <span style="font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase">${SPAN_LABELS[k]}</span>
-          ${showPct ? `<span style="font-size:16px;font-weight:800;font-variant-numeric:tabular-nums">${Math.round(fr[k] * 100)}%</span>` : ''}
+          ${showPct ? `<span style="font-size:16px;font-weight:800;font-variant-numeric:tabular-nums">${pctK}%</span>` : ''}
         </div>
         <div style="display:flex;gap:6px">${dots}</div>
       </div>`;
