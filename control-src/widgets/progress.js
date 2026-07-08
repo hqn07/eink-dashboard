@@ -1,4 +1,4 @@
-import { escapeHtml, pickTier } from './_shared.js';
+import { escapeHtml, pickTier, heatmapHtml } from './_shared.js';
 
 // Progress — elapsed-fraction bars for the day / week / month / year. Pure
 // client compute: no fetcher. `now` comes from ctx.now when present (frozen
@@ -17,8 +17,10 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
-    trmnl: { label: 'TRMNL — title-bar card' },
-    plain: { label: 'Plain — bars only' }
+    trmnl:  { label: 'TRMNL — title-bar card' },
+    plain:  { label: 'Plain — bars only' },
+    dots:   { label: 'Dots — 10 discrete steps per span' },
+    pixels: { label: 'Pixels — year as a day grid' }
   },
   defaultVariant: 'trmnl',
   degrade: {
@@ -123,6 +125,51 @@ export function render(ctx) {
   const chromePx = variant === 'plain' ? 34 : 81;
   const maxBars = Math.max(1, Math.floor((pxH - chromePx + 12) / 55));
   if (spans.length > maxBars) spans = spans.slice(0, maxBars);
+
+  // ---- pixels: the year as a day grid (GitHub-style, 7 rows). Past days
+  // filled mid-tone, today solid, future empty. Spans setting ignored —
+  // the year IS the canvas. Levels are passed through pre-computed.
+  if (variant === 'pixels') {
+    const { y, mo, d } = tzParts(now, tz);
+    const total = isLeap(y) ? 366 : 365;
+    const doy = dayOfYear(y, mo, d);
+    const values = Array.from({ length: total },
+      (_, i) => (i + 1 < doy ? 3 : i + 1 === doy ? 4 : 0));
+    const pct = Math.round((fr.year * 100));
+    return `<div class="tr-card">
+      <div class="tr-titlebar"><span>${escapeHtml(titleLabel)}</span><span class="tr-meta">DAY ${doy} · ${pct}%</span></div>
+      <div class="tr-body" style="justify-content:center">
+        ${heatmapHtml({ values, rows: 7, level: (v) => v })}
+      </div>
+    </div>`;
+  }
+
+  // ---- dots: 10 discrete steps per span (TRMNL progress-dots idiom).
+  // Elapsed steps solid, the in-progress step checkerboard, the rest a
+  // faint track — severity-free, reads at a glance from across a room.
+  if (variant === 'dots') {
+    const dotRow = (k) => {
+      const step = Math.min(9, Math.floor(fr[k] * 10));
+      const dots = Array.from({ length: 10 }, (_, i) => {
+        const tone = i < step ? 'background:#000'
+          : i === step ? '' : '';
+        const cls = i < step ? '' : (i === step ? SPAN_TONES[k] || 'face-tone-g50' : 'face-tone-g15');
+        return `<span class="${cls}" style="width:14px;height:14px;border:2px solid #000;border-radius:50%;${tone}"></span>`;
+      }).join('');
+      return `<div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;line-height:1;margin-bottom:5px">
+          <span style="font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase">${SPAN_LABELS[k]}</span>
+          ${showPct ? `<span style="font-size:16px;font-weight:800;font-variant-numeric:tabular-nums">${Math.round(fr[k] * 100)}%</span>` : ''}
+        </div>
+        <div style="display:flex;gap:6px">${dots}</div>
+      </div>`;
+    };
+    const rows = spans.map(dotRow).join('');
+    return `<div class="tr-card">
+      <div class="tr-titlebar"><span>${escapeHtml(titleLabel)}</span></div>
+      <div class="tr-body" style="flex-direction:column;justify-content:center;gap:14px;overflow:hidden">${rows}</div>
+    </div>`;
+  }
 
   const bars = spans.map(k => bar(k, fr[k], showPct)).join('');
   const stack = (pad) =>

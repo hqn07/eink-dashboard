@@ -118,6 +118,8 @@ export function demoCtxForWidget(id, cellW, cellH) {
     case 'codeactivity':
       return { ...base, codeActivity: DEMO_CODE_ACTIVITY,
         settings: { username: 'octocat' } };
+    case 'uv':
+      return { ...base, uv: { uv: 7.4, uvMax: 9.2 }, settings: {} };
     case 'webhook':
       return { ...base,
         webhook: { data: { steps: 8432, goal: 10000, note: 'Morning run done' },
