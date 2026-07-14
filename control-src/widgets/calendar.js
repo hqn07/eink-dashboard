@@ -68,7 +68,7 @@ export function render(ctx) {
   // that view, just compact. List remains the universal fallback
   // when the tile is too short to fit any grid row at all.
   if (mode === 'trmnl') return renderTrmnl(all, settings, titleLabel, cellW, cellH, density);
-  if (mode === 'month' && cellW >= 7 && cellH >= 4) return renderMonth(all, titleLabel, settings);
+  if (mode === 'month' && cellW >= 7 && cellH >= 4) return renderMonth(all, titleLabel, settings, cellH);
   if (mode === 'strip' && cellW >= 7 && cellH >= 2) return renderStrip(all, titleLabel, cellH, settings);
   return renderList(all, settings, titleLabel, cellW, cellH, density);
 }
@@ -234,8 +234,11 @@ function renderStrip(events, titleLabel, cellH, settings) {
 
 const MONTH_NAMES = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 
-function renderMonth(events, titleLabel, settings) {
+function renderMonth(events, titleLabel, settings, cellH) {
   const s = settings || {};
+  // Tall tiles have room for the event title to wrap inside a day cell;
+  // short ones keep the single-line ellipsis (--month-clamp default 1).
+  const clampLines = cellH >= 6 ? 2 : 1;
   const today = new Date();
   const year = today.getFullYear();
   const month = today.getMonth();
@@ -297,7 +300,7 @@ function renderMonth(events, titleLabel, settings) {
       <div class="month-head">
         ${DAY_INITIALS.map(d => `<span>${d[0]}</span>`).join('')}
       </div>
-      <div class="month-grid" style="grid-template-rows:repeat(${rowCount}, 1fr)">${cellHtml}</div>
+      <div class="month-grid" style="grid-template-rows:repeat(${rowCount}, 1fr);--month-clamp:${clampLines}">${cellHtml}</div>
     </div>
   `;
 }
