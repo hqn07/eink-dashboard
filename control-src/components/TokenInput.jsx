@@ -10,7 +10,10 @@ import { TOKEN_META } from '../widgets/_token_meta';
 // Tab also accepts the highlight, mirroring VS Code / Notion's
 // behaviour; this is convenient when the user is already typing and
 // doesn't want to switch to the arrow keys.
-export default function TokenInput({ value, onChange, placeholder, help, label }) {
+// Bare input + token popover, no label/help chrome — composed by
+// TokenInput below and by WidgetForm's TextField (`tokens` prop) so any
+// text-y settings field gets the same {{ autocomplete.
+export function TokenBareInput({ value, onChange, placeholder }) {
   const inputRef = useRef(null);
   const wrapRef = useRef(null);
   const [highlight, setHighlight] = useState(0);
@@ -84,39 +87,45 @@ export default function TokenInput({ value, onChange, placeholder, help, label }
   }, [trigger]);
 
   return (
-    <label className="wsm-field" ref={wrapRef}>
+    <div className="ti-wrap" ref={wrapRef}>
+      <input
+        ref={inputRef}
+        type="text"
+        value={value || ''}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKey}
+        onKeyUp={recomputeTrigger}
+        onClick={recomputeTrigger}
+        onBlur={() => setTimeout(() => setTrigger(null), 120)}
+      />
+      {trigger && matches.length > 0 && (
+        <div className="ti-popover" role="listbox">
+          {matches.map((t, i) => (
+            <button
+              type="button"
+              key={t.name}
+              className={`ti-item ${i === highlight ? 'ti-item-high' : ''}`}
+              onMouseEnter={() => setHighlight(i)}
+              onMouseDown={(e) => { e.preventDefault(); accept(t); }}
+              role="option"
+              aria-selected={i === highlight}
+            >
+              <code className="ti-item-name">{`{{${t.name}}}`}</code>
+              <span className="ti-item-example">{t.example}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function TokenInput({ value, onChange, placeholder, help, label }) {
+  return (
+    <label className="wsm-field">
       {label && <span className="wsm-field-label">{label}</span>}
-      <div className="ti-wrap">
-        <input
-          ref={inputRef}
-          type="text"
-          value={value || ''}
-          placeholder={placeholder}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={onKey}
-          onKeyUp={recomputeTrigger}
-          onClick={recomputeTrigger}
-          onBlur={() => setTimeout(() => setTrigger(null), 120)}
-        />
-        {trigger && matches.length > 0 && (
-          <div className="ti-popover" role="listbox">
-            {matches.map((t, i) => (
-              <button
-                type="button"
-                key={t.name}
-                className={`ti-item ${i === highlight ? 'ti-item-high' : ''}`}
-                onMouseEnter={() => setHighlight(i)}
-                onMouseDown={(e) => { e.preventDefault(); accept(t); }}
-                role="option"
-                aria-selected={i === highlight}
-              >
-                <code className="ti-item-name">{`{{${t.name}}}`}</code>
-                <span className="ti-item-example">{t.example}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <TokenBareInput value={value} onChange={onChange} placeholder={placeholder} />
       {help && <span className="wsm-field-help">{help}</span>}
     </label>
   );

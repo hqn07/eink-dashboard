@@ -71,7 +71,7 @@ export function Form({ values, patch, onChange, fields }) {
           label="Caption"
           value={v.caption || ''}
           defaultValue={defaults.caption}
-          onChange={(x) => patch({ caption: x })}
+          onChange={(x) => patch({ caption: x })} tokens
           placeholder="Scan me"
           help="Shown under the code. Optional."
         />
@@ -79,7 +79,7 @@ export function Form({ values, patch, onChange, fields }) {
           label="Tile heading"
           value={v.title || ''}
           defaultValue={defaults.title}
-          onChange={(x) => patch({ title: x })}
+          onChange={(x) => patch({ title: x })} tokens
           placeholder="QR"
           help="Leave blank for none."
         />

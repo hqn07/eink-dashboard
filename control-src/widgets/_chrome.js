@@ -3,6 +3,7 @@
 // + {{token}} system. File name kept to avoid churn across imports.
 
 import { FONT_STACKS } from './_shared.js';
+import { resolveTokenSettings } from './_tokens.js';
 
 // Extra class names the cell wrapper should carry based on the tile's
 // settings. Currently picks up `theme: 'inverted'` so the tile renders
@@ -45,13 +46,30 @@ export function buildTileCtx(item, data, def) {
   const variant = (s && s.variant && def && def.variants && def.variants[s.variant])
     ? s.variant
     : (def && def.defaultVariant) || null;
+  // {{token}} resolution for user-written text settings (title, label,
+  // caption, …) — widgets-wide, resolved here so all three surfaces get
+  // identical output. Slot data (per-tile weather/events) wins over the
+  // page-level fetch so a tile with its own feed reads its own numbers.
+  const d = data || {};
+  const tokenCtx = {
+    now: Date.now(),
+    timezone: (d.cfg && d.cfg.timezone) || 'UTC',
+    cfg: d.cfg,
+    weather: slot.weather || d.weather,
+    events:  slot.events  || d.events,
+    aqi:     slot.aqi     || d.aqi,
+    battery: d.battery,
+    units:   slot.units   || d.units,
+    lastRefresh: d.generatedAt ? Date.parse(d.generatedAt) : Date.now(),
+  };
   return {
-    ...data,
+    ...d,
     ...slot,
     cellW: item.w,
     cellH: item.h,
     density: item.density,
-    settings: item.settings,
+    settings: resolveTokenSettings(item.settings, tokenCtx),
+    tokenCtx,
     variant
   };
 }

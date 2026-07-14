@@ -13,7 +13,7 @@ export function Form({ values, patch, onChange, fields }) {
         <TextField
           label="Tile heading"
           value={v.title || ''}
-          onChange={(x) => patch({ title: x })}
+          onChange={(x) => patch({ title: x })} tokens
           placeholder="ON THIS DAY · JUNE 16"
           help="Leave blank for the auto heading with today's date."
         />

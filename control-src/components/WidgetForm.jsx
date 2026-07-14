@@ -3,6 +3,7 @@ import * as Switch from '@radix-ui/react-switch';
 import { CaretUp, CaretDown, DotsSixVertical, Crosshair } from '@phosphor-icons/react';
 import { geocode, reverseGeocode } from '../api.js';
 import { MIGRATED_FORMS, MIGRATED_DEFS } from '../widgets/_registry.js';
+import { TokenBareInput } from './TokenInput.jsx';
 import {
   renderWidget, typographyCss, cellClasses, scaleWrap
 } from '../widget-render.js';
@@ -103,9 +104,23 @@ function FieldLabel({ label, suffix, value, defaultValue, onReset }) {
   );
 }
 
-function TextField({ label, value, onChange, placeholder, type = 'text', help, defaultValue, secret }) {
+function TextField({ label, value, onChange, placeholder, type = 'text', help, defaultValue, secret, tokens }) {
   const [reveal, setReveal] = useState(false);
   const inputType = secret && !reveal ? 'password' : type;
+  // `tokens` opts a text field into {{token}} autocomplete. Only for
+  // fields whose settings key is on the RESOLVABLE_KEYS whitelist —
+  // data fields (tickers, URLs, QR payloads) must not advertise tokens
+  // they won't resolve.
+  if (tokens && !secret && type === 'text') {
+    return (
+      <label className="wsm-field">
+        <FieldLabel label={label} value={value} defaultValue={defaultValue}
+          onReset={() => onChange(defaultValue)} />
+        <TokenBareInput value={value} onChange={onChange} placeholder={placeholder || ''} />
+        {help && <span className="wsm-field-help">{help}</span>}
+      </label>
+    );
+  }
   return (
     <label className="wsm-field">
       <FieldLabel label={label} value={value} defaultValue={defaultValue}

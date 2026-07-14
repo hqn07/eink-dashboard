@@ -18,7 +18,7 @@ export function Form({ values, patch, onChange, fields }) {
           label="Label"
           value={v.label || ''}
           defaultValue={defaults.label}
-          onChange={(x) => patch({ label: x })}
+          onChange={(x) => patch({ label: x })} tokens
           placeholder="until launch"
           help="Shown under the number. Optional."
         />
@@ -26,7 +26,7 @@ export function Form({ values, patch, onChange, fields }) {
           label="Tile heading"
           value={v.title || ''}
           defaultValue={defaults.title}
-          onChange={(x) => patch({ title: x })}
+          onChange={(x) => patch({ title: x })} tokens
           placeholder="COUNTDOWN"
           help="Leave blank to keep the default heading."
         />

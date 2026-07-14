@@ -13,7 +13,7 @@ export function Form({ values, patch, onChange, fields }) {
         <TextField
           label="Tile heading"
           value={v.title || ''}
-          onChange={(x) => patch({ title: x })}
+          onChange={(x) => patch({ title: x })} tokens
           placeholder="MOON"
           help="Leave blank to keep the default heading."
         />

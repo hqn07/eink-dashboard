@@ -81,7 +81,7 @@ export function Form({ values, patch, onChange, fields }) {
           label="Tile heading"
           value={v.title || ''}
           defaultValue={defaults.title}
-          onChange={(x) => patch({ title: x })}
+          onChange={(x) => patch({ title: x })} tokens
           placeholder="Leave blank to use the feed name"
           help="Optional override for the title bar."
         />

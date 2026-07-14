@@ -61,8 +61,26 @@ for (const id of palette) {
   if (!widgetIds.includes(id)) problems.push(`palette has '${id}' but control-src/widgets/${id}.js does not exist`);
 }
 
+// Token registry parity: widgets/_tokens.js (CJS, server) and
+// control-src/widgets/_tokens.js (ESM, editor + buildTileCtx) are
+// hand-mirrored — compare TOKEN_META and RESOLVABLE_KEYS so a token
+// added on one side can't silently miss the other.
+{
+  const { createRequire } = await import('node:module');
+  const require = createRequire(import.meta.url);
+  const server = require(join(root, 'widgets', '_tokens.js'));
+  const client = await import(join(WDIR, '_tokens.js'));
+  const metaSig = (meta) => (meta || []).map(t => `${t.name}(${(t.formats || []).join(',')})`).join(' ');
+  if (metaSig(server.TOKEN_META) !== metaSig(client.TOKEN_META)) {
+    problems.push(`TOKEN_META drift between widgets/_tokens.js and control-src/widgets/_tokens.js:\n      server: ${metaSig(server.TOKEN_META)}\n      client: ${metaSig(client.TOKEN_META)}`);
+  }
+  if ((server.RESOLVABLE_KEYS || []).join(',') !== (client.RESOLVABLE_KEYS || []).join(',')) {
+    problems.push('RESOLVABLE_KEYS drift between widgets/_tokens.js and control-src/widgets/_tokens.js');
+  }
+}
+
 if (problems.length) {
   console.error('check-widgets FAILED:\n  - ' + problems.join('\n  - '));
   process.exit(1);
 }
-console.log(`check-widgets: ${widgetIds.length} widgets wired (render + form + registry + palette).`);
+console.log(`check-widgets: ${widgetIds.length} widgets wired (render + form + registry + palette); token registry in sync.`);

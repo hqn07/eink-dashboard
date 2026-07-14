@@ -1,15 +1,8 @@
-// Logic-less {{token}} interpolation for user-facing text widgets.
-// Fixed registry — no arbitrary code execution, no nested paths.
-//
-// Missing/empty values render as the universal placeholder "—" (em dash)
-// matching dashboard convention (Grafana "N/A", HA "unavailable"). Authors
-// can override per-spot with the `default:` pipe filter:
-//   {{weather}}                     → "—" if no data
-//   {{weather|default:Sunny}}       → "Sunny" if no data
-//   {{temp|unit|default:N/A}}       → "N/A" if no temp; "72°F" if present
-//
-// Unknown tokens (typos like {{wether}}) pass through raw so they stay
-// visible to the user — they don't honor `default`.
+// ESM mirror of widgets/_tokens.js for the control app + shared
+// buildTileCtx. Keep the two in sync — scripts/check-widgets.mjs
+// compares TOKEN_META and RESOLVABLE_KEYS between them and fails the
+// build on drift. Logic-less {{token}} interpolation; see the server
+// copy for the full contract notes.
 
 function fmtDate(d, tz, opts) {
   try {
@@ -35,15 +28,13 @@ function batteryBar(pct) {
   return '▓'.repeat(filled) + '░'.repeat(4 - filled);
 }
 
-// Round a temp-ish value that may arrive as '--' (weather stub) or a
-// number; '' lets the pipeline fall through to default/em-dash.
 function fmtTemp(v, fmt, ctx) {
   if (!Number.isFinite(Number(v))) return '';
   const r = Math.round(Number(v));
   return fmt === 'unit' ? `${r}°${ctx.units === 'C' ? 'C' : 'F'}` : `${r}°`;
 }
 
-const TOKENS = {
+export const TOKENS = {
   date(ctx, fmt) {
     if (!ctx.now) return '';
     const d = new Date(ctx.now);
@@ -55,7 +46,6 @@ const TOKENS = {
       day:   { weekday: 'long' },
     };
     if (fmt === 'iso') {
-      // sv-SE gives ISO format natively (YYYY-MM-DD); en-US gives MM/DD/YYYY.
       try {
         return new Intl.DateTimeFormat('sv-SE', { timeZone: tz || 'UTC', ...tables.iso }).format(d);
       } catch {
@@ -84,8 +74,6 @@ const TOKENS = {
   },
   weather(ctx) {
     const w = ctx.weather;
-    // `desc` is the Open-Meteo fetcher's field; description/summary kept
-    // for older cached shapes.
     return (w && (w.desc || w.description || w.summary)) || '';
   },
   nextEvent(ctx, fmt) {
@@ -114,11 +102,8 @@ const TOKENS = {
   },
 };
 
-// Pipe segments allow word format keywords OR `default:VALUE` where
-// VALUE can be any chars except `|` or `}`. Multiple pipes parsed
-// independently — e.g. `{{temp|unit|default:N/A}}`.
 const RE = /\{\{\s*(\w+)((?:\s*\|\s*[^|}]+)*)\s*\}\}/g;
-const DEFAULT_FALLBACK = '—';
+export const DEFAULT_FALLBACK = '—';
 
 function parsePipes(raw) {
   if (!raw) return { fmt: null, def: null };
@@ -131,7 +116,7 @@ function parsePipes(raw) {
   return { fmt, def };
 }
 
-function renderTokens(str, ctx) {
+export function renderTokens(str, ctx) {
   if (!str) return '';
   const safeCtx = ctx || { now: Date.now() };
   return String(str).replace(RE, (raw, name, pipesStr) => {
@@ -149,10 +134,7 @@ function renderTokens(str, ctx) {
   });
 }
 
-// `relative` removed from lastRefresh's advertised formats: the context
-// is built at render time so the delta was always "just now". The parser
-// still accepts it for old configs.
-const TOKEN_META = [
+export const TOKEN_META = [
   { name: 'date',        formats: ['long', 'short', 'iso', 'day'], example: 'Saturday, June 6' },
   { name: 'day',         formats: ['long', 'short'],               example: 'Saturday' },
   { name: 'city',        formats: [],                              example: 'Brooklyn' },
@@ -166,10 +148,21 @@ const TOKEN_META = [
   { name: 'battery',     formats: ['bar'],                         example: '84%' },
 ];
 
-// Settings keys eligible for {{token}} resolution across ALL widgets
-// (buildTileCtx runs them through renderTokens). Data-bearing fields —
-// qr `data`/`ssid`, webhook `key`/`template`, crypto symbols, URLs —
-// are excluded by not being listed.
-const RESOLVABLE_KEYS = ['title', 'subtitle', 'label', 'caption', 'note', 'text'];
+export const RESOLVABLE_KEYS = ['title', 'subtitle', 'label', 'caption', 'note', 'text'];
 
-module.exports = { renderTokens, TOKEN_META, TOKENS, DEFAULT_FALLBACK, RESOLVABLE_KEYS };
+// Resolve {{token}}s in the whitelisted string settings of one tile.
+// Returns the same object when nothing needs resolving so React memo /
+// referential checks don't churn; never mutates the input (the editor
+// form binds to it).
+export function resolveTokenSettings(settings, tokenCtx) {
+  if (!settings) return settings;
+  let out = null;
+  for (const k of RESOLVABLE_KEYS) {
+    const v = settings[k];
+    if (typeof v === 'string' && v.includes('{{')) {
+      if (!out) out = { ...settings };
+      out[k] = renderTokens(v, tokenCtx);
+    }
+  }
+  return out || settings;
+}

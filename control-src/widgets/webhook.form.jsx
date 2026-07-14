@@ -32,7 +32,7 @@ export function Form({ values, patch, onChange, fields }) {
           label="Tile heading"
           value={v.title || ''}
           defaultValue={defaults.title}
-          onChange={(x) => patch({ title: x })}
+          onChange={(x) => patch({ title: x })} tokens
           placeholder="WEBHOOK"
           help="Leave blank to keep the default heading."
         />

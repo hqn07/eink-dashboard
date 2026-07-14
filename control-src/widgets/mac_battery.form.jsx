@@ -10,7 +10,7 @@ export function Form({ values, onChange, fields }) {
         <TextField
           label="Tile heading"
           value={v.title || ''}
-          onChange={(x) => patch({ title: x })}
+          onChange={(x) => patch({ title: x })} tokens
           placeholder="MAC BATTERY"
           help="Leave blank to keep the default heading."
         />
