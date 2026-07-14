@@ -17,7 +17,8 @@
 
 import 'dotenv/config';
 import { spawn } from 'node:child_process';
-import { mkdir, readFile, writeFile, access } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile, access, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import sharp from 'sharp';
@@ -25,8 +26,6 @@ import puppeteer from 'puppeteer';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const BASELINE_DIR = join(ROOT, 'test', 'visual-baseline');
-const BASELINE = join(BASELINE_DIR, 'widgets-matrix.png');
-const DIFF_OUT = join(BASELINE_DIR, 'widgets-matrix.diff.png');
 
 const PORT = process.env.VR_PORT || 3970;
 const TOKEN = process.env.DEVICE_TOKEN || '';
@@ -56,8 +55,38 @@ for (const sig of ['exit', 'SIGINT', 'SIGTERM']) {
   });
 }
 
-function startServer() {
-  const env = { ...process.env, PORT: String(PORT), NODE_ENV: 'test' };
+// Deterministic screen for the editor capture: static strings only, and
+// a location set so the setup wizard doesn't auto-open over the canvas.
+// The matrix capture renders from ?demo=1 and ignores the config either
+// way — a temp DATA_DIR keeps both shots independent of the user's real
+// config.
+async function seedDataDir() {
+  const dir = await mkdtemp(join(tmpdir(), 'eink-vr-'));
+  const base = JSON.parse(await readFile(join(ROOT, 'data-defaults', 'config.default.json'), 'utf8'));
+  const cfg = {
+    ...base,
+    // Nonzero coords — the first-run wizard treats lat/lon 0 as unset
+    // and would auto-open over the canvas.
+    city: 'Testville', lat: 40.7, lon: -74.0, timezone: 'UTC',
+    screens: [{
+      id: 'vr', name: 'VR', isDefault: true, units: 'F', refreshMinutes: 30,
+      layout: [
+        { id: 'vr1', widgetId: 'text', x: 0, y: 0, w: 24, h: 2,
+          settings: { variant: 'bar', text: 'EDITOR SNAPSHOT', align: 'center' } },
+        { id: 'vr2', widgetId: 'qr', x: 0, y: 2, w: 12, h: 6,
+          settings: { variant: 'caption', mode: 'url', data: 'https://example.com', caption: 'STATIC', title: 'QR' } }
+      ]
+    }]
+  };
+  await writeFile(join(dir, 'config.json'), JSON.stringify(cfg, null, 2));
+  return dir;
+}
+
+function startServer(dataDir) {
+  const env = {
+    ...process.env, PORT: String(PORT), NODE_ENV: 'test',
+    DATA_DIR: dataDir, DEVICE_TOKEN: '', ADMIN_PIN: ''
+  };
   const child = spawn('node', ['server.js'], { cwd: ROOT, env, stdio: ['ignore', 'pipe', 'pipe'] });
   _serverChild = child;
   return new Promise((resolve, reject) => {
@@ -73,11 +102,10 @@ function startServer() {
   });
 }
 
-async function shoot() {
+async function shootMatrix(browser) {
   const url = `http://localhost:${PORT}/widgets-matrix?demo=1${TOKEN ? `&token=${TOKEN}` : ''}`;
-  const browser = await puppeteer.launch({ headless: 'new' });
+  const page = await browser.newPage();
   try {
-    const page = await browser.newPage();
     await page.setViewport({ width: 900, height: 1200, deviceScaleFactor: 1 });
     const resp = await page.goto(url, { waitUntil: 'networkidle0' });
     if (!resp || resp.status() !== 200) throw new Error(`matrix HTTP ${resp && resp.status()}`);
@@ -85,7 +113,29 @@ async function shoot() {
     await new Promise(r => setTimeout(r, 500));
     return await page.screenshot({ fullPage: true });
   } finally {
-    await browser.close();
+    await page.close();
+  }
+}
+
+// Editor (/control-app) capture. Animations/transitions killed by CSS so
+// framer-motion entrance states can't smear the shot; caret hidden for
+// the same reason. Viewport-only (fullPage on the editor measures a
+// scroll container mid-layout and jitters).
+async function shootEditor(browser) {
+  const url = `http://localhost:${PORT}/control-app/`;
+  const page = await browser.newPage();
+  try {
+    await page.setViewport({ width: 1280, height: 900, deviceScaleFactor: 1 });
+    await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+    const resp = await page.goto(url, { waitUntil: 'networkidle0' });
+    if (!resp || ![200, 304].includes(resp.status())) throw new Error(`editor HTTP ${resp && resp.status()}`);
+    await page.addStyleTag({ content: '*, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }' });
+    await page.evaluate(() => document.fonts.ready);
+    // Let the preview-data fetch land and the canvas settle.
+    await new Promise(r => setTimeout(r, 1500));
+    return await page.screenshot();
+  } finally {
+    await page.close();
   }
 }
 
@@ -118,38 +168,58 @@ async function diff(aBuf, bBuf) {
   return { diffPixels, total: width * height, diffPng };
 }
 
+// Editor threshold is looser: a full app viewport has far more AA text
+// than the face matrix, and React hydration order can wiggle a few px.
+const SHOTS = [
+  { name: 'widgets-matrix', fn: shootMatrix, threshold: THRESHOLD },
+  { name: 'editor',         fn: shootEditor, threshold: Number(process.env.VR_EDITOR_THRESHOLD || 0.002) },
+];
+
 async function main() {
   await mkdir(BASELINE_DIR, { recursive: true });
   let server;
+  let dataDir;
+  let failed = false;
+  const browser = await puppeteer.launch({ headless: 'new' });
   try {
-    server = await startServer();
-    log(`server up on :${PORT}, capturing matrix…`);
-    const shot = await shoot();
+    dataDir = await seedDataDir();
+    server = await startServer(dataDir);
+    log(`server up on :${PORT}`);
+    for (const shotDef of SHOTS) {
+      log(`capturing ${shotDef.name}…`);
+      const shot = await shotDef.fn(browser);
+      const baselinePath = join(BASELINE_DIR, `${shotDef.name}.png`);
+      const diffPath = join(BASELINE_DIR, `${shotDef.name}.diff.png`);
 
-    if (UPDATE || !(await exists(BASELINE))) {
-      await writeFile(BASELINE, shot);
-      log(UPDATE ? 'baseline updated.' : 'no baseline found — wrote initial baseline.');
-      return 0;
-    }
+      if (UPDATE || !(await exists(baselinePath))) {
+        await writeFile(baselinePath, shot);
+        log(`${shotDef.name}: baseline ${UPDATE ? 'updated' : 'created'}.`);
+        continue;
+      }
 
-    const base = await readFile(BASELINE);
-    const r = await diff(base, shot);
-    if (r.sizeMismatch) {
-      log(`FAIL — dimensions changed (${r.sizeMismatch}). Run with --update if intentional.`);
-      await writeFile(DIFF_OUT, shot);
-      return 1;
+      const base = await readFile(baselinePath);
+      const r = await diff(base, shot);
+      if (r.sizeMismatch) {
+        log(`${shotDef.name}: FAIL — dimensions changed (${r.sizeMismatch}). Run with --update if intentional.`);
+        await writeFile(diffPath, shot);
+        failed = true;
+        continue;
+      }
+      const frac = r.diffPixels / r.total;
+      log(`${shotDef.name}: diff ${r.diffPixels}/${r.total} px (${(frac * 100).toFixed(4)}%), threshold ${(shotDef.threshold * 100).toFixed(4)}%`);
+      if (frac > shotDef.threshold) {
+        await writeFile(diffPath, r.diffPng);
+        log(`${shotDef.name}: FAIL — drift exceeds threshold. Diff written to ${diffPath}. If intentional, re-run with --update.`);
+        failed = true;
+      } else {
+        log(`${shotDef.name}: PASS.`);
+      }
     }
-    const frac = r.diffPixels / r.total;
-    log(`diff ${r.diffPixels}/${r.total} px (${(frac * 100).toFixed(4)}%), threshold ${(THRESHOLD * 100).toFixed(4)}%`);
-    if (frac > THRESHOLD) {
-      await writeFile(DIFF_OUT, r.diffPng);
-      log(`FAIL — drift exceeds threshold. Diff written to ${DIFF_OUT}. If intentional, re-run with --update.`);
-      return 1;
-    }
-    log('PASS — no significant drift.');
-    return 0;
+    return failed ? 1 : 0;
   } finally {
+    await browser.close();
     if (server) server.kill('SIGTERM');
+    if (dataDir) await rm(dataDir, { recursive: true, force: true }).catch(() => {});
   }
 }
 

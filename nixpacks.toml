@@ -1,5 +1,7 @@
 [phases.setup]
-nixPkgs = ['nodejs_20', 'chromium']
+# nodejs_22: vite 8 requires node ^20.19 || >=22.12; 22 LTS removes the
+# "which 20.x minor does nix ship" gamble.
+nixPkgs = ['nodejs_22', 'chromium']
 
 [phases.install]
 # Railway injects NPM_CONFIG_PRODUCTION=true into every build; that's

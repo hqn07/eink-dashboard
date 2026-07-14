@@ -1,5 +1,14 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { renderDitherPreview } from '../dither-preview.js';
+import { uploadPhotoUrl } from '../api.js';
+
+// Uploaded image source: fresh uploads sit in imageData (data URI) until
+// the next save externalizes them to an imageRef file on the server.
+function uploadedSrc(v) {
+  if (v.imageData && v.imageData.trim()) return v.imageData;
+  if (v.imageRef && v.imageRef.trim()) return uploadPhotoUrl(v.imageRef.trim());
+  return '';
+}
 
 // IMPORTANT: the top-level `Form` must stay a PURE function (no hooks) —
 // TabbedForm calls it directly to introspect its FormSection children. Any
@@ -39,7 +48,7 @@ function downscaleToDataURL(file, maxEdge = 640) {
 function PhotoUpload({ v, patch }) {
   const fileRef = useRef(null);
   const [busy, setBusy] = useState(false);
-  const hasUpload = !!(v.imageData && v.imageData.trim());
+  const hasUpload = !!uploadedSrc(v);
 
   const onFile = async (e) => {
     const file = e.target.files && e.target.files[0];
@@ -47,7 +56,8 @@ function PhotoUpload({ v, patch }) {
     setBusy(true);
     try {
       const dataURL = await downscaleToDataURL(file);
-      patch({ imageData: dataURL, imageUrl: '' }); // uploaded wins over URL
+      // uploaded wins over URL; clear any previous externalized ref
+      patch({ imageData: dataURL, imageUrl: '', imageRef: '' });
     } catch {
       /* ignore — user can retry */
     } finally {
@@ -63,7 +73,7 @@ function PhotoUpload({ v, patch }) {
       </button>
       <input ref={fileRef} type="file" accept="image/*" onChange={onFile} style={{ display: 'none' }} />
       {hasUpload && (
-        <button type="button" onClick={() => patch({ imageData: '' })} style={{ width: 220 }}>
+        <button type="button" onClick={() => patch({ imageData: '', imageRef: '' })} style={{ width: 220 }}>
           Remove uploaded image
         </button>
       )}
@@ -80,8 +90,7 @@ function PhotoUpload({ v, patch }) {
 function DitherPreview({ v }) {
   const canvasRef = useRef(null);
   const [previewOk, setPreviewOk] = useState(true);
-  const hasUpload = !!(v.imageData && v.imageData.trim());
-  const src = hasUpload ? v.imageData : (v.imageUrl && v.imageUrl.trim());
+  const src = uploadedSrc(v) || (v.imageUrl && v.imageUrl.trim());
 
   useEffect(() => {
     let cancelled = false;
@@ -118,7 +127,7 @@ function DitherPreview({ v }) {
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
   const { TextField, TypographyFields, FormSection, defaults = {} } = fields;
-  const hasUpload = !!(v.imageData && v.imageData.trim());
+  const hasUpload = !!uploadedSrc(v);
   return (
     <>
       <FormSection title="Image">

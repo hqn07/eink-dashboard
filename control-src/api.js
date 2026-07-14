@@ -209,6 +209,13 @@ export function statusPageUrl() {
   return tok ? `/status?token=${encodeURIComponent(tok)}` : '/status';
 }
 
+// Direct-src URL for an externalized photo upload (img/canvas loads can't
+// send the auth header, so the token rides the query string).
+export function uploadPhotoUrl(ref) {
+  const tok = getToken();
+  return `/api/upload/photo/${encodeURIComponent(ref)}${tok ? `?token=${encodeURIComponent(tok)}` : ''}`;
+}
+
 // Single-widget PNG render — used by the settings modal preview to
 // show the bit-identical e-ink output of the current draft settings
 // after a debounce. Returns a Blob or throws on non-200.

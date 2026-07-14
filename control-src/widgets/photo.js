@@ -36,7 +36,8 @@ export const def = {
   defaults: () => ({
     variant: 'full',
     imageUrl: '',        // remote http(s) image
-    imageData: '',       // uploaded base64 data: URI (wins over imageUrl)
+    imageData: '',       // fresh upload (data: URI) — externalized to imageRef on save
+    imageRef: '',        // server-side upload file ref (DATA_DIR/uploads)
     fit: 'cover',        // 'cover' | 'contain'
     dither: 'atkinson',  // 'atkinson' | 'fs' | 'threshold'
     brightness: 0,       // -100..100
@@ -53,7 +54,7 @@ export function render(ctx) {
   const s = settings || {};
   const src = photo && photo.src;
   if (!src) {
-    const hasSource = (s.imageUrl && s.imageUrl.trim()) || (s.imageData && s.imageData.trim());
+    const hasSource = (s.imageUrl && s.imageUrl.trim()) || (s.imageData && s.imageData.trim()) || (s.imageRef && s.imageRef.trim());
     return placeholder('PHOTO', hasSource ? 'Image failed' : 'Add a photo', 'msg', { cellW, cellH }, hasSource ? 'nodata' : 'setup');
   }
 

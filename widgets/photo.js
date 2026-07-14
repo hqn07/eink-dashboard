@@ -8,6 +8,8 @@
 
 const { ditherPhotoToBase64 } = require('./_dither');
 const { fetchPublicUrl } = require('./_fetch');
+const status = require('./_status');
+const { readUpload } = require('../lib/uploads');
 
 // Grid → pixel mapping (24×12 over the 800×480 panel). Cap the long edge
 // so a full-bleed tile doesn't run FS over 384k px on every render; the
@@ -34,6 +36,12 @@ function targetDims(item) {
 // Returns a Buffer or null. Only http(s) is fetched; anything else is
 // rejected so a stray file:// / data-of-wrong-type can't be dereferenced.
 async function loadBytes(settings) {
+  // Externalized upload (config save moves data URIs to DATA_DIR/uploads).
+  if (typeof settings.imageRef === 'string' && settings.imageRef) {
+    const buf = await readUpload(settings.imageRef);
+    if (buf) return buf;
+    // fall through — a missing file can still be covered by imageData/URL
+  }
   const data = typeof settings.imageData === 'string' ? settings.imageData.trim() : '';
   if (data.startsWith('data:')) {
     const comma = data.indexOf(',');
@@ -42,12 +50,24 @@ async function loadBytes(settings) {
   }
   const url = typeof settings.imageUrl === 'string' ? settings.imageUrl.trim() : '';
   if (/^https?:\/\//i.test(url)) {
+    const t0 = Date.now();
     try {
       const res = await fetchPublicUrl(url, {}, 5000); // SSRF guard on user URL
-      if (!res.ok) return null;
+      if (!res.ok) {
+        status.record('photo', { ok: false, ms: Date.now() - t0, err: `HTTP ${res.status}` });
+        return null;
+      }
       const buf = Buffer.from(await res.arrayBuffer());
-      return buf.length > 100 ? buf : null;
-    } catch { return null; }
+      if (buf.length <= 100) {
+        status.record('photo', { ok: false, ms: Date.now() - t0, err: 'empty response' });
+        return null;
+      }
+      status.record('photo', { ok: true, ms: Date.now() - t0 });
+      return buf;
+    } catch (err) {
+      status.record('photo', { ok: false, ms: Date.now() - t0, err: err.message || String(err) });
+      return null;
+    }
   }
   return null;
 }

@@ -12,6 +12,7 @@ const { invalidateImage } = require('../lib/render');
 const { buildWidgetData } = require('../lib/widget-data');
 const { loadBatteryState, loadBatteryHistory } = require('../lib/battery-store');
 const { safeError } = require('../lib/http');
+const { externalizePhotoUploads, readUpload, uploadMime } = require('../lib/uploads');
 
 // Reset config back to data-defaults. Destructive — the client confirms first.
 router.post('/api/config/reset', checkAdminAuth, async (req, res) => {
@@ -79,6 +80,10 @@ router.post('/api/config', checkAdminAuth, async (req, res) => {
         if (!('layout' in req.body))  delete next.layout;
         if (!('layouts' in req.body)) delete next.layouts;
       }
+      // Inline photo uploads → DATA_DIR/uploads files (imageRef). Keeps
+      // config.json lean; also lazily migrates configs saved before the
+      // ref scheme existed.
+      await externalizePhotoUploads(next);
       await saveConfig(next);
       invalidateImage();
       return next;
@@ -87,6 +92,17 @@ router.post('/api/config', checkAdminAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ ok: false, ...safeError(err) });
   }
+});
+
+// Serve an externalized photo upload back to the editor (form preview /
+// dither preview). Ref format is validated inside readUpload — no path
+// traversal. Content-addressed files never change, so cache hard.
+router.get('/api/upload/photo/:ref', checkAdminAuth, async (req, res) => {
+  const buf = await readUpload(req.params.ref);
+  if (!buf) return res.status(404).json({ ok: false, error: 'not found' });
+  res.set('Content-Type', uploadMime(req.params.ref));
+  res.set('Cache-Control', 'private, max-age=31536000, immutable');
+  res.send(buf);
 });
 
 module.exports = router;
