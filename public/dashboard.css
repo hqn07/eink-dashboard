@@ -172,6 +172,19 @@ html, body {
 .cell.cell-edge-right  { border-right: none; }
 .cell.cell-edge-bottom { border-bottom: none; }
 
+/* Per-tile bold / italic toggles (typography settings). !important on
+ * weight because widgets pin explicit per-element weights; 700 is close
+ * enough to any 600/800 already there at 1-bit. DM Serif ships only a
+ * 400 face — Chromium's synthetic bold/oblique renders fine on e-ink. */
+.cell.cell-bold,
+.cell.cell-bold * {
+  font-weight: 700 !important;
+}
+.cell.cell-italic,
+.cell.cell-italic * {
+  font-style: italic;
+}
+
 /* Inverted theme — solid black tile with white ink. Filters cover SVG
  * fills + bg images (album art, weather icons) so a play glyph that
  * was solid black on white still reads as solid white on black. The

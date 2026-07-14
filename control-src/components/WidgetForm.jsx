@@ -243,7 +243,9 @@ const TYPO_DEFAULTS = {
   fontScale:  1,
   scaleAnchor: 'top_left',
   padding:    14,
-  theme:      'normal'
+  theme:      'normal',
+  bold:       false,
+  italic:     false
 };
 
 function TypographyFields({ values, onChange }) {
@@ -263,12 +265,24 @@ function TypographyFields({ values, onChange }) {
         onChange={(x) => patch({ fontFamily: x })}
       />
       <SliderField
-        label="Content scale"
-        min={0.7} max={1.4} step={0.05}
+        label="Font size (content scale)"
+        min={0.5} max={2} step={0.05}
         value={scale}
         defaultValue={TYPO_DEFAULTS.fontScale}
         onChange={(x) => patch({ fontScale: x })}
         format={(x) => `${Math.round(x * 100)}%`}
+      />
+      <ToggleField
+        label="Bold"
+        value={!!v.bold}
+        defaultValue={TYPO_DEFAULTS.bold}
+        onChange={(x) => patch({ bold: x })}
+      />
+      <ToggleField
+        label="Italic"
+        value={!!v.italic}
+        defaultValue={TYPO_DEFAULTS.italic}
+        onChange={(x) => patch({ italic: x })}
       />
       <SelectField
         label="Scale anchor"

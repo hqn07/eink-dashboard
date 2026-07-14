@@ -11,6 +11,12 @@ import { resolveTokenSettings } from './_tokens.js';
 export function cellClasses(s) {
   const out = [];
   if (s && s.theme === 'inverted') out.push('cell-inverted');
+  // Per-tile text style toggles. Applied via class + universal child
+  // selector (015-body-grid-system.css) because most widgets set their
+  // own font-weight per element — inline style on the cell wouldn't
+  // cascade past those.
+  if (s && s.bold)   out.push('cell-bold');
+  if (s && s.italic) out.push('cell-italic');
   // Per-widget red accent (3-color B panel). The class drives CSS that
   // tints this tile's heading + key figure onto the red plane; no-op on
   // BW panels (greyscales to dark). Part of the layered red model with
