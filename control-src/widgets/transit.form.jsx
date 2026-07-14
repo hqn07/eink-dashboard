@@ -14,7 +14,7 @@ export function Form({ values, patch, onChange, fields }) {
   const { TextField, TypographyFields, FormSection, defaults = {} } = fields;
   const station = v.stopId ? BY_ID.get(v.stopId) : null;
   const routes = station ? station.routes : [];
-  const dir = v.direction === 'S' ? 'S' : 'N';
+  const dir = (v.direction === 'S' || v.direction === 'both') ? v.direction : 'N';
 
   const pickStation = (id, item) => {
     const st = BY_ID.get(id);
@@ -61,6 +61,7 @@ export function Form({ values, patch, onChange, fields }) {
           >
             <option value="N">{station && station.nl ? `${station.nl} (N)` : 'Northbound (N)'}</option>
             <option value="S">{station && station.sl ? `${station.sl} (S)` : 'Southbound (S)'}</option>
+            <option value="both">Both platforms (↑/↓ per train)</option>
           </select>
         </label>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>

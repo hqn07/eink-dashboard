@@ -64,15 +64,19 @@ export function render(ctx) {
   const items = transit.items.slice(0, maxRows);
   const variant = ctx.variant || (def.variants[s.variant] ? s.variant : 'trmnl');
   const stale = staleMark(transit.stale);
+  const both = !!transit.both;
   const dir = (transit.stop || '').slice(-1);
-  const dirLabel = dir === 'N' ? 'northbound' : dir === 'S' ? 'southbound' : '';
+  const dirLabel = both ? 'both platforms'
+    : dir === 'N' ? 'northbound' : dir === 'S' ? 'southbound' : '';
 
   const row = (it) => {
     const soon = it.minutes <= 2;
     const red = semRed(s, soon);
     const min = it.minutes <= 0 ? 'now' : `${it.minutes}<span class="tr-t-unit">min</span>`;
+    // Both-platform mode marks each arrival ↑ (N) / ↓ (S).
+    const arrow = both ? `<span class="tr-t-dir">${it.dir === 'S' ? '↓' : '↑'}</span>` : '';
     return `<div class="tr-t-row">
-      ${bullet(it.line)}
+      ${bullet(it.line)}${arrow}
       <span class="tr-t-min${red}">${min}</span>
     </div>`;
   };

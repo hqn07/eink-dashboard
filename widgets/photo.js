@@ -48,7 +48,17 @@ async function loadBytes(settings) {
     if (comma < 0) return null;
     try { return Buffer.from(data.slice(comma + 1), 'base64'); } catch { return null; }
   }
-  const url = typeof settings.imageUrl === 'string' ? settings.imageUrl.trim() : '';
+  // Rotation list: several URLs cycle on a 30-minute clock, so each
+  // panel refresh can land on the next image without any stored state.
+  const list = Array.isArray(settings.imageUrls)
+    ? settings.imageUrls.filter(u => /^https?:\/\//i.test(String(u || '').trim()))
+    : [];
+  const single = typeof settings.imageUrl === 'string' ? settings.imageUrl.trim() : '';
+  let url = single;
+  if (list.length) {
+    const slot = Math.floor(Date.now() / (30 * 60 * 1000));
+    url = String(list[slot % list.length]).trim();
+  }
   if (/^https?:\/\//i.test(url)) {
     const t0 = Date.now();
     try {

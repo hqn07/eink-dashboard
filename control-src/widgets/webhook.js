@@ -22,10 +22,21 @@ export const def = {
     L: { w: 12, h: 6 }
   },
   defaultSize: 'S',
+  // `auto` keeps the historical behavior (template when one is set,
+  // otherwise the key/value grid) so pre-variant tiles don't change.
+  variants: {
+    auto:   { label: 'Auto — template if set, else key/value' },
+    number: { label: 'Number — one big value' },
+    kv:     { label: 'Table — key/value rows' },
+    template: { label: 'Template — custom lines' }
+  },
+  defaultVariant: 'auto',
   defaults: () => ({
+    variant: 'auto',
     key: '',
     title: '',
     template: '',
+    path: '',            // number variant: dot path to the hero value
     fontScale: 1,
     padding: 14
   })
@@ -91,10 +102,28 @@ export function render(ctx) {
 
   const now = Number.isFinite(ctx.now) ? ctx.now : Date.now();
   const data = hook.data;
-  const tpl = (typeof s.template === 'string') ? s.template.trim() : '';
+  const rawTpl = (typeof s.template === 'string') ? s.template.trim() : '';
+  const variant = ctx.variant || 'auto';
+  // auto = historical behavior; explicit variants pin one body style.
+  const tpl = (variant === 'kv' || variant === 'number') ? ''
+    : (variant === 'template' || variant === 'auto') ? rawTpl : rawTpl;
   let body = '';
 
-  if (tpl) {
+  if (variant === 'number') {
+    // One big value. Path from settings, falling back to the first
+    // numeric field, then the first field.
+    let path = (typeof s.path === 'string' && s.path.trim()) ? s.path.trim() : '';
+    if (!path) {
+      const keys = Object.keys(data);
+      path = keys.find(k => typeof data[k] === 'number') || keys[0] || '';
+    }
+    const label = path ? path.split('.').pop().toUpperCase() : '';
+    body = `
+      <div class="tr-lv tr-lv-xl">
+        <div class="tr-v autofit" data-min-font="18" style="font-size:${Math.round(56 * scale)}px">${escapeHtml(fmtValue(getPath(data, path)))}</div>
+        ${label ? `<div class="tr-l">${escapeHtml(label)}</div>` : ''}
+      </div>`;
+  } else if (tpl) {
     // Template mode: first line = hero, the rest = stacked rows.
     const lines = tpl.split('\n').map(l => l.trim()).filter(Boolean)
       .map(l => fillTemplate(escapeHtml(l), data));

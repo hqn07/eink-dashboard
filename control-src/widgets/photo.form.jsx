@@ -126,7 +126,7 @@ function DitherPreview({ v }) {
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, TypographyFields, FormSection, defaults = {} } = fields;
+  const { TextField, CsvField, TypographyFields, FormSection, defaults = {} } = fields;
   const hasUpload = !!uploadedSrc(v);
   return (
     <>
@@ -139,6 +139,14 @@ export function Form({ values, patch, onChange, fields }) {
           onChange={(x) => patch({ imageUrl: x })}
           placeholder="https://example.com/photo.jpg"
           help={hasUpload ? 'Ignored while an uploaded image is set.' : 'Public http(s) image link.'}
+        />
+        <CsvField
+          label="Rotation list (URLs, comma-separated)"
+          value={v.imageUrls || []}
+          defaultValue={defaults.imageUrls}
+          onCommit={(arr) => patch({ imageUrls: arr })}
+          placeholder="https://…/a.jpg, https://…/b.jpg"
+          help="Two or more URLs cycle to the next image roughly every 30 minutes. Overrides the single URL above."
         />
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
           Fit

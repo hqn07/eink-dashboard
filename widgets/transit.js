@@ -39,16 +39,22 @@ async function loadFeed(feedName) {
   return feedMsg;
 }
 
-// settings: { line, stopId, direction: 'N'|'S', count }
+// settings: { line, stopId, direction: 'N'|'S'|'both', count }
+// direction 'both' watches both platforms of the station on one tile;
+// each arrival carries `dir` so the renderer can mark ↑/↓.
 async function fetchTransit(settings) {
   const s = settings || {};
   const line = String(s.line || '').toUpperCase().trim();
   const base = String(s.stopId || '').toUpperCase().trim();
+  const both = s.direction === 'both';
   const dir = s.direction === 'S' ? 'S' : 'N';
   const count = Number.isFinite(s.count) ? s.count : 5;
   const feedName = LINE_TO_FEED[line];
   if (!feedName || !base) return null;
-  const targetStop = base.endsWith('N') || base.endsWith('S') ? base : base + dir;
+  const pinned = base.endsWith('N') || base.endsWith('S');
+  const targets = new Set(
+    both && !pinned ? [base + 'N', base + 'S'] : [pinned ? base : base + dir]
+  );
 
   const t0 = Date.now();
   try {
@@ -59,16 +65,20 @@ async function fetchTransit(settings) {
       const tu = e.tripUpdate;
       if (!tu || !Array.isArray(tu.stopTimeUpdate)) continue;
       for (const stu of tu.stopTimeUpdate) {
-        if (stu.stopId !== targetStop) continue;
+        if (!targets.has(stu.stopId)) continue;
         const t = stu.arrival && stu.arrival.time ? Number(stu.arrival.time) * 1000 : null;
         if (!t) continue;
         const mins = Math.round((t - now) / 60000);
         if (mins < 0) continue;
-        arrivals.push({ line: tu.trip.routeId || line, minutes: mins });
+        arrivals.push({
+          line: tu.trip.routeId || line,
+          minutes: mins,
+          dir: stu.stopId.endsWith('S') ? 'S' : 'N'
+        });
       }
     }
     arrivals.sort((a, b) => a.minutes - b.minutes);
-    const data = { stop: targetStop, items: arrivals.slice(0, count), stale: false };
+    const data = { stop: [...targets].join('+'), both: both && !pinned, items: arrivals.slice(0, count), stale: false };
     status.record('transit', { ok: true, ms: Date.now() - t0 });
     return data;
   } catch (err) {

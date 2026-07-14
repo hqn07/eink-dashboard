@@ -36,6 +36,7 @@ export const def = {
   defaults: () => ({
     variant: 'full',
     imageUrl: '',        // remote http(s) image
+    imageUrls: [],       // rotation list — cycles every ~30 min (refresh-aligned)
     imageData: '',       // fresh upload (data: URI) — externalized to imageRef on save
     imageRef: '',        // server-side upload file ref (DATA_DIR/uploads)
     fit: 'cover',        // 'cover' | 'contain'
@@ -54,7 +55,7 @@ export function render(ctx) {
   const s = settings || {};
   const src = photo && photo.src;
   if (!src) {
-    const hasSource = (s.imageUrl && s.imageUrl.trim()) || (s.imageData && s.imageData.trim()) || (s.imageRef && s.imageRef.trim());
+    const hasSource = (s.imageUrl && s.imageUrl.trim()) || (s.imageData && s.imageData.trim()) || (s.imageRef && s.imageRef.trim()) || (Array.isArray(s.imageUrls) && s.imageUrls.filter(Boolean).length);
     return placeholder('PHOTO', hasSource ? 'Image failed' : 'Add a photo', 'msg', { cellW, cellH }, hasSource ? 'nodata' : 'setup');
   }
 

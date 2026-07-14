@@ -36,6 +36,16 @@ export function Form({ values, patch, onChange, fields }) {
           placeholder="WEBHOOK"
           help="Leave blank to keep the default heading."
         />
+        {(v.variant === 'number') && (
+          <TextField
+            label="Value path"
+            value={v.path || ''}
+            defaultValue={defaults.path}
+            onChange={(x) => patch({ path: x })}
+            placeholder="steps  ·  sensors.0.value"
+            help="Dot path into the posted JSON. Blank = first numeric field."
+          />
+        )}
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
           Template (optional)
           <textarea

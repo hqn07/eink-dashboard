@@ -36,6 +36,7 @@ export const def = {
   defaults: () => ({
     variant: 'trmnl',
     target: '',          // YYYY-MM-DD or YYYY-MM-DDTHH:MM
+    repeat: 'none',      // 'none' | 'weekly' | 'monthly' | 'yearly'
     label: '',           // e.g. "until launch"
     title: '',
     fontScale: 1,
@@ -57,16 +58,31 @@ function parseTarget(t) {
   return Number.isNaN(d.getTime()) ? null : d.getTime();
 }
 
+// Recurring targets: once the date passes, roll forward to the next
+// occurrence so a birthday countdown never sits at "N days since".
+function nextOccurrence(ms, repeat, now) {
+  if (!repeat || repeat === 'none' || ms > now) return ms;
+  const d = new Date(ms);
+  for (let i = 0; i < 400 && d.getTime() <= now; i++) {
+    if (repeat === 'weekly') d.setDate(d.getDate() + 7);
+    else if (repeat === 'monthly') d.setMonth(d.getMonth() + 1);
+    else if (repeat === 'yearly') d.setFullYear(d.getFullYear() + 1);
+    else break;
+  }
+  return d.getTime();
+}
+
 export function render(ctx) {
   const { settings, cellW, cellH, density } = ctx;
   const s = settings || {};
   const titleLabel = (typeof s.title === 'string' && s.title.trim())
     ? s.title.trim() : 'COUNTDOWN';
-  const target = parseTarget(s.target);
+  let target = parseTarget(s.target);
   if (target == null) {
     return placeholder(titleLabel.split(/\s+/)[0] || 'COUNTDOWN', 'Set a date', 'msg', { cellW, cellH });
   }
   const now = Number.isFinite(ctx.now) ? ctx.now : Date.now();
+  target = nextOccurrence(target, s.repeat, now);
   const variant = ctx.variant || (def.variants[s.variant] ? s.variant : 'big');
   const tier = pickTier(cellW || 0, cellH || 0, density);
 

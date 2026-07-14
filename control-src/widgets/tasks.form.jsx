@@ -3,7 +3,7 @@ import React from 'react';
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
   const { TextField, TypographyFields, FormSection, defaults = {} } = fields;
-  const source = v.source === 'ical' ? 'ical' : 'todoist';
+  const source = (v.source === 'ical' || v.source === 'both') ? v.source : 'todoist';
   return (
     <>
       <FormSection title="Source">
@@ -16,9 +16,10 @@ export function Form({ values, patch, onChange, fields }) {
           >
             <option value="todoist">Todoist</option>
             <option value="ical">iCal / Reminders feed (VTODO)</option>
+            <option value="both">Both — merge by due date</option>
           </select>
         </label>
-        {source === 'todoist' && (
+        {(source === 'todoist' || source === 'both') && (
           <TextField
             label="Todoist API token"
             value={v.token || ''}
@@ -28,7 +29,7 @@ export function Form({ values, patch, onChange, fields }) {
             help="Todoist → Settings → Integrations → Developer → API token."
           />
         )}
-        {source === 'ical' && (
+        {(source === 'ical' || source === 'both') && (
           <TextField
             label="VTODO feed URL"
             value={v.icalUrl || ''}

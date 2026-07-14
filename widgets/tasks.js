@@ -79,29 +79,34 @@ async function fetchIcalTodos(url, limit) {
   return items.filter(i => i.title).slice(0, limit);
 }
 
-// settings: { source: 'todoist'|'ical', token, icalUrl, count }
+// settings: { source: 'todoist'|'ical'|'both', token, icalUrl, count }
+// `both` merges Todoist + iCal VTODO into one list (due-date sort,
+// no-due items last), so one tile covers "work board + class feed".
 async function fetchTasks(settings) {
   const s = settings || {};
   const limit = Number.isFinite(s.count) ? s.count : 8;
-  let key;
-  if (s.source === 'ical') {
-    const url = typeof s.icalUrl === 'string' ? s.icalUrl.trim() : '';
-    if (!/^https?:\/\//i.test(url)) return null;
-    key = `ical:${url}`;
-  } else {
-    const token = typeof s.token === 'string' ? s.token.trim() : '';
-    if (!token) return null;
-    key = `todoist:${token.slice(0, 8)}`;
-  }
+  const token = typeof s.token === 'string' ? s.token.trim() : '';
+  const url = typeof s.icalUrl === 'string' ? s.icalUrl.trim() : '';
+  const wantTodoist = (s.source === 'todoist' || s.source === 'both') && token;
+  const wantIcal = (s.source === 'ical' || s.source === 'both') && /^https?:\/\//i.test(url);
+  if (!wantTodoist && !wantIcal) return null;
+  const key = `${wantTodoist ? `todoist:${token.slice(0, 8)}` : ''}|${wantIcal ? `ical:${url}` : ''}`;
 
   const hit = cache.get(key);
   if (hit && (Date.now() - hit.at) < CACHE_MS) { status.cacheHit('tasks'); return hit.data; }
 
   const t0 = Date.now();
   try {
-    const items = s.source === 'ical'
-      ? await fetchIcalTodos(s.icalUrl.trim(), limit)
-      : await fetchTodoist(s.token.trim(), limit);
+    const [td, ic] = await Promise.all([
+      wantTodoist ? fetchTodoist(token, limit) : [],
+      wantIcal ? fetchIcalTodos(url, limit) : []
+    ]);
+    let items = [...(td || []), ...(ic || [])];
+    if (wantTodoist && wantIcal) {
+      // Merge sort: dated first (soonest due), undated after, cap.
+      items.sort((a, b) => (a.dueSort - b.dueSort) || ((a.order || 0) - (b.order || 0)));
+      items = items.slice(0, limit);
+    }
     const data = { items, stale: false };
     cache.set(key, { at: Date.now(), data });
     status.record('tasks', { ok: true, ms: Date.now() - t0 });
