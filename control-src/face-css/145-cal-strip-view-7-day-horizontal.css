@@ -31,7 +31,7 @@
 .strip-day-num { font-size: 16px; font-weight: 700; line-height: 1; }
 .strip-day-events {
   display: flex; flex-direction: column;
-  gap: var(--face-gap-2);
+  gap: var(--face-gap-6);
   min-height: 0;
   overflow: hidden;
 }
@@ -45,6 +45,8 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: var(--strip-clamp, 2);
   word-break: break-word;
+  border-left: 3px solid currentColor;
+  padding-left: 4px;
 }
 .strip-allday { font-weight: 700; }
 .strip-more {
