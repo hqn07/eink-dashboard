@@ -196,8 +196,11 @@ function renderStrip(events, titleLabel, cellH, settings) {
     if (!byDay[k]) byDay[k] = [];
     byDay[k].push(ev);
   }
-  // How many event lines fit per cell depends on cell height.
+  // How many events fit per cell depends on cell height. Titles wrap up
+  // to --strip-clamp text lines each (tall tiles get more), so the event
+  // budget assumes worst-case wrapped height.
   const linesPer = cellH < 5 ? 1 : cellH < 8 ? 2 : 3;
+  const clampLines = cellH < 5 ? 1 : cellH < 8 ? 2 : 4;
   const cell = (d, i) => {
     const k = dayKey(d);
     const evs = byDay[k] || [];
@@ -220,7 +223,7 @@ function renderStrip(events, titleLabel, cellH, settings) {
   return `
     <div class="widget widget-cal widget-cal-strip">
       <div class="widget-title">${escapeHtml(titleLabel)}</div>
-      <div class="cal-strip">
+      <div class="cal-strip" style="--strip-clamp:${clampLines}">
         ${days.map(cell).join('')}
       </div>
     </div>

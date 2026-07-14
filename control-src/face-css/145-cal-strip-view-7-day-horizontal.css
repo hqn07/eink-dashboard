@@ -40,9 +40,11 @@
   font-size: 11px;
   letter-spacing: 0.5px;
   line-height: 1.15;
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--strip-clamp, 2);
+  word-break: break-word;
 }
 .strip-allday { font-weight: 700; }
 .strip-more {
