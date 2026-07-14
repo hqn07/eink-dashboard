@@ -46,6 +46,9 @@
 .cell.cell-italic * {
   font-style: italic;
 }
+.cell.cell-upper {
+  text-transform: uppercase;
+}
 
 /* Inverted theme — solid black tile with white ink. Filters cover SVG
  * fills + bg images (album art, weather icons) so a play glyph that

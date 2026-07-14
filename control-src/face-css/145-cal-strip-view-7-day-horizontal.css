@@ -59,6 +59,15 @@
   padding-left: 4px;
 }
 .strip-allday { font-weight: 700; }
+/* Day with no events: a quiet dash so the column reads "checked,
+ * nothing scheduled" instead of looking like a render failure. Solid
+ * ink — grays die at the 1-bit threshold. */
+.strip-day-events:empty::before {
+  content: '—';
+  font-family: var(--face-mono);
+  font-size: 11px;
+  color: currentColor;
+}
 .strip-more {
   font-family: var(--face-mono);
   font-size: 11px;

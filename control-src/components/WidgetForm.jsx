@@ -114,12 +114,13 @@ function TextField({ label, value, onChange, placeholder, type = 'text', help, d
   // data fields (tickers, URLs, QR payloads) must not advertise tokens
   // they won't resolve.
   if (tokens && !secret && type === 'text') {
+    const tokenHelp = help || 'Type {{ for live tokens (date, temp, battery…)';
     return (
       <label className="wsm-field">
         <FieldLabel label={label} value={value} defaultValue={defaultValue}
           onReset={() => onChange(defaultValue)} />
         <TokenBareInput value={value} onChange={onChange} placeholder={placeholder || ''} />
-        {help && <span className="wsm-field-help">{help}</span>}
+        <span className="wsm-field-help">{tokenHelp}</span>
       </label>
     );
   }
@@ -247,7 +248,9 @@ const TYPO_DEFAULTS = {
   padding:    14,
   theme:      'normal',
   bold:       false,
-  italic:     false
+  italic:     false,
+  upper:      false,
+  letterSpacing: 0
 };
 
 function TypographyFields({ values, onChange }) {
@@ -285,6 +288,20 @@ function TypographyFields({ values, onChange }) {
         value={!!v.italic}
         defaultValue={TYPO_DEFAULTS.italic}
         onChange={(x) => patch({ italic: x })}
+      />
+      <ToggleField
+        label="Uppercase"
+        value={!!v.upper}
+        defaultValue={TYPO_DEFAULTS.upper}
+        onChange={(x) => patch({ upper: x })}
+      />
+      <SliderField
+        label="Letter spacing"
+        min={0} max={4} step={0.5}
+        value={Number.isFinite(v.letterSpacing) ? v.letterSpacing : 0}
+        defaultValue={TYPO_DEFAULTS.letterSpacing}
+        onChange={(x) => patch({ letterSpacing: x })}
+        format={(x) => `${x}px`}
       />
       <SelectField
         label="Scale anchor"

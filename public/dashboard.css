@@ -184,6 +184,9 @@ html, body {
 .cell.cell-italic * {
   font-style: italic;
 }
+.cell.cell-upper {
+  text-transform: uppercase;
+}
 
 /* Inverted theme — solid black tile with white ink. Filters cover SVG
  * fills + bg images (album art, weather icons) so a play glyph that
@@ -1850,6 +1853,15 @@ img.icon { object-fit: contain; }
   padding-left: 4px;
 }
 .strip-allday { font-weight: 700; }
+/* Day with no events: a quiet dash so the column reads "checked,
+ * nothing scheduled" instead of looking like a render failure. Solid
+ * ink — grays die at the 1-bit threshold. */
+.strip-day-events:empty::before {
+  content: '—';
+  font-family: var(--face-mono);
+  font-size: 11px;
+  color: currentColor;
+}
 .strip-more {
   font-family: var(--face-mono);
   font-size: 11px;
@@ -2014,7 +2026,9 @@ img.icon { object-fit: contain; }
 }
 .qr .col-title { align-self: flex-start; }
 .qr-code {
-  flex: 1 1 auto;
+  /* basis 0, not auto — the SVG's natural size otherwise inflates the
+   * flex item and shoves the caption off the tile's bottom edge. */
+  flex: 1 1 0;
   min-height: 0;
   display: flex;
   align-items: center;
@@ -2030,6 +2044,7 @@ img.icon { object-fit: contain; }
   image-rendering: pixelated;
 }
 .qr-caption {
+  flex: none;
   font-family: var(--face-mono);
   font-weight: 500;
   font-size: 12px;

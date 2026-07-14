@@ -10,7 +10,9 @@
 }
 .qr .col-title { align-self: flex-start; }
 .qr-code {
-  flex: 1 1 auto;
+  /* basis 0, not auto — the SVG's natural size otherwise inflates the
+   * flex item and shoves the caption off the tile's bottom edge. */
+  flex: 1 1 0;
   min-height: 0;
   display: flex;
   align-items: center;
@@ -26,6 +28,7 @@
   image-rendering: pixelated;
 }
 .qr-caption {
+  flex: none;
   font-family: var(--face-mono);
   font-weight: 500;
   font-size: 12px;

@@ -509,7 +509,16 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
                     downPosRef.current = null;
                     if (!d || d.id !== l.id) return;
                     const moved = Math.hypot(e.clientX - d.x, e.clientY - d.y);
-                    if (moved < 5) setSelectedId(l.id);
+                    if (moved >= 5) return;
+                    // Clicking a setup/empty placeholder jumps straight to
+                    // the settings modal — the card is already telling the
+                    // user to configure, so don't make them find the gear.
+                    if (e.target.closest && e.target.closest('.widget-placeholder')) {
+                      setSelectedId(l.id);
+                      setModalForId(l.id);
+                      return;
+                    }
+                    setSelectedId(l.id);
                   }}
                   onTouchEnd={() => setSelectedId(l.id)}
                 >

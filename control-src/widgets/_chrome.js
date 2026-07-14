@@ -17,6 +17,7 @@ export function cellClasses(s) {
   // cascade past those.
   if (s && s.bold)   out.push('cell-bold');
   if (s && s.italic) out.push('cell-italic');
+  if (s && s.upper)  out.push('cell-upper');
   // Per-widget red accent (3-color B panel). The class drives CSS that
   // tints this tile's heading + key figure onto the red plane; no-op on
   // BW panels (greyscales to dark). Part of the layered red model with
@@ -96,6 +97,11 @@ export function typographyCss(s) {
   }
   if (Number.isFinite(s.padding)) {
     css += `padding:${s.padding}px;`;
+  }
+  // Letter-spacing inherits; elements with their own explicit tracking
+  // (mono captions etc.) keep theirs, which is the right default.
+  if (Number.isFinite(s.letterSpacing) && s.letterSpacing !== 0) {
+    css += `letter-spacing:${s.letterSpacing}px;`;
   }
   return css;
 }
