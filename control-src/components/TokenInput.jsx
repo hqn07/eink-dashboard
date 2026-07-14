@@ -32,8 +32,10 @@ export function TokenBareInput({ value, onChange, placeholder }) {
   const [trigger, setTrigger] = useState(null); // {start, query} when active
 
   // Re-evaluate whether the cursor sits inside an open `{{...` trigger
-  // on every keystroke / caret move. Trigger lives from the last `{{`
-  // to the cursor position, terminated by `}}`, `|`, or whitespace.
+  // on every keystroke / caret move. Two trigger modes:
+  //   name   — `{{te`      → suggest token names
+  //   format — `{{temp|u`  → suggest that token's formats + `default:`
+  // `}` or whitespace before the caret closes the trigger.
   function recomputeTrigger() {
     const el = inputRef.current;
     if (!el) { setTrigger(null); return; }
@@ -42,11 +44,22 @@ export function TokenBareInput({ value, onChange, placeholder }) {
     const head = v.slice(0, caret);
     const start = head.lastIndexOf('{{');
     if (start < 0) { setTrigger(null); return; }
-    // If anything between `{{` and the caret closes the trigger,
-    // we're not in an open one. `}` `|` and whitespace all end it.
     const between = head.slice(start + 2);
-    if (/[}\s|]/.test(between)) { setTrigger(null); return; }
-    setTrigger({ start, query: between });
+    if (/[}\s]/.test(between)) { setTrigger(null); return; }
+    const pipe = between.lastIndexOf('|');
+    if (pipe >= 0) {
+      const name = between.slice(0, between.indexOf('|'));
+      setTrigger({
+        mode: 'format',
+        start,
+        name,
+        query: between.slice(pipe + 1),
+        // Absolute index of the char right after the last `|`.
+        segStart: start + 2 + pipe + 1
+      });
+    } else {
+      setTrigger({ mode: 'name', start, query: between });
+    }
     setHighlight(0);
   }
 
@@ -61,18 +74,27 @@ export function TokenBareInput({ value, onChange, placeholder }) {
     if (e.key === 'Escape') { e.preventDefault(); setTrigger(null); return; }
   }
 
-  function accept(tokenMeta) {
+  function accept(match) {
     const el = inputRef.current;
     if (!el || !trigger) return;
     const v = el.value || '';
-    // Replace `{{<query>` with `{{token}}` and place caret after the
-    // inserted close-brace.
-    const head = v.slice(0, trigger.start);
-    const tailFrom = (el.selectionStart || trigger.start + 2 + trigger.query.length);
+    const tailFrom = el.selectionStart != null ? el.selectionStart : v.length;
     const tail = v.slice(tailFrom);
-    const insert = `{{${tokenMeta.name}}}`;
+    let head, insert, caret;
+    if (trigger.mode === 'format') {
+      // Replace the segment after the last `|` with the picked format
+      // and close the braces. `default:` stays open — the caret lands
+      // after the colon so the user types the fallback text.
+      head = v.slice(0, trigger.segStart);
+      insert = match.fmt === 'default:' ? 'default:}}' : `${match.fmt}}}`;
+      caret = (head + (match.fmt === 'default:' ? 'default:' : insert)).length;
+    } else {
+      // Replace `{{<query>` with `{{token}}`, caret after the braces.
+      head = v.slice(0, trigger.start);
+      insert = `{{${match.name}}}`;
+      caret = (head + insert).length;
+    }
     const next = head + insert + tail;
-    const caret = (head + insert).length;
     onChange(next);
     setTrigger(null);
     // Restore caret in the next tick once React has re-rendered.
@@ -95,6 +117,13 @@ export function TokenBareInput({ value, onChange, placeholder }) {
   const matches = useMemo(() => {
     if (!trigger) return [];
     const q = trigger.query.toLowerCase();
+    if (trigger.mode === 'format') {
+      const meta = TOKEN_META.find(t => t.name === trigger.name);
+      if (!meta) return [];
+      return [...meta.formats, 'default:']
+        .filter(f => f.toLowerCase().startsWith(q))
+        .map(f => ({ fmt: f, name: trigger.name }));
+    }
     return TOKEN_META.filter(t => t.name.toLowerCase().includes(q));
   }, [trigger]);
 
@@ -116,15 +145,28 @@ export function TokenBareInput({ value, onChange, placeholder }) {
           {matches.map((t, i) => (
             <button
               type="button"
-              key={t.name}
+              key={t.fmt ? `${t.name}|${t.fmt}` : t.name}
               className={`ti-item ${i === highlight ? 'ti-item-high' : ''}`}
               onMouseEnter={() => setHighlight(i)}
               onMouseDown={(e) => { e.preventDefault(); accept(t); }}
               role="option"
               aria-selected={i === highlight}
             >
-              <code className="ti-item-name">{`{{${t.name}}}`}</code>
-              <span className="ti-item-example">{liveValue(`{{${t.name}}}`, t.example)}</span>
+              {t.fmt ? (
+                <>
+                  <code className="ti-item-name">{`|${t.fmt}`}</code>
+                  <span className="ti-item-example">
+                    {t.fmt === 'default:'
+                      ? 'fallback when no data'
+                      : liveValue(`{{${t.name}|${t.fmt}}}`, '')}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <code className="ti-item-name">{`{{${t.name}}}`}</code>
+                  <span className="ti-item-example">{liveValue(`{{${t.name}}}`, t.example)}</span>
+                </>
+              )}
             </button>
           ))}
         </div>

@@ -357,6 +357,58 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
     setTimeout(() => { dupLockRef.current = false; }, 350);
   };
 
+  // Keyboard control of the selected tile: arrows nudge one cell,
+  // Shift+arrows resize, Delete/Backspace removes, Cmd/Ctrl+D
+  // duplicates. Collisions block with the same shake as drag-drop —
+  // nudging must not silently stack tiles.
+  useEffect(() => {
+    if (readOnly || !selectedId || modalForId) return;
+    const collides = (cand) => enabled.some(it =>
+      it.id !== cand.id &&
+      cand.x < it.x + it.w && cand.x + cand.w > it.x &&
+      cand.y < it.y + it.h && cand.y + cand.h > it.y
+    );
+    const onKey = (e) => {
+      const t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+      const item = enabled.find(l => l.id === selectedId);
+      if (!item) return;
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key.toLowerCase() === 'd') {
+        e.preventDefault();
+        duplicateTile(selectedId);
+        return;
+      }
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        removeFromCanvas(selectedId);
+        setSelectedId(null);
+        return;
+      }
+      if (e.key === 'Escape') { setSelectedId(null); return; }
+      const dir = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+      if (!dir || mod) return;
+      e.preventDefault();
+      const def = widgetById(item.widgetId);
+      const minW = (def && def.minSize && def.minSize.w) || 2;
+      const minH = (def && def.minSize && def.minSize.h) || 1;
+      let cand;
+      if (e.shiftKey) {
+        cand = { ...item,
+          w: Math.max(minW, Math.min(GRID_COLS - item.x, item.w + dir[0])),
+          h: Math.max(minH, Math.min(GRID_ROWS - item.y, item.h + dir[1]))
+        };
+      } else {
+        cand = { ...item, ...clampPos(item.x + dir[0], item.y + dir[1], item.w, item.h) };
+      }
+      if (cand.x === item.x && cand.y === item.y && cand.w === item.w && cand.h === item.h) return;
+      if (collides(cand)) { triggerShake(); return; }
+      onChange(layout.map(l => l.id === item.id ? cand : l));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
   // HTML5 drag from pool tile onto canvas.
   const onPoolDragStart = (e, id) => {
     e.dataTransfer.effectAllowed = 'copy';

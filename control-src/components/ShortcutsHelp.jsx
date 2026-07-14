@@ -15,7 +15,11 @@ const SHORTCUTS = [
   { keys: ['['],             desc: 'Previous screen tab' },
   { keys: [']'],             desc: 'Next screen tab' },
   { keys: ['G'],             desc: 'Toggle grid overlay on canvas' },
-  { keys: ['Esc'],           desc: 'Close any open modal' }
+  { keys: ['↑↓←→'],          desc: 'Move selected tile one cell' },
+  { keys: ['⇧', '↑↓←→'],     desc: 'Resize selected tile' },
+  { keys: ['⌘', 'D'],        desc: 'Duplicate selected tile' },
+  { keys: ['⌫'],             desc: 'Remove selected tile' },
+  { keys: ['Esc'],           desc: 'Deselect / close any open modal' }
 ];
 
 export default function ShortcutsHelp({ open, onClose }) {
