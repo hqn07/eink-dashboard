@@ -29,6 +29,7 @@ import SettingsMenu from './components/SettingsMenu.jsx';
 import ShortcutsHelp from './components/ShortcutsHelp.jsx';
 import LiveDashboard from './components/LiveDashboard.jsx';
 import DeviceStatusCard from './components/DeviceStatusCard.jsx';
+import DeviceStatusChip from './components/DeviceStatusChip.jsx';
 
 const STATUS = {
   syncing: { label: 'SYNCING...', cls: 'saving' },
@@ -541,13 +542,15 @@ export default function App() {
         if (canSave && status === 'dirty') handleSave();
         return;
       }
-      if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+      // Undo/redo only when NOT typing in a field — inside an input the
+      // browser's native text undo must win, not a config rollback.
+      if (mod && !inField && e.key.toLowerCase() === 'z' && !e.shiftKey) {
         e.preventDefault();
         undo();
         return;
       }
       // cmd+shift+z or cmd+y — redo
-      if (mod && ((e.key.toLowerCase() === 'z' && e.shiftKey) || e.key.toLowerCase() === 'y')) {
+      if (mod && !inField && ((e.key.toLowerCase() === 'z' && e.shiftKey) || e.key.toLowerCase() === 'y')) {
         e.preventDefault();
         redo();
         return;
@@ -631,6 +634,7 @@ export default function App() {
           <SyncPill status={status} lastSavedAt={lastSavedAt} statusMsg={statusMsg} />
         </div>
         <div className="app-header-right">
+          <DeviceStatusChip refreshMinutes={cfg && Number(cfg.refreshMinutes)} />
           {cfg && (
             <SettingsMenu
               cfg={cfg}

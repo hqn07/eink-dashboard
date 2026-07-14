@@ -233,6 +233,33 @@ html, body {
 .sync-pill-dirty,
 .sync-pill-error  { color: #c00; }
 .sync-pill { transition: color 200ms ease; }
+
+/* DeviceStatusChip — same quiet mono-caption idiom as the sync pill.
+ * Warm dot when the panel checked in on schedule; red + OFFLINE label
+ * when it has missed several wake cycles. */
+.device-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  margin-right: 14px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--mute);
+  text-decoration: none;
+  cursor: pointer;
+}
+.device-chip .sync-dot { background: var(--accent-warm); }
+.device-chip-stale { color: #c00; }
+.device-chip-stale .sync-dot { background: #c00; }
+.device-chip-part { white-space: nowrap; }
+.device-chip-fw { opacity: 0.7; }
+@media (max-width: 760px) {
+  .device-chip-fw { display: none; }
+}
+
 .sync-pill-saved {
   animation: syncSavedFlash 600ms ease-out;
 }

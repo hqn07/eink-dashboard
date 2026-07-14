@@ -4,6 +4,8 @@ import { CaretUp, CaretDown, DotsSixVertical, Crosshair } from '@phosphor-icons/
 import { geocode, reverseGeocode } from '../api.js';
 import { MIGRATED_FORMS, MIGRATED_DEFS } from '../widgets/_registry.js';
 import { TokenBareInput } from './TokenInput.jsx';
+import { TokenCtx } from './token-ctx.js';
+import { buildTokenCtx } from '../widgets/_tokens.js';
 import {
   renderWidget, typographyCss, cellClasses, scaleWrap
 } from '../widget-render.js';
@@ -941,7 +943,24 @@ const FIELD_PRIMITIVES = {
   FormSection, AdvancedGroup, PresetField, Collapsible
 };
 
-export default function WidgetForm({ widgetId, values, onChange, item, previewData, onHoverPreset }) {
+// Thin provider wrapper: exposes the live token context (from preview
+// data, per-tile slot first) so TokenBareInput / TokenPicker popovers
+// can show real resolved values next to each token.
+export default function WidgetForm(props) {
+  const { previewData, item } = props;
+  const liveTokenCtx = useMemo(() => {
+    if (!previewData) return null;
+    const slot = (previewData.perItem && item && previewData.perItem[item.id]) || null;
+    return buildTokenCtx(previewData, slot);
+  }, [previewData, item]);
+  return (
+    <TokenCtx.Provider value={liveTokenCtx}>
+      <WidgetFormInner {...props} />
+    </TokenCtx.Provider>
+  );
+}
+
+function WidgetFormInner({ widgetId, values, onChange, item, previewData, onHoverPreset }) {
   const v = values || {};
   const patch = (p) => onChange({ ...v, ...p });
 

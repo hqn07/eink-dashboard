@@ -14,7 +14,17 @@
   font-family: var(--face-sans);
   background: #fff;
 }
-.strip-day.strip-today { background: #000; color: #fff; }
+/* Today: invert only the day header, not the whole column — an empty
+ * day used to render as a solid black slab. Negative margins bleed the
+ * header band to the cell's inner edges (cell padding is 4px). */
+.strip-day.strip-today { border-width: 3px; }
+.strip-day.strip-today .strip-day-head {
+  background: #000;
+  color: #fff;
+  margin: -4px -4px 3px;
+  padding: 4px 4px 3px;
+  border-bottom: 0;
+}
 .strip-day-head {
   display: flex; align-items: baseline; justify-content: space-between;
   gap: var(--face-gap-4);

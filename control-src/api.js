@@ -193,6 +193,22 @@ export async function fetchBattery() {
   return r.json();
 }
 
+// Enrolled devices + last-seen telemetry — { devices: [{ friendly_id,
+// fw_version, board, screen, last_seen_at, ... }] }.
+export async function fetchDevices() {
+  const r = await authFetch('/api/devices');
+  if (!r.ok) throw new Error(`devices ${r.status}`);
+  return r.json();
+}
+
+// URL for the human /status page with the device token attached (it's a
+// full navigation, so the X-Device-Token header path doesn't apply).
+// PIN-cookie sessions work with the bare path.
+export function statusPageUrl() {
+  const tok = getToken();
+  return tok ? `/status?token=${encodeURIComponent(tok)}` : '/status';
+}
+
 // Single-widget PNG render — used by the settings modal preview to
 // show the bit-identical e-ink output of the current draft settings
 // after a debounce. Returns a Blob or throws on non-200.

@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TOKEN_META } from '../widgets/_token_meta';
+import { useLiveTokenValue } from './TokenInput.jsx';
 
 export function TokenPicker({ onInsert, title = 'Insert token' }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  const liveValue = useLiveTokenValue();
 
   useEffect(() => {
     if (!open) return;
@@ -68,7 +70,7 @@ export function TokenPicker({ onInsert, title = 'Insert token' }) {
                 }}
               >
                 <code style={{ color: '#06f' }}>{`{{${t.name}}}`}</code>
-                <span style={{ float: 'right', color: '#767676', fontSize: 11 }}>{t.example}</span>
+                <span style={{ float: 'right', color: '#767676', fontSize: 11 }}>{liveValue(`{{${t.name}}}`, t.example)}</span>
               </button>
               {t.formats.map(f => (
                 <button
@@ -88,6 +90,7 @@ export function TokenPicker({ onInsert, title = 'Insert token' }) {
                   }}
                 >
                   <code>{`{{${t.name}|${f}}}`}</code>
+                  <span style={{ float: 'right', color: '#999', fontSize: 10 }}>{liveValue(`{{${t.name}|${f}}}`, '')}</span>
                 </button>
               ))}
             </div>

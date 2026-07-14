@@ -1,5 +1,16 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { TOKEN_META } from '../widgets/_token_meta';
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { TOKEN_META, renderTokens } from '../widgets/_tokens.js';
+import { TokenCtx } from './token-ctx.js';
+
+// Live value for a token expression when preview data is available;
+// falls back to the canned example otherwise.
+export function useLiveTokenValue() {
+  const ctx = useContext(TokenCtx);
+  return (expr, fallback) => {
+    if (!ctx) return fallback;
+    try { return renderTokens(expr, ctx); } catch { return fallback; }
+  };
+}
 
 // Text input with inline {{token}} autocomplete. As soon as the user
 // types `{{` followed by any letters the menu surfaces below the
@@ -16,6 +27,7 @@ import { TOKEN_META } from '../widgets/_token_meta';
 export function TokenBareInput({ value, onChange, placeholder }) {
   const inputRef = useRef(null);
   const wrapRef = useRef(null);
+  const liveValue = useLiveTokenValue();
   const [highlight, setHighlight] = useState(0);
   const [trigger, setTrigger] = useState(null); // {start, query} when active
 
@@ -112,7 +124,7 @@ export function TokenBareInput({ value, onChange, placeholder }) {
               aria-selected={i === highlight}
             >
               <code className="ti-item-name">{`{{${t.name}}}`}</code>
-              <span className="ti-item-example">{t.example}</span>
+              <span className="ti-item-example">{liveValue(`{{${t.name}}}`, t.example)}</span>
             </button>
           ))}
         </div>

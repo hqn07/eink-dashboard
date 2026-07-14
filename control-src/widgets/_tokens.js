@@ -150,6 +150,26 @@ export const TOKEN_META = [
 
 export const RESOLVABLE_KEYS = ['title', 'subtitle', 'label', 'caption', 'note', 'text'];
 
+// Token context from a page-level data payload (preview-data response /
+// SSR payload). `slot` (per-tile fetch) wins over the page fetch so a
+// tile with its own feed reads its own numbers. Used by buildTileCtx
+// and by the editor's token popovers (live example values).
+export function buildTokenCtx(data, slot) {
+  const d = data || {};
+  const sl = slot || {};
+  return {
+    now: Date.now(),
+    timezone: (d.cfg && d.cfg.timezone) || 'UTC',
+    cfg: d.cfg,
+    weather: sl.weather || d.weather,
+    events:  sl.events  || d.events,
+    aqi:     sl.aqi     || d.aqi,
+    battery: d.battery,
+    units:   sl.units   || d.units,
+    lastRefresh: d.generatedAt ? Date.parse(d.generatedAt) : Date.now(),
+  };
+}
+
 // Resolve {{token}}s in the whitelisted string settings of one tile.
 // Returns the same object when nothing needs resolving so React memo /
 // referential checks don't churn; never mutates the input (the editor
