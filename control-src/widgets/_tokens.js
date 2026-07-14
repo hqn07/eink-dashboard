@@ -34,6 +34,33 @@ function fmtTemp(v, fmt, ctx) {
   return fmt === 'unit' ? `${r}°${ctx.units === 'C' ? 'C' : 'F'}` : `${r}°`;
 }
 
+// Wall-clock "now" in the ctx timezone → { dow (0=Sun), minutes }.
+function nowInTz(ctx) {
+  const d = new Date(ctx.now || Date.now());
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: ctx.timezone || 'UTC', weekday: 'short',
+      hour: 'numeric', minute: 'numeric', hour12: false
+    }).formatToParts(d);
+    const get = (t) => (parts.find(p => p.type === t) || {}).value;
+    const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(get('weekday'));
+    return { dow: dow < 0 ? d.getDay() : dow, minutes: (Number(get('hour')) % 24) * 60 + Number(get('minute')) };
+  } catch {
+    return { dow: d.getDay(), minutes: d.getHours() * 60 + d.getMinutes() };
+  }
+}
+
+const ALARM_DAY_IDX = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+const DOW_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function fmtClock(minutes) {
+  let h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12; if (h === 0) h = 12;
+  return `${h}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
 export const TOKENS = {
   date(ctx, fmt) {
     if (!ctx.now) return '';
@@ -87,6 +114,47 @@ export const TOKENS = {
     const a = ctx.aqi;
     if (!a || a.aqi == null) return '';
     return fmt === 'label' ? (a.label || '') : String(Math.round(a.aqi));
+  },
+  nextAlarm(ctx, fmt) {
+    const alarms = (ctx.cfg && Array.isArray(ctx.cfg.alarms))
+      ? ctx.cfg.alarms.filter(a => a && a.enabled !== false && /^\d{1,2}:\d{2}$/.test(String(a.time || '')))
+      : [];
+    if (!alarms.length) return '';
+    const { dow, minutes } = nowInTz(ctx);
+    let best = null;
+    for (const a of alarms) {
+      const [hh, mm] = a.time.split(':').map(Number);
+      if (hh > 23 || mm > 59) continue;
+      const alarmMin = hh * 60 + mm;
+      const days = Array.isArray(a.days) && a.days.length
+        ? a.days.map(d => ALARM_DAY_IDX[String(d || '').toLowerCase().slice(0, 3)]).filter(x => x != null)
+        : [0, 1, 2, 3, 4, 5, 6];
+      for (let off = 0; off < 8; off++) {
+        if (!days.includes((dow + off) % 7)) continue;
+        if (off === 0 && alarmMin <= minutes) continue;
+        const wait = off * 1440 + alarmMin - minutes;
+        if (!best || wait < best.wait) best = { wait, alarmMin, off, label: a.label || '' };
+        break;
+      }
+    }
+    if (!best) return '';
+    if (fmt === 'label') return best.label;
+    if (fmt === 'in') {
+      const h = Math.floor(best.wait / 60), m = best.wait % 60;
+      return h ? `in ${h}h ${m}m` : `in ${m}m`;
+    }
+    const clock = fmtClock(best.alarmMin);
+    return best.off === 0 ? clock : `${DOW_SHORT[(nowInTz(ctx).dow + best.off) % 7]} ${clock}`;
+  },
+  eventsToday(ctx) {
+    if (!Array.isArray(ctx.events) || !ctx.events.length) return '0';
+    const tz = ctx.timezone || 'UTC';
+    const dayOf = (t) => {
+      try { return new Intl.DateTimeFormat('sv-SE', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(t)); }
+      catch { return new Date(t).toDateString(); }
+    };
+    const today = dayOf(ctx.now || Date.now());
+    return String(ctx.events.filter(e => e.startISO && dayOf(e.startISO) === today).length);
   },
   lastRefresh(ctx, fmt) {
     const t = ctx.lastRefresh || ctx.now;
@@ -143,6 +211,8 @@ export const TOKEN_META = [
   { name: 'tempLo',      formats: ['unit'],                        example: '61°' },
   { name: 'weather',     formats: [],                              example: 'Partly cloudy' },
   { name: 'nextEvent',   formats: ['time', 'day'],                 example: 'Physics lab' },
+  { name: 'eventsToday', formats: [],                              example: '3' },
+  { name: 'nextAlarm',   formats: ['in', 'label'],                 example: '6:30 AM' },
   { name: 'aqi',         formats: ['label'],                       example: '42' },
   { name: 'lastRefresh', formats: [],                              example: '8:42 AM' },
   { name: 'battery',     formats: ['bar'],                         example: '84%' },

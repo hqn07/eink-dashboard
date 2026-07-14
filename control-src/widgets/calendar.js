@@ -82,14 +82,17 @@ function renderTrmnl(all, settings, titleLabel, cellW, cellH, density) {
   const showTime = s.showTime !== false;
   const showDay  = s.showDayLabel !== false;
   const list = all.slice(0, maxRows);
+  const soonCutoff = Date.now() + 24 * 3600 * 1000;
   const rows = list.map((ev, i) => {
     const time = ev.isAllDay ? 'ALL&nbsp;DAY' : escapeHtml(ev.startLabel || '');
     const day  = showDay ? escapeHtml(ev.dayLabel || '') : '';
     // Mark the soonest event "now/next" with a solid left accent bar
     // (see .tr-row-now — no dither behind text; keeps 1-bit legibility).
     const isNext = i === 0;
+    // Timed events inside 24h: time goes red (semantic red).
+    const soon = !ev.isAllDay && ev.startISO && Date.parse(ev.startISO) < soonCutoff;
     return `<div class="tr-row${isNext ? ' tr-row-now' : ''}"><div class="tr-row-inner">
-      ${showTime ? `<div class="tr-row-time">${time}</div>` : ''}
+      ${showTime ? `<div class="tr-row-time${soon ? semRed(s, true) : ''}">${time}</div>` : ''}
       <div class="tr-row-main">
         <div class="tr-row-title">${escapeHtml(ev.title || '')}</div>
         ${day ? `<div class="tr-row-sub">${day}</div>` : ''}
@@ -182,6 +185,7 @@ const DAY_INITIALS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 function renderStrip(events, titleLabel, cellH, settings) {
   const s = settings || {};
+  const showTime = s.showTime !== false;
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const days = [];
   for (let i = 0; i < 7; i++) {
@@ -189,12 +193,26 @@ function renderStrip(events, titleLabel, cellH, settings) {
     d.setDate(today.getDate() + i);
     days.push(d);
   }
-  // Bucket events per day key.
+  const soonCutoff = Date.now() + 24 * 3600 * 1000;
+  // Bucket events per day key. Multi-day events (endISO) land in every
+  // day they span, capped at the strip's 7-day window.
   const byDay = {};
-  for (const ev of events) {
-    const k = dayKey(eventDate(ev));
+  const put = (d, ev) => {
+    const k = dayKey(d);
     if (!byDay[k]) byDay[k] = [];
     byDay[k].push(ev);
+  };
+  const windowEnd = new Date(today); windowEnd.setDate(today.getDate() + 7);
+  for (const ev of events) {
+    const start = eventDate(ev);
+    put(start, ev);
+    if (ev.endISO) {
+      const end = new Date(ev.endISO);
+      const d = new Date(start); d.setHours(0, 0, 0, 0);
+      for (d.setDate(d.getDate() + 1); d <= end && d < windowEnd; d.setDate(d.getDate() + 1)) {
+        put(new Date(d), { ...ev, _cont: true });
+      }
+    }
   }
   // How many events fit per cell depends on cell height. Titles wrap up
   // to --strip-clamp text lines each (tall tiles get more), so the event
@@ -207,9 +225,21 @@ function renderStrip(events, titleLabel, cellH, settings) {
     const isToday = i === 0;
     const dayNum = d.getDate();
     const dayName = DAY_INITIALS[d.getDay()];
-    const lines = evs.slice(0, linesPer).map(ev => `
-      <div class="strip-event ${ev.isAllDay ? 'strip-allday' : ''}">${escapeHtml(ev.title)}</div>
-    `).join('');
+    const lines = evs.slice(0, linesPer).map(ev => {
+      // Timed events starting inside 24h ride the red plane (semantic
+      // red — greyscales to dark on the BW panel). Continuation days of
+      // a multi-day event show an arrow instead of repeating the time.
+      const soon = !ev._cont && !ev.isAllDay && ev.startISO
+        && Date.parse(ev.startISO) < soonCutoff;
+      const time = ev._cont
+        ? '<span class="strip-event-time">↳</span> '
+        : (showTime && !ev.isAllDay && ev.startLabel
+          ? `<span class="strip-event-time">${escapeHtml(ev.startLabel)}</span> `
+          : '');
+      return `
+      <div class="strip-event ${ev.isAllDay ? 'strip-allday' : ''}${soon ? semRed(s, true) : ''}">${time}${escapeHtml(ev.title)}</div>
+    `;
+    }).join('');
     const more = evs.length > linesPer ? `<div class="strip-more">+${evs.length - linesPer}</div>` : '';
     return `
       <div class="strip-day ${isToday ? 'strip-today' + semRed(s, true) : ''}">

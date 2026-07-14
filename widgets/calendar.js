@@ -118,13 +118,25 @@ async function fetchEvents(icalUrl, limit = 5) {
       // Keep them until the day rolls over.
       const cutoff = isAllDay ? startOfToday : nowDate;
 
+      // Duration from the parent event so multi-day events can render on
+      // every day they span. iCal DTEND is exclusive for all-day events
+      // (a Mon–Wed event carries DTEND Thu) — subtract a tick so the
+      // computed end lands inside the last real day.
+      let durMs = 0;
+      if (ev.end && ev.start) {
+        durMs = new Date(ev.end).getTime() - new Date(ev.start).getTime();
+        if (isAllDay && durMs > 0) durMs -= 1;
+      }
+
       for (const occ of expandEvent(ev, startOfToday, horizon)) {
         const start = occ.start;
         if (start < cutoff || start > horizon) continue;
+        const startMs = start.toISOString ? start.getTime() : new Date(start).getTime();
         upcoming.push({
           title: (occ.summary || 'Untitled').toString(),
           start,
           startISO: start.toISOString ? start.toISOString() : new Date(start).toISOString(),
+          endISO: durMs > 0 ? new Date(startMs + durMs).toISOString() : null,
           startLabel: isAllDay ? 'ALL DAY' : formatEventTime(start),
           dayLabel: formatEventDay(start),
           section: sectionFor(start),

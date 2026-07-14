@@ -1509,6 +1509,21 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
  * desktop, tap on touch). Touch devices report no hover capability —
  * `@media (hover: none)` overrides the hover rule below so the only
  * way to surface the buttons on a phone/tablet is to tap the tile. */
+/* Time-window badge — marks tiles that hide themselves on the panel
+ * outside their visibility window, so the editor never "loses" a tile. */
+.tile-vis-badge {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  z-index: 5;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  padding: 1px 5px;
+  background: #000;
+  color: #fff;
+  pointer-events: none;
+}
 .tile-actions {
   position: absolute;
   top: 4px;

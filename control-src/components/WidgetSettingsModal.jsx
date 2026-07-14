@@ -122,6 +122,8 @@ export default function WidgetSettingsModal({
     const a = initialRef.current, b = draft;
     if ((a.flush || false) !== (b.flush || false)) return true;
     if ((a.density || '') !== (b.density || '')) return true;
+    const vis = (x) => JSON.stringify(x.visibility || null);
+    if (vis(a) !== vis(b)) return true;
     // Settings comparison: stringify for deep equality. Cheap because
     // settings objects are flat and small.
     const aSet = a.settings ? JSON.stringify(a.settings) : '';
@@ -380,6 +382,48 @@ export default function WidgetSettingsModal({
                     onHoverPreset={setHoveredPresetValues}
                   />
                 </ErrorBoundary>
+              </section>
+              <section className="wsm-section wsm-subsection" data-section-title="Visibility">
+                <div className="wsm-subsection-title">Visibility</div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                  <input
+                    type="checkbox"
+                    checked={!!(draft.visibility && draft.visibility.enabled)}
+                    onChange={(e) => setDraft(prev => ({
+                      ...prev,
+                      visibility: {
+                        from: '06:00', to: '22:00',
+                        ...(prev.visibility || {}),
+                        enabled: e.target.checked
+                      }
+                    }))}
+                  />
+                  Only show this tile during a time window
+                </label>
+                {draft.visibility && draft.visibility.enabled && (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6, fontSize: 12 }}>
+                    <input
+                      type="time"
+                      value={draft.visibility.from || '06:00'}
+                      onChange={(e) => setDraft(prev => ({
+                        ...prev, visibility: { ...prev.visibility, from: e.target.value }
+                      }))}
+                      style={{ width: 110 }}
+                    />
+                    <span>→</span>
+                    <input
+                      type="time"
+                      value={draft.visibility.to || '22:00'}
+                      onChange={(e) => setDraft(prev => ({
+                        ...prev, visibility: { ...prev.visibility, to: e.target.value }
+                      }))}
+                      style={{ width: 110 }}
+                    />
+                    <span className="wsm-field-help" style={{ margin: 0 }}>
+                      Wraps midnight if end &lt; start. Hidden tiles leave empty space.
+                    </span>
+                  </div>
+                )}
               </section>
             </div>
 

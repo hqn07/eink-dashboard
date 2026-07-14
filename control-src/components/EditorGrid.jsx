@@ -522,6 +522,11 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
                   }}
                   onTouchEnd={() => setSelectedId(l.id)}
                 >
+                  {l.visibility && l.visibility.enabled && (
+                    <div className="tile-vis-badge" title={`Shows ${l.visibility.from}–${l.visibility.to} only`}>
+                      {l.visibility.from}–{l.visibility.to}
+                    </div>
+                  )}
                   <div className="tile-actions">
                     <button
                       className="tile-settings"
@@ -756,6 +761,7 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
           const patch = {
             flush: updated.flush,
             density: updated.density,
+            visibility: updated.visibility,
             settings: updated.settings
           };
           if (onCommitItemNow) {

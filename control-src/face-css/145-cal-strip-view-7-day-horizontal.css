@@ -59,6 +59,10 @@
   padding-left: 4px;
 }
 .strip-allday { font-weight: 700; }
+.strip-event-time {
+  font-weight: 700;
+  letter-spacing: 0;
+}
 /* Day with no events: a quiet dash so the column reads "checked,
  * nothing scheduled" instead of looking like a render failure. Solid
  * ink — grays die at the 1-bit threshold. */
