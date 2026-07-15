@@ -228,6 +228,27 @@ export const SCREEN_PRESETS = [
     ]
   },
   {
+    id: 'front_page',
+    name: 'Front Page',
+    description: 'Morning-edition broadsheet: masthead with a weather ear, headline column, agenda, forecast, closing quote.',
+    layout: [
+      { widgetId: 'text', x: 0, y: 0, w: 24, h: 2,
+        settings: {
+          variant: 'bar', align: 'center', fontFamily: 'serif',
+          text: 'The {{city|default:Home}} Times',
+          subtitle: '{{date|long}} · {{weather|default:—}} · {{tempHi}}/{{tempLo}} · {{eventsToday}} on the docket'
+        } },
+      { widgetId: 'headlines',        x: 0,  y: 2, w: 9, h: 10,
+        settings: { source: 'news', newsSource: 'bbc', count: 7, title: 'THE WIRE' } },
+      { widgetId: 'calendar',         x: 9,  y: 2, w: 8, h: 6,
+        settings: { variant: 'list', title: 'TODAY' } },
+      { widgetId: 'onthisday',        x: 9,  y: 8, w: 8, h: 4 },
+      { widgetId: 'weather_forecast', x: 17, y: 2, w: 7, h: 6 },
+      { widgetId: 'quote',            x: 17, y: 8, w: 7, h: 4,
+        settings: { variant: 'serif' } }
+    ]
+  },
+  {
     id: 'minimal_hero',
     name: 'Just Weather',
     description: 'Just the weather, full-bleed.',
