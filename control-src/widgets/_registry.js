@@ -17,6 +17,7 @@
 // client bundle pulls it in.
 
 import * as aqi              from './aqi.js';
+import * as art              from './art.js';
 import * as calendar         from './calendar.js';
 import * as codeactivity     from './codeactivity.js';
 import * as clock            from './clock.js';
@@ -46,6 +47,7 @@ import * as world_clock      from './world_clock.js';
 import * as wordofday        from './wordofday.js';
 
 import { Form as aqiForm }             from './aqi.form.jsx';
+import { Form as artForm }             from './art.form.jsx';
 import { Form as calendarForm }        from './calendar.form.jsx';
 import { Form as codeActivityForm }    from './codeactivity.form.jsx';
 import { Form as clockForm }           from './clock.form.jsx';
@@ -75,12 +77,13 @@ import { Form as worldClockForm }      from './world_clock.form.jsx';
 import { Form as wordofdayForm }       from './wordofday.form.jsx';
 
 const MODULES = [
-  aqi, calendar, codeactivity, clock, countdown, eink_battery, mac_battery, mac_nowplaying,
+  aqi, art, calendar, codeactivity, clock, countdown, eink_battery, mac_battery, mac_nowplaying,
   headlines, moon, onthisday, photo, progress, qr, fx, crypto, quote, sparkline, sun, tasks, text, transit, uv, webhook, weather_forecast, weather_hero, world_clock, wordofday
 ];
 
 const FORMS = {
   aqi:              aqiForm,
+  art:              artForm,
   calendar:         calendarForm,
   codeactivity:     codeActivityForm,
   clock:            clockForm,

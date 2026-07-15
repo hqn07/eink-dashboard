@@ -4,6 +4,7 @@
 // _registry.js — that pulls in every <id>.form.jsx).
 
 import * as aqi              from './aqi.js';
+import * as art              from './art.js';
 import * as calendar         from './calendar.js';
 import * as codeactivity     from './codeactivity.js';
 import * as clock            from './clock.js';
@@ -33,7 +34,7 @@ import * as world_clock      from './world_clock.js';
 import * as wordofday        from './wordofday.js';
 
 const MODULES = [
-  aqi, calendar, codeactivity, clock, countdown, eink_battery, mac_battery, mac_nowplaying,
+  aqi, art, calendar, codeactivity, clock, countdown, eink_battery, mac_battery, mac_nowplaying,
   headlines, moon, onthisday, photo, progress, qr, fx, crypto, quote, sparkline, sun, tasks, text, transit, uv, webhook, weather_forecast, weather_hero, world_clock, wordofday
 ];
 

@@ -57,6 +57,7 @@ const POOL_META = {
   crypto:           { category: 'Data',     blurb: 'Crypto prices + 24h change (no key)' },
   codeactivity:     { category: 'Data',     blurb: 'GitHub contribution heatmap' },
   text:             { category: 'Text',     blurb: 'Token strip or message card' },
+  art:              { category: 'Fun',      blurb: 'Daily generative pattern — reseeds every morning' },
   quote:            { category: 'Text',     blurb: 'Quote + attribution' },
   wordofday:        { category: 'Text',     blurb: 'Daily vocabulary word + definition' },
   webhook:          { category: 'Data',     blurb: 'Push any JSON, see it on the panel' },
@@ -83,6 +84,7 @@ export const WIDGET_REGISTRY = [
   // source of truth — a widget missing here renders server-side but
   // never shows in the add-widget pool. Keep in sync with _registry.js.
   { ...migratedDef('aqi') },
+  { ...migratedDef('art') },
   { ...migratedDef('sun') },
   { ...migratedDef('countdown') },
   { ...migratedDef('progress') },
@@ -246,6 +248,15 @@ export const SCREEN_PRESETS = [
       { widgetId: 'weather_forecast', x: 17, y: 2, w: 7, h: 6 },
       { widgetId: 'quote',            x: 17, y: 8, w: 7, h: 4,
         settings: { variant: 'serif' } }
+    ]
+  },
+  {
+    id: 'photo_frame',
+    name: 'Photo Frame',
+    description: 'Full-bleed photo, nothing else. Schedule it overnight on the timeline for a bedside frame.',
+    layout: [
+      { widgetId: 'photo', x: 0, y: 0, w: 24, h: 12, flush: true,
+        settings: { variant: 'full', fit: 'cover', dither: 'atkinson' } }
     ]
   },
   {
