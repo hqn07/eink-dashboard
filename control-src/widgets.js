@@ -58,7 +58,6 @@ const POOL_META = {
   codeactivity:     { category: 'Data',     blurb: 'GitHub contribution heatmap' },
   text:             { category: 'Text',     blurb: 'Token strip or message card' },
   art:              { category: 'Fun',      blurb: 'Daily generative pattern — reseeds every morning' },
-  brief:            { category: 'Text',     blurb: 'AI morning brief — weather + schedule in two sentences' },
   chess:            { category: 'Fun',      blurb: 'Lichess puzzle of the day' },
   stocks:           { category: 'Money',    blurb: 'Stock/ETF quotes — no API key needed' },
   quote:            { category: 'Text',     blurb: 'Quote + attribution' },
@@ -88,7 +87,6 @@ export const WIDGET_REGISTRY = [
   // never shows in the add-widget pool. Keep in sync with _registry.js.
   { ...migratedDef('aqi') },
   { ...migratedDef('art') },
-  { ...migratedDef('brief') },
   { ...migratedDef('chess') },
   { ...migratedDef('stocks') },
   { ...migratedDef('sun') },

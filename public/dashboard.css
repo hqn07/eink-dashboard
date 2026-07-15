@@ -2943,7 +2943,7 @@ img.icon { object-fit: contain; }
   border: 2px solid #000;
 }
 
-/* ============ CHESS PUZZLE + DAILY BRIEF ============ */
+/* ============ CHESS PUZZLE ============ */
 .chess-body {
   flex-direction: column;
   align-items: center;
@@ -2962,16 +2962,4 @@ img.icon { object-fit: contain; }
   font-size: 11px;
   letter-spacing: 1px;
   text-transform: uppercase;
-}
-
-.brief-body {
-  padding: 10px 16px;
-  min-height: 0;
-}
-.brief-text {
-  font-family: var(--face-serif);
-  font-size: 20px;
-  line-height: 1.3;
-  white-space: normal;
-  text-align: left;
 }
