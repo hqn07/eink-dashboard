@@ -2875,3 +2875,45 @@ img.icon { object-fit: contain; }
 .tr-t-list--board .tr-t-min { font-size: 30px; }
 
 .tr-t-stale { font-size: 0.85em; font-weight: 400; }
+
+/* ============ BEAM — send-to-display takeover ============
+ * Full-panel message card. Solid inks only; the autofit pass sizes the
+ * text to fill whatever the message length allows. */
+.beam-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 28px 40px 20px;
+  box-sizing: border-box;
+  background: #fff;
+  border: 6px double #000;
+}
+.beam-tag {
+  font-family: var(--face-mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  border-bottom: 3px solid #000;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+.beam-text {
+  flex: 1;
+  min-height: 0;
+  font-family: var(--face-serif);
+  font-size: 64px;
+  line-height: 1.15;
+  font-weight: 700;
+  text-align: center;
+  white-space: normal;
+  word-break: break-word;
+}
+.beam-foot {
+  font-family: var(--face-mono);
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-align: right;
+  border-top: var(--face-rule) solid #000;
+  padding-top: 6px;
+}

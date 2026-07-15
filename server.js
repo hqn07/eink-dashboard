@@ -140,6 +140,7 @@ app.use(require('./routes/alarms'));       // /api/alarms + /api/alarm/next
 app.use(require('./routes/firmware'));     // /api/firmware/manifest + /firmware/:file
 app.use(require('./routes/devices'));      // /api/setup + /api/devices + /api/device/:id + /api/log(s)
 app.use(require('./routes/webhook'));      // /api/webhook/:key (push JSON -> webhook widget)
+app.use(require('./routes/beam'));         // /api/beam (send-to-display takeover message)
 app.use(require('./routes/status'));       // /status + /health + /health/widgets
 
 // Node 15+ exits on unhandled rejections by default. Log first so we

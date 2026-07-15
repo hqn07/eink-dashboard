@@ -16,6 +16,7 @@ const { getBrowser, tryAcquirePage, releasePage } = require('../lib/render');
 const { preThreshold } = require('../lib/image');
 const { decodeSettingsParam } = require('../lib/htmlutil');
 const { safeError } = require('../lib/http');
+const { getActiveBeam } = require('../lib/beam-store');
 const dev = require('../lib/dev');
 
 const PORT = process.env.PORT || 3000;
@@ -33,8 +34,9 @@ router.get('/dashboard', checkDeviceAuth, async (req, res) => {
     const [shell, ssr] = await Promise.all([loadDashboardHtml(), loadSsr()]);
     const battery = await loadBatteryState();
     const batteryHistory = await loadBatteryHistory();
+    const beam = await getActiveBeam();
     const payload = {
-      cfg, units, screen, layout, battery, batteryHistory,
+      cfg, units, screen, layout, battery, batteryHistory, beam,
       cardStyle: (activeScreen && activeScreen.cardStyle) || 'grid',
       ...data,
       generatedAt: new Date().toISOString()

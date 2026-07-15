@@ -209,6 +209,24 @@ export function statusPageUrl() {
   return tok ? `/status?token=${encodeURIComponent(tok)}` : '/status';
 }
 
+// Beam a takeover message to the panel. Returns { ok, beam, fastUntil,
+// maxLatency info } from the server.
+export async function sendBeam(text, minutes) {
+  const r = await authFetch('/api/beam', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, minutes })
+  });
+  if (!r.ok) throw new Error(`beam ${r.status}`);
+  return r.json();
+}
+
+export async function clearBeam() {
+  const r = await authFetch('/api/beam', { method: 'DELETE' });
+  if (!r.ok) throw new Error(`beam clear ${r.status}`);
+  return r.json();
+}
+
 // Direct-src URL for an externalized photo upload (img/canvas loads can't
 // send the auth header, so the token rides the query string).
 export function uploadPhotoUrl(ref) {

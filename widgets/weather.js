@@ -179,6 +179,11 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
     current: 'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover',
     hourly: 'temperature_2m,weather_code,precipitation_probability,cloud_cover',
     daily: 'temperature_2m_max,temperature_2m_min,weather_code,sunrise,sunset,precipitation_probability_max',
+    // 15-minute precipitation for the "rain in N min" line. Regions
+    // without true minutely data get hourly interpolation — still fine
+    // for a heads-up.
+    minutely_15: 'precipitation',
+    forecast_minutely_15: '8',
     timezone: 'auto',
     forecast_days: '8',
     temperature_unit: tempUnit,
@@ -200,6 +205,30 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
     const cur = data.current || {};
     const daily = data.daily || {};
     const curWmo = wmo(cur.weather_code);
+
+    // Minutes until the first 15-min slot with measurable precipitation
+    // (≥0.1mm), within the next 2 hours. null = no rain coming / already
+    // raining is handled by the current weather_code instead.
+    let rainInMin = null;
+    const m15 = data.minutely_15 || {};
+    if (Array.isArray(m15.time) && Array.isArray(m15.precipitation)) {
+      const nowMs = Date.now();
+      for (let i = 0; i < m15.time.length; i++) {
+        const t = parseOMTime(m15.time[i]);
+        if (!t) continue;
+        // Open-Meteo returns local wall-clock strings; rebuild epoch via
+        // the current slot spacing instead: use index distance from the
+        // first future slot. Simpler: compare wall-clock minutes.
+        const slotMin = t.hour * 60 + t.minute;
+        const nowT = minutesOM(cur.time);
+        if (nowT == null) break;
+        let delta = slotMin - nowT;
+        if (delta < -720) delta += 1440; // midnight wrap
+        if (delta < 0) continue;
+        if (delta > 120) break;
+        if (Number(m15.precipitation[i]) >= 0.1) { rainInMin = delta; break; }
+      }
+    }
 
     // Hourly: pick next 6 hours starting from the current local time.
     const hourly = [];
@@ -274,6 +303,7 @@ async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
       sunriseMin: minutesOM(daily.sunrise && daily.sunrise[0]),
       sunsetMin:  minutesOM(daily.sunset  && daily.sunset[0]),
       nowMin:     minutesOM(cur.time),
+      rainInMin,
       currentTime: formatTimeOM(cur.time),
       currentDate: formatDateOM(cur.time),
       forecast,

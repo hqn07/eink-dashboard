@@ -1524,6 +1524,31 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   color: #fff;
   pointer-events: none;
 }
+/* Beam composer — header button + modal body. */
+.beam-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 12px;
+}
+.beam-modal { max-width: 440px; }
+.beam-body { display: flex; flex-direction: column; gap: 10px; padding: 4px 0 0; }
+.beam-body textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 14px;
+  padding: 8px;
+  resize: vertical;
+}
+.beam-minutes { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.beam-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.beam-note { font-size: 12px; font-weight: 600; }
+.beam-hint { font-size: 11px; opacity: 0.7; line-height: 1.4; }
+@media (max-width: 760px) {
+  .beam-btn-label { display: none; }
+}
+
 .tile-actions {
   position: absolute;
   top: 4px;

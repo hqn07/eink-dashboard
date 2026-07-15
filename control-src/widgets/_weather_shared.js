@@ -88,14 +88,27 @@ export function sunBar(w) {
 }
 
 export function alertBanner(w) {
-  if (!w || !Array.isArray(w.alerts) || !w.alerts.length) return '';
-  const a = w.alerts[0];
-  return `
+  // Real NWS alert wins the banner slot; otherwise the minutely rain
+  // heads-up ("rain in 23 min") borrows the same styling so both read
+  // as "weather is about to happen".
+  if (w && Array.isArray(w.alerts) && w.alerts.length) {
+    const a = w.alerts[0];
+    return `
     <div class="weather-alert">
       <span class="alert-tag">⚠ ${a.severity || 'ALERT'}</span>
       <span class="alert-text">${a.event}</span>
     </div>
   `;
+  }
+  if (w && Number.isFinite(w.rainInMin) && w.rainInMin <= 90) {
+    const label = w.rainInMin <= 0 ? 'RAIN NOW' : `RAIN IN ${w.rainInMin} MIN`;
+    return `
+    <div class="weather-alert weather-alert-rain">
+      <span class="alert-text">${label}</span>
+    </div>
+  `;
+  }
+  return '';
 }
 
 export function hourlyStrip(w) {

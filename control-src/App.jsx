@@ -30,6 +30,7 @@ import ShortcutsHelp from './components/ShortcutsHelp.jsx';
 import LiveDashboard from './components/LiveDashboard.jsx';
 import DeviceStatusCard from './components/DeviceStatusCard.jsx';
 import DeviceStatusChip from './components/DeviceStatusChip.jsx';
+import BeamComposer from './components/BeamComposer.jsx';
 
 const STATUS = {
   syncing: { label: 'SYNCING...', cls: 'saving' },
@@ -635,6 +636,7 @@ export default function App() {
         </div>
         <div className="app-header-right">
           <DeviceStatusChip refreshMinutes={cfg && Number(cfg.refreshMinutes)} />
+          <BeamComposer />
           {cfg && (
             <SettingsMenu
               cfg={cfg}
