@@ -18,6 +18,9 @@
 
 import * as aqi              from './aqi.js';
 import * as art              from './art.js';
+import * as brief            from './brief.js';
+import * as chess            from './chess.js';
+import * as stocks           from './stocks.js';
 import * as calendar         from './calendar.js';
 import * as codeactivity     from './codeactivity.js';
 import * as clock            from './clock.js';
@@ -48,6 +51,9 @@ import * as wordofday        from './wordofday.js';
 
 import { Form as aqiForm }             from './aqi.form.jsx';
 import { Form as artForm }             from './art.form.jsx';
+import { Form as briefForm }           from './brief.form.jsx';
+import { Form as chessForm }           from './chess.form.jsx';
+import { Form as stocksForm }          from './stocks.form.jsx';
 import { Form as calendarForm }        from './calendar.form.jsx';
 import { Form as codeActivityForm }    from './codeactivity.form.jsx';
 import { Form as clockForm }           from './clock.form.jsx';
@@ -77,13 +83,16 @@ import { Form as worldClockForm }      from './world_clock.form.jsx';
 import { Form as wordofdayForm }       from './wordofday.form.jsx';
 
 const MODULES = [
-  aqi, art, calendar, codeactivity, clock, countdown, eink_battery, mac_battery, mac_nowplaying,
+  aqi, art, brief, calendar, chess, stocks, codeactivity, clock, countdown, eink_battery, mac_battery, mac_nowplaying,
   headlines, moon, onthisday, photo, progress, qr, fx, crypto, quote, sparkline, sun, tasks, text, transit, uv, webhook, weather_forecast, weather_hero, world_clock, wordofday
 ];
 
 const FORMS = {
   aqi:              aqiForm,
   art:              artForm,
+  brief:            briefForm,
+  chess:            chessForm,
+  stocks:           stocksForm,
   calendar:         calendarForm,
   codeactivity:     codeActivityForm,
   clock:            clockForm,
