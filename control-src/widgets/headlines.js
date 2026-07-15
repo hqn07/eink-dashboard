@@ -37,6 +37,7 @@ export const def = {
     newsSource: 'bbc',   // source=news (bbc|bbc_world|nyt|guardian|npr|aljazeera)
     hnFeed: 'top',       // 'top' | 'best' | 'new'
     feedUrl: '',         // source=rss
+    feedUrls: [],        // extra RSS URLs merged round-robin with the primary
     count: 6,
     showAge: true,
     title: '',

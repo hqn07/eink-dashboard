@@ -919,6 +919,14 @@ html, body {
   height: 10px;
   background: #000;
 }
+.eink-batt-eta {
+  font-family: var(--face-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #000;
+  text-transform: uppercase;
+}
 .eink-batt-age {
   font-family: var(--face-mono);
   font-size: 11px;

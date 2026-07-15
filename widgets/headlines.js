@@ -94,27 +94,15 @@ function parseFeed(xml) {
   return { source: source.trim(), items: items.filter(i => i.title) };
 }
 
-// settings: { source: 'news'|'rss'|'hn', newsSource, feedUrl, hnFeed }
-async function fetchHeadlines(settings) {
-  const s = settings || {};
-  let url;
-  if (s.source === 'hn') {
-    url = HN_FEEDS[s.hnFeed] || HN_FEEDS.top;
-  } else if (s.source === 'news') {
-    url = NEWS_FEEDS[s.newsSource] || NEWS_FEEDS.bbc;
-  } else {
-    url = typeof s.feedUrl === 'string' ? s.feedUrl.trim() : '';
-    if (!/^https?:\/\//i.test(url)) return null;
-  }
-
+// One feed URL → { source, items, stale } with per-URL cache. `isHn`
+// skips the SSRF guard (hnrss.org is first-party); user URLs go through
+// fetchPublicUrl.
+async function fetchOneFeed(url, isHn, labelOverride) {
   const hit = cache.get(url);
   if (hit && (Date.now() - hit.at) < CACHE_MS) { status.cacheHit('headlines'); return hit.data; }
-
   const t0 = Date.now();
   try {
-    // hnrss.org (HN) is first-party/public; a custom RSS URL is user input →
-    // guard it against private/loopback/metadata targets.
-    const doFetch = s.source === 'hn' ? fetchWithTimeout : fetchPublicUrl;
+    const doFetch = isHn ? fetchWithTimeout : fetchPublicUrl;
     const res = await doFetch(url, { headers: { accept: 'application/rss+xml, application/xml, text/xml, */*' } }, 6000);
     if (!res.ok) {
       status.record('headlines', { ok: false, ms: Date.now() - t0, err: `HTTP ${res.status}` });
@@ -123,9 +111,7 @@ async function fetchHeadlines(settings) {
     }
     const xml = await res.text();
     const parsed = parseFeed(xml);
-    // Friendlier source labels than some raw feed titles.
-    if (s.source === 'hn') parsed.source = 'Hacker News';
-    else if (s.source === 'news') parsed.source = NEWS_LABELS[s.newsSource] || parsed.source;
+    if (labelOverride) parsed.source = labelOverride;
     const data = { ...parsed, stale: false };
     cache.set(url, { at: Date.now(), data });
     status.record('headlines', { ok: true, ms: Date.now() - t0 });
@@ -135,6 +121,51 @@ async function fetchHeadlines(settings) {
     if (hit) return { ...hit.data, stale: true };
     return null;
   }
+}
+
+// settings: { source: 'news'|'rss'|'hn', newsSource, feedUrl, feedUrls, hnFeed }
+// `feedUrls` (extra RSS URLs) merge with the primary source round-robin,
+// so one tile can interleave e.g. BBC + a personal blog + HN.
+async function fetchHeadlines(settings) {
+  const s = settings || {};
+  let url, isHn = false, label = null;
+  if (s.source === 'hn') {
+    url = HN_FEEDS[s.hnFeed] || HN_FEEDS.top;
+    isHn = true;
+    label = 'Hacker News';
+  } else if (s.source === 'news') {
+    url = NEWS_FEEDS[s.newsSource] || NEWS_FEEDS.bbc;
+    label = NEWS_LABELS[s.newsSource] || null;
+  } else {
+    url = typeof s.feedUrl === 'string' ? s.feedUrl.trim() : '';
+    if (!/^https?:\/\//i.test(url)) url = '';
+  }
+  const extras = Array.isArray(s.feedUrls)
+    ? s.feedUrls.map(u => String(u || '').trim()).filter(u => /^https?:\/\//i.test(u) && u !== url)
+    : [];
+  if (!url && !extras.length) return null;
+
+  const feeds = (await Promise.all([
+    url ? fetchOneFeed(url, isHn, label) : null,
+    ...extras.map(u => fetchOneFeed(u, false, null))
+  ])).filter(f => f && Array.isArray(f.items) && f.items.length);
+  if (!feeds.length) return null;
+  if (feeds.length === 1) return feeds[0];
+
+  // Round-robin interleave keeps sources balanced regardless of feed size.
+  const items = [];
+  for (let i = 0; items.length < 24; i++) {
+    let added = false;
+    for (const f of feeds) {
+      if (f.items[i]) { items.push(f.items[i]); added = true; }
+    }
+    if (!added) break;
+  }
+  return {
+    source: `${feeds[0].source || 'feeds'} +${feeds.length - 1}`,
+    items,
+    stale: feeds.some(f => f.stale)
+  };
 }
 
 module.exports = { fetchHeadlines };

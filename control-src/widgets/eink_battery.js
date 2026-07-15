@@ -54,6 +54,28 @@ export const def = {
 
 // Friendly relative age: "2m", "3h", "1d", "5d". Returns null when the
 // battery payload has no timestamp.
+// Least-squares slope over the rolling history (~2 days) → days until
+// empty at the current discharge rate. null when charging, flat, or too
+// few points to trust.
+function daysLeftEstimate(hist) {
+  const pts = (Array.isArray(hist) ? hist : [])
+    .filter(p => p && Number.isFinite(p.pct) && Number.isFinite(p.at));
+  if (pts.length < 6) return null;
+  const t0 = pts[0].at;
+  let sx = 0, sy = 0, sxx = 0, sxy = 0;
+  for (const p of pts) {
+    const x = (p.at - t0) / 86400000;
+    sx += x; sy += p.pct; sxx += x * x; sxy += x * p.pct;
+  }
+  const n = pts.length;
+  const denom = n * sxx - sx * sx;
+  if (!denom) return null;
+  const slope = (n * sxy - sx * sy) / denom; // pct per day
+  if (slope >= -0.5) return null;            // charging or ~flat
+  const days = pts[n - 1].pct / -slope;
+  return (Number.isFinite(days) && days > 0 && days <= 365) ? days : null;
+}
+
 function ageLabel(at) {
   if (!Number.isFinite(at)) return null;
   const mins = Math.max(0, Math.round((Date.now() - at) / 60000));
@@ -158,6 +180,10 @@ export function render(ctx) {
     const chart = series.length >= 2
       ? `<div class="eink-batt-trend-chart${low}">${sparkSvg(series, false, niceDomain(series, 20, 0, 100))}</div>`
       : bar;
+    const eta = daysLeftEstimate(hist);
+    const etaHtml = eta != null
+      ? `<div class="eink-batt-eta${semRed(s, eta <= 3)}">≈ ${eta < 1 ? '<1' : Math.round(eta)}d left</div>`
+      : '';
     return `
       <div class="eink-batt eink-batt-trend">
         <div class="eink-batt-trend-head">
@@ -165,6 +191,7 @@ export function render(ctx) {
           ${pctBlock}
         </div>
         ${chart}
+        ${etaHtml}
       </div>
     `;
   }

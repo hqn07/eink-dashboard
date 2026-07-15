@@ -2,7 +2,7 @@ import React from 'react';
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, TypographyFields, FormSection, defaults = {} } = fields;
+  const { TextField, CsvField, TypographyFields, FormSection, defaults = {} } = fields;
   const source = (v.source === 'rss' || v.source === 'news') ? v.source : 'hn';
   return (
     <>
@@ -60,6 +60,14 @@ export function Form({ values, patch, onChange, fields }) {
             help="Any public RSS 2.0 / Atom / RSS 1.0 feed."
           />
         )}
+        <CsvField
+          label="Extra feeds (URLs, comma-separated)"
+          value={v.feedUrls || []}
+          defaultValue={defaults.feedUrls}
+          onCommit={(arr) => patch({ feedUrls: arr })}
+          placeholder="https://…/rss.xml, https://…/atom.xml"
+          help="Merged round-robin with the source above, so one tile interleaves several feeds."
+        />
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
           Max items ({Number.isFinite(v.count) ? v.count : 6})
           <input
