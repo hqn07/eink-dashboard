@@ -37,6 +37,7 @@ export const def = {
   defaults: () => ({
     icalUrls: [],
     disabledFeeds: [],   // URL strings currently muted (server skips fetch)
+    localEvents: [],     // quick events typed into the tile: {title, date, time?}
     title: '',
     variant: 'trmnl',    // 'trmnl' | 'list' | 'strip' | 'month'
     density: 'auto',     // 'auto' | 'compact' | 'standard' | 'rich'
@@ -51,10 +52,11 @@ export function render(ctx) {
   const { events, cfg, settings, cellW, cellH, density } = ctx;
   const s = settings || {};
   const urls = collectUrls(settings, cfg);
+  const hasLocals = Array.isArray(s.localEvents) && s.localEvents.some(e => e && e.title);
   const titleLabel = (typeof s.title === 'string' && s.title.trim())
     ? s.title.trim()
     : 'UPCOMING';
-  if (!urls.length) return placeholder(titleLabel, 'Add a calendar feed', 'calendar', { cellW, cellH }, 'setup');
+  if (!urls.length && !hasLocals) return placeholder(titleLabel, 'Add a feed or a quick event', 'calendar', { cellW, cellH }, 'setup');
   const all = events || [];
   if (!all.length) return placeholder(titleLabel, 'No events in the next 14 days', 'calendar', { cellW, cellH }, 'empty');
   // variant wins; legacy tiles fall back to settings.viewMode, then the

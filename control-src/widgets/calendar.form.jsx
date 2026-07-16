@@ -91,6 +91,31 @@ export function Form({ values, patch, onChange, fields }) {
             </>
           )}
         />
+        <ListEditor
+          label="Quick events (no calendar app needed)"
+          items={v.localEvents || []}
+          onChange={(items) => patch({ localEvents: items })}
+          blank={{ title: '', date: '', time: '' }}
+          addLabel="Add quick event"
+          help="Typed right here, merged with the feeds above. Leave time empty for all-day. Past events drop off automatically."
+          renderRow={(it, set) => (
+            <div style={{ display: 'flex', gap: 6, flex: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+              <input type="text"
+                value={it.title || ''}
+                placeholder="Pick up package"
+                onChange={e => set({ title: e.target.value })}
+                style={{ flex: '1 1 140px' }} />
+              <input type="date"
+                value={it.date || ''}
+                onChange={e => set({ date: e.target.value })}
+                style={{ width: 130 }} />
+              <input type="time"
+                value={it.time || ''}
+                onChange={e => set({ time: e.target.value })}
+                style={{ width: 100 }} />
+            </div>
+          )}
+        />
         {urls.length > 1 && (
           <div style={{ marginTop: 8 }}>
             <div className="wsm-field-label">Active feeds</div>

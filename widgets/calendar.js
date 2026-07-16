@@ -187,4 +187,36 @@ function sectionFor(d) {
   return 'LATER';
 }
 
-module.exports = { fetchEvents };
+// Quick events typed straight into the widget's settings — no external
+// calendar involved. Rows are { title, date: 'YYYY-MM-DD', time?: 'HH:MM' }.
+// Times parse in the server's local timezone, same convention as alarms
+// (set TZ on Railway). Expiry mirrors the feed: timed events drop once
+// their start passes; date-only events survive until the day rolls over.
+function localEventsToEvents(list) {
+  const out = [];
+  const now = new Date();
+  const startOfToday = new Date(now); startOfToday.setHours(0, 0, 0, 0);
+  for (const row of Array.isArray(list) ? list : []) {
+    if (!row || typeof row.title !== 'string' || !row.title.trim()) continue;
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(row.date || '').trim());
+    if (!m) continue;
+    const t = /^(\d{1,2}):(\d{2})$/.exec(String(row.time || '').trim());
+    const isAllDay = !t;
+    const start = new Date(+m[1], +m[2] - 1, +m[3], t ? +t[1] : 0, t ? +t[2] : 0);
+    if (isNaN(start.getTime())) continue;
+    if (start < (isAllDay ? startOfToday : now)) continue;
+    out.push({
+      title: row.title.trim(),
+      start,
+      startISO: start.toISOString(),
+      endISO: null,
+      startLabel: isAllDay ? 'ALL DAY' : formatEventTime(start),
+      dayLabel: formatEventDay(start),
+      section: sectionFor(start),
+      isAllDay
+    });
+  }
+  return out;
+}
+
+module.exports = { fetchEvents, localEventsToEvents };
