@@ -48,16 +48,95 @@ export const def = {
   })
 };
 
+// ---- Quick events (settings.localEvents) ----------------------------
+// Expanded at render time on every surface, so the editor's modal
+// preview shows an event the moment it's typed — no save/refetch lag.
+// Rows: { title, date: 'YYYY-MM-DD', time?: 'HH:MM', repeat? }.
+
+function fmtLocalTime(d) {
+  let h = d.getHours();
+  const m = d.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12; if (h === 0) h = 12;
+  return `${h}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+function fmtLocalDay(d) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const evDay = new Date(d); evDay.setHours(0, 0, 0, 0);
+  const diff = Math.round((evDay - today) / 86400000);
+  if (diff === 0) return 'TODAY';
+  if (diff === 1) return 'TMRW';
+  return DAY_INITIALS[d.getDay()];
+}
+function localSection(d) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const evDay = new Date(d); evDay.setHours(0, 0, 0, 0);
+  const diff = Math.round((evDay - today) / 86400000);
+  if (diff === 0) return 'TODAY';
+  if (diff === 1) return 'TOMORROW';
+  if (diff < 7)   return 'THIS WEEK';
+  return 'LATER';
+}
+
+export function expandLocalEvents(list) {
+  const out = [];
+  const now = new Date();
+  const startOfToday = new Date(now); startOfToday.setHours(0, 0, 0, 0);
+  const horizon = new Date(now.getTime() + 14 * 24 * 3600 * 1000);
+  for (const row of Array.isArray(list) ? list : []) {
+    if (!row || typeof row.title !== 'string' || !row.title.trim()) continue;
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(row.date || '').trim());
+    if (!m) continue;
+    const t = /^(\d{1,2}):(\d{2})$/.exec(String(row.time || '').trim());
+    const isAllDay = !t;
+    const anchor = new Date(+m[1], +m[2] - 1, +m[3], t ? +t[1] : 0, t ? +t[2] : 0);
+    if (isNaN(anchor.getTime())) continue;
+    const repeat = String(row.repeat || 'none');
+    const cutoff = isAllDay ? startOfToday : now;
+    const d = new Date(anchor);
+    const periodDays = { daily: 1, weekdays: 1, weekly: 7, biweekly: 14 }[repeat];
+    if (periodDays && d < cutoff) {
+      const behind = Math.floor((cutoff - d) / (periodDays * 86400000));
+      if (behind > 0) d.setDate(d.getDate() + behind * periodDays);
+    }
+    const occurrences = [];
+    for (let i = 0; i < 800 && d <= horizon; i++) {
+      const weekdayOk = repeat !== 'weekdays' || (d.getDay() >= 1 && d.getDay() <= 5);
+      if (d >= cutoff && weekdayOk) occurrences.push(new Date(d));
+      if (repeat === 'none') break;
+      if (repeat === 'daily' || repeat === 'weekdays') d.setDate(d.getDate() + 1);
+      else if (repeat === 'weekly') d.setDate(d.getDate() + 7);
+      else if (repeat === 'biweekly') d.setDate(d.getDate() + 14);
+      else if (repeat === 'monthly') d.setMonth(d.getMonth() + 1);
+      else if (repeat === 'yearly') d.setFullYear(d.getFullYear() + 1);
+      if (occurrences.length >= 20) break;
+    }
+    for (const start of occurrences) {
+      out.push({
+        title: row.title.trim(),
+        startISO: start.toISOString(),
+        endISO: null,
+        startLabel: isAllDay ? 'ALL DAY' : fmtLocalTime(start),
+        dayLabel: fmtLocalDay(start),
+        section: localSection(start),
+        isAllDay
+      });
+    }
+  }
+  return out;
+}
+
 export function render(ctx) {
   const { events, cfg, settings, cellW, cellH, density } = ctx;
   const s = settings || {};
   const urls = collectUrls(settings, cfg);
-  const hasLocals = Array.isArray(s.localEvents) && s.localEvents.some(e => e && e.title);
+  const locals = expandLocalEvents(s.localEvents);
   const titleLabel = (typeof s.title === 'string' && s.title.trim())
     ? s.title.trim()
     : 'UPCOMING';
-  if (!urls.length && !hasLocals) return placeholder(titleLabel, 'Add a feed or a quick event', 'calendar', { cellW, cellH }, 'setup');
-  const all = events || [];
+  if (!urls.length && !locals.length) return placeholder(titleLabel, 'Add a feed or a quick event', 'calendar', { cellW, cellH }, 'setup');
+  const all = [...(events || []), ...locals]
+    .sort((a, b) => String(a.startISO || '').localeCompare(String(b.startISO || '')));
   if (!all.length) return placeholder(titleLabel, 'No events in the next 14 days', 'calendar', { cellW, cellH }, 'empty');
   // variant wins; legacy tiles fall back to settings.viewMode, then the
   // ctx-resolved default. (buildTileCtx already maps settings.variant →
