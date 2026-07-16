@@ -24,6 +24,7 @@ export const def = {
     trmnl: { label: 'TRMNL — title-bar agenda' },
     list:  { label: 'List — agenda rows' },
     strip: { label: 'Strip — 7-day horizontal' },
+    strip5: { label: 'Strip — 5-day, roomier text' },
     month: { label: 'Month — full grid' }
   },
   defaultVariant: 'trmnl',
@@ -31,7 +32,7 @@ export const def = {
   // the render falls back to the list view regardless of variant.
   degrade: {
     compact: ['month'],
-    tiny:    ['month', 'strip']
+    tiny:    ['month', 'strip', 'strip5']
   },
   defaults: () => ({
     icalUrls: [],
@@ -69,7 +70,8 @@ export function render(ctx) {
   // when the tile is too short to fit any grid row at all.
   if (mode === 'trmnl') return renderTrmnl(all, settings, titleLabel, cellW, cellH, density);
   if (mode === 'month' && cellW >= 7 && cellH >= 4) return renderMonth(all, titleLabel, settings, cellH);
-  if (mode === 'strip' && cellW >= 7 && cellH >= 2) return renderStrip(all, titleLabel, cellH, settings);
+  if (mode === 'strip' && cellW >= 7 && cellH >= 2) return renderStrip(all, titleLabel, cellH, settings, 7);
+  if (mode === 'strip5' && cellW >= 5 && cellH >= 2) return renderStrip(all, titleLabel, cellH, settings, 5);
   return renderList(all, settings, titleLabel, cellW, cellH, density);
 }
 
@@ -183,12 +185,12 @@ function eventDate(ev) {
 
 const DAY_INITIALS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
-function renderStrip(events, titleLabel, cellH, settings) {
+function renderStrip(events, titleLabel, cellH, settings, dayCount = 7) {
   const s = settings || {};
   const showTime = s.showTime !== false;
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const days = [];
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < dayCount; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
     days.push(d);
@@ -202,7 +204,7 @@ function renderStrip(events, titleLabel, cellH, settings) {
     if (!byDay[k]) byDay[k] = [];
     byDay[k].push(ev);
   };
-  const windowEnd = new Date(today); windowEnd.setDate(today.getDate() + 7);
+  const windowEnd = new Date(today); windowEnd.setDate(today.getDate() + dayCount);
   for (const ev of events) {
     const start = eventDate(ev);
     put(start, ev);
@@ -218,7 +220,9 @@ function renderStrip(events, titleLabel, cellH, settings) {
   // to --strip-clamp text lines each (tall tiles get more), so the event
   // budget assumes worst-case wrapped height.
   const linesPer = cellH < 5 ? 1 : cellH < 8 ? 2 : 3;
-  const clampLines = cellH < 5 ? 1 : cellH < 8 ? 2 : 4;
+  // Wider 5-day columns wrap less, so titles need fewer clamped lines —
+  // but each event can safely show one more line of text.
+  const clampLines = (cellH < 5 ? 1 : cellH < 8 ? 2 : 4) + (dayCount <= 5 ? 1 : 0);
   const cell = (d, i) => {
     const k = dayKey(d);
     const evs = byDay[k] || [];
@@ -253,7 +257,7 @@ function renderStrip(events, titleLabel, cellH, settings) {
   return `
     <div class="widget widget-cal widget-cal-strip">
       <div class="widget-title">${escapeHtml(titleLabel)}</div>
-      <div class="cal-strip" style="--strip-clamp:${clampLines}">
+      <div class="cal-strip" style="--strip-clamp:${clampLines};--strip-days:${dayCount}">
         ${days.map(cell).join('')}
       </div>
     </div>

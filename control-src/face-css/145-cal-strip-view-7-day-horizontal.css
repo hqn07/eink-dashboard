@@ -2,7 +2,7 @@
 .widget-cal-strip { display: flex; flex-direction: column; height: 100%; }
 .cal-strip {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(var(--strip-days, 7), 1fr);
   gap: var(--face-gap-4);
   flex: 1; min-height: 0;
 }
