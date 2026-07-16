@@ -80,7 +80,10 @@ function expandEvent(ev, windowStart, horizon) {
   return out;
 }
 
-async function fetchEvents(icalUrl, limit = 5) {
+// limit guards against pathological feeds, not display — each view caps
+// its own rows. 5 used to starve the 7-day strip (five nearest events =
+// ~3 days, the rest of the week rendered empty).
+async function fetchEvents(icalUrl, limit = 50) {
   if (!icalUrl) return [];
 
   const now = Date.now();
