@@ -151,8 +151,8 @@ export function render(ctx) {
   // when the tile is too short to fit any grid row at all.
   if (mode === 'trmnl') return renderTrmnl(all, settings, titleLabel, cellW, cellH, density);
   if (mode === 'month' && cellW >= 7 && cellH >= 4) return renderMonth(all, titleLabel, settings, cellH);
-  if (mode === 'strip' && cellW >= 7 && cellH >= 2) return renderStrip(all, titleLabel, cellH, settings, 7);
-  if (mode === 'strip5' && cellW >= 5 && cellH >= 2) return renderStrip(all, titleLabel, cellH, settings, 5);
+  if (mode === 'strip' && cellW >= 7 && cellH >= 2) return renderStrip(all, titleLabel, cellW, cellH, settings, 7);
+  if (mode === 'strip5' && cellW >= 5 && cellH >= 2) return renderStrip(all, titleLabel, cellW, cellH, settings, 5);
   return renderList(all, settings, titleLabel, cellW, cellH, density);
 }
 
@@ -266,7 +266,7 @@ function eventDate(ev) {
 
 const DAY_INITIALS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
-function renderStrip(events, titleLabel, cellH, settings, dayCount = 7) {
+function renderStrip(events, titleLabel, cellW, cellH, settings, dayCount = 7) {
   const s = settings || {};
   const showTime = s.showTime !== false;
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -300,19 +300,36 @@ function renderStrip(events, titleLabel, cellH, settings, dayCount = 7) {
   // Wider 5-day columns wrap less, so titles need fewer clamped lines —
   // but each event can safely show one more line of text.
   const clampLines = (cellH < 5 ? 1 : cellH < 8 ? 2 : 4) + (dayCount <= 5 ? 1 : 0);
-  // Events per day from actual pixel budget, not a static tier — a tall
-  // column used to cap at 3 and print "+N" over inches of white space.
-  // cell row = 40px; ~64px goes to widget title + day header; worst-case
-  // event block = clamped title lines at 11px/1.15 + gap + padding.
+  // Per-day fill budget from real pixels. Estimating every event at the
+  // full clamp height under-filled columns of short titles (+1 above
+  // inches of white), so estimate each event from its own title length
+  // and greedy-fill until the column is actually out of room.
   const availPx = (cellH || 2) * 40 - 64;
-  const eventPx = clampLines * 13 + 12;
-  const linesPer = Math.max(1, Math.floor(availPx / eventPx));
+  const colPx = Math.max(40, (cellW || 24) * (800 / 24) / dayCount - 14);
+  const charsPerLine = Math.max(6, Math.floor(colPx / 7.2)); // 11px mono + tracking
+  const estPx = (ev) => {
+    const timeLen = ev.isAllDay || !ev.startLabel ? 0 : ev.startLabel.length + 1;
+    const lines = Math.min(clampLines, Math.max(1, Math.ceil((timeLen + (ev.title || '').length) / charsPerLine)));
+    return lines * 13 + 12; // line-height + gap/padding
+  };
+  const fitCount = (evs) => {
+    let used = 0;
+    for (let i = 0; i < evs.length; i++) {
+      const h = estPx(evs[i]);
+      // Reserve one text line for the +N marker if anything would remain.
+      const reserve = i < evs.length - 1 ? 14 : 0;
+      if (used + h + reserve > availPx) return Math.max(1, i);
+      used += h;
+    }
+    return evs.length;
+  };
   const cell = (d, i) => {
     const k = dayKey(d);
     const evs = byDay[k] || [];
     const isToday = i === 0;
     const dayNum = d.getDate();
     const dayName = DAY_INITIALS[d.getDay()];
+    const linesPer = fitCount(evs);
     const lines = evs.slice(0, linesPer).map(ev => {
       // Timed events starting inside 24h ride the red plane (semantic
       // red — greyscales to dark on the BW panel). Continuation days of
