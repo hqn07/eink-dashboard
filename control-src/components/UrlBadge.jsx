@@ -13,7 +13,9 @@ function classify(url) {
   if (!s) return 'empty';
   try {
     const u = new URL(s);
-    if (u.protocol !== 'http:' && u.protocol !== 'https:') return 'invalid';
+    // webcal:// is Apple's subscribe scheme for iCal feeds — the server
+    // fetches it over https.
+    if (u.protocol !== 'http:' && u.protocol !== 'https:' && u.protocol !== 'webcal:') return 'invalid';
     return 'valid';
   } catch {
     return 'invalid';

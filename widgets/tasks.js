@@ -86,7 +86,8 @@ async function fetchTasks(settings) {
   const s = settings || {};
   const limit = Number.isFinite(s.count) ? s.count : 8;
   const token = typeof s.token === 'string' ? s.token.trim() : '';
-  const url = typeof s.icalUrl === 'string' ? s.icalUrl.trim() : '';
+  const url = (typeof s.icalUrl === 'string' ? s.icalUrl.trim() : '')
+    .replace(/^webcal:\/\//i, 'https://');
   const wantTodoist = (s.source === 'todoist' || s.source === 'both') && token;
   const wantIcal = (s.source === 'ical' || s.source === 'both') && /^https?:\/\//i.test(url);
   if (!wantTodoist && !wantIcal) return null;

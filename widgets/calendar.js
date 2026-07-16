@@ -85,6 +85,8 @@ function expandEvent(ev, windowStart, horizon) {
 // ~3 days, the rest of the week rendered empty).
 async function fetchEvents(icalUrl, limit = 50) {
   if (!icalUrl) return [];
+  // Apple's "Subscribe" links use webcal:// — plain HTTP(S) underneath.
+  icalUrl = String(icalUrl).replace(/^webcal:\/\//i, 'https://');
 
   const now = Date.now();
   const hit = cache.get(icalUrl);
