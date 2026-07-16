@@ -216,13 +216,16 @@ function renderStrip(events, titleLabel, cellH, settings, dayCount = 7) {
       }
     }
   }
-  // How many events fit per cell depends on cell height. Titles wrap up
-  // to --strip-clamp text lines each (tall tiles get more), so the event
-  // budget assumes worst-case wrapped height.
-  const linesPer = cellH < 5 ? 1 : cellH < 8 ? 2 : 3;
   // Wider 5-day columns wrap less, so titles need fewer clamped lines —
   // but each event can safely show one more line of text.
   const clampLines = (cellH < 5 ? 1 : cellH < 8 ? 2 : 4) + (dayCount <= 5 ? 1 : 0);
+  // Events per day from actual pixel budget, not a static tier — a tall
+  // column used to cap at 3 and print "+N" over inches of white space.
+  // cell row = 40px; ~64px goes to widget title + day header; worst-case
+  // event block = clamped title lines at 11px/1.15 + gap + padding.
+  const availPx = (cellH || 2) * 40 - 64;
+  const eventPx = clampLines * 13 + 12;
+  const linesPer = Math.max(1, Math.floor(availPx / eventPx));
   const cell = (d, i) => {
     const k = dayKey(d);
     const evs = byDay[k] || [];
