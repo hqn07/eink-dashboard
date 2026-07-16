@@ -97,7 +97,7 @@ export function Form({ values, patch, onChange, fields }) {
           onChange={(items) => patch({ localEvents: items })}
           blank={{ title: '', date: '', time: '' }}
           addLabel="Add quick event"
-          help="Typed right here, merged with the feeds above. Leave time empty for all-day. Past events drop off automatically."
+          help="Typed right here, merged with the feeds above. Leave time empty for all-day. Repeats expand like a real calendar; past one-offs drop automatically."
           renderRow={(it, set) => (
             <div style={{ display: 'flex', gap: 6, flex: 1, alignItems: 'center', flexWrap: 'wrap' }}>
               <input type="text"
@@ -113,6 +113,19 @@ export function Form({ values, patch, onChange, fields }) {
                 value={it.time || ''}
                 onChange={e => set({ time: e.target.value })}
                 style={{ width: 100 }} />
+              <select
+                value={it.repeat || 'none'}
+                onChange={e => set({ repeat: e.target.value })}
+                style={{ width: 110 }}
+              >
+                <option value="none">Once</option>
+                <option value="daily">Daily</option>
+                <option value="weekdays">Weekdays</option>
+                <option value="weekly">Weekly</option>
+                <option value="biweekly">Every 2 wks</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
             </div>
           )}
         />

@@ -196,25 +196,57 @@ function localEventsToEvents(list) {
   const out = [];
   const now = new Date();
   const startOfToday = new Date(now); startOfToday.setHours(0, 0, 0, 0);
+  const horizon = new Date(now.getTime() + 14 * 24 * 3600 * 1000);
   for (const row of Array.isArray(list) ? list : []) {
     if (!row || typeof row.title !== 'string' || !row.title.trim()) continue;
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(row.date || '').trim());
     if (!m) continue;
     const t = /^(\d{1,2}):(\d{2})$/.exec(String(row.time || '').trim());
     const isAllDay = !t;
-    const start = new Date(+m[1], +m[2] - 1, +m[3], t ? +t[1] : 0, t ? +t[2] : 0);
-    if (isNaN(start.getTime())) continue;
-    if (start < (isAllDay ? startOfToday : now)) continue;
-    out.push({
-      title: row.title.trim(),
-      start,
-      startISO: start.toISOString(),
-      endISO: null,
-      startLabel: isAllDay ? 'ALL DAY' : formatEventTime(start),
-      dayLabel: formatEventDay(start),
-      section: sectionFor(start),
-      isAllDay
-    });
+    const anchor = new Date(+m[1], +m[2] - 1, +m[3], t ? +t[1] : 0, t ? +t[2] : 0);
+    if (isNaN(anchor.getTime())) continue;
+    const repeat = String(row.repeat || 'none');
+    const cutoff = isAllDay ? startOfToday : now;
+
+    // Expand occurrences from the anchor into the same 14-day window the
+    // feed uses. 'none' yields at most the anchor itself.
+    const occurrences = [];
+    const step = (d) => {
+      if (repeat === 'daily') d.setDate(d.getDate() + 1);
+      else if (repeat === 'weekdays') d.setDate(d.getDate() + 1);
+      else if (repeat === 'weekly') d.setDate(d.getDate() + 7);
+      else if (repeat === 'biweekly') d.setDate(d.getDate() + 14);
+      else if (repeat === 'monthly') d.setMonth(d.getMonth() + 1);
+      else if (repeat === 'yearly') d.setFullYear(d.getFullYear() + 1);
+    };
+    const d = new Date(anchor);
+    // Fast-forward day-based repeats so an anchor years in the past
+    // doesn't burn the iteration cap before reaching the window.
+    const periodDays = { daily: 1, weekdays: 1, weekly: 7, biweekly: 14 }[repeat];
+    if (periodDays && d < cutoff) {
+      const behind = Math.floor((cutoff - d) / (periodDays * 24 * 3600 * 1000));
+      if (behind > 0) d.setDate(d.getDate() + behind * periodDays);
+    }
+    for (let i = 0; i < 800 && d <= horizon; i++) {
+      const weekdayOk = repeat !== 'weekdays' || (d.getDay() >= 1 && d.getDay() <= 5);
+      if (d >= cutoff && weekdayOk) occurrences.push(new Date(d));
+      if (repeat === 'none') break;
+      step(d);
+      if (occurrences.length >= 20) break;
+    }
+
+    for (const start of occurrences) {
+      out.push({
+        title: row.title.trim(),
+        start,
+        startISO: start.toISOString(),
+        endISO: null,
+        startLabel: isAllDay ? 'ALL DAY' : formatEventTime(start),
+        dayLabel: formatEventDay(start),
+        section: sectionFor(start),
+        isAllDay
+      });
+    }
   }
   return out;
 }
