@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ICAL_PRESETS } from './_ical_presets.js';
 import SearchableSelect from '../components/SearchableSelect.jsx';
+import QuickEventsEditor from '../components/QuickEventsEditor.jsx';
 import UrlBadge from '../components/UrlBadge.jsx';
 
 // Presets cover the three view modes so the thumbnails actually differ
@@ -91,43 +92,10 @@ export function Form({ values, patch, onChange, fields }) {
             </>
           )}
         />
-        <ListEditor
-          label="Quick events (no calendar app needed)"
-          items={v.localEvents || []}
+        <div className="wsm-field-label" style={{ marginTop: 10 }}>Quick events (no calendar app needed)</div>
+        <QuickEventsEditor
+          value={v.localEvents || []}
           onChange={(items) => patch({ localEvents: items })}
-          blank={{ title: '', date: '', time: '' }}
-          addLabel="Add quick event"
-          help="Typed right here, merged with the feeds above. Leave time empty for all-day. Repeats expand like a real calendar; past one-offs drop automatically."
-          renderRow={(it, set) => (
-            <div style={{ display: 'flex', gap: 6, flex: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-              <input type="text"
-                value={it.title || ''}
-                placeholder="Pick up package"
-                onChange={e => set({ title: e.target.value })}
-                style={{ flex: '1 1 140px' }} />
-              <input type="date"
-                value={it.date || ''}
-                onChange={e => set({ date: e.target.value })}
-                style={{ width: 130 }} />
-              <input type="time"
-                value={it.time || ''}
-                onChange={e => set({ time: e.target.value })}
-                style={{ width: 100 }} />
-              <select
-                value={it.repeat || 'none'}
-                onChange={e => set({ repeat: e.target.value })}
-                style={{ width: 110 }}
-              >
-                <option value="none">Once</option>
-                <option value="daily">Daily</option>
-                <option value="weekdays">Weekdays</option>
-                <option value="weekly">Weekly</option>
-                <option value="biweekly">Every 2 wks</option>
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly</option>
-              </select>
-            </div>
-          )}
         />
         {urls.length > 1 && (
           <div style={{ marginTop: 8 }}>
