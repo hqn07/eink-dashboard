@@ -1762,6 +1762,35 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   text-transform: none;
 }
 .palette-search:focus { outline: var(--bw-frame) solid var(--ink); outline-offset: -1px; }
+
+/* Category filter chips — jump to a section without scrolling the full
+ * 31-widget list. Sticky under the search so they stay reachable. */
+.palette-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px 4px;
+}
+.palette-chip {
+  padding: 3px 9px;
+  border: var(--bw-hair) solid var(--line);
+  background: var(--bg);
+  color: var(--mute, #666);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs, 11px);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+.palette-chip:hover { color: var(--ink); border-color: var(--ink); }
+.palette-chip.is-active {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.palette-chip:focus-visible { outline: var(--bw-frame) solid var(--ink); outline-offset: 2px; }
 .palette-tile {
   display: flex;
   justify-content: space-between;

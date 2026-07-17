@@ -83,6 +83,9 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
   // All items in `layout` are on the canvas (no more enabled flag).
   // Filter for the pool — narrows the list of templates by label.
   const [poolFilter, setPoolFilter] = useState('');
+  // Active category chip ('' = all). Lets the user jump to a section
+  // instead of scrolling the full 31-widget list.
+  const [poolCat, setPoolCat] = useState('');
   // Pool collapsed by default — saves vertical real estate now that the
   // editor canvas is always visible (no more separate edit mode).
   const [poolOpen, setPoolOpen] = useState(false);
@@ -145,15 +148,31 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
   // The pool is a fixed list of widget templates from the registry —
   // each card creates a NEW instance when added.
   const enabled = layout;
-  const palette = poolFilter.trim()
-    ? WIDGET_REGISTRY.filter(d => {
-        const q = poolFilter.toLowerCase();
-        return d.label.toLowerCase().includes(q) ||
-          d.id.toLowerCase().includes(q) ||
-          (d.blurb || '').toLowerCase().includes(q) ||
-          (d.category || '').toLowerCase().includes(q);
-      })
-    : WIDGET_REGISTRY;
+  const palette = WIDGET_REGISTRY.filter(d => {
+    if (poolCat && (d.category || 'Text') !== poolCat) return false;
+    const q = poolFilter.trim().toLowerCase();
+    if (!q) return true;
+    return d.label.toLowerCase().includes(q) ||
+      d.id.toLowerCase().includes(q) ||
+      (d.blurb || '').toLowerCase().includes(q) ||
+      (d.category || '').toLowerCase().includes(q) ||
+      (d.keywords || '').toLowerCase().includes(q);
+  });
+
+  // Category sections to render, in POOL_CATEGORIES order but always
+  // including any stray category present in the data (so a widget whose
+  // category isn't listed can never silently disappear from the pool —
+  // that bug hid art/chess/stocks). `allCats` drives the filter chips and
+  // stays stable regardless of the active search/category.
+  const catsIn = (list) => {
+    const present = new Set(list.map(d => d.category || 'Text'));
+    return [
+      ...POOL_CATEGORIES.filter(c => present.has(c)),
+      ...[...present].filter(c => !POOL_CATEGORIES.includes(c))
+    ];
+  };
+  const orderedCats = catsIn(palette);
+  const allCats = catsIn(WIDGET_REGISTRY);
 
   // Editor canvas is sized to the full dashboard aspect. Header + footer
   // chrome was removed in favor of the text widget (bar variant); widgets now own
@@ -632,18 +651,37 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
             <span className="badge">{palette.length}</span>
           </div>
         )}
+        {poolOpen && (
+          <div className="palette-chips" role="tablist" aria-label="Widget categories">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={!poolCat}
+              className={`palette-chip ${!poolCat ? 'is-active' : ''}`}
+              onClick={() => setPoolCat('')}
+            >All</button>
+            {allCats.map(cat => (
+              <button
+                key={cat}
+                type="button"
+                role="tab"
+                aria-selected={poolCat === cat}
+                className={`palette-chip ${poolCat === cat ? 'is-active' : ''}`}
+                onClick={() => setPoolCat(c => c === cat ? '' : cat)}
+              >{cat}</button>
+            ))}
+          </div>
+        )}
         {poolOpen && palette.length === 0 && (
           <div className="terminal-line" style={{ padding: 12 }}>
             &gt; NO WIDGETS MATCH "{poolFilter}"
           </div>
         )}
-        {poolOpen && POOL_CATEGORIES
-          .filter(cat => palette.some(d => d.category === cat))
-          .map(cat => (
+        {poolOpen && orderedCats.map(cat => (
         <div className="palette-section" key={cat}>
           <div className="palette-section-head">{cat}</div>
           <div className="palette-grid">
-          {palette.filter(d => d.category === cat).map(def => {
+          {palette.filter(d => (d.category || 'Text') === cat).map(def => {
             const sizeKey = smallestSizeKey(def);
             const { w, h } = def.sizes[sizeKey];
             // Pool tiles render with frozen demo data so a brand-new

@@ -32,43 +32,51 @@ export const SCREENS = [1, 2];
 // section a widget lands in and the one-line blurb shown on its card.
 // Lives here (not on the def) because SSR never needs it; only the
 // editor pool does. `POOL_CATEGORIES` fixes the section order.
-export const POOL_CATEGORIES = ['Weather', 'Time', 'Calendar', 'Media', 'News', 'System', 'Data', 'Text'];
+// Section order for the add-widget pool. Must list EVERY category used in
+// POOL_META below — a widget whose category is missing here used to vanish
+// from the grouped pool entirely (it was still counted in the badge). The
+// render now appends any stray category after these, but keep this in sync
+// so the intended order holds.
+export const POOL_CATEGORIES = ['Weather', 'Time', 'Calendar', 'Media', 'News', 'Money', 'Data', 'System', 'Text', 'Fun'];
+// `keywords` feed the pool search alongside label/id/blurb so synonyms the
+// user is likely to type ("music", "todo", "rss", "btc") find the widget
+// even when they aren't in its name.
 const POOL_META = {
-  weather_hero:     { category: 'Weather',  blurb: 'Current conditions — big temp + icon' },
-  weather_forecast: { category: 'Weather',  blurb: 'Multi-day / hourly outlook' },
-  aqi:              { category: 'Weather',  blurb: 'Air quality index + category' },
-  sun:              { category: 'Weather',  blurb: 'Sunrise / sunset + daylight (no key)' },
-  uv:               { category: 'Weather',  blurb: 'UV index + WHO band (no key)' },
-  clock:            { category: 'Time',     blurb: 'Time + date' },
-  world_clock:      { category: 'Time',     blurb: 'Time across multiple zones' },
-  countdown:        { category: 'Time',     blurb: 'Days until a target date' },
-  progress:         { category: 'Time',     blurb: 'Day / week / month / year % bars' },
-  moon:             { category: 'Time',     blurb: 'Moon phase + illumination' },
-  calendar:         { category: 'Calendar', blurb: 'Upcoming events agenda' },
-  tasks:            { category: 'Calendar', blurb: 'Todoist / iCal to-do list' },
-  transit:          { category: 'Calendar', blurb: 'NYC MTA live arrivals' },
-  mac_nowplaying:   { category: 'Media',    blurb: 'Now playing from your Mac' },
-  photo:            { category: 'Media',    blurb: 'Your image, dithered to 1-bit' },
-  headlines:        { category: 'News',     blurb: 'RSS or Hacker News headlines' },
-  eink_battery:     { category: 'System',   blurb: 'This display’s battery level' },
-  mac_battery:      { category: 'System',   blurb: 'Your Mac’s battery level' },
-  sparkline:        { category: 'Data',     blurb: 'Weather or battery trend line' },
-  fx:               { category: 'Data',     blurb: 'Currency exchange rates (no key)' },
-  crypto:           { category: 'Data',     blurb: 'Crypto prices + 24h change (no key)' },
-  codeactivity:     { category: 'Data',     blurb: 'GitHub contribution heatmap' },
-  text:             { category: 'Text',     blurb: 'Token strip or message card' },
-  art:              { category: 'Fun',      blurb: 'Daily generative pattern — reseeds every morning' },
-  chess:            { category: 'Fun',      blurb: 'Lichess puzzle of the day' },
-  stocks:           { category: 'Money',    blurb: 'Stock/ETF quotes — no API key needed' },
-  quote:            { category: 'Text',     blurb: 'Quote + attribution' },
-  wordofday:        { category: 'Text',     blurb: 'Daily vocabulary word + definition' },
-  webhook:          { category: 'Data',     blurb: 'Push any JSON, see it on the panel' },
-  onthisday:        { category: 'Text',     blurb: 'Historical events for today' },
-  qr:               { category: 'Text',     blurb: 'QR code + caption' }
+  weather_hero:     { category: 'Weather',  blurb: 'Current conditions — big temp + icon', keywords: 'temperature forecast conditions now' },
+  weather_forecast: { category: 'Weather',  blurb: 'Multi-day / hourly outlook', keywords: 'forecast hourly daily rain outlook' },
+  aqi:              { category: 'Weather',  blurb: 'Air quality index + category', keywords: 'air quality pollution pm2.5 smog' },
+  sun:              { category: 'Weather',  blurb: 'Sunrise / sunset + daylight (no key)', keywords: 'sunrise sunset daylight golden hour' },
+  uv:               { category: 'Weather',  blurb: 'UV index + WHO band (no key)', keywords: 'ultraviolet uv sun index' },
+  clock:            { category: 'Time',     blurb: 'Time + date', keywords: 'clock time date hour' },
+  world_clock:      { category: 'Time',     blurb: 'Time across multiple zones', keywords: 'timezone zones world cities utc' },
+  countdown:        { category: 'Time',     blurb: 'Days until a target date', keywords: 'countdown timer days until deadline' },
+  progress:         { category: 'Time',     blurb: 'Day / week / month / year % bars', keywords: 'progress year week percent bars' },
+  moon:             { category: 'Time',     blurb: 'Moon phase + illumination', keywords: 'moon phase lunar illumination' },
+  calendar:         { category: 'Calendar', blurb: 'Upcoming events agenda', keywords: 'events agenda ical schedule appointments' },
+  tasks:            { category: 'Calendar', blurb: 'Todoist / iCal to-do list', keywords: 'todo todoist tasks checklist reminders' },
+  transit:          { category: 'Calendar', blurb: 'NYC MTA live arrivals', keywords: 'transit subway train bus mta arrivals commute' },
+  mac_nowplaying:   { category: 'Media',    blurb: 'Now playing from your Mac', keywords: 'music song spotify apple playing media track album' },
+  photo:            { category: 'Media',    blurb: 'Your image, dithered to 1-bit', keywords: 'photo image picture dither' },
+  headlines:        { category: 'News',     blurb: 'RSS or Hacker News headlines', keywords: 'news rss feed hn hacker headlines atom' },
+  eink_battery:     { category: 'System',   blurb: 'This display’s battery level', keywords: 'battery power display device charge' },
+  mac_battery:      { category: 'System',   blurb: 'Your Mac’s battery level', keywords: 'battery power mac laptop charge' },
+  sparkline:        { category: 'Data',     blurb: 'Weather or battery trend line', keywords: 'trend graph chart line sparkline' },
+  fx:               { category: 'Data',     blurb: 'Currency exchange rates (no key)', keywords: 'currency forex exchange fx usd eur rate' },
+  crypto:           { category: 'Data',     blurb: 'Crypto prices + 24h change (no key)', keywords: 'crypto bitcoin btc eth ethereum coin price' },
+  codeactivity:     { category: 'Data',     blurb: 'GitHub contribution heatmap', keywords: 'github git commits contributions heatmap code' },
+  text:             { category: 'Text',     blurb: 'Token strip or message card', keywords: 'text message token label heading note' },
+  art:              { category: 'Fun',      blurb: 'Daily generative pattern — reseeds every morning', keywords: 'art generative pattern decorative random' },
+  chess:            { category: 'Fun',      blurb: 'Lichess puzzle of the day', keywords: 'chess puzzle lichess board game' },
+  stocks:           { category: 'Money',    blurb: 'Stock/ETF quotes — no API key needed', keywords: 'stock stocks etf ticker market shares finance' },
+  quote:            { category: 'Text',     blurb: 'Quote + attribution', keywords: 'quote quotation saying author' },
+  wordofday:        { category: 'Text',     blurb: 'Daily vocabulary word + definition', keywords: 'word vocabulary definition dictionary' },
+  webhook:          { category: 'Data',     blurb: 'Push any JSON, see it on the panel', keywords: 'webhook json push api custom' },
+  onthisday:        { category: 'Text',     blurb: 'Historical events for today', keywords: 'history historical on this day events anniversary' },
+  qr:               { category: 'Text',     blurb: 'QR code + caption', keywords: 'qr code link url scan' }
 };
 function withPoolMeta(def) {
-  const m = POOL_META[def.id] || { category: 'Text', blurb: '' };
-  return { ...def, category: m.category, blurb: m.blurb };
+  const m = POOL_META[def.id] || { category: 'Text', blurb: '', keywords: '' };
+  return { ...def, category: m.category, blurb: m.blurb, keywords: m.keywords || '' };
 }
 
 export const WIDGET_REGISTRY = [
