@@ -3,6 +3,9 @@ import { ICAL_PRESETS } from './_ical_presets.js';
 import SearchableSelect from '../components/SearchableSelect.jsx';
 import QuickEventsEditor from '../components/QuickEventsEditor.jsx';
 import UrlBadge from '../components/UrlBadge.jsx';
+import SaveFeedButton from '../components/SaveFeedButton.jsx';
+import SavedFeedsManager from '../components/SavedFeedsManager.jsx';
+import { useSavedFeeds } from '../components/saved-feeds-context.js';
 
 // Presets cover the three view modes so the thumbnails actually differ
 // from each other. Each preset commits a full look (view + density +
@@ -23,27 +26,34 @@ const PRESETS = [
 // it must not call hooks).
 function PresetAdder({ v, patch }) {
   const [presetPick, setPresetPick] = useState('');
+  const { feeds } = useSavedFeeds();
   const addPreset = (url) => {
     if (!url) { setPresetPick(''); return; }
     const existing = Array.isArray(v.icalUrls) ? v.icalUrls : [];
     if (!existing.includes(url)) patch({ icalUrls: [...existing, url] });
     setPresetPick('');
   };
+  // "My feeds" leads the list so the user's own saved webcal/ics URLs are
+  // one pick away on every new screen — the whole point of the library.
+  const myGroup = feeds.length ? [{
+    label: 'My feeds',
+    items: feeds.map(f => ({ value: f.url, label: f.name, hint: 'Saved' }))
+  }] : [];
   return (
     <div style={{ marginBottom: 10 }}>
-      <div className="wsm-field-label">Add from preset</div>
+      <div className="wsm-field-label">Add from library</div>
       <div className="wsm-field-help" style={{ marginBottom: 4 }}>
-        Public iCal feeds — search or pick one to append below.
+        Your saved feeds + public presets — search or pick one to append below.
       </div>
       <SearchableSelect
         value={presetPick}
         onChange={addPreset}
-        groups={ICAL_PRESETS.map(g => ({
+        groups={[...myGroup, ...ICAL_PRESETS.map(g => ({
           label: g.group,
           items: g.items.map(it => ({ value: it.url, label: it.name, hint: g.group }))
-        }))}
-        placeholder="— Pick a preset —"
-        ariaLabel="Add iCal preset"
+        }))]}
+        placeholder="— Pick a feed —"
+        ariaLabel="Add iCal feed"
       />
     </div>
   );
@@ -89,9 +99,11 @@ export function Form({ values, patch, onChange, fields }) {
                 onChange={e => set(e.target.value)}
                 style={{ flex: 1 }} />
               <UrlBadge url={typeof it === 'string' ? it : ''} />
+              <SaveFeedButton url={typeof it === 'string' ? it : ''} />
             </>
           )}
         />
+        <SavedFeedsManager />
         <div className="wsm-field-label" style={{ marginTop: 10 }}>Quick events (no calendar app needed)</div>
         <QuickEventsEditor
           value={v.localEvents || []}

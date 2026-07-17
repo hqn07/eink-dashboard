@@ -1,9 +1,38 @@
-import React from 'react';
+import React, { useState } from 'react';
+import SearchableSelect from '../components/SearchableSelect.jsx';
+import SaveFeedButton from '../components/SaveFeedButton.jsx';
+import SavedFeedsManager from '../components/SavedFeedsManager.jsx';
+import { useSavedFeeds } from '../components/saved-feeds-context.js';
+
+// Appends a saved feed URL to the round-robin "extra feeds" list. Lives in
+// its own component because the pure Form body can't call hooks.
+function MyFeedPicker({ feedUrls, onAdd }) {
+  const [pick, setPick] = useState('');
+  const { feeds } = useSavedFeeds();
+  if (!feeds.length) return null;
+  const add = (url) => {
+    if (url && !feedUrls.includes(url)) onAdd([...feedUrls, url]);
+    setPick('');
+  };
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div className="wsm-field-label">Add from My feeds</div>
+      <SearchableSelect
+        value={pick}
+        onChange={add}
+        groups={[{ label: 'My feeds', items: feeds.map(f => ({ value: f.url, label: f.name, hint: 'Saved' })) }]}
+        placeholder="— Pick a saved feed —"
+        ariaLabel="Add saved feed"
+      />
+    </div>
+  );
+}
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
   const { TextField, CsvField, TypographyFields, FormSection, defaults = {} } = fields;
   const source = (v.source === 'rss' || v.source === 'news') ? v.source : 'hn';
+  const feedUrls = Array.isArray(v.feedUrls) ? v.feedUrls : [];
   return (
     <>
       <FormSection title="Feed">
@@ -51,15 +80,21 @@ export function Form({ values, patch, onChange, fields }) {
           </label>
         )}
         {source === 'rss' && (
-          <TextField
-            label="Feed URL"
-            value={v.feedUrl || ''}
-            defaultValue={defaults.feedUrl}
-            onChange={(x) => patch({ feedUrl: x })}
-            placeholder="https://feeds.bbci.co.uk/news/rss.xml"
-            help="Any public RSS 2.0 / Atom / RSS 1.0 feed."
-          />
+          <>
+            <TextField
+              label="Feed URL"
+              value={v.feedUrl || ''}
+              defaultValue={defaults.feedUrl}
+              onChange={(x) => patch({ feedUrl: x })}
+              placeholder="https://feeds.bbci.co.uk/news/rss.xml"
+              help="Any public RSS 2.0 / Atom / RSS 1.0 feed."
+            />
+            <div style={{ margin: '-2px 0 8px' }}>
+              <SaveFeedButton url={v.feedUrl || ''} />
+            </div>
+          </>
         )}
+        <MyFeedPicker feedUrls={feedUrls} onAdd={(arr) => patch({ feedUrls: arr })} />
         <CsvField
           label="Extra feeds (URLs, comma-separated)"
           value={v.feedUrls || []}
@@ -68,6 +103,7 @@ export function Form({ values, patch, onChange, fields }) {
           placeholder="https://…/rss.xml, https://…/atom.xml"
           help="Merged round-robin with the source above, so one tile interleaves several feeds."
         />
+        <SavedFeedsManager />
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
           Max items ({Number.isFinite(v.count) ? v.count : 6})
           <input

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LazyMotion, domAnimation, m, AnimatePresence, MotionConfig } from 'framer-motion';
-import { Star, ArrowCounterClockwise, SlidersHorizontal, Trash, Lock, Cards } from '@phosphor-icons/react';
+import { Star, ArrowCounterClockwise, SlidersHorizontal, Trash, Lock, Cards, Copy } from '@phosphor-icons/react';
 import { fetchConfig, saveConfig, fetchPreviewData, onUnauthorized } from './api.js';
 import {
   WIDGET_REGISTRY,
@@ -31,6 +31,7 @@ import LiveDashboard from './components/LiveDashboard.jsx';
 import DeviceStatusCard from './components/DeviceStatusCard.jsx';
 import DeviceStatusChip from './components/DeviceStatusChip.jsx';
 import BeamComposer from './components/BeamComposer.jsx';
+import { SavedFeedsContext, deriveFeedName } from './components/saved-feeds-context.js';
 
 const STATUS = {
   syncing: { label: 'SYNCING...', cls: 'saving' },
@@ -330,6 +331,30 @@ export default function App() {
     ...prev, [key]: { ...(prev?.[key] || {}), ...patch }
   }));
 
+  // ============ SAVED FEEDS (cross-widget URL library) ============
+  // Named iCal/RSS URLs kept at cfg.savedFeeds so a feed typed once is
+  // reusable on every future calendar/headlines widget instead of being
+  // re-typed per screen. All three ops route through mutateCfg so they
+  // land on the undo stack and get persisted by the normal save path.
+  const addSavedFeed = (name, url) => {
+    const clean = String(url || '').trim();
+    if (!clean) return;
+    mutateCfg(prev => {
+      const list = Array.isArray(prev.savedFeeds) ? prev.savedFeeds : [];
+      if (list.some(f => f.url === clean)) return prev; // dedupe by URL
+      const id = 'feed_' + Math.random().toString(36).slice(2, 9);
+      const nm = String(name || '').trim() || deriveFeedName(clean);
+      return { ...prev, savedFeeds: [...list, { id, name: nm, url: clean }] };
+    });
+  };
+  const removeSavedFeed = (id) => mutateCfg(prev => ({
+    ...prev, savedFeeds: (prev.savedFeeds || []).filter(f => f.id !== id)
+  }));
+  const renameSavedFeed = (id, name) => mutateCfg(prev => ({
+    ...prev, savedFeeds: (prev.savedFeeds || []).map(f =>
+      f.id === id ? { ...f, name: String(name || '').trim() || f.name } : f)
+  }));
+
   // ============ SCREENS ============
   const updateScreen = (id, patch) => mutateCfg(prev => ({
     ...prev,
@@ -386,6 +411,40 @@ export default function App() {
     if (editScreenId === id) {
       setEditScreenId(screens.find(s => s.id !== id)?.id || null);
     }
+  };
+
+  // Clone a whole screen — layout, per-tile settings (feed URLs, location,
+  // typography) and chrome all come along, so building a variant of an
+  // existing screen no longer means re-entering every widget from scratch.
+  // The copy lands unscheduled + non-default to avoid instant overlap
+  // validation; the user turns its window on when ready.
+  const duplicateScreen = (id) => {
+    if (cfg && cfg.screens && cfg.screens.length >= MAX_SCREENS) {
+      showToast(`Max ${MAX_SCREENS} screens`);
+      return;
+    }
+    mutateCfg(prev => {
+      if (prev.screens.length >= MAX_SCREENS) return prev;
+      const idx = prev.screens.findIndex(s => s.id === id);
+      const source = prev.screens[idx];
+      if (!source) return prev;
+      const deep = structuredClone(source);
+      const nid = newScreenId();
+      const rid = () => Math.random().toString(36).slice(2, 8);
+      const clone = {
+        ...deep,
+        id: nid,
+        name: `${source.name} copy`,
+        isDefault: false,
+        schedule: { ...(deep.schedule || {}), enabled: false },
+        layout: (deep.layout || []).map(w => ({ ...w, id: `${w.widgetId}-${rid()}` }))
+      };
+      setTimeout(() => setEditScreenId(nid), 0);
+      const next = prev.screens.slice();
+      next.splice(idx + 1, 0, clone);
+      return { ...prev, screens: next };
+    });
+    showToast('Screen duplicated');
   };
 
   const setDefaultScreen = (id) => mutateCfg(prev => ({
@@ -606,6 +665,12 @@ export default function App() {
   const layout = editScreen ? editScreen.layout : [];
 
   return (
+    <SavedFeedsContext.Provider value={{
+      feeds: (cfg && cfg.savedFeeds) || [],
+      addFeed: addSavedFeed,
+      removeFeed: removeSavedFeed,
+      renameFeed: renameSavedFeed
+    }}>
     <LazyMotion features={domAnimation} strict>
     <MotionConfig reducedMotion="user">
     <div className="shell">
@@ -755,6 +820,13 @@ export default function App() {
                   onClick={() => clearLayout(editScreen.id)}>
                   <ArrowCounterClockwise size={12} weight="bold" /> CLEAR
                 </button>
+                {editScreen && (
+                  <button className="btn btn-ghost btn-iconed btn-compact"
+                    title="Copy this screen — widgets, feed URLs and settings all come along"
+                    onClick={() => duplicateScreen(editScreen.id)}>
+                    <Copy size={12} weight="bold" /> DUPLICATE
+                  </button>
+                )}
                 {editScreen && screens.length > 1 && (
                   <button className="btn btn-danger btn-iconed btn-compact"
                     title="Delete this screen"
@@ -925,5 +997,6 @@ export default function App() {
     </div>
     </MotionConfig>
     </LazyMotion>
+    </SavedFeedsContext.Provider>
   );
 }

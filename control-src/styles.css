@@ -3165,6 +3165,83 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   border-color: #bbb;
 }
 
+/* Save-to-library affordance next to a feed URL input. Quiet by default;
+ * becomes a static "Saved" chip once the URL is in the library. */
+.feed-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+.feed-save-btn {
+  background: #fff;
+  color: var(--ink);
+  border: var(--bw-rule) solid var(--ink);
+  border-radius: 3px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.feed-save-btn:hover { background: var(--ink); color: #fff; }
+.feed-save-done { color: #666; }
+.feed-save-naming { gap: 4px; }
+.feed-save-naming input {
+  width: 120px;
+  font-size: 11px;
+  padding: 2px 5px;
+  border: var(--bw-rule) solid var(--ink);
+}
+.feed-save-ok {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+/* Cross-widget saved-feed library editor (rename / remove). */
+.saved-feeds-mgr { margin-top: 4px; }
+.saved-feeds-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  border-bottom: var(--bw-rule) solid var(--hair, #e3e3e3);
+}
+.saved-feeds-row:last-child { border-bottom: none; }
+.saved-feeds-name {
+  flex: 1;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.saved-feeds-row input {
+  font-size: 12px;
+  padding: 2px 5px;
+  border: var(--bw-rule) solid var(--ink);
+}
+.saved-feeds-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 2px;
+}
+.saved-feeds-ico:hover { color: var(--ink); }
+.saved-feeds-del:hover { color: #c00; }
+
 /* Consistent HH:MM input — replaces native <input type="time"> which
  * renders OS-themed on mac and a chunky picker on Windows. Pure text
  * input with format-as-you-type + invalid-state red border. */
