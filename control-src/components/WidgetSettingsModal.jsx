@@ -327,7 +327,6 @@ export default function WidgetSettingsModal({
   const bodyGridCls = `body body-grid${(data && data.cardStyle === 'cards') ? ' body-cards' : ''}`;
   const pageHtml = `<div class="page" style="grid-template-rows:0px minmax(0,1fr) 0px;width:${DASH_W}px;height:${DASH_H}px"><div class="hdr-stub"></div><main class="${bodyGridCls}" style="grid-template-columns:repeat(${GRID_COLS},minmax(0,1fr));grid-template-rows:repeat(${GRID_ROWS},minmax(0,1fr))">${cellHtml}</main><div class="ftr-stub"></div></div>`;
 
-  const density = draft.density || '';
   const previewLoading = !previewData;
 
   return (
@@ -382,6 +381,32 @@ export default function WidgetSettingsModal({
                     onHoverPreset={setHoveredPresetValues}
                   />
                 </ErrorBoundary>
+              </section>
+              <section className="wsm-section wsm-subsection" data-section-title="Layout density">
+                <div className="wsm-subsection-title">Layout density</div>
+                <div className="wsm-segmented" role="radiogroup" aria-label="Layout density">
+                  {[
+                    { value: 'rich',   label: 'Detailed', title: 'Show a richer layout than the tile size would pick' },
+                    { value: '',       label: 'Auto',     title: 'Layout follows the tile size (default)' },
+                    { value: 'sparse', label: 'Minimal',  title: 'Show a simpler layout than the tile size would pick' }
+                  ].map(o => {
+                    const active = (draft.density || '') === o.value;
+                    return (
+                      <button
+                        key={o.value || 'auto'}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        className={`wsm-seg-btn ${active ? 'is-active' : ''}`}
+                        title={o.title}
+                        onClick={() => setDraft(prev => ({ ...prev, density: o.value }))}
+                      >{o.label}</button>
+                    );
+                  })}
+                </div>
+                <span className="wsm-field-help">
+                  Overrides how much detail this tile shows for its size — one step richer or simpler.
+                </span>
               </section>
               <section className="wsm-section wsm-subsection" data-section-title="Visibility">
                 <div className="wsm-subsection-title">Visibility</div>
