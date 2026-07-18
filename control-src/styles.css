@@ -1791,6 +1791,38 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   border-color: var(--ink);
 }
 .palette-chip:focus-visible { outline: var(--bw-frame) solid var(--ink); outline-offset: 2px; }
+
+/* Recently-added quick-add row — one-click re-add of common widgets when
+ * building a new screen. Only shown in the default browse view. */
+.palette-recents {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 12px 8px;
+}
+.palette-recents-head {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs, 11px);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--mute, #888);
+  margin-right: 2px;
+}
+.palette-recent-chip {
+  padding: 3px 9px;
+  border: var(--bw-hair) solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs, 11px);
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+.palette-recent-chip:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.palette-recent-chip:focus-visible { outline: var(--bw-frame) solid var(--ink); outline-offset: 2px; }
 .palette-tile {
   display: flex;
   justify-content: space-between;
@@ -1829,6 +1861,30 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 .palette-card:active { cursor: grabbing; }
 .palette-card:hover { border-color: var(--ink); background: #faf8f3; }
+/* Top search match — Enter in the search box adds this one. */
+.palette-card.is-highlight {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 2px var(--ink) inset;
+}
+
+/* "↵ Label" hint that replaces the count badge while a search is typed,
+ * telling the user what Enter will add. */
+.palette-enter-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 2px 7px;
+  background: var(--ink);
+  color: var(--bg);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs, 11px);
+  letter-spacing: 0.4px;
+  border-radius: 2px;
+}
 
 /* HoverCard popover — Radix renders into a portal so this lives at
  * document root. Keep it bounded (max 480x320 incl. label/padding) so

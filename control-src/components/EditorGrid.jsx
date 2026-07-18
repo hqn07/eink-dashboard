@@ -86,6 +86,17 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
   // Active category chip ('' = all). Lets the user jump to a section
   // instead of scrolling the full 31-widget list.
   const [poolCat, setPoolCat] = useState('');
+  // Recently-added widget types (most-recent first, capped), persisted so
+  // re-adding a common widget on a new screen is one click. localStorage
+  // read is lazy-initialised once.
+  const [recents, setRecents] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ctrl.recentWidgets') || '[]'); } catch { return []; }
+  });
+  const pushRecent = (id) => setRecents(prev => {
+    const next = [id, ...prev.filter(x => x !== id)].slice(0, 6);
+    try { localStorage.setItem('ctrl.recentWidgets', JSON.stringify(next)); } catch {}
+    return next;
+  });
   // Pool collapsed by default — saves vertical real estate now that the
   // editor canvas is always visible (no more separate edit mode).
   const [poolOpen, setPoolOpen] = useState(false);
@@ -173,6 +184,31 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
   };
   const orderedCats = catsIn(palette);
   const allCats = catsIn(WIDGET_REGISTRY);
+
+  // Keyboard flow: while a search query is active, the first match is the
+  // "top match" — Enter in the search box adds it, and its card is
+  // highlighted so the user sees what Enter will drop. Lets the pool be
+  // driven entirely from the keyboard (type → Enter).
+  const topMatch = poolFilter.trim() && palette.length ? palette[0] : null;
+  // Recently-added widgets that still exist in the registry, resolved to
+  // their defs. Only surfaced in the default browse view (no search/cat
+  // filter) so it doesn't fight with an active query.
+  const recentDefs = recents
+    .map(id => WIDGET_REGISTRY.find(d => d.id === id))
+    .filter(Boolean)
+    .slice(0, 6);
+  const showRecents = recentDefs.length > 0 && !poolFilter.trim() && !poolCat;
+  const onSearchKeyDown = (e) => {
+    if (e.key === 'Enter' && topMatch) {
+      e.preventDefault();
+      addToCanvas(topMatch.id);
+      setPoolFilter('');
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      if (poolFilter) setPoolFilter('');
+      else setPoolOpen(false);
+    }
+  };
 
   // Editor canvas is sized to the full dashboard aspect. Header + footer
   // chrome was removed in favor of the text widget (bar variant); widgets now own
@@ -328,6 +364,7 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
         const inst = makeInstance(widgetId, { x: slot.x, y: slot.y, w: c.w, h: c.h, sizeKey: c.key }, seedCtx);
         if (inst) {
           onChange([...layout, inst]);
+          pushRecent(widgetId);
           // Select the new tile so it's visibly highlighted, and bring
           // the canvas back into view — click-to-add from the pool
           // otherwise drops the widget somewhere off-screen above.
@@ -645,10 +682,13 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
               className="palette-search"
               value={poolFilter}
               onChange={e => setPoolFilter(e.target.value)}
+              onKeyDown={onSearchKeyDown}
               placeholder="Search widgets…"
               autoFocus
             />
-            <span className="badge">{palette.length}</span>
+            {topMatch
+              ? <span className="palette-enter-hint" title="Press Enter to add">↵ {topMatch.label}</span>
+              : <span className="badge">{palette.length}</span>}
           </div>
         )}
         {poolOpen && (
@@ -669,6 +709,20 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
                 className={`palette-chip ${poolCat === cat ? 'is-active' : ''}`}
                 onClick={() => setPoolCat(c => c === cat ? '' : cat)}
               >{cat}</button>
+            ))}
+          </div>
+        )}
+        {poolOpen && showRecents && (
+          <div className="palette-recents">
+            <span className="palette-recents-head">Recent</span>
+            {recentDefs.map(def => (
+              <button
+                key={def.id}
+                type="button"
+                className="palette-recent-chip"
+                onClick={() => addToCanvas(def.id)}
+                title={`Add ${def.label}`}
+              >+ {def.label}</button>
             ))}
           </div>
         )}
@@ -721,7 +775,7 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
                 <HoverCard.Trigger asChild>
                   <m.div
                     layout
-                    className="palette-card"
+                    className={`palette-card ${topMatch && topMatch.id === def.id ? 'is-highlight' : ''}`}
                     draggable
                     onDragStart={(e) => onPoolDragStart(e, def.id)}
                     onClick={() => addToCanvas(def.id)}
