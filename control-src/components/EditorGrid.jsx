@@ -7,7 +7,7 @@ import { WIDGET_REGISTRY, POOL_CATEGORIES, GRID_COLS, GRID_ROWS, widgetById, mak
 import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses } from '../widget-render.js';
 import { demoCtxForWidget } from '../widgets/_pool_demo.js';
 import { autofitText } from '../autofit.js';
-import WidgetSettingsModal from './WidgetSettingsModal.jsx';
+const WidgetSettingsModal = React.lazy(() => import('./WidgetSettingsModal.jsx'));
 
 // Editor cells must align 1:1 with dashboard cells so widget previews
 // scale cleanly. Any padding/margin would offset cells from the
@@ -842,33 +842,42 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
         ))}
       </div>
 
-      <WidgetSettingsModal
-        open={!!modalForId}
-        item={modalForId ? layout.find(it => it.id === modalForId) : null}
-        layout={layout}
-        cfg={previewData && previewData.cfg}
-        previewData={previewData}
-        onCancel={() => setModalForId(null)}
-        onSave={(updated) => {
-          const patch = {
-            flush: updated.flush,
-            density: updated.density,
-            visibility: updated.visibility,
-            settings: updated.settings
-          };
-          if (onCommitItemNow) {
-            // Persist immediately + refresh preview so the editor shows
-            // updated data without a second click on the main save bar.
-            onCommitItemNow({ id: updated.id, ...patch });
-          } else {
-            onChange(layout.map(it => it.id === updated.id
-              ? { ...it, ...patch }
-              : it
-            ));
-          }
-          setModalForId(null);
-        }}
-      />
+      {/* Lazy: the settings modal drags in WidgetForm + every per-widget
+       *  form.jsx + TokenPicker + Radix Tabs, none of which the editor
+       *  canvas or palette need. Mounting only when a tile is opened keeps
+       *  that weight out of the initial bundle. It early-returns null when
+       *  closed anyway, so unmounting on close loses no animation. */}
+      {modalForId && (
+        <React.Suspense fallback={null}>
+          <WidgetSettingsModal
+            open
+            item={layout.find(it => it.id === modalForId) || null}
+            layout={layout}
+            cfg={previewData && previewData.cfg}
+            previewData={previewData}
+            onCancel={() => setModalForId(null)}
+            onSave={(updated) => {
+              const patch = {
+                flush: updated.flush,
+                density: updated.density,
+                visibility: updated.visibility,
+                settings: updated.settings
+              };
+              if (onCommitItemNow) {
+                // Persist immediately + refresh preview so the editor shows
+                // updated data without a second click on the main save bar.
+                onCommitItemNow({ id: updated.id, ...patch });
+              } else {
+                onChange(layout.map(it => it.id === updated.id
+                  ? { ...it, ...patch }
+                  : it
+                ));
+              }
+              setModalForId(null);
+            }}
+          />
+        </React.Suspense>
+      )}
     </div>
   );
 }

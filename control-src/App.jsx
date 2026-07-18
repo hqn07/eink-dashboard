@@ -24,9 +24,9 @@ import ScreenPresetPicker from './components/ScreenPresetPicker.jsx';
 import ScreenPanel from './components/ScreenPanel.jsx';
 import ScheduleTimeline from './components/ScheduleTimeline.jsx';
 import QuietHours from './components/QuietHours.jsx';
-import SetupWizard from './components/SetupWizard.jsx';
+const SetupWizard = React.lazy(() => import('./components/SetupWizard.jsx'));
 import SettingsMenu from './components/SettingsMenu.jsx';
-import ShortcutsHelp from './components/ShortcutsHelp.jsx';
+const ShortcutsHelp = React.lazy(() => import('./components/ShortcutsHelp.jsx'));
 import LiveDashboard from './components/LiveDashboard.jsx';
 import DeviceStatusCard from './components/DeviceStatusCard.jsx';
 import DeviceStatusChip from './components/DeviceStatusChip.jsx';
@@ -944,7 +944,11 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <ShortcutsHelp open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      {shortcutsOpen && (
+        <React.Suspense fallback={null}>
+          <ShortcutsHelp open onClose={() => setShortcutsOpen(false)} />
+        </React.Suspense>
+      )}
 
       <AnimatePresence>
         {toast && (
@@ -973,18 +977,20 @@ export default function App() {
       {/* Setup wizard: auto-shows on first run (no location set), or on
        *  demand via the header "Setup" button. */}
       {((cfg.firstRun !== false && !cfg.lat) || showWizard) && (
-        <SetupWizard
-          cfg={cfg}
-          onPatch={patchCfg}
-          onApplyPreset={(preset) => {
-            // Replace the default screen's layout with the chosen preset.
-            const defaultId = (screens.find(s => s.isDefault) || screens[0])?.id;
-            if (!defaultId) return;
-            const layout = inflatePresetLayout(preset);
-            updateScreenLayout(defaultId, layout);
-          }}
-          onClose={() => setShowWizard(false)}
-        />
+        <React.Suspense fallback={null}>
+          <SetupWizard
+            cfg={cfg}
+            onPatch={patchCfg}
+            onApplyPreset={(preset) => {
+              // Replace the default screen's layout with the chosen preset.
+              const defaultId = (screens.find(s => s.isDefault) || screens[0])?.id;
+              if (!defaultId) return;
+              const layout = inflatePresetLayout(preset);
+              updateScreenLayout(defaultId, layout);
+            }}
+            onClose={() => setShowWizard(false)}
+          />
+        </React.Suspense>
       )}
 
       {showPresetPicker && (
