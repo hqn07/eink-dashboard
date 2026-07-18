@@ -382,6 +382,7 @@ export default function WidgetSettingsModal({
                   />
                 </ErrorBoundary>
               </section>
+              {def.usesDensity !== false && (
               <section className="wsm-section wsm-subsection" data-section-title="Layout density">
                 <div className="wsm-subsection-title">Layout density</div>
                 <div className="wsm-segmented" role="radiogroup" aria-label="Layout density">
@@ -408,6 +409,7 @@ export default function WidgetSettingsModal({
                   Overrides how much detail this tile shows for its size — one step richer or simpler.
                 </span>
               </section>
+              )}
               <section className="wsm-section wsm-subsection" data-section-title="Visibility">
                 <div className="wsm-subsection-title">Visibility</div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>

@@ -9,6 +9,7 @@ import { escapeHtml, placeholder, heatmapHtml } from './_shared.js';
 
 export const def = {
   id: 'codeactivity',
+  usesDensity: false,   // doesn't read ctx.density — hide the modal density knob
   label: 'Code Activity',
   requires: 'codeActivity',
   minSize: { w: 8, h: 3 },

@@ -12,6 +12,7 @@ import { escapeHtml, placeholder, semRed } from './_shared.js';
 
 export const def = {
   id: 'mac_battery',
+  usesDensity: false,   // doesn't read ctx.density — hide the modal density knob
   label: 'Mac Battery',
   requires: 'mac_battery',
   minSize: { w: 3, h: 2 },

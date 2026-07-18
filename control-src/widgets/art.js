@@ -12,6 +12,10 @@ import { escapeHtml } from './_shared.js';
 
 export const def = {
   id: 'art',
+  // No tier response — art sizes off its own numeric `density` (grid
+  // fineness), not ctx.density, so the modal's Layout-density control is
+  // hidden to avoid a dead knob that also collides with that setting.
+  usesDensity: false,
   label: 'Daily Art',
   requires: null,
   minSize: { w: 4, h: 3 },
