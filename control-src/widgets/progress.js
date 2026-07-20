@@ -1,4 +1,4 @@
-import { escapeHtml, pickTier, heatmapHtml } from './_shared.js';
+import { escapeHtml, pickTier, heatmapHtml, barShapeClass } from './_shared.js';
 
 // Progress — elapsed-fraction bars for the day / week / month / year. Pure
 // client compute: no fetcher. `now` comes from ctx.now when present (frozen
@@ -30,6 +30,7 @@ export const def = {
     variant: 'trmnl',
     spans: ['day', 'year'],   // any of: day, week, month, year
     title: '',
+    barShape: 'rectangular',
     fontScale: 1,
     padding: 14
   })
@@ -87,13 +88,13 @@ function fractions(now, tz) {
 // Head styles are inlined — `.tr-l` / `.tr-v` are only styled inside a
 // `.tr-lv` stack, so bare class use here silently fell back to the 16px
 // body font and fattened every row by ~10px (found via box measurement).
-function bar(spanKey, frac, showPct) {
+function bar(spanKey, frac, showPct, shapeCls = '') {
   const pct = Math.max(0, Math.min(100, Math.round(frac * 100)));
   const head = `<div style="display:flex;justify-content:space-between;align-items:baseline;line-height:1">`
     + `<span style="font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase">${SPAN_LABELS[spanKey]}</span>`
     + (showPct ? `<span style="font-size:16px;font-weight:800;font-variant-numeric:tabular-nums">${pct}%</span>` : '')
     + `</div>`;
-  const track = `<div class="tr-bar" style="height:16px;flex:none;margin-top:4px">`
+  const track = `<div class="tr-bar${shapeCls}" style="height:16px;flex:none;margin-top:4px">`
     + `<div class="tr-bar-fill ${SPAN_TONES[spanKey] || 'face-tone-g50'}" style="width:${pct}%"></div>`
     + `<div class="tr-bar-track face-tone-g15"></div>`
     + `</div>`;
@@ -174,7 +175,7 @@ export function render(ctx) {
     </div>`;
   }
 
-  const bars = spans.map(k => bar(k, fr[k], showPct)).join('');
+  const bars = spans.map(k => bar(k, fr[k], showPct, barShapeClass(s))).join('');
   const stack = (pad) =>
     `<div style="display:flex;flex-direction:column;justify-content:center;gap:12px;height:100%;overflow:hidden;${pad}">${bars}</div>`;
 

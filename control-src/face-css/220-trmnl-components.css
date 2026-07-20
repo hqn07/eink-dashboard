@@ -114,6 +114,72 @@
 .tr-bar .tr-bar-fill { height: 100%; }
 .tr-bar .tr-bar-track { flex: 1; height: 100%; }
 
+/* Bar shape variants — per-tile `barShape`, applied as a modifier class on
+ * .tr-bar. The fill/track structure is unchanged, so every widget using the
+ * shared bar gets these for free. All 1-bit safe: radii ride the solid 1px
+ * frame, segment gaps are pure paper, ticks pure ink. `::before` draws the
+ * internal pattern (ticks/segments), `::after` draws the battery tip nub. */
+
+/* Pill — fully rounded ends. */
+.tr-bar--pill { border-radius: 999px; }
+
+/* Ticked — hairline ink notches at 25 / 50 / 75%. */
+.tr-bar--ticked { position: relative; }
+.tr-bar--ticked::before {
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(90deg,
+    transparent 0 calc(25% - 1px),
+    var(--face-ink) calc(25% - 1px) 25%);
+}
+
+/* Segmented — 10 cells split by paper gaps (phone-battery look). */
+.tr-bar--segmented { position: relative; }
+.tr-bar--segmented::before {
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(90deg,
+    transparent 0 calc(10% - 2px),
+    var(--face-paper) calc(10% - 2px) 10%);
+}
+
+/* Battery — rounded body + a tip nub on the right, like a cell. Needs
+ * overflow visible for the nub, so the fill/track round their outer ends
+ * to keep the corners clean. */
+.tr-bar--battery,
+.tr-bar--notched {
+  position: relative;
+  overflow: visible;
+  border-radius: 3px;
+  margin-right: 6px;
+}
+.tr-bar--battery .tr-bar-fill,
+.tr-bar--notched .tr-bar-fill { border-radius: 3px 0 0 3px; }
+.tr-bar--battery .tr-bar-track,
+.tr-bar--notched .tr-bar-track { border-radius: 0 3px 3px 0; }
+.tr-bar--battery::after,
+.tr-bar--notched::after {
+  content: '';
+  position: absolute;
+  right: -6px; top: 50%;
+  transform: translateY(-50%);
+  width: 5px; height: 45%;
+  background: var(--face-ink);
+  border-radius: 0 2px 2px 0;
+}
+
+/* Notched — battery tip + segmented cells. */
+.tr-bar--notched::before {
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(90deg,
+    transparent 0 calc(10% - 2px),
+    var(--face-paper) calc(10% - 2px) 10%);
+}
+
 /* Stat row: equal cells, dotted separators, right of a bar/hero. */
 .tr-stats {
   display: flex;

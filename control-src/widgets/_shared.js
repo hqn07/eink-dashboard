@@ -77,6 +77,16 @@ export function semRed(s, condition) {
   return (condition && (!s || s.semanticRed !== false)) ? ' face-red' : '';
 }
 
+// Per-tile bar-shape modifier class for the shared `.tr-bar` primitive.
+// Returns a leading-space class (or '') so it drops into `class="tr-bar${...}"`.
+// 'rectangular' (default) keeps the base bar. Any widget using .tr-bar can
+// opt in by threading its settings.barShape through this.
+export const BAR_SHAPES = ['pill', 'ticked', 'segmented', 'battery', 'notched'];
+export function barShapeClass(s) {
+  const sh = s && s.barShape;
+  return BAR_SHAPES.includes(sh) ? ` tr-bar--${sh}` : '';
+}
+
 // Tidy a raw geocoded place string for display: normalize comma spacing and
 // drop a trailing country token so "GAINESVILLE,FLORIDA,US" reads as
 // "Gainesville, Florida". Only strips an explicit country (US/USA/UK/…) so

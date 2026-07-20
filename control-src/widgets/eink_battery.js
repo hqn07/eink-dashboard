@@ -11,7 +11,7 @@
 // Tier gates the gauge extras so a 4×2 tile stops rendering five
 // stacked lines into 80px.
 
-import { escapeHtml, placeholder, semRed } from './_shared.js';
+import { escapeHtml, placeholder, semRed, barShapeClass } from './_shared.js';
 import { sparkSvg, niceDomain } from './sparkline.js';
 
 export const def = {
@@ -47,6 +47,7 @@ export const def = {
     showVoltage: true,
     showAge:     true,
     showBar:     true,
+    barShape:    'rectangular',
     fontScale: 1,
     padding: 14
   })
@@ -131,7 +132,7 @@ export function render(ctx) {
     const fillTone = low ? 'face-tone-r50' : 'face-tone-g50';
     const ageA = ageLabel(battery.at);
     const barRow = (cellH || 0) >= 3
-      ? `<div class="tr-bar" style="height:26px;flex:none">
+      ? `<div class="tr-bar${barShapeClass(s)}" style="height:26px;flex:none">
            <div class="tr-bar-fill ${fillTone}" style="width:${fillPct}%"></div>
            <div class="tr-bar-track face-tone-g15"></div>
          </div>` : '';

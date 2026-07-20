@@ -8,7 +8,7 @@
 // Gauge gates on grid rows directly (battery presets never leave the
 // tiny/compact tier band): ≤2 rows shows percent only.
 
-import { escapeHtml, placeholder, semRed } from './_shared.js';
+import { escapeHtml, placeholder, semRed, barShapeClass } from './_shared.js';
 
 export const def = {
   id: 'mac_battery',
@@ -36,6 +36,7 @@ export const def = {
     variant: 'gauge',
     title: '',
     showState: true,
+    barShape: 'rectangular',
     fontScale: 1,
     padding: 14
   })
@@ -76,7 +77,7 @@ export function render(ctx) {
     const fillPct = pct > 0 && pct < 3 ? 3 : pct;
     const fillTone = low ? 'face-tone-r50' : 'face-tone-g50';
     const bar = (cellH || 0) >= 3
-      ? `<div class="tr-bar" style="height:22px;flex:none">
+      ? `<div class="tr-bar${barShapeClass(s)}" style="height:22px;flex:none">
            <div class="tr-bar-fill ${fillTone}" style="width:${fillPct}%"></div>
            <div class="tr-bar-track face-tone-g15"></div>
          </div>` : '';

@@ -3,7 +3,15 @@ import React from 'react';
 export function Form({ values, onChange, fields }) {
   const v = values || {};
   const patch = (p) => onChange({ ...v, ...p });
-  const { TextField, ToggleField, TypographyFields, FormSection, defaults = {} } = fields;
+  const { TextField, ToggleField, SelectField, TypographyFields, FormSection, defaults = {} } = fields;
+  const BAR_SHAPE_OPTS = [
+    { value: 'rectangular', label: 'Rectangular (default)' },
+    { value: 'pill',        label: 'Pill — rounded ends' },
+    { value: 'battery',     label: 'Battery — rounded + tip' },
+    { value: 'segmented',   label: 'Segmented — 10 cells' },
+    { value: 'notched',     label: 'Notched — cells + tip' },
+    { value: 'ticked',      label: 'Ticked — 25/50/75 marks' }
+  ];
   return (
     <>
       <FormSection title="Content">
@@ -27,6 +35,16 @@ export function Form({ values, onChange, fields }) {
           defaultValue={defaults.showBar}
           onChange={(x) => patch({ showBar: x })}
         />
+        {v.showBar !== false && (
+          <SelectField
+            label="Bar shape"
+            value={v.barShape || 'rectangular'}
+            defaultValue={defaults.barShape || 'rectangular'}
+            options={BAR_SHAPE_OPTS}
+            onChange={(x) => patch({ barShape: x })}
+            help="Battery / notched read most like a battery icon."
+          />
+        )}
         <ToggleField
           label='"Updated N ago" timestamp'
           value={v.showAge !== false}
