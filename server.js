@@ -27,6 +27,7 @@ const { loadConfig, saveConfig, setMigrator: _setConfigMigrator } = require('./l
 const { migrateConfigToScreens } = require('./lib/screens');
 const {
   invalidateImage, warmActiveImage, PRERENDER_ENABLED, PRERENDER_INTERVAL_MS,
+  BROWSER_IDLE_MS,
 } = require('./lib/render');
 const { gateControlHtml } = require('./lib/auth');
 const { safeError } = require('./lib/http');
@@ -218,5 +219,8 @@ app.listen(PORT, () => {
     warmActiveImage();
     const timer = setInterval(warmActiveImage, PRERENDER_INTERVAL_MS);
     if (timer.unref) timer.unref(); // don't keep the process alive just for this
+  } else {
+    console.log('  Pre-render:     off (on-demand; set PRERENDER=1 to warm)');
   }
+  console.log(`  Browser idle:   ${BROWSER_IDLE_MS ? `close after ${Math.round(BROWSER_IDLE_MS / 1000)}s` : 'stay resident'}`);
 });
