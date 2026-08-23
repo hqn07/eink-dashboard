@@ -1,7 +1,11 @@
 [phases.setup]
 # nodejs_22: vite 8 requires node ^20.19 || >=22.12; 22 LTS removes the
 # "which 20.x minor does nix ship" gamble.
-nixPkgs = ['nodejs_22', 'chromium']
+# tini: PID-1 init that reaps zombies. Puppeteer's Chromium spawns a
+# chrome_crashpad_handler that gets re-parented to PID 1 when the browser
+# dies; bare `node` never reaps it, so those zombies accumulated and
+# exhausted the container PID table (fork: EAGAIN -> fleet-down, Aug 2026).
+nixPkgs = ['nodejs_22', 'chromium', 'tini']
 
 [phases.install]
 # Railway injects NPM_CONFIG_PRODUCTION=true into every build; that's
@@ -15,7 +19,10 @@ cmds = ['env -u NPM_CONFIG_PRODUCTION npm install --include=dev --loglevel=error
 cmds = ['env -u NPM_CONFIG_PRODUCTION npm run build --loglevel=error']
 
 [start]
-cmd = 'node server.js'
+# `tini -g --` so signals + zombie-reaping cover the whole process group,
+# including any orphaned Chromium helpers. Without an init, `node` runs as
+# PID 1 and leaks zombie crashpad handlers until the PID table is exhausted.
+cmd = 'tini -g -- node server.js'
 
 [variables]
 PUPPETEER_SKIP_DOWNLOAD = '1'
