@@ -58,7 +58,16 @@ export function render(ctx) {
   if (!data || (!data.text && data.error)) {
     // Only reachable before the first successful generation — after that the
     // server serves the last good text rather than surfacing an error.
-    return placeholder('AI', data && data.error ? 'Generation failed' : 'Waiting…', 'msg', { cellW, cellH });
+    //
+    // Show the provider's own words, trimmed. "Generation failed" told the
+    // reader nothing and sent them to /status to find out what a wrong model
+    // id or an empty balance looks like; the reason belongs where the problem
+    // is visible. Provider error bodies carry the status and message, never
+    // the API key.
+    const why = data && data.error
+      ? String(data.error).replace(/\s+/g, ' ').slice(0, 90)
+      : 'Waiting…';
+    return placeholder('AI', why, 'msg', { cellW, cellH });
   }
   if (!data.text) {
     return placeholder('AI', 'Waiting…', 'msg', { cellW, cellH });
