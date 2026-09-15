@@ -12,6 +12,7 @@ export function Form({ values, patch, onChange, fields }) {
           or add your own below.
         </div>
         <ListEditor
+          replaceRow
           label="Your quotes (text — Author)"
           items={quotes}
           onChange={(items) => patch({ quotes: items })}

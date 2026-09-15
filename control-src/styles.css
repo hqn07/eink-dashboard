@@ -3926,3 +3926,26 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .qe-composer input[type="text"] { width: 100%; box-sizing: border-box; }
 .qe-composer-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .qe-composer-row select { flex: 1; min-width: 90px; }
+
+/* Feed preset chips (AI tile → Sources). Toggle buttons, so the chips alone
+   cover the common case and the URL list below is only for a feed that is
+   not on the list. */
+.wsm-feed-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.wsm-feed-presets .wsm-chip {
+  font: inherit;
+  font-size: var(--fs-sm);
+  padding: 3px 9px;
+  border: var(--bw-frame) solid var(--ink);
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  border-radius: 999px;
+  line-height: 1.5;
+}
+.wsm-feed-presets .wsm-chip:hover { background: var(--paper-2, #f2f0ea); }
+.wsm-feed-presets .wsm-chip.is-on { background: var(--ink); color: #fff; }

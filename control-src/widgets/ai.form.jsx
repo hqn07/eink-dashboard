@@ -1,4 +1,5 @@
 import React from 'react';
+import { FEED_PRESETS } from './_feeds.js';
 
 // Two fields, and that is the whole form. The prompt is the customization —
 // everything cosmetic is the design's decision now. Cadence earns its place
@@ -37,7 +38,28 @@ export function Form({ values, patch, fields }) {
           plus any feeds you add here, so naming a site in the prompt will not
           reach it &mdash; add the feed instead.
         </div>
+        <div className="wsm-feed-presets">
+          {FEED_PRESETS.map((f) => {
+            const have = (Array.isArray(v.feedUrls) ? v.feedUrls : []).includes(f.url);
+            return (
+              <button
+                key={f.url}
+                type="button"
+                className={`wsm-chip ${have ? 'is-on' : ''}`}
+                title={f.url}
+                onClick={() => {
+                  const cur = Array.isArray(v.feedUrls) ? v.feedUrls : [];
+                  // Toggle: clicking a chip that is already on removes it, so the
+                  // chips are the whole interface for the common case and the list
+                  // below is only needed for a feed that is not on it.
+                  patch({ feedUrls: have ? cur.filter((u) => u !== f.url) : [...cur, f.url] });
+                }}
+              >{f.label}</button>
+            );
+          })}
+        </div>
         <ListEditor
+          replaceRow
           label="RSS / Atom feeds"
           items={Array.isArray(v.feedUrls) ? v.feedUrls : []}
           onChange={(items) => patch({ feedUrls: items })}

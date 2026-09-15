@@ -80,6 +80,7 @@ export function Form({ values, patch, onChange, fields }) {
       <FormSection title="Zones">
         <ZoneAdder v={v} patch={patch} />
         <ListEditor
+          replaceRow
           label="Zones (LABEL | IANA timezone)"
           items={zones}
           onChange={(items) => patch({ zones: items })}
