@@ -49,7 +49,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.20.2"
+#define FW_VERSION "1.21.0"
 #define FW_BOARD   "b"
 #define OTA_MIN_BATT_PCT 50
 
@@ -886,6 +886,40 @@ bool enrollDevice() {
 }
 
 // Download the two-plane 96000-byte image (black plane + red plane) into
+
+// Sink that lets HTTPClient::writeToStream() decode a response straight into
+// the image buffer. HTTPClient strips chunk framing; reading the raw socket
+// through getStreamPtr() does NOT — which is how HTTP chunk-size headers
+// ("17700\r\n" and friends) once got copied in as pixels and slid the whole
+// picture sideways. Bounds-checked so a longer-than-expected body can't run
+// past the allocation.
+class ImageBufferSink : public Stream {
+ public:
+  ImageBufferSink(uint8_t* dst, size_t cap) : _dst(dst), _cap(cap) {}
+  size_t write(uint8_t b) override {
+    if (_len >= _cap) { _over = true; return 0; }
+    _dst[_len++] = b;
+    return 1;
+  }
+  size_t write(const uint8_t* data, size_t size) override {
+    if (_len + size > _cap) { size = _cap - _len; _over = true; }
+    if (size) { memcpy(_dst + _len, data, size); _len += size; }
+    return size;
+  }
+  // Write-only sink; the read half of Stream is unused.
+  int available() override { return 0; }
+  int read() override { return -1; }
+  int peek() override { return -1; }
+  void flush() override {}
+  size_t length() const { return _len; }
+  bool overflowed() const { return _over; }
+
+ private:
+  uint8_t* _dst;
+  size_t _cap;
+  size_t _len = 0;
+  bool _over = false;
+};
 // one heap buffer. black = buf, red = buf + IMG_BYTES. Returns nullptr on
 // failure (caller frees on success).
 uint8_t* downloadImage() {
@@ -973,6 +1007,10 @@ uint8_t* downloadImage() {
   }
 
   int len = http.getSize();
+  // len < 0 means no usable Content-Length, i.e. the response is chunked (or
+  // the length is unknown). The raw-socket read below would copy the chunk
+  // framing in as image data, so that case takes the decoding path instead.
+  const bool needsDecode = (len != WANT);
   if (len > 0 && len != WANT) {
     Serial.printf("Unexpected size %d (expected %d)\n", len, WANT);
     http.end();
@@ -980,23 +1018,43 @@ uint8_t* downloadImage() {
     return nullptr;
   }
 
-  WiFiClient* stream = http.getStreamPtr();
   int read = 0;
   bool streamTimedOut = false;
-  unsigned long lastData = millis();
-  while (read < WANT) {
-    size_t avail = stream->available();
-    if (avail) {
-      int n = stream->readBytes(buf + read, min((int)avail, WANT - read));
-      read += n;
-      lastData = millis();
-    } else {
-      if (millis() - lastData > 10000) {
-        Serial.println("stream timeout");
-        streamTimedOut = true;
-        break;
+  if (needsDecode) {
+    // No usable Content-Length. Let HTTPClient do the reading so chunk
+    // framing is stripped rather than landing in the image as pixels. Slower
+    // and less instrumented than the loop below, which is why it is the
+    // fallback and not the default — a correctly configured server always
+    // sends Content-Length and takes the fast path.
+    Serial.println("No Content-Length — decoding response (chunked?)");
+    ImageBufferSink sink(buf, WANT);
+    int written = http.writeToStream(&sink);
+    read = (int)sink.length();
+    if (written < 0) {
+      Serial.printf("writeToStream failed: %d\n", written);
+      streamTimedOut = true;
+    }
+    if (sink.overflowed()) {
+      Serial.println("Body longer than expected — refusing to draw");
+      read = -1;
+    }
+  } else {
+    WiFiClient* stream = http.getStreamPtr();
+    unsigned long lastData = millis();
+    while (read < WANT) {
+      size_t avail = stream->available();
+      if (avail) {
+        int n = stream->readBytes(buf + read, min((int)avail, WANT - read));
+        read += n;
+        lastData = millis();
+      } else {
+        if (millis() - lastData > 10000) {
+          Serial.println("stream timeout");
+          streamTimedOut = true;
+          break;
+        }
+        delay(5);
       }
-      delay(5);
     }
   }
   // Grab the ETag before tearing down the client — stored only once the
