@@ -145,12 +145,23 @@ Each step is one commit, guards + panel photo before the next.
    # render again, diff the two PNGs, restore with `git checkout HEAD -- ...`
    ```
    Freeze the clock/weather first if an exact 0-pixel result is wanted.
-3. **Cut the variants** that step 1 made unreachable-by-default. Editor picker
-   only shows what remains.
-4. **Cut the cosmetic keys** (`fontScale`, `padding`, `density`, `barShape`,
-   and the mac_nowplaying position set) from `defaults()` and the forms.
-5. **Strip dead keys from the live config** — only after 2 and 4 confirm
-   nothing depends on them.
+3. **Cut the variants** — **DONE** (`bd3aba3`). 99 -> 43. `chess` had no
+   `def.defaultVariant` at all (only `defaults().variant`), so trimming its
+   picker would have resolved to null; fixed.
+4. **Cut the cosmetic keys** — **DONE** (`e487cc3`). 235 default keys -> 166.
+   `fontScale` + `padding` from all 31 widgets, `barShape` from three, and
+   mac_nowplaying's alignment/offset knobs; plus 31 dead `Style` form
+   sections. **Two entries in the table above were wrong** and were kept
+   instead: `art.density` is that widget's grid fineness in px, not the
+   layout knob, and `calendar.density` (rich/compact/auto) changes how much
+   of each event shows — both are content by the rule. Classifying on the
+   key's name is not good enough.
+5. **Strip dead keys from the live config** — NEXT, and the only step that
+   changes a running screen. Removes `fontScale`, `padding`, `theme`
+   (now redundant — inverted is the default), and any cut variant from the
+   stored tiles. Note the live tiles currently store `padding: 14`, which
+   overrides the face CSS's designed `14px 16px`; stripping it is a real
+   2px change, so photo after.
 6. **Rebaseline** `test:visual` and re-photo.
 
 ## Risks
