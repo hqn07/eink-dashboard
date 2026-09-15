@@ -6,11 +6,21 @@ import { FONT_STACKS } from './_shared.js';
 import { resolveTokenSettings, buildTokenCtx } from './_tokens.js';
 
 // Extra class names the cell wrapper should carry based on the tile's
-// settings. Currently picks up `theme: 'inverted'` so the tile renders
-// as black-on-white instead of the default white-on-black.
+// settings.
+//
+// INVERTED IS THE DEFAULT (2026-09-15). It used to be an opt-in per-tile
+// knob, but the live config answered the question: every tile on the screen
+// carried `theme: 'inverted'`, which means it was never a per-tile choice —
+// it is what the dashboard looks like. Once the typography knobs came out of
+// the modal, a newly added tile had no way to set it and landed
+// black-on-white beside four inverted neighbours.
+//
+// So an unset theme now means inverted. `theme: 'normal'` remains the
+// explicit opt-out and still works, which keeps the escape hatch available
+// in config even though the UI no longer offers the choice.
 export function cellClasses(s) {
   const out = [];
-  if (s && s.theme === 'inverted') out.push('cell-inverted');
+  if (!s || s.theme !== 'normal') out.push('cell-inverted');
   // Per-tile text style toggles. Applied via class + universal child
   // selector (015-body-grid-system.css) because most widgets set their
   // own font-weight per element — inline style on the cell wouldn't
