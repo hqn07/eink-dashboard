@@ -16,6 +16,7 @@
 // imports the .js files for SSR); Form is React-only and only the
 // client bundle pulls it in.
 
+import * as ai               from './ai.js';
 import * as aqi              from './aqi.js';
 import * as art              from './art.js';
 import * as chess            from './chess.js';
@@ -48,6 +49,7 @@ import * as weather_hero     from './weather_hero.js';
 import * as world_clock      from './world_clock.js';
 import * as wordofday        from './wordofday.js';
 
+import { Form as aiForm }              from './ai.form.jsx';
 import { Form as aqiForm }             from './aqi.form.jsx';
 import { Form as artForm }             from './art.form.jsx';
 import { Form as chessForm }           from './chess.form.jsx';
@@ -81,11 +83,12 @@ import { Form as worldClockForm }      from './world_clock.form.jsx';
 import { Form as wordofdayForm }       from './wordofday.form.jsx';
 
 const MODULES = [
-  aqi, art, calendar, chess, stocks, codeactivity, clock, countdown, eink_battery, mac_battery, mac_nowplaying,
+  ai, aqi, art, calendar, chess, stocks, codeactivity, clock, countdown, eink_battery, mac_battery, mac_nowplaying,
   headlines, moon, onthisday, photo, progress, qr, fx, crypto, quote, sparkline, sun, tasks, text, transit, uv, webhook, weather_forecast, weather_hero, world_clock, wordofday
 ];
 
 const FORMS = {
+  ai:               aiForm,
   aqi:              aqiForm,
   art:              artForm,
   chess:            chessForm,

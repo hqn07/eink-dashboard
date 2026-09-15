@@ -1,0 +1,219 @@
+// AI widget — turns the dashboard's own data plus a prompt you write into a
+// few lines of text on the panel.
+//
+// Provider-agnostic on purpose: OpenAI and DeepSeek expose the identical
+// POST /chat/completions shape, so one code path serves both and switching is
+// an env change, not a code change. That is also why this doesn't pull in a
+// vendor SDK — it would add a dependency and a second HTTP stack for a single
+// endpoint, and every outbound call here has to go through fetchWithTimeout
+// anyway (house rule: no unbounded external call can hang the render queue).
+//
+//   AI_API_KEY   required — absent means the widget renders SETUP NEEDED
+//   AI_BASE_URL  default https://api.openai.com/v1
+//                DeepSeek: https://api.deepseek.com/v1
+//   AI_MODEL     required, no default. A wrong-but-plausible default would
+//                fail at request time with a confusing provider error; a
+//                missing one fails immediately with a message naming the fix.
+//
+// CADENCE IS THE WHOLE DESIGN. The panel wakes every 15-30 min and a colour
+// redraw costs 15-26 s, so text that changed on every wake would redraw the
+// screen all day and flatten the battery. Generation is therefore time-based,
+// not render-based: the cached line is reused until it ages past the widget's
+// cadence, so most renders cost nothing and the ETag only moves when the text
+// actually changes. A failed call keeps serving the last good text — a wall
+// display should never show an error where yesterday's briefing was.
+
+const path = require('path');
+const fsp = require('fs/promises');
+const { fetchWithTimeout } = require('./_fetch');
+const { DATA_DIR, atomicWriteFile } = require('../lib/store');
+const status = require('./_status');
+
+const CACHE_PATH = path.join(DATA_DIR, 'ai-cache.json');
+const REQUEST_TIMEOUT_MS = 30000;   // generation is slower than a data fetch
+const MAX_OUTPUT_TOKENS = 200;
+
+const CADENCES = {
+  hourly: 60 * 60 * 1000,
+  daily: 24 * 60 * 60 * 1000,
+};
+const DEFAULT_CADENCE = 'daily';
+
+// The panel is 1-bit: no colour, no emoji (the threshold pass turns them into
+// blobs), no markdown (nothing renders it). Say so once, firmly, rather than
+// cleaning up prose afterwards — though sanitise() still runs as a backstop
+// because a model that ignores this would otherwise put literal ** on a wall.
+const SYSTEM_PROMPT = [
+  'You write a few lines for a small black-and-white e-ink dashboard on a wall.',
+  'Plain text only. No markdown, no asterisks, no bullet characters, no emoji.',
+  'No preamble, no sign-off, no restating the question. Answer directly.',
+  'Keep it under 45 words unless asked otherwise. Short sentences.',
+  'The data you are given is the current state of the dashboard. If some of it',
+  'is missing, just work with what is there and never mention what is absent.',
+].join(' ');
+
+// ---------- disk cache ----------
+// Survives redeploys via DATA_DIR (a Railway volume in production), so a
+// restart doesn't trigger a fresh generation and an unnecessary redraw.
+let memo = null;
+
+async function loadCache() {
+  if (memo) return memo;
+  try {
+    memo = JSON.parse(await fsp.readFile(CACHE_PATH, 'utf8'));
+  } catch {
+    memo = {};                       // absent or corrupt — start clean
+  }
+  return memo;
+}
+
+async function saveCache(cache) {
+  memo = cache;
+  try {
+    await atomicWriteFile(CACHE_PATH, JSON.stringify(cache, null, 2));
+  } catch (err) {
+    // A cache we can't persist still works in memory for this process.
+    console.error('ai: cache write failed:', err.message);
+  }
+}
+
+// ---------- context ----------
+// What the model is told about "now". Deliberately a compact digest rather
+// than the raw widget payloads: the panel only has room for a few lines, and
+// a tighter prompt is cheaper, faster, and less likely to wander.
+function buildContext(ctx) {
+  const lines = [];
+  // Field names match widgets/weather.js's payload exactly — it rounds with a
+  // '--' fallback rather than leaving numbers undefined, so guard on that too.
+  const w = ctx && ctx.weather;
+  const num = (v) => (Number.isFinite(v) ? v : null);
+  if (w && num(w.temp) !== null) {
+    const unit = ctx.units === 'metric' ? 'C' : 'F';
+    const parts = [`Weather: ${w.temp}°${unit}`];
+    if (w.desc) parts.push(String(w.desc));
+    if (num(w.tempMax) !== null && num(w.tempMin) !== null) {
+      parts.push(`high ${w.tempMax}, low ${w.tempMin}`);
+    }
+    if (num(w.feelsLike) !== null) parts.push(`feels like ${w.feelsLike}`);
+    if (num(w.humidity) !== null) parts.push(`humidity ${w.humidity}%`);
+    if (num(w.windSpeed) !== null) parts.push(`wind ${w.windSpeed}`);
+    if (ctx.city) parts.push(`in ${ctx.city}`);
+    lines.push(parts.join(', '));
+  }
+
+  const events = Array.isArray(ctx && ctx.events) ? ctx.events.slice(0, 6) : [];
+  if (events.length) {
+    lines.push('Calendar: ' + events.map((e) => {
+      const when = e.isAllDay ? 'all day' : (e.startLabel || '');
+      const day = e.dayLabel ? `${e.dayLabel} ` : '';
+      return `${e.title || 'Untitled'}${when || day ? ` (${day}${when})`.replace(' )', ')') : ''}`;
+    }).join('; '));
+  }
+
+  const tasks = Array.isArray(ctx && ctx.tasks) ? ctx.tasks.slice(0, 6) : [];
+  if (tasks.length) {
+    lines.push('Tasks: ' + tasks.map((t) => t.title || t.text || '').filter(Boolean).join('; '));
+  }
+
+  const heads = Array.isArray(ctx && ctx.headlines) ? ctx.headlines.slice(0, 8) : [];
+  if (heads.length) {
+    lines.push('Headlines: ' + heads.map((h) => h.title || '').filter(Boolean).join(' | '));
+  }
+
+  const np = ctx && ctx.macNowPlaying;
+  if (np && np.title) lines.push(`Now playing: ${np.title}${np.artist ? ` — ${np.artist}` : ''}`);
+
+  const batt = ctx && ctx.battery;
+  if (batt && Number.isFinite(batt.pct)) lines.push(`Panel battery: ${Math.round(batt.pct)}%`);
+
+  const now = new Date(Number.isFinite(ctx && ctx.now) ? ctx.now : Date.now());
+  lines.unshift(`Now: ${now.toDateString()} ${now.toTimeString().slice(0, 5)}`);
+  return lines.join('\n');
+}
+
+// Backstop for a model that ignores the formatting instruction. Markdown and
+// emoji both survive the 1-bit threshold as noise, so strip rather than trust.
+function sanitise(text) {
+  return String(text || '')
+    .replace(/[*_`#>]+/g, '')
+    .replace(/^\s*[-•]\s*/gm, '')
+    .replace(/\p{Extended_Pictographic}/gu, '')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+// ---------- generation ----------
+async function generate(prompt, context) {
+  const key = process.env.AI_API_KEY;
+  const base = (process.env.AI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, '');
+  const model = process.env.AI_MODEL;
+  if (!key) throw new Error('AI_API_KEY not set');
+  if (!model) throw new Error('AI_MODEL not set');
+
+  const res = await fetchWithTimeout(`${base}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${key}`,
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: MAX_OUTPUT_TOKENS,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: `${context}\n\n---\n${prompt}` },
+      ],
+    }),
+  }, REQUEST_TIMEOUT_MS);
+
+  if (!res.ok) {
+    // Body often carries the actionable part (bad model id, no credit).
+    let detail = '';
+    try { detail = (await res.text()).slice(0, 200); } catch { /* ignore */ }
+    throw new Error(`HTTP ${res.status}${detail ? ` — ${detail}` : ''}`);
+  }
+  const json = await res.json();
+  const text = sanitise(json && json.choices && json.choices[0]
+    && json.choices[0].message && json.choices[0].message.content);
+  if (!text) throw new Error('empty completion');
+  return text;
+}
+
+// Returns { text, at, stale, error } or null when unconfigured.
+// `itemId` scopes the cache so two AI tiles with different prompts don't
+// overwrite each other.
+async function fetchAi(settings, ctx, itemId) {
+  const s = settings || {};
+  const prompt = typeof s.prompt === 'string' ? s.prompt.trim() : '';
+  if (!prompt) return null;
+  if (!process.env.AI_API_KEY || !process.env.AI_MODEL) {
+    return { text: '', at: 0, needsSetup: true };
+  }
+
+  const cadenceMs = CADENCES[s.cadence] || CADENCES[DEFAULT_CADENCE];
+  const cache = await loadCache();
+  const slot = cache[itemId || 'default'];
+  const fresh = slot
+    && slot.prompt === prompt
+    && (Date.now() - (slot.at || 0)) < cadenceMs;
+
+  if (fresh) { status.cacheHit('ai'); return { text: slot.text, at: slot.at }; }
+
+  const t0 = Date.now();
+  try {
+    const text = await generate(prompt, buildContext(ctx));
+    const entry = { text, prompt, at: Date.now() };
+    await saveCache({ ...cache, [itemId || 'default']: entry });
+    status.record('ai', { ok: true, ms: Date.now() - t0 });
+    return { text, at: entry.at };
+  } catch (err) {
+    status.record('ai', { ok: false, ms: Date.now() - t0, err: err.message });
+    // Last good text beats an error on a wall display. Only when there has
+    // never been one does the widget admit the failure.
+    if (slot && slot.text) return { text: slot.text, at: slot.at, stale: true };
+    return { text: '', at: 0, error: err.message };
+  }
+}
+
+module.exports = { fetchAi, CADENCES, DEFAULT_CADENCE };

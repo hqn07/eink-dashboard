@@ -3029,3 +3029,18 @@ img.icon { object-fit: contain; }
   letter-spacing: 1px;
   text-transform: uppercase;
 }
+
+/* AI widget — one text block. Deliberately minimal: the card chrome comes
+   from the shared .tr-* primitives, so this only has to make the generated
+   text read well at any tile size. */
+.ai-text {
+  font-family: var(--face-grotesk);
+  line-height: 1.35;
+  /* Generated text varies in length far more than a fixed label, so let
+     autofit do the sizing and just keep it from crowding the card edges. */
+  width: 100%;
+  overflow: hidden;
+  /* Left-aligned and top-anchored: prose centred in a box reads as a pull
+     quote, which is the wrong register for a briefing. */
+  text-align: left;
+}

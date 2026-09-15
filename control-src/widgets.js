@@ -42,6 +42,7 @@ export const POOL_CATEGORIES = ['Weather', 'Time', 'Calendar', 'Media', 'News', 
 // user is likely to type ("music", "todo", "rss", "btc") find the widget
 // even when they aren't in its name.
 const POOL_META = {
+  ai:               { category: 'Text',     blurb: 'Your prompt plus the dashboard data, in a few lines', keywords: 'ai llm gpt deepseek openai briefing summary prompt' },
   weather_hero:     { category: 'Weather',  blurb: 'Current conditions — big temp + icon', keywords: 'temperature forecast conditions now' },
   weather_forecast: { category: 'Weather',  blurb: 'Multi-day / hourly outlook', keywords: 'forecast hourly daily rain outlook' },
   aqi:              { category: 'Weather',  blurb: 'Air quality index + category', keywords: 'air quality pollution pm2.5 smog' },
@@ -93,6 +94,7 @@ export const WIDGET_REGISTRY = [
   // No-key widgets (2026-06-16). This array is the editor palette's
   // source of truth — a widget missing here renders server-side but
   // never shows in the add-widget pool. Keep in sync with _registry.js.
+  { ...migratedDef('ai') },
   { ...migratedDef('aqi') },
   { ...migratedDef('art') },
   { ...migratedDef('chess') },

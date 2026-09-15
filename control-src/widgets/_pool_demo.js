@@ -118,6 +118,12 @@ export function demoCtxForWidget(id, cellW, cellH) {
     case 'codeactivity':
       return { ...base, codeActivity: DEMO_CODE_ACTIVITY,
         settings: { username: 'octocat' } };
+    case 'ai':
+      // Frozen so the widgets-matrix render stays byte-identical — the whole
+      // point of demo data is that a screenshot diff means a real change.
+      return { ...base,
+        ai: { text: 'Cool and clear this morning, high near 78. Two meetings before noon, nothing after 3.', at: base.now - 3 * 3600 * 1000 },
+        settings: { prompt: 'Brief me on today.', cadence: 'daily' } };
     case 'uv':
       return { ...base, uv: { uv: 7.4, uvMax: 9.2 }, settings: {} };
     case 'webhook':

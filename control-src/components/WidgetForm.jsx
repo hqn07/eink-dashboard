@@ -106,7 +106,7 @@ function FieldLabel({ label, suffix, value, defaultValue, onReset }) {
   );
 }
 
-function TextField({ label, value, onChange, placeholder, type = 'text', help, defaultValue, secret, tokens }) {
+function TextField({ label, value, onChange, placeholder, type = 'text', help, defaultValue, secret, tokens, multiline }) {
   const [reveal, setReveal] = useState(false);
   const inputType = secret && !reveal ? 'password' : type;
   // `tokens` opts a text field into {{token}} autocomplete. Only for
@@ -124,6 +124,25 @@ function TextField({ label, value, onChange, placeholder, type = 'text', help, d
       </label>
     );
   }
+  // Multi-line text (prompts, anything sentence-length). Same label/reset
+  // chrome as the single-line case so it doesn't read as a different control.
+  if (multiline && !secret) {
+    return (
+      <label className="wsm-field">
+        <FieldLabel label={label} value={value} defaultValue={defaultValue}
+          onReset={() => onChange(defaultValue)} />
+        <textarea
+          className="wsm-textarea"
+          rows={3}
+          value={value ?? ''}
+          placeholder={placeholder || ''}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        {help && <span className="wsm-field-help">{help}</span>}
+      </label>
+    );
+  }
+
   return (
     <label className="wsm-field">
       <FieldLabel label={label} value={value} defaultValue={defaultValue}

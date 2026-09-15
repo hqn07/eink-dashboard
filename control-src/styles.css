@@ -3042,6 +3042,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   text-transform: uppercase;
   letter-spacing: 1.5px;
 }
+.wsm-field textarea.wsm-textarea,
 .wsm-field input[type="text"],
 .wsm-field input[type="number"] {
   background: #fff;
@@ -3052,6 +3053,11 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   font-size: var(--fs-lg);
   width: 100%;
   box-sizing: border-box;
+}
+.wsm-field textarea.wsm-textarea {
+  resize: vertical;
+  min-height: 64px;
+  line-height: 1.45;
 }
 .wsm-field-help {
   font-size: var(--fs-sm);
