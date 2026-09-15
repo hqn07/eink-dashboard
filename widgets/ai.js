@@ -52,8 +52,15 @@ const SYSTEM_PROMPT = [
   'Plain text only. No markdown, no asterisks, no bullet characters, no emoji.',
   'No preamble, no sign-off, no restating the question. Answer directly.',
   'Keep it under 45 words unless asked otherwise. Short sentences.',
-  'The data you are given is the current state of the dashboard. If some of it',
-  'is missing, just work with what is there and never mention what is absent.',
+  'The data you are given is the current state of the dashboard.',
+  // "never mention what is absent" made it substitute silently: asked for
+  // news with no news in context, it wrote weather advice instead, which
+  // reads as an answer and is not one. Padding around a gap is worse than
+  // naming it — the reader can fix a named gap.
+  'If the request needs data you have not been given, say so in a few words',
+  'rather than answering a different question. Do not pad, and do not invent',
+  'facts you were not given. Ignoring a missing OPTIONAL detail is fine; the',
+  'rule is about being asked for something you genuinely cannot see.',
   'Other tiles on the same screen already show some of this data. Do not',
   'repeat numbers the reader can already see — add what those tiles cannot:',
   'judgement, what it means, what to do. If you have nothing to add beyond',
@@ -123,7 +130,11 @@ function buildContext(ctx) {
     lines.push('Tasks: ' + tasks.map((t) => t.title || t.text || '').filter(Boolean).join('; '));
   }
 
-  const heads = Array.isArray(ctx && ctx.headlines) ? ctx.headlines.slice(0, 8) : [];
+  // fetchHeadlines returns { items: [...] }; the bare-array form is accepted
+  // too so a caller passing the list directly still works.
+  const hRaw = ctx && ctx.headlines;
+  const heads = Array.isArray(hRaw) ? hRaw.slice(0, 8)
+    : (hRaw && Array.isArray(hRaw.items) ? hRaw.items.slice(0, 8) : []);
   if (heads.length) {
     lines.push('Headlines: ' + heads.map((h) => h.title || '').filter(Boolean).join(' | '));
   }
