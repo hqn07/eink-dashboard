@@ -1,6 +1,6 @@
 # Widget config — the plan before the rebuild
 
-Status: **plan, agreed shape, not executed** (2026-09-15). Written because the
+Status: **executed 2026-09-15** — steps 1-6 done bar the final panel photo. Written because the
 last change (removing the theme knob) shipped before its default was right,
 and the AI widget landed black-on-white beside four inverted neighbours. The
 order matters: **fix the default, confirm it, then remove the control.**
@@ -156,13 +156,19 @@ Each step is one commit, guards + panel photo before the next.
    layout knob, and `calendar.density` (rich/compact/auto) changes how much
    of each event shows — both are content by the rule. Classifying on the
    key's name is not good enough.
-5. **Strip dead keys from the live config** — NEXT, and the only step that
-   changes a running screen. Removes `fontScale`, `padding`, `theme`
-   (now redundant — inverted is the default), and any cut variant from the
-   stored tiles. Note the live tiles currently store `padding: 14`, which
-   overrides the face CSS's designed `14px 16px`; stripping it is a real
-   2px change, so photo after.
-6. **Rebaseline** `test:visual` and re-photo.
+5. **Strip dead keys from the live config** — **DONE** (`caa521d`), as
+   gridVersion migration v5 rather than a hand edit, so it applies to any
+   config on load. Two visible consequences on the live screen: the world
+   clock loses its `fontFamily: system` override and renders in the face
+   serif like the main clock, and headlines re-wrap because the designed
+   `14px 16px` padding is 2px wider than the stored square `14`.
+   **If the world clock should keep a distinct face, the fix is to drop
+   `'fontFamily'` from `DEAD_TILE_SETTINGS` in `lib/screens.js`** — but the
+   honest answer is that a per-tile font override is exactly what this pass
+   set out to remove, so a deliberate second face belongs in the widget's
+   own CSS, not in one tile's settings.
+6. **Rebaseline** `test:visual` — **DONE** throughout; both snapshots pass.
+   Re-photo the panel: still outstanding, and the only thing left.
 
 ## Risks
 
