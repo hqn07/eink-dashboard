@@ -1,5 +1,40 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-15 (later) — AI widget + central-setup stage 1
+> - **`ai` widget (32nd).** Prompt + the dashboard's own data -> a few lines.
+>   Provider-agnostic over plain `/chat/completions` (OpenAI and DeepSeek are
+>   the same shape), so switching is `AI_BASE_URL`. No vendor SDK.
+>   **Live on the panel and working.** Env: `AI_API_KEY`, `AI_BASE_URL`,
+>   `AI_MODEL` (no default on purpose). User runs `deepseek-flash`.
+> - **Cadence is the design.** Generation is time-based (daily default,
+>   hourly opt-in), cached on disk under DATA_DIR, so ordinary wakes cost
+>   nothing and the ETag only moves when the text does. A failed call keeps
+>   serving the last good text.
+> - **Two bugs found by photographing it**, both fixed: DeepSeek runs
+>   thinking mode BY DEFAULT, so a 200-token ceiling went entirely on
+>   reasoning and returned empty `content` (now `thinking: {type:'disabled'}`
+>   for DeepSeek, ceiling 800); and the tile said "Generation failed" instead
+>   of the provider's actual words.
+> - **It restated the forecast beside it** — and disagreed with it, since its
+>   "today's high" is the current-conditions daily max while the forecast tile
+>   renders its own. Now told what else is on screen and asked for judgement
+>   rather than data. The underlying figure mismatch is untouched and
+>   pre-existing.
+> - **Central setup stage 1** (`docs/setup-architecture.md`): `cfg.home` block
+>   + "About you" free text (Settings > Tools), which the AI puts first in its
+>   context. Also DECLARES `city`/`lat`/`lon`/`githubUser`, which were read by
+>   fetchers and written by SetupWizard but appeared in no schema. Stages 2
+>   (read helper + Setup panel) and 3 (widgets inherit) deliberately not
+>   started — they change how every location-aware widget reads data.
+> - **Simplification stage 1** shipped earlier the same day: the eleven
+>   per-tile typography knobs and the layout-density control are gone from the
+>   modal (UI only — stored values still render, so nothing restyled itself).
+>   The user's own config was the argument: 4 tiles, all `theme: inverted`,
+>   4 of 99 variants used, one real typography override across the whole
+>   screen. Rule refined by the user: keep controls that change WHAT
+>   information appears (forecast days, headline count, zones), cut ones that
+>   only decorate it.
+>
 > ## 2026-09-15 — panel offset SOLVED + VERIFIED ON GLASS
 > Fix confirmed on the physical panel: with `Content-Length` shipping and
 > `PANEL_SHIFT_3C_PX=0`, the calibration target lands correctly —
@@ -178,7 +213,14 @@
 > + token registry in sync, `lint:eink` clean, `build:css` produces no
 > drift against the committed `public/dashboard.css`. Working tree clean.
 >
-> **⇒ TOP PRIORITY 1: panel-photo verify — now finally worth doing.**
+> **⇒ PRIORITY 1 — PARTLY DONE 2026-09-15.** A dashboard photo (not just the
+> calibration target) confirms the chunked-framing fix on a real render:
+> clean left and right edges, no wrapped strip, `PANEL_SHIFT_3C_PX=0`. The
+> `weather_forecast` / `clock` / `world_clock` / `ai` screen reads well on
+> glass. What is still unverified is every OTHER widget's visual work since
+> 07-01 — the four on that screen are now confirmed, the other 28 are not.
+>
+> **Original note (still true for the unverified widgets):**
 > Every visual change since 2026-07-01 (gauge/heatmap primitives, space-
 > aware fit ladder, moon NASA disc, uv widget, progress dots/pixels,
 > chess variants, `.tr-bar` shapes, 5-day calendar strip) is verified only
