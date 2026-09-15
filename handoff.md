@@ -147,13 +147,30 @@
 > 07-01 has been seen on the physical B panel.** Product intent = ship one
 > self-unit first, so this gates further polish.
 >
-> **⇒ TOP PRIORITY 2: watch for crashpad accumulation.** tini IS live —
-> `fd7f624` deployed successfully on 2026-08-23 and was still the ACTIVE
-> deploy 23 days later (confirmed from the Railway deploy list 09-15), so
-> the reaper is in place and the container has been stable since. What's
-> unproven is the long-run zombie count under real wake churn. Leave
-> `BROWSER_IDLE_MS=0` (resident browser) until that's checked — relaunch
-> churn without a working reaper is exactly what took the fleet down.
+> **⇒ TOP PRIORITY 2: tini never shipped — `nixpacks.toml` is inert.**
+> The Railway service's builder is **RAILPACK** (`get-service-config`,
+> 2026-09-15), so `nixpacks.toml` is not read at all: not the `tini` pkg,
+> not the `tini -g -- node server.js` start command, not its `[variables]`
+> block (`PUPPETEER_EXECUTABLE_PATH`, `PUPPETEER_SKIP_DOWNLOAD`,
+> `DATA_DIR` — Railpack apt-installs its own Chrome deps and the real
+> `DATA_DIR` is a Railway variable). An earlier note in this file claimed
+> tini was live because `fd7f624` deployed successfully; that was wrong —
+> a successful deploy says nothing about a file the builder ignores.
+>
+> So of the Aug-23 outage fix, only the code layers are live:
+> `BROWSER_IDLE_MS=0` (resident browser — no relaunch churn, hence no
+> orphaned crashpad handlers) and the `--disable-crash-reporter` /
+> `--disable-breakpad` launch args in `lib/render.js`. The resident
+> browser is what's actually holding prod up, and there is **no reaper
+> behind it**. Do not raise `BROWSER_IDLE_MS` off 0 until either the
+> service builder is switched back to NIXPACKS or tini (or another init)
+> is arranged under Railpack — that combination is the exact Aug-23
+> fleet-down configuration.
+>
+> **Check while in the Railway dashboard:** the volume mounts at `/data`,
+> and the inert `nixpacks.toml` claimed `DATA_DIR=/app/data`. `DATA_DIR`
+> is set as a real variable; if its value is `/app/data` it does not match
+> the mount and config is NOT surviving redeploys.
 > Check: container PID 1 is `tini`, and no `chrome_crashpad_handler`
 > pile-up across a few hours of device wakes.
 >
