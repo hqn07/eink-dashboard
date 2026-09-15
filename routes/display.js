@@ -109,7 +109,17 @@ router.get('/display.bin', checkDeviceAuth, async (req, res) => {
     res.set('Content-Type', 'application/octet-stream');
     res.set('X-Image-Width', String(SCREEN_W));
     res.set('X-Image-Height', String(SCREEN_H));
+    // Content-Length is LOAD-BEARING, do not drop it. Without it Node falls
+    // back to Transfer-Encoding: chunked and frames the body as
+    // "<hex size>\r\n" + data + "\r\n0\r\n\r\n". The firmware reads
+    // http.getStreamPtr() — the raw socket — which does NOT strip that
+    // framing, so the size header lands in the image buffer as pixels and
+    // shifts the picture sideways by 8px per header byte (a 96000-byte body
+    // yields "17700\r\n" = 7 bytes = 56px), with every further chunk
+    // boundary adding another step mid-image. Setting it explicitly keeps
+    // the response identity-encoded and byte-exact.
     // res.end (not res.send) so Express keeps our strong ETag as-is.
+    res.set('Content-Length', String(bin.length));
     res.end(bin);
   } catch (err) {
     console.error('BIN error:', err);
@@ -188,6 +198,16 @@ router.get('/display-3c.bin', checkDeviceAuth, async (req, res) => {
     res.set('X-Image-Width', String(SCREEN_W));
     res.set('X-Image-Height', String(SCREEN_H));
     res.set('X-Image-Planes', '2');
+    // Content-Length is LOAD-BEARING, do not drop it. Without it Node falls
+    // back to Transfer-Encoding: chunked and frames the body as
+    // "<hex size>\r\n" + data + "\r\n0\r\n\r\n". The firmware reads
+    // http.getStreamPtr() — the raw socket — which does NOT strip that
+    // framing, so the size header lands in the image buffer as pixels and
+    // shifts the picture sideways by 8px per header byte (a 96000-byte body
+    // yields "17700\r\n" = 7 bytes = 56px), with every further chunk
+    // boundary adding another step mid-image. Setting it explicitly keeps
+    // the response identity-encoded and byte-exact.
+    res.set('Content-Length', String(bin.length));
     res.end(bin);
   } catch (err) {
     console.error('3C BIN error:', err);

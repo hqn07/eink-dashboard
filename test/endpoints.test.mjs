@@ -283,3 +283,58 @@ test('webhook: validation + store + read-back', async () => {
   // Unknown key → 404
   assert.equal((await fetch(tok('/api/webhook/nothing'))).status, 404);
 });
+
+// --- Device binaries must be identity-encoded, never chunked ---------------
+//
+// Regression guard for a fleet-wide display corruption. The firmware reads
+// http.getStreamPtr() — the raw socket — which does not strip HTTP chunk
+// framing. When the route answered with res.end(bin) and no Content-Length,
+// Node fell back to Transfer-Encoding: chunked and prefixed the body with
+// "17700\r\n" (the hex size of 96000). Those 7 bytes were read as pixels, so
+// every image landed 56px sideways, with another ~64px step at each further
+// chunk boundary. It read exactly like a panel hardware fault.
+//
+// Uses its own server with CALIB_3C=raw so the assertion covers the framing
+// without dragging Puppeteer (and a Chrome install) into it, and a raw socket
+// because fetch() hides transfer framing.
+test('device binaries send Content-Length and are not chunked', async () => {
+  const { createConnection } = await import('node:net');
+  const P = PORT + 1;
+  const child = spawn('node', ['server.js'], {
+    cwd: ROOT,
+    env: { ...process.env, PORT: String(P), DATA_DIR: dataDir, DEVICE_TOKEN: TOKEN,
+      PRERENDER: '0', CALIB_3C: 'raw', NODE_ENV: 'test' },
+    stdio: 'ignore',
+  });
+  try {
+    const deadline = Date.now() + 30000;
+    for (;;) {
+      try { if ((await fetch(`http://127.0.0.1:${P}/health`)).ok) break; } catch {}
+      if (Date.now() > deadline) throw new Error('calib server did not start');
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    const raw = await new Promise((resolve, reject) => {
+      const parts = [];
+      const sock = createConnection(P, '127.0.0.1', () => {
+        sock.write(`GET /display-3c.bin HTTP/1.1\r\nHost: localhost\r\n`
+          + `X-Device-Token: ${TOKEN}\r\nConnection: close\r\n\r\n`);
+      });
+      sock.on('data', (d) => parts.push(d));
+      sock.on('error', reject);
+      sock.on('end', () => resolve(Buffer.concat(parts)));
+    });
+    const split = raw.indexOf('\r\n\r\n') + 4;
+    const headers = raw.subarray(0, split).toString();
+    const body = raw.subarray(split);
+
+    assert.ok(!/transfer-encoding:\s*chunked/i.test(headers),
+      'must not be chunked — the firmware reads the raw socket');
+    assert.match(headers, /Content-Length:\s*96000/i);
+    assert.equal(body.length, 96000, 'body must be exactly two 48000-byte planes');
+    // A chunk header would look like hex digits followed by CRLF.
+    assert.ok(!/^[0-9a-f]+\r\n/i.test(body.subarray(0, 12).toString('latin1')),
+      'body must start with image data, not a chunk-size header');
+  } finally {
+    child.kill();
+  }
+});
