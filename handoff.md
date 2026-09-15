@@ -167,10 +167,10 @@
 > is arranged under Railpack — that combination is the exact Aug-23
 > fleet-down configuration.
 >
-> **Check while in the Railway dashboard:** the volume mounts at `/data`,
-> and the inert `nixpacks.toml` claimed `DATA_DIR=/app/data`. `DATA_DIR`
-> is set as a real variable; if its value is `/app/data` it does not match
-> the mount and config is NOT surviving redeploys.
+> Volume/DATA_DIR pairing is fine, checked 2026-09-15: the Railway
+> variable `DATA_DIR=/data` matches the volume mount at `/data`, so config
+> does survive redeploys. (The inert `nixpacks.toml` still says
+> `/app/data` — ignore it; it documents a builder that isn't in use.)
 > Check: container PID 1 is `tini`, and no `chrome_crashpad_handler`
 > pile-up across a few hours of device wakes.
 >
