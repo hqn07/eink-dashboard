@@ -1,5 +1,39 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-15 (evening) — config rebuild done, VERIFIED ON GLASS
+> The whole `docs/widget-config-plan.md` pass shipped and was photographed:
+> **235 settings keys -> 166, 99 variants -> 43, 12 per-tile knobs -> 1.**
+> Panel shows every tile inverted (including `ai`), both clock faces intact
+> (serif local / sans SAIGON), forecast and spacing clean.
+> - Order was **defaults first, then removals** — the inverse of the theme
+>   mistake earlier the same day. Step 1 flipped 17 `defaultVariant`s with
+>   nothing deleted; proven a no-op by rendering the live config against the
+>   previous commit and diffing (73 px, all live weather drift).
+> - Step 5 is `gridVersion` migration **v5** in `lib/screens.js`, not a hand
+>   edit of the volume. Its variant map is FROZEN on purpose — a migration
+>   must give the same answer whenever it runs.
+> - **`fontFamily` is excluded from the strip at the user's request**: the
+>   world clock uses it for a face distinct from the serif clock, and with
+>   the font picker gone it could not have been restored from the UI. That
+>   tile is now the only one with a font override and it is effectively
+>   frozen — if it is ever deleted and re-added the face goes with it. The
+>   durable fix is moving it into the world_clock widget's CSS.
+> - Two plan entries were wrong from classifying on the key NAME:
+>   `art.density` is grid fineness in px, `calendar.density` is
+>   rich/compact/auto. Both are content; both kept.
+> - `chess` declared its default only in `defaults()` while `buildTileCtx`
+>   reads `def.defaultVariant` — trimming its picker would have resolved to
+>   null. Caught by assertion, not by reading the diff.
+> - **Alarms removed server-side**; the buzzer stays as firmware-only
+>   feedback (beepChime on button wake, beepLowBattery). Firmware treats a
+>   missing alarm as success, so its alarm loop can come out on any flash.
+> - **Local Puppeteer works again.** Its bundled Chrome is unsigned and arm64
+>   macOS refuses it (`spawn Unknown system error -88`), which had been
+>   misread as "no local Chrome" for months. Point
+>   `PUPPETEER_EXECUTABLE_PATH` at `/Applications/Google Chrome.app/...`:
+>   **test:api 23/23** (was 20/22) and the visual harness runs. Both
+>   baselines regenerated and passing.
+>
 > ## 2026-09-15 (later) — AI widget + central-setup stage 1
 > - **`ai` widget (32nd).** Prompt + the dashboard's own data -> a few lines.
 >   Provider-agnostic over plain `/chat/completions` (OpenAI and DeepSeek are
