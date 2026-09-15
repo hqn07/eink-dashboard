@@ -1,6 +1,9 @@
 # E-Ink Dashboard — Handoff
 
-> ## 2026-09-15 — panel offset SOLVED: it was HTTP chunked framing
+> ## 2026-09-15 — panel offset SOLVED + VERIFIED ON GLASS
+> Fix confirmed on the physical panel: with `Content-Length` shipping and
+> `PANEL_SHIFT_3C_PX=0`, the calibration target lands correctly —
+> sentinels flush to both edges, diagonals straight, planes registered.
 > Not a panel trait. `/display.bin` and `/display-3c.bin` answered with
 > `res.end(bin)` and no `Content-Length`, so Node framed the body as
 > `<hex size>\r\n` + data + `\r\n0\r\n\r\n`. The firmware reads
@@ -175,15 +178,17 @@
 > + token registry in sync, `lint:eink` clean, `build:css` produces no
 > drift against the committed `public/dashboard.css`. Working tree clean.
 >
-> **⇒ TOP PRIORITY 1: panel-photo verify.** Still the oldest open item —
-> every visual change since 2026-07-01 (gauge/heatmap primitives, space-
+> **⇒ TOP PRIORITY 1: panel-photo verify — now finally worth doing.**
+> Every visual change since 2026-07-01 (gauge/heatmap primitives, space-
 > aware fit ladder, moon NASA disc, uv widget, progress dots/pixels,
 > chess variants, `.tr-bar` shapes, 5-day calendar strip) is verified only
 > through the 1-bit sim harness (`node scripts/preview-components.mjs` —
 > a scratch file, rewritten per task: renders through the real face CSS +
-> Chrome, then `sharp.threshold(128)` to fake the panel). **Nothing since
-> 07-01 has been seen on the physical B panel.** Product intent = ship one
-> self-unit first, so this gates further polish.
+> Chrome, then `sharp.threshold(128)` to fake the panel). Until 09-15 the
+> panel itself was misaligned by the chunked-framing bug, so any photo
+> judgement was being made through a 56px shift — worth re-checking
+> anything that was assessed on glass before that date. Product intent =
+> ship one self-unit first, so this gates further polish.
 >
 > **⇒ TOP PRIORITY 2: tini never shipped — `nixpacks.toml` is inert.**
 > The Railway service's builder is **RAILPACK** (`get-service-config`,
@@ -234,11 +239,15 @@
 >   because first paint needs them; `manualChunks` on those is what's left
 >   if the warning is worth chasing.
 >
-> **Deploy hygiene:** Railway auto-deploys every push to `main`, so
-> docs-only commits used to rebuild the whole image. `railway.json` now
-> sets `build.watchPatterns` to skip `**/*.md`, `docs/**`, `esp32/**` and
-> `test/visual-baseline/**`. `public/**` stays watched on purpose — the
-> CI-built firmware bins live in `public/firmware/` and must ship.
+> **Deploy hygiene — `railway.json` is IGNORED, same as `nixpacks.toml`.**
+> It sets `build.watchPatterns` to skip `**/*.md`, `docs/**`, `.github/**`,
+> `esp32/**` and `test/visual-baseline/**`, but observed behaviour on
+> 2026-09-15 is that docs-only and firmware-only commits still trigger full
+> deploys. This service takes its build config from the Railway dashboard,
+> not from the repo (builder is RAILPACK). To actually stop the churn, set
+> Watch Paths in Service → Settings → Build; otherwise delete
+> `railway.json`, which is currently decorative. Keep `public/**` watched
+> either way — CI-built firmware bins live in `public/firmware/`.
 >
 > **Open (small, not started):** heatmap 2px cell borders read a bit
 > heavy; two GxEPD2 copies on disk (`libraries/GxEPD2` 1.6.5 + misnested
