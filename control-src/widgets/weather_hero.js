@@ -33,10 +33,8 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
-    trmnl:   { label: 'TRMNL — title-bar card' },
     classic: { label: 'Classic — centered stack' },
-    split:   { label: 'Split — icon left, readings right' },
-    minimal: { label: 'Minimal — temperature + high/low only' }
+    split:   { label: 'Split — icon left, readings right' }
   },
   defaultVariant: 'classic',
   // What each tier drops relative to `full` (advisory; the render below

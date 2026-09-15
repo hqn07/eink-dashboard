@@ -22,9 +22,7 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
-    trmnl:   { label: 'TRMNL — title-bar board' },
-    board:   { label: 'Board — big minutes' },
-    compact: { label: 'Compact — dense rows' }
+    board:   { label: 'Board — big minutes' }
   },
   defaultVariant: 'board',
   degrade: { tiny: ['stop'] },

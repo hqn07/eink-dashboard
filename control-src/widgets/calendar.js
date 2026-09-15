@@ -21,10 +21,8 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
-    trmnl: { label: 'TRMNL — title-bar agenda' },
     list:  { label: 'List — agenda rows' },
     strip: { label: 'Strip — 7-day horizontal' },
-    strip5: { label: 'Strip — 5-day, roomier text' },
     month: { label: 'Month — full grid' }
   },
   defaultVariant: 'list',

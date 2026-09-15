@@ -105,10 +105,7 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
-    trmnl:   { label: 'TRMNL — title-bar card' },
-    serif:   { label: 'Serif — quote + attribution' },
-    mark:    { label: 'Mark — big quote mark' },
-    minimal: { label: 'Minimal — quote only' }
+    serif:   { label: 'Serif — quote + attribution' }
   },
   defaultVariant: 'serif',
   degrade: {

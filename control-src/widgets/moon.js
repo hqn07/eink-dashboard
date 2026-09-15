@@ -107,11 +107,8 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
-    trmnl:   { label: 'TRMNL — title-bar card' },
     flow:    { label: 'Cycle — phase timeline (today centered)' },
-    disc:    { label: 'Disc — moon + phase name' },
-    detail:  { label: 'Detail — moon + illumination + age' },
-    minimal: { label: 'Minimal — disc + name' }
+    disc:    { label: 'Disc — moon + phase name' }
   },
   defaultVariant: 'disc',
   degrade: {

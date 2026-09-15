@@ -24,10 +24,7 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
-    trmnl:   { label: 'TRMNL — title-bar card' },
-    big:     { label: 'Big — one number' },
-    detail:  { label: 'Detail — days + hours' },
-    minimal: { label: 'Minimal — number + unit' }
+    big:     { label: 'Big — one number' }
   },
   defaultVariant: 'big',
   degrade: {

@@ -100,7 +100,6 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
-    trmnl:  { label: 'TRMNL — title-bar card' },
     serif:  { label: 'Serif — big word + definition' }
   },
   defaultVariant: 'serif',

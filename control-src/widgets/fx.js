@@ -14,9 +14,6 @@ export const def = {
     L: { w: 8, h: 8 }
   },
   defaultSize: 'M',
-  variants: {
-    trmnl: { label: 'TRMNL — title-bar card' }
-  },
   defaultVariant: 'trmnl',
   defaults: () => ({
     variant: 'trmnl',

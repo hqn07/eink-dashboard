@@ -17,8 +17,7 @@ export const def = {
   },
   defaultSize: 'S',
   variants: {
-    gauge: { label: 'Gauge — ring dial' },
-    scale: { label: 'Scale — WHO band strip' }
+    gauge: { label: 'Gauge — ring dial' }
   },
   defaultVariant: 'gauge',
   defaults: () => ({

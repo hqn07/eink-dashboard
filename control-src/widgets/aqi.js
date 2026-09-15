@@ -23,11 +23,7 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
-    trmnl:   { label: 'TRMNL — title-bar card' },
-    gauge:   { label: 'Gauge — ring dial' },
-    big:     { label: 'Big — number + category' },
-    bar:     { label: 'Bar — number over a scale' },
-    minimal: { label: 'Minimal — number + category only' }
+    gauge:   { label: 'Gauge — ring dial' }
   },
   defaultVariant: 'gauge',
   degrade: {

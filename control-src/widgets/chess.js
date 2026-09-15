@@ -19,13 +19,16 @@ export const def = {
     L: { w: 12, h: 12 }
   },
   defaultSize: 'M',
-  // Layout variants: the full newspaper diagram, a bare board for tight
-  // tiles, and a coordinate-labelled board like a printed study.
+  // One layout: the full newspaper diagram. The bare-board and
+  // coordinate-labelled alternatives were restyles of the same information,
+  // cut 2026-09-15 with the rest of the near-duplicate variants.
   variants: {
-    diagram:    { label: 'Diagram' },
-    board_only: { label: 'Board only' },
-    coords:     { label: 'With coords' }
+    diagram:    { label: 'Diagram' }
   },
+  // chess kept its default only in defaults(); every other widget also
+  // declares it here, and buildTileCtx reads THIS one — without it a tile
+  // with no stored variant resolved to null.
+  defaultVariant: 'diagram',
   defaults: () => ({
     title: '',
     variant: 'diagram',

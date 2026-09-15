@@ -22,9 +22,7 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
-    trmnl:   { label: 'TRMNL — title-bar list' },
-    list:    { label: 'List — numbered rows' },
-    compact: { label: 'Compact — dense rows' }
+    list:    { label: 'List — numbered rows' }
   },
   defaultVariant: 'list',
   degrade: {

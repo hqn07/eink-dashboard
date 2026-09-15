@@ -24,10 +24,7 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
-    trmnl:   { label: 'TRMNL — title-bar card' },
-    line:    { label: 'Line — trend + value' },
-    dots:    { label: 'Dots — mark latest point' },
-    minimal: { label: 'Minimal — line + value' }
+    line:    { label: 'Line — trend + value' }
   },
   defaultVariant: 'line',
   degrade: {

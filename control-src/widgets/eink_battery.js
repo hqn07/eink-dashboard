@@ -26,11 +26,8 @@ export const def = {
   },
   defaultSize: 'S',
   variants: {
-    trmnl:   { label: 'TRMNL — card + dithered bar' },
     gauge:   { label: 'Gauge — percent + volts + bar + age' },
-    trend:   { label: 'Trend — percent + history sparkline' },
-    inline:  { label: 'Inline — one-row strip' },
-    minimal: { label: 'Minimal — percent only' }
+    trend:   { label: 'Trend — percent + history sparkline' }
   },
   defaultVariant: 'gauge',
   // Gauge drops downward as the tile shrinks. Battery presets all live

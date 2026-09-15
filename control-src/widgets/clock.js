@@ -23,10 +23,7 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
-    trmnl:  { label: 'TRMNL — title-bar card' },
-    big:    { label: 'Big — chunky serif' },
-    thin:   { label: 'Thin — light + airy' },
-    banner: { label: 'Banner — time left, date right' }
+    big:    { label: 'Big — chunky serif' }
   },
   defaultVariant: 'big',
   degrade: {

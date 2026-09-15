@@ -23,10 +23,7 @@ export const def = {
   },
   defaultSize: 'S',
   variants: {
-    trmnl:   { label: 'TRMNL — card + dithered bar' },
-    gauge:   { label: 'Gauge — percent + state' },
-    inline:  { label: 'Inline — one-row strip' },
-    minimal: { label: 'Minimal — percent only' }
+    gauge:   { label: 'Gauge — percent + state' }
   },
   defaultVariant: 'gauge',
   degrade: {

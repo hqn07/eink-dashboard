@@ -21,10 +21,7 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
-    trmnl:   { label: 'TRMNL — title-bar list' },
-    list:    { label: 'List — dated rows' },
-    feature: { label: 'Feature — one event, large' },
-    compact: { label: 'Compact — dense rows' }
+    list:    { label: 'List — dated rows' }
   },
   defaultVariant: 'list',
   degrade: {

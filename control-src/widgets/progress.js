@@ -17,7 +17,6 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
-    trmnl:  { label: 'TRMNL — title-bar card' },
     plain:  { label: 'Plain — bars only' },
     dots:   { label: 'Dots — 10 discrete steps per span' },
     pixels: { label: 'Pixels — year as a day grid' }

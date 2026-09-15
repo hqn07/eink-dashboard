@@ -24,7 +24,6 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
-    trmnl:   { label: 'TRMNL — title-bar card' },
     rows:    { label: 'Rows — one day per line' },
     columns: { label: 'Columns — horizontal day strip' }
   },

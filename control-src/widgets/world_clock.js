@@ -33,10 +33,8 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
-    trmnl: { label: 'TRMNL — title-bar rows' },
     stack: { label: 'Stack — label · time rows' },
-    big:   { label: 'Big — one zone, large' },
-    dual:  { label: 'Dual — two zones side by side' }
+    big:   { label: 'Big — one zone, large' }
   },
   defaultVariant: 'big',
   degrade: {

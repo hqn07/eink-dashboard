@@ -22,9 +22,7 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
-    trmnl:   { label: 'TRMNL — title-bar checklist' },
-    list:    { label: 'List — checkbox rows' },
-    compact: { label: 'Compact — dense rows' }
+    list:    { label: 'List — checkbox rows' }
   },
   defaultVariant: 'list',
   degrade: {

@@ -19,9 +19,6 @@ export const def = {
     L: { w: 20, h: 6 }
   },
   defaultSize: 'M',
-  variants: {
-    trmnl: { label: 'TRMNL — heatmap card' }
-  },
   defaultVariant: 'trmnl',
   defaults: () => ({
     variant: 'trmnl',

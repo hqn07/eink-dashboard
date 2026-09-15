@@ -74,12 +74,7 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
-    time_bookends: { label: 'Time bookends — elapsed · remaining' },
-    centered:      { label: 'Centered — no bookends' },
-    vertical_text: { label: 'Vertical NOW PLAYING text' },
-    play_state:    { label: 'Big play / pause glyph' },
-    bars:          { label: 'Decorative bars' },
-    metadata:      { label: 'Artist · album / source labels' }
+    time_bookends: { label: 'Time bookends — elapsed · remaining' }
   },
   defaultVariant: 'time_bookends',
   // The settings-modal variant picker renders each thumbnail at this
