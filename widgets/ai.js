@@ -54,6 +54,10 @@ const SYSTEM_PROMPT = [
   'Keep it under 45 words unless asked otherwise. Short sentences.',
   'The data you are given is the current state of the dashboard. If some of it',
   'is missing, just work with what is there and never mention what is absent.',
+  'Other tiles on the same screen already show some of this data. Do not',
+  'repeat numbers the reader can already see — add what those tiles cannot:',
+  'judgement, what it means, what to do. If you have nothing to add beyond',
+  'what is already displayed, say one short useful thing instead of padding.',
 ].join(' ');
 
 // ---------- disk cache ----------
@@ -139,6 +143,16 @@ function buildContext(ctx) {
   const about = ctx && ctx.home && typeof ctx.home.about === 'string'
     ? ctx.home.about.trim() : '';
   if (about) lines.unshift(`About the person reading this: ${about}`);
+
+  // What the reader can already see. Without this the model restates the
+  // forecast sitting next to it — and worse, disagrees with it, because its
+  // "today's high" comes from the current-conditions payload while the
+  // forecast tile renders its own daily figure. Naming the neighbours turns
+  // duplication into commentary.
+  const others = Array.isArray(ctx && ctx.otherWidgets) ? ctx.otherWidgets : [];
+  if (others.length) {
+    lines.push(`Already visible on this screen (do not restate): ${others.join(', ')}`);
+  }
   return lines.join('\n');
 }
 
