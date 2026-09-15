@@ -31,7 +31,11 @@ const status = require('./_status');
 
 const CACHE_PATH = path.join(DATA_DIR, 'ai-cache.json');
 const REQUEST_TIMEOUT_MS = 30000;   // generation is slower than a data fetch
-const MAX_OUTPUT_TOKENS = 200;
+// Generous because a model with thinking enabled spends this budget on
+// reasoning first: at 200 the reasoning consumed the lot and `content` came
+// back empty with finish_reason "length". Output is billed per token used,
+// not per token allowed, so a high ceiling costs nothing extra.
+const MAX_OUTPUT_TOKENS = 800;
 
 const CADENCES = {
   hourly: 60 * 60 * 1000,
@@ -151,20 +155,27 @@ async function generate(prompt, context) {
   if (!key) throw new Error('AI_API_KEY not set');
   if (!model) throw new Error('AI_MODEL not set');
 
+  const body = {
+    model,
+    max_tokens: MAX_OUTPUT_TOKENS,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: `${context}\n\n---\n${prompt}` },
+    ],
+  };
+  // DeepSeek enables thinking mode by default, which is wasted on a 40-word
+  // briefing: it burns budget and latency reasoning about a summary. Turn it
+  // off there. Sent only for DeepSeek because `thinking` is not an OpenAI
+  // parameter and strict providers reject unknown body fields.
+  if (/deepseek/i.test(base)) body.thinking = { type: 'disabled' };
+
   const res = await fetchWithTimeout(`${base}/chat/completions`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
       authorization: `Bearer ${key}`,
     },
-    body: JSON.stringify({
-      model,
-      max_tokens: MAX_OUTPUT_TOKENS,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: `${context}\n\n---\n${prompt}` },
-      ],
-    }),
+    body: JSON.stringify(body),
   }, REQUEST_TIMEOUT_MS);
 
   if (!res.ok) {
@@ -174,9 +185,19 @@ async function generate(prompt, context) {
     throw new Error(`HTTP ${res.status}${detail ? ` — ${detail}` : ''}`);
   }
   const json = await res.json();
-  const text = sanitise(json && json.choices && json.choices[0]
-    && json.choices[0].message && json.choices[0].message.content);
-  if (!text) throw new Error('empty completion');
+  const choice = (json && json.choices && json.choices[0]) || {};
+  const msg = choice.message || {};
+  const text = sanitise(msg.content);
+  if (!text) {
+    // "empty completion" alone sent me hunting; the cause is almost always
+    // visible right here. finish_reason "length" plus reasoning_content means
+    // the budget went on thinking before any answer was written.
+    const why = [
+      choice.finish_reason ? `finish_reason=${choice.finish_reason}` : '',
+      msg.reasoning_content ? 'reasoning-only output' : '',
+    ].filter(Boolean).join(', ');
+    throw new Error(`empty completion${why ? ` (${why})` : ''}`);
+  }
   return text;
 }
 
