@@ -93,8 +93,35 @@ choice. The other cuts are `minimal` / `compact` / `thin`, which duplicate what
 | Screen: refreshMinutes, schedule, units | Keep — behaviour, not decoration |
 | Screen: `layoutKind` / slots | **Decide** — primitive layouts were built but never got UI; either finish or delete |
 | Global: `home` block | Keep — stages 2 and 3 of `setup-architecture.md` |
-| Global: quietHours, alarms | Keep quietHours. **Alarms are dead** — the buzzer is being desoldered |
+| Global: quietHours | Keep — behaviour |
+| Global: alarms (scheduled ring) | **Cut** — see below |
+| Buzzer audio feedback | **Keep** — firmware-only, already working |
 | Palette: 32 widgets | Keep all; they cost nothing until added |
+
+## Buzzer: feedback stays, alarms go
+
+The buzzer is **not** being desoldered after all — it stays, but as audio
+feedback only, not as an alarm clock. These are already cleanly separable:
+
+**Keep (firmware-only, no server involvement):**
+- `beepChime()` on button wake — press acknowledgement / refresh done
+- `beepLowBattery()` below the low-battery threshold
+
+Neither touches the server, so cutting alarms cannot break them.
+
+**Cut (the schedule-a-ring feature):**
+- `routes/alarms.js`, `widgets/alarms.js`, the `server.js` wiring
+- `AlarmsPanel.jsx` + its Settings > Tools row, and the `control-src/api.js`
+  helpers
+- The `{{nextAlarm}}` token family in `widgets/_tokens.js` — check the token
+  registry mirror and `check:widgets` after, since the two copies must agree
+- Firmware: `fetchNextAlarm()`, the `/api/alarm/next` call and the alarm ring
+  loop. Firmware already treats "no alarm scheduled" as success, so the
+  server side can go first and the device keeps working until the next OTA.
+
+Order matters here too: drop the server surface, confirm the panel still
+wakes and beeps on a button press, then strip the firmware alarm loop on the
+next flash.
 
 ## Rebuild order
 
