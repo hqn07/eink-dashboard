@@ -2,7 +2,6 @@
   "gridVersion": 3,
   "timezone": "America/New_York",
   "quietHours": { "enabled": false, "from": "01:00", "to": "06:00" },
-  "alarms": [],
   "savedFeeds": [],
   "home": {
     "city": "",

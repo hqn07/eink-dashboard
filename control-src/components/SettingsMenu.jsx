@@ -8,21 +8,20 @@ import PushNowButton from './PushNowButton.jsx';
 import PanelPreview from './PanelPreview.jsx';
 import PinButton from './PinButton.jsx';
 import AboutPanel from './AboutPanel.jsx';
-import AlarmsPanel from './AlarmsPanel.jsx';
 import BackupPanel from './BackupPanel.jsx';
 
 // Single header settings menu. Consolidates what used to be separate
 // header controls — Mac-agent status, Setup wizard, Panel view, PIN/Lock,
-// keyboard shortcuts, and Tools (alarms + backup) — into one gear
+// keyboard shortcuts, and Tools (about + backup) — into one gear
 // dropdown, grouped into labelled sections (Option A layout).
 //
 // Panel view + PIN keep their own modal/popover logic; they render their
-// trigger as a full-width menu row here (block prop). Alarms + Backup are
+// trigger as a full-width menu row here (block prop). About + Backup are
 // heavy blocks, so they collapse behind expandable rows to keep the menu
 // short.
 export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcuts }) {
   const [open, setOpen] = useState(false);
-  const [expanded, setExpanded] = useState(null); // 'alarms' | 'backup' | null
+  const [expanded, setExpanded] = useState(null); // 'about' | 'backup' | null
   const ref = useRef(null);
 
   useEffect(() => {
@@ -103,18 +102,6 @@ export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcut
               <div className="settings-collapse-body">
                 <AboutPanel cfg={cfg} onReplaceConfig={onReplaceConfig} />
               </div>
-            )}
-            <button
-              type="button"
-              className={`settings-row settings-row--expandable ${expanded === 'alarms' ? 'is-open' : ''}`}
-              aria-expanded={expanded === 'alarms'}
-              onClick={() => toggle('alarms')}
-            >
-              <Bell size={14} weight="bold" /> Alarms
-              <CaretRight className="settings-row-caret" size={12} weight="bold" />
-            </button>
-            {expanded === 'alarms' && (
-              <div className="settings-collapse-body"><AlarmsPanel /></div>
             )}
             <button
               type="button"

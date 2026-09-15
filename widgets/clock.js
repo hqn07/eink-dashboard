@@ -2,7 +2,8 @@
 // Server-side time formatter for the clock widget. Refreshed once per
 // dashboard cycle, so the displayed time is accurate to the panel's
 // refresh interval (typically 30 min) — not a real second-ticker. The
-// alarm system runs separately and uses an NTP-synced wake on the
+// scheduled-alarm feature was removed 2026-09-15 (the buzzer stays, as
+// firmware-side audio feedback only); the device wake is NTP-synced on the
 // device, independent of this widget.
 //
 // Settings shape (per-tile):
