@@ -338,3 +338,65 @@ test('device binaries send Content-Length and are not chunked', async () => {
     child.kill();
   }
 });
+
+// --- Config migration v5: retire cosmetic per-tile settings ----------------
+//
+// The risk this guards is asymmetric. Dropping a cosmetic key is recoverable
+// (the design decides the look now); dropping a DATA or CONTENT key silently
+// destroys something the user typed — a calendar URL, a ticker list, a
+// forecast-day count — with no way to know it is gone until the tile renders
+// wrong. So this asserts both directions, not just that the strip happened.
+test('config migration v5 strips cosmetics and keeps content', async () => {
+  const { migrateConfigToScreens } = await import('../lib/screens.js');
+  const cfg = {
+    gridVersion: 4,
+    firstRunSeeded: true,
+    screens: [{
+      id: 'x', name: 'X', isDefault: true, layoutKind: 'free',
+      layout: [
+        { id: 'a', widgetId: 'weather_forecast', x: 0, y: 0, w: 14, h: 9,
+          density: 'rich',
+          settings: { lat: 1, lon: 2, city: 'Town', forecastDays: 4, includeToday: true,
+                      variant: 'columns', theme: 'inverted', fontScale: 1, padding: 14,
+                      bold: true, fontFamily: 'system', frame: 'none' } },
+        { id: 'b', widgetId: 'calendar', x: 0, y: 9, w: 10, h: 3,
+          settings: { icalUrls: ['https://example.com/c.ics'], density: 'compact',
+                      variant: 'strip5', showTime: true, padding: 14 } },
+        { id: 'c', widgetId: 'art', x: 10, y: 9, w: 10, h: 3,
+          settings: { density: 22, seed: 7, theme: 'normal' } },
+      ],
+    }],
+  };
+  const out = migrateConfigToScreens(JSON.parse(JSON.stringify(cfg)));
+  assert.equal(out.gridVersion, 5);
+  const [a, b, c] = out.screens[0].layout;
+
+  // Cosmetics gone, including the item-level layout-density override.
+  for (const k of ['theme', 'fontScale', 'padding', 'bold', 'fontFamily', 'frame']) {
+    assert.ok(!(k in a.settings), `${k} should be stripped`);
+  }
+  assert.ok(!('density' in a), 'item-level density override should be stripped');
+
+  // Data and content survive untouched.
+  assert.deepEqual(
+    { lat: a.settings.lat, lon: a.settings.lon, city: a.settings.city,
+      forecastDays: a.settings.forecastDays, includeToday: a.settings.includeToday,
+      variant: a.settings.variant },
+    { lat: 1, lon: 2, city: 'Town', forecastDays: 4, includeToday: true, variant: 'columns' });
+  assert.deepEqual(b.settings.icalUrls, ['https://example.com/c.ics']);
+  assert.equal(b.settings.showTime, true);
+
+  // settings.density is the widget's OWN parameter on art (grid fineness) and
+  // calendar (how much of each event shows) — not the retired layout knob.
+  assert.equal(b.settings.density, 'compact');
+  assert.equal(c.settings.density, 22);
+  assert.equal(c.settings.seed, 7);
+
+  // theme: 'normal' is the escape hatch the modal writes; only 'inverted'
+  // (now the default) is redundant.
+  assert.equal(c.settings.theme, 'normal');
+
+  // A variant that no longer exists is dropped so the tile falls through to
+  // the widget default instead of pinning something unreachable.
+  assert.ok(!('variant' in b.settings), 'cut variant strip5 should be dropped');
+});
