@@ -29,12 +29,12 @@ export const def = {
     detail:  { label: 'Detail — days + hours' },
     minimal: { label: 'Minimal — number + unit' }
   },
-  defaultVariant: 'trmnl',
+  defaultVariant: 'big',
   degrade: {
     tiny: ['label', 'hours']
   },
   defaults: () => ({
-    variant: 'trmnl',
+    variant: 'big',
     target: '',          // YYYY-MM-DD or YYYY-MM-DDTHH:MM
     repeat: 'none',      // 'none' | 'weekly' | 'monthly' | 'yearly'
     label: '',           // e.g. "until launch"

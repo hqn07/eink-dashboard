@@ -110,12 +110,12 @@ export const def = {
     mark:    { label: 'Mark — big quote mark' },
     minimal: { label: 'Minimal — quote only' }
   },
-  defaultVariant: 'trmnl',
+  defaultVariant: 'serif',
   degrade: {
     tiny: ['author']
   },
   defaults: () => ({
-    variant: 'trmnl',
+    variant: 'serif',
     quotes: [],          // empty → built-in rotation
     fontScale: 1,
     padding: 14

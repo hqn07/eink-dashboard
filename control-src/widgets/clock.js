@@ -28,12 +28,12 @@ export const def = {
     thin:   { label: 'Thin — light + airy' },
     banner: { label: 'Banner — time left, date right' }
   },
-  defaultVariant: 'trmnl',
+  defaultVariant: 'big',
   degrade: {
     tiny: ['date']
   },
   defaults: () => ({
-    variant: 'trmnl',
+    variant: 'big',
     format: '12h', showDate: true,
     fontScale: 1,
     padding: 14

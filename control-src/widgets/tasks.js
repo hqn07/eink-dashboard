@@ -26,13 +26,13 @@ export const def = {
     list:    { label: 'List — checkbox rows' },
     compact: { label: 'Compact — dense rows' }
   },
-  defaultVariant: 'trmnl',
+  defaultVariant: 'list',
   degrade: {
     compact: ['due'],
     tiny:    ['due']
   },
   defaults: () => ({
-    variant: 'trmnl',
+    variant: 'list',
     source: 'todoist',   // 'todoist' | 'ical'
     token: '',           // Todoist API token
     icalUrl: '',         // source=ical (VTODO feed)

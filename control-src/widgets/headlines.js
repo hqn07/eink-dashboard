@@ -26,13 +26,13 @@ export const def = {
     list:    { label: 'List — numbered rows' },
     compact: { label: 'Compact — dense rows' }
   },
-  defaultVariant: 'trmnl',
+  defaultVariant: 'list',
   degrade: {
     compact: ['age'],
     tiny:    ['age', 'source']
   },
   defaults: () => ({
-    variant: 'trmnl',
+    variant: 'list',
     source: 'hn',        // 'news' | 'hn' | 'rss'
     newsSource: 'bbc',   // source=news (bbc|bbc_world|nyt|guardian|npr|aljazeera)
     hnFeed: 'top',       // 'top' | 'best' | 'new'

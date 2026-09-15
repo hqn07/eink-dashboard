@@ -26,10 +26,10 @@ export const def = {
     board:   { label: 'Board — big minutes' },
     compact: { label: 'Compact — dense rows' }
   },
-  defaultVariant: 'trmnl',
+  defaultVariant: 'board',
   degrade: { tiny: ['stop'] },
   defaults: () => ({
-    variant: 'trmnl',
+    variant: 'board',
     line: 'L',
     stopId: '',
     direction: 'N',

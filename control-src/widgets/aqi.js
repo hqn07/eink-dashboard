@@ -29,13 +29,13 @@ export const def = {
     bar:     { label: 'Bar — number over a scale' },
     minimal: { label: 'Minimal — number + category only' }
   },
-  defaultVariant: 'trmnl',
+  defaultVariant: 'gauge',
   degrade: {
     compact: ['pollutants'],
     tiny:    ['pollutants', 'title', 'category']
   },
   defaults: () => ({
-    variant: 'trmnl',
+    variant: 'gauge',
     title: '',
     showPollutants: true,
     fontScale: 1,

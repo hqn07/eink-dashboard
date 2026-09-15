@@ -113,12 +113,12 @@ export const def = {
     detail:  { label: 'Detail — moon + illumination + age' },
     minimal: { label: 'Minimal — disc + name' }
   },
-  defaultVariant: 'trmnl',
+  defaultVariant: 'disc',
   degrade: {
     tiny: ['name', 'stats']
   },
   defaults: () => ({
-    variant: 'trmnl',
+    variant: 'disc',
     title: '',
     fontScale: 1,
     padding: 14

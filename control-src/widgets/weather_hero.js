@@ -38,7 +38,7 @@ export const def = {
     split:   { label: 'Split — icon left, readings right' },
     minimal: { label: 'Minimal — temperature + high/low only' }
   },
-  defaultVariant: 'trmnl',
+  defaultVariant: 'classic',
   // What each tier drops relative to `full` (advisory; the render below
   // is the source of truth). Stats additionally need ≥8 grid rows of
   // height even at standard+. `minimal` drops everything but temp +
@@ -50,7 +50,7 @@ export const def = {
     tiny:     ['icon', 'desc', 'hilo', 'stats', 'alerts', 'sunbar', 'hourly']
   },
   defaults: (ctx) => ({
-    variant: 'trmnl',
+    variant: 'classic',
     city: (ctx && ctx.city) || '',
     lat:  (ctx && Number.isFinite(ctx.lat)) ? ctx.lat : null,
     lon:  (ctx && Number.isFinite(ctx.lon)) ? ctx.lon : null,

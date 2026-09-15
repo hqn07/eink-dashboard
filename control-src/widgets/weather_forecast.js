@@ -28,7 +28,7 @@ export const def = {
     rows:    { label: 'Rows — one day per line' },
     columns: { label: 'Columns — horizontal day strip' }
   },
-  defaultVariant: 'trmnl',
+  defaultVariant: 'columns',
   // Advisory: what shrinks away as the tile gets smaller. Day count
   // itself auto-scales with size, so the degrade story is mostly
   // "fewer days", plus precip hiding on narrow tiles in auto mode.
@@ -38,7 +38,7 @@ export const def = {
     tiny:     ['precip', 'days']
   },
   defaults: (ctx) => ({
-    variant: 'trmnl',
+    variant: 'columns',
     city: (ctx && ctx.city) || '',
     lat:  (ctx && Number.isFinite(ctx.lat)) ? ctx.lat : null,
     lon:  (ctx && Number.isFinite(ctx.lon)) ? ctx.lon : null,

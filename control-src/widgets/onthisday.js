@@ -26,12 +26,12 @@ export const def = {
     feature: { label: 'Feature — one event, large' },
     compact: { label: 'Compact — dense rows' }
   },
-  defaultVariant: 'trmnl',
+  defaultVariant: 'list',
   degrade: {
     tiny: ['title']
   },
   defaults: () => ({
-    variant: 'trmnl',
+    variant: 'list',
     title: '',
     fontScale: 1,
     padding: 14

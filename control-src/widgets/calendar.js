@@ -27,7 +27,7 @@ export const def = {
     strip5: { label: 'Strip — 5-day, roomier text' },
     month: { label: 'Month — full grid' }
   },
-  defaultVariant: 'trmnl',
+  defaultVariant: 'list',
   // Advisory. strip needs ≥7 cols × 2 rows, month ≥7 × 4; under that
   // the render falls back to the list view regardless of variant.
   degrade: {
@@ -39,7 +39,7 @@ export const def = {
     disabledFeeds: [],   // URL strings currently muted (server skips fetch)
     localEvents: [],     // quick events typed into the tile: {title, date, time?}
     title: '',
-    variant: 'trmnl',    // 'trmnl' | 'list' | 'strip' | 'month'
+    variant: 'list',    // 'list' | 'strip' | 'strip5' | 'month' | 'trmnl'
     density: 'auto',     // 'auto' | 'compact' | 'standard' | 'rich'
     showDayLabel: true,
     showTime:     true,

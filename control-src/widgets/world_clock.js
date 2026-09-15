@@ -38,12 +38,12 @@ export const def = {
     big:   { label: 'Big — one zone, large' },
     dual:  { label: 'Dual — two zones side by side' }
   },
-  defaultVariant: 'trmnl',
+  defaultVariant: 'big',
   degrade: {
     tiny: ['title', 'meta', 'glyph']
   },
   defaults: () => ({
-    variant: 'trmnl',
+    variant: 'big',
     title: '',
     zones: ['LONDON|Europe/London', 'TOKYO|Asia/Tokyo'],
     format: '12h',

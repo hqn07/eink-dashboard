@@ -103,12 +103,12 @@ export const def = {
     trmnl:  { label: 'TRMNL — title-bar card' },
     serif:  { label: 'Serif — big word + definition' }
   },
-  defaultVariant: 'trmnl',
+  defaultVariant: 'serif',
   degrade: {
     tiny: ['definition', 'part']
   },
   defaults: () => ({
-    variant: 'trmnl',
+    variant: 'serif',
     words: [],           // optional custom "word — definition" rows
     title: '',
     fontScale: 1,

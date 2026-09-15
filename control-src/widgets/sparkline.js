@@ -29,12 +29,12 @@ export const def = {
     dots:    { label: 'Dots — mark latest point' },
     minimal: { label: 'Minimal — line + value' }
   },
-  defaultVariant: 'trmnl',
+  defaultVariant: 'line',
   degrade: {
     tiny: ['title', 'minmax']
   },
   defaults: () => ({
-    variant: 'trmnl',
+    variant: 'line',
     source: 'battery_pct',   // battery_pct | battery_v
     title: '',
     fontScale: 1,

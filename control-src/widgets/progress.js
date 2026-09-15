@@ -22,12 +22,12 @@ export const def = {
     dots:   { label: 'Dots — 10 discrete steps per span' },
     pixels: { label: 'Pixels — year as a day grid' }
   },
-  defaultVariant: 'trmnl',
+  defaultVariant: 'plain',
   degrade: {
     tiny: ['percent-label']
   },
   defaults: () => ({
-    variant: 'trmnl',
+    variant: 'plain',
     spans: ['day', 'year'],   // any of: day, week, month, year
     title: '',
     barShape: 'rectangular',
