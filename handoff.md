@@ -1,5 +1,83 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-08-23 — PROD OUTAGE: Chromium zombie leak (fleet down)
+> `fd7f624`. The Aug-13 idle-close change launched + killed a fresh
+> Chromium per render; each one spawns a `chrome_crashpad_handler` that
+> re-parents to PID 1 on browser death. Container ran bare `node` as
+> PID 1 — never reaps — so hourly wake churn piled zombies until the PID
+> table was exhausted: `posix_spawn … Resource temporarily unavailable
+> (11)` / `fork: EAGAIN`, and every render endpoint (panel,
+> `/display.png`, `/display.bin`) 500'd `internal_error`.
+> Three layers, redeploy clears the backlog (fresh container):
+> 1. **tini as PID 1** (nixpacks pkg + `tini -g -- node server.js`) —
+>    reaps orphans. Root fix.
+> 2. `BROWSER_IDLE_MS` back to **0 = resident browser** (the pre-Aug-13
+>    model that ran stable for months). Re-enable idle-close via env
+>    only once tini is confirmed live.
+> 3. `--disable-crash-reporter` / `--disable-breakpad` so the handler
+>    never spawns.
+> **Lesson:** any per-render process churn in a container needs an
+> init that reaps. Don't re-enable idle-close without checking PID
+> count on the box.
+>
+> ## 2026-08-13 — cloud RAM/CPU trim (this caused the above)
+> `51c8c82`. Railway bills per-minute actual usage; the render path held
+> one Chromium resident 24/7 and re-rendered every 5 min for a fleet that
+> wakes every 15-30 min (~450 MB idle + renders nobody reads).
+> - **A. Idle browser close** (`lib/render.js`): track in-flight renders,
+>   arm a `BROWSER_IDLE_MS` timer on the last finish → `killBrowser()`;
+>   `getBrowser()` relaunches on demand (+1-2 s cold). Image cache is
+>   separate bytes and survives, so devices still serve from cache — only
+>   the background revalidate pays. `killBrowser()` nulls the handle
+>   synchronously before awaiting close so a racing render relaunches
+>   cleanly. **Now defaults 0 (off) after `fd7f624`.**
+> - **B. `PRERENDER` now opt-in (`=1`)** — stale-while-revalidate already
+>   warms the device cache on wake, so the 24/7 interval render was waste
+>   on an infrequently-woken fleet. Opt back in for a shared always-on
+>   host with many frequent wakes. Startup logs both states.
+>
+> ## 2026-07-19 — `.tr-bar` shape variants
+> `41860b7`. Per-tile `barShape` on the shared progress/fill bar, five
+> shapes over the default rect: `pill`, `ticked` (hairline ink notches at
+> 25/50/75%), `segmented` (10 cells split by paper gaps), `battery`
+> (rounded body + right tip nub), `notched` (segmented + tip). Pure CSS —
+> `::before` draws ticks/segments, `::after` the tip, radii ride the solid
+> frame; 1-bit safe. `barShapeClass(settings)` in `_shared.js` appends the
+> modifier; wired into `eink_battery`, `mac_battery`, `progress`. Other
+> bar users (weather_hero, aqi, uv, moon, now-playing) can opt in by
+> threading the same helper.
+>
+> ## 2026-07-17 — editor batch (widget count now 31)
+> - `16d8117` **per-tile layout variants finished.** Universal Layout
+>   **Density** control (Detailed / Auto / Minimal) in the settings modal
+>   — the `item.density` lever already fed `pickTier` (±1 size tier) and
+>   was dirty-tracked but had no UI. Plus **chess variants** (diagram /
+>   board-only / with-coords), the last widget without `def.variants`.
+> - `7a0a551` **palette bug + search.** The grouped pool iterated only the
+>   hardcoded `POOL_CATEGORIES`, but `POOL_META` assigned `Fun` (art,
+>   chess) and `Money` (stocks) — those 3 counted in the badge and were
+>   **unreachable from the add-widget pool**. Added both categories, and
+>   the render now appends any stray category after the known ones so a
+>   mis-categorised widget can't silently vanish again. Also: `keywords`
+>   synonym string per widget (music/spotify → now-playing, rss/hn →
+>   headlines, btc → crypto) folded into pool search, + sticky category
+>   filter chips.
+> - `bebda0c` **palette keyboard + recents.** Enter-to-add the top match
+>   (highlighted with an inset ring, badge swaps to `↵ <label>`), Escape
+>   clears the query then closes the pool; `addToCanvas` records the type
+>   to a capped localStorage recents list shown as a quick-add chip row in
+>   the default browse view. Pool is now type → Enter drivable.
+> - `7ea5316` **lazy-load on-demand surfaces.** `WidgetSettingsModal`
+>   (drags in WidgetForm + every `form.jsx` + TokenPicker + Radix Tabs),
+>   `SetupWizard`, `ShortcutsHelp` → `React.lazy` behind their existing
+>   conditional renders. Render modules stay eager (canvas/palette need
+>   them). Initial index chunk **384 → 344 kB** (gzip 111 → 101).
+> - `a044bea` **dead density knob hidden.** `art` / `codeactivity` /
+>   `mac_battery` / `weather_forecast` never read `ctx.density` (they size
+>   off cellW/cellH), and on `art` it collided with that widget's own
+>   numeric `density` grid-fineness setting. `usesDensity: false` on those
+>   four defs; modal gates the section on `def.usesDensity !== false`.
+>
 > ## 2026-07-07 (later) — hardware slim-down + widget batch
 > - HW: user cutting buzzer + button. fw 1.20.2/1.14.2 add buttonless WiFi
 >   recovery (portal self-opens on 3rd consecutive fail, then ~daily/6-hourly).
