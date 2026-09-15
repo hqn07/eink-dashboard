@@ -5,6 +5,7 @@
       "**",
       "!**/*.md",
       "!docs/**",
+      "!.github/**",
       "!esp32/**",
       "!test/visual-baseline/**"
     ]

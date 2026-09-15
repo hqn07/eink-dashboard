@@ -223,4 +223,13 @@ app.listen(PORT, () => {
     console.log('  Pre-render:     off (on-demand; set PRERENDER=1 to warm)');
   }
   console.log(`  Browser idle:   ${BROWSER_IDLE_MS ? `close after ${Math.round(BROWSER_IDLE_MS / 1000)}s` : 'stay resident'}`);
+
+  // Loud, because it replaces the dashboard with a test pattern on glass:
+  // whoever finds the panel showing a ruler should be able to confirm why
+  // from the logs, and nobody should leave it on by accident.
+  const calib = (process.env.CALIB_3C || '').trim().toLowerCase();
+  if (calib === 'raw' || calib === 'shifted' || calib === '1') {
+    console.log(`  ** CALIBRATION MODE: /display-3c.bin serves the alignment target (CALIB_3C=${calib}) **`);
+    console.log('     Unset CALIB_3C to go back to the dashboard.');
+  }
 });
