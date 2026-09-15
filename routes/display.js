@@ -135,8 +135,16 @@ const PANEL_SHIFT_3C_PX =
 // told to add a query param, so this is the only way to get a target onto
 // glass without reflashing or editing the user's screens.
 const CALIB_3C = (process.env.CALIB_3C || '').trim().toLowerCase();
-const CALIB_ON = CALIB_3C === 'raw' || CALIB_3C === 'shifted' || CALIB_3C === '1';
+const CALIB_ON = CALIB_3C === 'raw' || CALIB_3C === 'shifted'
+  || CALIB_3C === 'nocache' || CALIB_3C === '1';
 const CALIB_SHIFTED = CALIB_3C === 'shifted';
+// `nocache` hands out a unique ETag per request so the device can never 304
+// its way out of redrawing. That makes the fault repeatable on demand: press
+// the button a few times and compare where it lands each draw. A fixed row
+// means a deterministic indexing bug; a row that moves means the transfer
+// itself is unreliable. Costs a full ~20s colour refresh every single wake,
+// so it is strictly a bench mode — never leave it on.
+const CALIB_NOCACHE = CALIB_3C === 'nocache';
 
 // Raw two-plane packed binary for the 3-color (B) panel.
 // 96000 bytes = black plane (48000) + red plane (48000), each MSB-first.
@@ -149,7 +157,9 @@ router.get('/display-3c.bin', checkDeviceAuth, async (req, res) => {
       // Skip the render pipeline entirely — the target is pure pixel math,
       // so it's deterministic and needs no Puppeteer round-trip.
       bin = calibPlanes();
-      etag = `"calib-${CALIB_3C}-${PANEL_SHIFT_3C_PX}-${calibTag()}"`;
+      etag = CALIB_NOCACHE
+        ? `"calib-nocache-${Date.now()}"`
+        : `"calib-${CALIB_3C}-${PANEL_SHIFT_3C_PX}-${calibTag()}"`;
       if (CALIB_SHIFTED && PANEL_SHIFT_3C_PX) bin = shiftPlanesLeft(bin, PANEL_SHIFT_3C_PX);
     } else {
       const entry = await getCurrentImage(variant);
