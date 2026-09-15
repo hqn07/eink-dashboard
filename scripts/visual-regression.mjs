@@ -37,6 +37,14 @@ const UPDATE = process.argv.includes('--update');
 // 0.05% catches that while leaving headroom. NOTE: the baseline is
 // machine-specific — regenerate with `--update` on yours.
 const THRESHOLD = Number(process.env.VR_THRESHOLD || 0.0005);
+// A percentage threshold is meaningless on a canvas this big. The matrix is
+// ~45.8M pixels, so the 0.05% that looked strict tolerated ~22,900 changed
+// pixels — enough to hide a font swap or an underline across eleven tiles,
+// which is exactly what it did on 2026-09-15 until a deliberate probe caught
+// it. The matrix is deterministic (frozen demo data, frozen clocks), so a
+// real change is the ONLY thing that moves a pixel. Fail on an absolute count
+// as well as the fraction, and let the absolute one be the strict half.
+const MAX_DIFF_PX = Number(process.env.VR_MAX_DIFF_PX || 120);
 // Per-channel delta below which two pixels are "the same" (AA softness).
 const PIXEL_TOL = 24;
 
@@ -171,8 +179,12 @@ async function diff(aBuf, bBuf) {
 // Editor threshold is looser: a full app viewport has far more AA text
 // than the face matrix, and React hydration order can wiggle a few px.
 const SHOTS = [
-  { name: 'widgets-matrix', fn: shootMatrix, threshold: THRESHOLD },
-  { name: 'editor',         fn: shootEditor, threshold: Number(process.env.VR_EDITOR_THRESHOLD || 0.002) },
+  { name: 'widgets-matrix', fn: shootMatrix, threshold: THRESHOLD, maxPx: MAX_DIFF_PX },
+  // The editor is a live app viewport — scrollbars, focus rings and AA on real
+  // text make a handful of pixels move between runs, so it keeps a looser
+  // absolute allowance than the deterministic face matrix.
+  { name: 'editor',         fn: shootEditor, threshold: Number(process.env.VR_EDITOR_THRESHOLD || 0.002),
+    maxPx: Number(process.env.VR_EDITOR_MAX_DIFF_PX || 2500) },
 ];
 
 async function main() {
@@ -206,8 +218,8 @@ async function main() {
         continue;
       }
       const frac = r.diffPixels / r.total;
-      log(`${shotDef.name}: diff ${r.diffPixels}/${r.total} px (${(frac * 100).toFixed(4)}%), threshold ${(shotDef.threshold * 100).toFixed(4)}%`);
-      if (frac > shotDef.threshold) {
+      log(`${shotDef.name}: diff ${r.diffPixels}/${r.total} px (${(frac * 100).toFixed(4)}%), threshold ${(shotDef.threshold * 100).toFixed(4)}% / ${shotDef.maxPx} px`);
+      if (frac > shotDef.threshold || r.diffPixels > shotDef.maxPx) {
         await writeFile(diffPath, r.diffPng);
         log(`${shotDef.name}: FAIL — drift exceeds threshold. Diff written to ${diffPath}. If intentional, re-run with --update.`);
         failed = true;
