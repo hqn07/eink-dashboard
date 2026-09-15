@@ -253,7 +253,27 @@ const TYPO_DEFAULTS = {
   letterSpacing: 0
 };
 
-function TypographyFields({ values, onChange }) {
+// Retired 2026-09-15. These eleven per-tile knobs (font family, size, bold,
+// italic, uppercase, letter spacing, scale anchor, padding, theme, frame)
+// shipped on EVERY widget, so a tile with three real fields presented
+// fourteen. After a month of daily use the verdict was that the choice was
+// the problem: it taxed every add and let screens drift out of visual
+// agreement with themselves. The look is the design's job now.
+//
+// Deliberately still rendered as a component and still exported, because all
+// 31 form modules call it — returning null retires the UI in one place
+// instead of 31 edits. The renderers still honour these keys, so settings
+// already saved in a config keep rendering exactly as they do today; what
+// goes away is the ability to add more. Strip the stored values only once
+// the defaults are confirmed good on the panel.
+//
+// The original field list is preserved in git history (this commit's parent)
+// if a specific knob ever needs to come back as a global design token.
+function TypographyFields() {
+  return null;
+}
+
+function LegacyTypographyFields({ values, onChange }) {
   const v = values || {};
   const patch = (p) => onChange({ ...v, ...p });
   const family = v.fontFamily || 'serif';
@@ -703,9 +723,19 @@ function TabbedForm({ widgetId, MigratedForm, formProps, leadingSections = [], t
   // Normalize the form's FormSection children + the injected leading/trailing
   // sections (Variant, Color) into one {title, node} list, so they all become
   // rail items — no floating block above the nav.
+  // A section whose only content was TypographyFields is now empty (see the
+  // note on TypographyFields) — drop it rather than leave a dead tab in the
+  // rail. Sections that mix it with real fields keep those fields.
+  const typographyOnly = (node) => {
+    const kids = React.Children.toArray(node)
+      .filter(c => c !== null && c !== false && c !== '');
+    return kids.length > 0
+      && kids.every(c => React.isValidElement(c) && c.type === TypographyFields);
+  };
   const formSecs = flat
     .filter(c => React.isValidElement(c) && c.type === FormSection)
-    .map(s => ({ title: s.props.title, node: s.props.children }));
+    .map(s => ({ title: s.props.title, node: s.props.children }))
+    .filter(s => !typographyOnly(s.node));
   const extras = flat.filter(c => !React.isValidElement(c) || c.type !== FormSection);
   const sections = [...leadingSections, ...formSecs, ...trailingSections]
     .filter(s => s && s.title && s.node != null);

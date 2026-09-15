@@ -382,34 +382,13 @@ export default function WidgetSettingsModal({
                   />
                 </ErrorBoundary>
               </section>
-              {def.usesDensity !== false && (
-              <section className="wsm-section wsm-subsection" data-section-title="Layout density">
-                <div className="wsm-subsection-title">Layout density</div>
-                <div className="wsm-segmented" role="radiogroup" aria-label="Layout density">
-                  {[
-                    { value: 'rich',   label: 'Detailed', title: 'Show a richer layout than the tile size would pick' },
-                    { value: '',       label: 'Auto',     title: 'Layout follows the tile size (default)' },
-                    { value: 'sparse', label: 'Minimal',  title: 'Show a simpler layout than the tile size would pick' }
-                  ].map(o => {
-                    const active = (draft.density || '') === o.value;
-                    return (
-                      <button
-                        key={o.value || 'auto'}
-                        type="button"
-                        role="radio"
-                        aria-checked={active}
-                        className={`wsm-seg-btn ${active ? 'is-active' : ''}`}
-                        title={o.title}
-                        onClick={() => setDraft(prev => ({ ...prev, density: o.value }))}
-                      >{o.label}</button>
-                    );
-                  })}
-                </div>
-                <span className="wsm-field-help">
-                  Overrides how much detail this tile shows for its size — one step richer or simpler.
-                </span>
-              </section>
-              )}
+              {/* Layout density control retired 2026-09-15 with the typography
+                  knobs (see the note on TypographyFields in WidgetForm.jsx).
+                  Tile size already picks the layout through pickTier, and the
+                  manual one-step override mostly produced tiles that disagreed
+                  with their neighbours. `draft.density` is still threaded
+                  through the render context, so any value already saved in a
+                  config keeps working — it just can't be set by hand. */}
               <section className="wsm-section wsm-subsection" data-section-title="Visibility">
                 <div className="wsm-subsection-title">Visibility</div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
