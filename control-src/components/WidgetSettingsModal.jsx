@@ -389,6 +389,35 @@ export default function WidgetSettingsModal({
                   with their neighbours. `draft.density` is still threaded
                   through the render context, so any value already saved in a
                   config keeps working — it just can't be set by hand. */}
+              {/* The one cosmetic control that survived the 2026-09-15 cut.
+                  Inverted became the default because every tile on the live
+                  screen used it — but that left no way to set a tile back
+                  without hand-editing config.json, which is not a real option.
+                  One checkbox, not the eleven typography knobs: the look is
+                  still the design's decision, this is just the escape hatch. */}
+              <section className="wsm-section wsm-subsection" data-section-title="Appearance">
+                <div className="wsm-subsection-title">Appearance</div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                  <input
+                    type="checkbox"
+                    checked={(draft.settings || {}).theme !== 'normal'}
+                    onChange={(e) => setDraft(prev => ({
+                      ...prev,
+                      settings: {
+                        ...(prev.settings || {}),
+                        // Store the explicit value either way — an absent theme
+                        // means inverted, so "off" has to be written down.
+                        theme: e.target.checked ? 'inverted' : 'normal'
+                      }
+                    }))}
+                  />
+                  Inverted (white on black)
+                </label>
+                <span className="wsm-field-help">
+                  On for every tile by default. Turn it off for a tile that
+                  should read black-on-white instead.
+                </span>
+              </section>
               <section className="wsm-section wsm-subsection" data-section-title="Visibility">
                 <div className="wsm-subsection-title">Visibility</div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
