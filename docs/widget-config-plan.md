@@ -162,11 +162,12 @@ Each step is one commit, guards + panel photo before the next.
    clock loses its `fontFamily: system` override and renders in the face
    serif like the main clock, and headlines re-wrap because the designed
    `14px 16px` padding is 2px wider than the stored square `14`.
-   **If the world clock should keep a distinct face, the fix is to drop
-   `'fontFamily'` from `DEAD_TILE_SETTINGS` in `lib/screens.js`** — but the
-   honest answer is that a per-tile font override is exactly what this pass
-   set out to remove, so a deliberate second face belongs in the widget's
-   own CSS, not in one tile's settings.
+   **`fontFamily` was subsequently excluded from the strip** at the user's
+   call: the world clock uses it to read in a different face from the serif
+   clock beside it, and with the font picker gone, stripping it could not be
+   undone from the UI. Stored values keep working; nothing new can set one.
+   If that distinction ever deserves to be the design's rather than one
+   tile's, move it into the world_clock widget's own CSS and drop the key.
 6. **Rebaseline** `test:visual` — **DONE** throughout; both snapshots pass.
    Re-photo the panel: still outstanding, and the only thing left.
 

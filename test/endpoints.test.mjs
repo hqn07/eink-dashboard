@@ -372,9 +372,13 @@ test('config migration v5 strips cosmetics and keeps content', async () => {
   const [a, b, c] = out.screens[0].layout;
 
   // Cosmetics gone, including the item-level layout-density override.
-  for (const k of ['theme', 'fontScale', 'padding', 'bold', 'fontFamily', 'frame']) {
+  for (const k of ['theme', 'fontScale', 'padding', 'bold', 'frame']) {
     assert.ok(!(k in a.settings), `${k} should be stripped`);
   }
+  // fontFamily survives on purpose: the live world clock uses it to read in a
+  // different face from the serif clock beside it, and with the font picker
+  // gone, stripping it could not be undone from the UI.
+  assert.equal(a.settings.fontFamily, 'system', 'fontFamily must survive');
   assert.ok(!('density' in a), 'item-level density override should be stripped');
 
   // Data and content survive untouched.
