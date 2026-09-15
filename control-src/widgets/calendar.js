@@ -209,7 +209,14 @@ function renderList(all, settings, titleLabel, cellW, cellH, density) {
     full:     { events: 8, sections: true  }
   };
   const t = matrix[tier];
-  const list = all.slice(0, t.events);
+  // Section headings (TODAY / LATER) take a row's worth of height each, but
+  // the budget above counts events only — so at the tiers that show sections
+  // the last event was pushed past the tile edge. Pay for the headings out of
+  // the same budget.
+  const sectionCount = t.sections
+    ? new Set(all.slice(0, t.events).map(ev => ev.section || 'LATER')).size
+    : 0;
+  const list = all.slice(0, Math.max(1, t.events - sectionCount));
   const showDayLabel = !settings || settings.showDayLabel !== false;
   const showTime     = !settings || settings.showTime     !== false;
   const row = ev => {

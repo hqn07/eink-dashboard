@@ -12,6 +12,14 @@
   letter-spacing: 1.5px;
   font-size: 13px;
   color: #000;
+  /* Zone names are user-typed and the tracking is wide, so a long one ran
+     past its box and was cut mid-letter — ellipsis at least tells the reader
+     the name is truncated rather than misspelt. min-width:0 lets it shrink
+     inside the flex row instead of pushing the time out. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .wclock-time {
   /* Grotesk, NOT the serif the clock widget uses. The two clocks sit side by

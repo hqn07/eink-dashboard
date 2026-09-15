@@ -13,16 +13,36 @@
 
 export function autofitText(el) {
   if (!el) return;
-  const maxW = el.clientWidth;
+  // Measure against the space AVAILABLE, not the space taken. A nowrap flex
+  // item sizes to its own content, so el.clientWidth grows with the text and
+  // every font size trivially "fits" itself — the text bar measured 270px
+  // inside a 229px parent and autofit happily left it overflowing. Capping by
+  // the parent's box makes the constraint real.
+  const parent = el.parentElement;
+  const parentW = parent ? parent.clientWidth : 0;
+  const ownW = el.clientWidth;
+  const maxW = parentW > 0 ? Math.min(ownW || parentW, parentW) : ownW;
   const maxH = el.clientHeight;
-  if (maxW <= 0 || maxH <= 0) return;
+  if (maxW <= 0) return;
+  // A single-line element often has no definite height — it is sized BY its
+  // text, so clientHeight is 0 until the font is set. Bailing out there meant
+  // it was never fitted at all and kept whatever inline size the render
+  // guessed, which is how the text bar came to overrun its tile by 34px.
+  // Width alone is a sufficient constraint for one line.
+  //
+  // Wrapping elements are different: with no height limit, a narrower font
+  // just wraps to more lines, so every size "fits" and the binary search is
+  // meaningless. Those still bail.
+  const wraps = el.classList.contains('multiline');
+  const hCap = maxH > 0 ? maxH : (wraps ? 0 : Infinity);
+  if (hCap <= 0) return;
   const minFont = Math.max(8, parseInt(el.getAttribute('data-min-font') || '11', 10));
   const maxFont = Math.max(minFont, parseInt(el.getAttribute('data-max-font') || '260', 10));
   let lo = minFont, hi = maxFont;
   while (lo < hi) {
     const mid = Math.ceil((lo + hi) / 2);
     el.style.fontSize = mid + 'px';
-    if (el.scrollWidth <= maxW + 1 && el.scrollHeight <= maxH + 1) lo = mid;
+    if (el.scrollWidth <= maxW + 1 && el.scrollHeight <= hCap + 1) lo = mid;
     else hi = mid - 1;
   }
   el.style.fontSize = lo + 'px';

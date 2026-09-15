@@ -70,9 +70,11 @@ const TIER_SIZE = {
   compact:  { icon: 60,  temp: 72 },
   standard: { icon: 90,  temp: 86 },
   extended: { icon: 110, temp: 96 },
-  // 130px full-tier art + every extra enabled overflows 480px — verified
-  // in /widgets-matrix; 110 keeps sunbar + hourly on-tile.
-  full:     { icon: 110, temp: 96 }
+  // Full tier stacks hero + stats + sunbar + hourly into 480px. Measured
+  // 2026-09-15: at icon 110 the hourly strip ended 55px past the tile, so the
+  // art gives back 18px and 070/065/020's full-tier spacing gives the rest.
+  // Re-measure here if another block joins the stack.
+  full:     { icon: 84, temp: 96 }
 };
 
 // Resolve a stat key to a { label, value } pair. Returns null when the

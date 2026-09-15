@@ -148,3 +148,22 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+
+
+/* ---- Full tier only: reclaim vertical space -------------------------------
+ * At `full` the cell carries hero + stats + sunbar + hourly in 480px and the
+ * comfortable spacing below adds up to more than the tile has. These blocks
+ * are siblings of .weather-hero, so the tier class on the hero selects them.
+ * Every other tier keeps the roomier rhythm — it can afford it. */
+.hero-tier-full ~ .weather-stats {
+  padding-top: 8px;
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+.hero-tier-full ~ .sun-bar    { margin-top: 4px; }
+.hero-tier-full ~ .hourly-strip {
+  margin-top: 4px;
+  margin-bottom: 0;
+  padding-top: 3px;
+  padding-bottom: 0;
+}
