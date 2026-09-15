@@ -34,8 +34,6 @@ export const def = {
     variant: 'line',
     source: 'battery_pct',   // battery_pct | battery_v
     title: '',
-    fontScale: 1,
-    padding: 14,
     semanticRed: true
   })
 };

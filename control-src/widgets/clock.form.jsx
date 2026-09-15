@@ -15,7 +15,7 @@ const PRESETS = [
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { SegmentedField, ToggleField, TypographyFields, FormSection, PresetField, defaults = {} } = fields;
+  const { SegmentedField, ToggleField, FormSection, PresetField, defaults = {} } = fields;
   const fmt = v.format === '24h' ? '24h' : '12h';
   const showDate = v.showDate !== false;
   return (
@@ -38,9 +38,6 @@ export function Form({ values, patch, onChange, fields }) {
           defaultValue={defaults.showDate}
           onChange={(x) => patch({ showDate: x })}
         />
-      </FormSection>
-      <FormSection title="Style">
-        <TypographyFields values={v} onChange={onChange} />
       </FormSection>
     </>
   );

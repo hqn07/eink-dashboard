@@ -21,8 +21,6 @@ export const def = {
     hour24: false,
     showDaylight: true,
     title: '',
-    fontScale: 1,
-    padding: 14
   })
 };
 

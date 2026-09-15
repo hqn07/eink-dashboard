@@ -20,7 +20,7 @@ const PRESETS = [
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { LocationFields, SelectField, ToggleField, TypographyFields, FormSection, PresetField, Collapsible, defaults = {} } = fields;
+  const { LocationFields, SelectField, ToggleField, FormSection, PresetField, Collapsible, defaults = {} } = fields;
   const stats = Array.isArray(v.stats) && v.stats.length === 4 ? v.stats : DEFAULT_STATS;
   const setSlot = (idx, val) => {
     const next = stats.slice();
@@ -81,9 +81,6 @@ export function Form({ values, patch, onChange, fields }) {
             />
           ))}
         </Collapsible>
-      </FormSection>
-      <FormSection title="Style">
-        <TypographyFields values={v} onChange={onChange} />
       </FormSection>
     </>
   );

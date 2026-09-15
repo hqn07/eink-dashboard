@@ -110,8 +110,6 @@ export const def = {
     variant: 'serif',
     words: [],           // optional custom "word — definition" rows
     title: '',
-    fontScale: 1,
-    padding: 14
   })
 };
 

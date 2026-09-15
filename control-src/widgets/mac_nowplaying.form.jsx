@@ -15,7 +15,7 @@ export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
   const {
     TextField, SelectField, SegmentedField, ToggleField, SliderField,
-    TypographyFields, FormSection, Collapsible, PresetField, defaults = {}
+    FormSection, Collapsible, PresetField, defaults = {}
   } = fields;
   return (
     <>
@@ -78,17 +78,6 @@ export function Form({ values, patch, onChange, fields }) {
           stack the art above the title (extended/full tiers). Smaller
           tiles fall back to the standard inline layout.
         </div>
-        <SegmentedField
-          label='Heading alignment'
-          value={v.headerAlign || 'left'}
-          defaultValue={defaults.headerAlign}
-          options={[
-            { value: 'left',   short: 'L', label: 'Left' },
-            { value: 'center', short: 'C', label: 'Center' },
-            { value: 'right',  short: 'R', label: 'Right' }
-          ]}
-          onChange={(x) => patch({ headerAlign: x })}
-        />
         <SelectField
           label="Album art shape"
           value={v.artShape || 'square'}
@@ -101,40 +90,6 @@ export function Form({ values, patch, onChange, fields }) {
           ]}
           onChange={(x) => patch({ artShape: x })}
         />
-        <Collapsible title="Advanced positioning" storageScope="mac-np-adv" defaultOpen={false}>
-          <SegmentedField
-            label="Album art side"
-            value={v.artPosition || 'right'}
-            defaultValue={defaults.artPosition}
-            options={[
-              { value: 'left',  short: 'Left',  label: 'Left of text' },
-              { value: 'right', short: 'Right', label: 'Right of text' }
-            ]}
-            onChange={(x) => patch({ artPosition: x })}
-          />
-          <SegmentedField
-            label="Artist / song text"
-            value={v.textAlign || 'left'}
-            defaultValue={defaults.textAlign}
-            options={[
-              { value: 'left',   short: 'L', label: 'Left' },
-              { value: 'center', short: 'C', label: 'Center' },
-              { value: 'right',  short: 'R', label: 'Right' }
-            ]}
-            onChange={(x) => patch({ textAlign: x })}
-          />
-          <SliderField
-            label="Text block vertical offset"
-            min={-120} max={120} step={2}
-            value={Number.isFinite(v.textOffsetY) ? v.textOffsetY : 0}
-            defaultValue={defaults.textOffsetY}
-            onChange={(x) => patch({ textOffsetY: x })}
-            format={(x) => x === 0 ? '0' : (x > 0 ? `+${x}px down` : `${x}px up`)}
-          />
-        </Collapsible>
-      </FormSection>
-      <FormSection title="Style">
-        <TypographyFields values={v} onChange={onChange} />
       </FormSection>
     </>
   );

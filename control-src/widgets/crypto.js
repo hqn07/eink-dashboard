@@ -20,8 +20,6 @@ export const def = {
     coins: ['bitcoin', 'ethereum'],
     vs: 'usd',
     title: '',
-    fontScale: 1,
-    padding: 14
   })
 };
 

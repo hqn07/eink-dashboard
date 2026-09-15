@@ -33,8 +33,6 @@ export const def = {
     title: '',
     variant: 'diagram',
     showMeta: true,     // rating + themes footer
-    fontScale: 1,
-    padding: 10
   })
 };
 

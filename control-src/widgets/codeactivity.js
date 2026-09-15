@@ -24,8 +24,6 @@ export const def = {
     variant: 'trmnl',
     username: '',
     title: '',
-    fontScale: 1,
-    padding: 14
   })
 };
 

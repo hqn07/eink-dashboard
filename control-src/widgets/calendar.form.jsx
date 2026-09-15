@@ -61,7 +61,7 @@ function PresetAdder({ v, patch }) {
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, ListEditor, SelectField, ToggleField, TypographyFields, FormSection, PresetField, defaults = {} } = fields;
+  const { TextField, ListEditor, SelectField, ToggleField, FormSection, PresetField, defaults = {} } = fields;
   const urls = Array.isArray(v.icalUrls) ? v.icalUrls.filter(Boolean) : [];
   const disabled = Array.isArray(v.disabledFeeds) ? v.disabledFeeds : [];
   const toggleFeed = (url, on) => {
@@ -160,9 +160,6 @@ export function Form({ values, patch, onChange, fields }) {
           ]}
           onChange={(x) => patch({ density: x })}
         />
-      </FormSection>
-      <FormSection title="Style">
-        <TypographyFields values={v} onChange={onChange} />
       </FormSection>
     </>
   );

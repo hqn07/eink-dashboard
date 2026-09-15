@@ -30,8 +30,6 @@ export const def = {
   defaults: () => ({
     variant: 'list',
     title: '',
-    fontScale: 1,
-    padding: 14
   })
 };
 

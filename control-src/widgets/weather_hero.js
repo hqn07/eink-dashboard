@@ -59,8 +59,6 @@ export const def = {
     showSunbar: true,
     showAlerts: true,
     showDesc:   true,
-    fontScale: 1,
-    padding: 14
   })
 };
 

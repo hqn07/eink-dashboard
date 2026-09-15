@@ -2,7 +2,7 @@ import React from 'react';
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, TypographyFields, FormSection, defaults = {} } = fields;
+  const { TextField, FormSection, defaults = {} } = fields;
   return (
     <>
       <FormSection title="Content">
@@ -25,9 +25,6 @@ export function Form({ values, patch, onChange, fields }) {
           placeholder="CODE ACTIVITY"
           help="Leave blank to keep the default heading."
         />
-      </FormSection>
-      <FormSection title="Style">
-        <TypographyFields values={v} onChange={onChange} />
       </FormSection>
     </>
   );

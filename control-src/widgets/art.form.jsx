@@ -4,7 +4,7 @@ import React from 'react';
 // picker (def.variants); this form owns the knobs under it.
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { ToggleField, SliderField, TypographyFields, FormSection, defaults = {} } = fields;
+  const { ToggleField, SliderField, FormSection, defaults = {} } = fields;
   return (
     <>
       <FormSection title="Pattern">
@@ -31,9 +31,6 @@ export function Form({ values, patch, onChange, fields }) {
           defaultValue={defaults.showDate}
           onChange={(x) => patch({ showDate: x })}
         />
-      </FormSection>
-      <FormSection title="Style">
-        <TypographyFields values={v} onChange={onChange} />
       </FormSection>
     </>
   );

@@ -101,12 +101,6 @@ export const def = {
     showColTitle:  true,        // toggle the "NOW PLAYING" heading
     showSongTitle: true,        // toggle the song title line
     showArtist:    true,        // toggle the artist · album line
-    headerAlign:   'left',      // 'left' | 'center' | 'right'
-    artPosition:   'right',     // 'left' | 'right' (horizontal layout only)
-    textAlign:     'left',      // 'left' | 'center' | 'right' (artist/title block)
-    textOffsetY:   0,           // -120..+120 px vertical nudge for the text block
-    fontScale: 1,
-    padding: 14
   })
 };
 

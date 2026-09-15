@@ -46,8 +46,6 @@ export const def = {
     zones: ['LONDON|Europe/London', 'TOKYO|Asia/Tokyo'],
     format: '12h',
     showMeta: true,
-    fontScale: 1,
-    padding: 14
   })
 };
 

@@ -30,7 +30,7 @@ function MyFeedPicker({ feedUrls, onAdd }) {
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, CsvField, TypographyFields, FormSection, defaults = {} } = fields;
+  const { TextField, CsvField, FormSection, defaults = {} } = fields;
   const source = (v.source === 'rss' || v.source === 'news') ? v.source : 'hn';
   const feedUrls = Array.isArray(v.feedUrls) ? v.feedUrls : [];
   return (
@@ -129,9 +129,6 @@ export function Form({ values, patch, onChange, fields }) {
           placeholder="Leave blank to use the feed name"
           help="Optional override for the title bar."
         />
-      </FormSection>
-      <FormSection title="Style">
-        <TypographyFields values={v} onChange={onChange} />
       </FormSection>
     </>
   );

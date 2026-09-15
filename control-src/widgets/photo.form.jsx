@@ -126,7 +126,7 @@ function DitherPreview({ v }) {
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, CsvField, TypographyFields, FormSection, defaults = {} } = fields;
+  const { TextField, CsvField, FormSection, defaults = {} } = fields;
   const hasUpload = !!uploadedSrc(v);
   return (
     <>
@@ -178,9 +178,6 @@ export function Form({ values, patch, onChange, fields }) {
             value={Number.isFinite(v.contrast) ? v.contrast : 0}
             onChange={(e) => patch({ contrast: parseInt(e.target.value, 10) })} style={{ width: 220 }} />
         </label>
-      </FormSection>
-      <FormSection title="Style">
-        <TypographyFields values={v} onChange={onChange} />
       </FormSection>
     </>
   );

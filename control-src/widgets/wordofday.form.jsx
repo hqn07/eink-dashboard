@@ -2,7 +2,7 @@ import React from 'react';
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { ListEditor, TextField, TypographyFields, FormSection, defaults = {} } = fields;
+  const { ListEditor, TextField, FormSection, defaults = {} } = fields;
   const words = Array.isArray(v.words) ? v.words : [];
   return (
     <>
@@ -36,9 +36,6 @@ export function Form({ values, patch, onChange, fields }) {
           placeholder="WORD OF THE DAY"
           help="Leave blank to keep the default heading."
         />
-      </FormSection>
-      <FormSection title="Style">
-        <TypographyFields values={v} onChange={onChange} />
       </FormSection>
     </>
   );

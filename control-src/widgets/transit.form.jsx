@@ -11,7 +11,7 @@ const STATION_ITEMS = MTA_STATIONS.map(s => ({
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, TypographyFields, FormSection, defaults = {} } = fields;
+  const { TextField, FormSection, defaults = {} } = fields;
   const station = v.stopId ? BY_ID.get(v.stopId) : null;
   const routes = station ? station.routes : [];
   const dir = (v.direction === 'S' || v.direction === 'both') ? v.direction : 'N';
@@ -81,9 +81,6 @@ export function Form({ values, patch, onChange, fields }) {
           placeholder="Station name"
           help="Defaults to the station you pick."
         />
-      </FormSection>
-      <FormSection title="Style">
-        <TypographyFields values={v} onChange={onChange} />
       </FormSection>
     </>
   );

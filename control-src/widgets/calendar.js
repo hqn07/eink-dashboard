@@ -41,8 +41,6 @@ export const def = {
     density: 'auto',     // 'auto' | 'compact' | 'standard' | 'rich'
     showDayLabel: true,
     showTime:     true,
-    fontScale: 1,
-    padding: 14
   })
 };
 

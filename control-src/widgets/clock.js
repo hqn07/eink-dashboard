@@ -32,8 +32,6 @@ export const def = {
   defaults: () => ({
     variant: 'big',
     format: '12h', showDate: true,
-    fontScale: 1,
-    padding: 14
   })
 };
 

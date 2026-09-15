@@ -34,8 +34,6 @@ export const def = {
     variant: 'gauge',
     title: '',
     showPollutants: true,
-    fontScale: 1,
-    padding: 14
   })
 };
 

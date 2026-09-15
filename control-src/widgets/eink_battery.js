@@ -44,9 +44,6 @@ export const def = {
     showVoltage: true,
     showAge:     true,
     showBar:     true,
-    barShape:    'rectangular',
-    fontScale: 1,
-    padding: 14
   })
 };
 

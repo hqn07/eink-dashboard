@@ -117,8 +117,6 @@ export const def = {
   defaults: () => ({
     variant: 'disc',
     title: '',
-    fontScale: 1,
-    padding: 14
   })
 };
 

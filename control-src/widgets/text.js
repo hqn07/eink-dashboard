@@ -29,8 +29,6 @@ export const def = {
     text: '', subtitle: '', schedule: [],
     align: 'left', upper: false,
     fontFamily: 'serif',
-    fontScale: 1,
-    padding: 8
   })
 };
 

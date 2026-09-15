@@ -13,7 +13,7 @@ const PRESETS = [
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { LocationFields, TextField, SelectField, SegmentedField, ToggleField, TypographyFields, FormSection, PresetField, defaults = {} } = fields;
+  const { LocationFields, TextField, SelectField, SegmentedField, ToggleField, FormSection, PresetField, defaults = {} } = fields;
   return (
     <>
       <FormSection title="Data">
@@ -92,9 +92,6 @@ export function Form({ values, patch, onChange, fields }) {
           ]}
           onChange={(x) => patch({ hiloStyle: x })}
         />
-      </FormSection>
-      <FormSection title="Style">
-        <TypographyFields values={v} onChange={onChange} />
       </FormSection>
     </>
   );

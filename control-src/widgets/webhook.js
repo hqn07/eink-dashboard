@@ -37,8 +37,6 @@ export const def = {
     title: '',
     template: '',
     path: '',            // number variant: dot path to the hero value
-    fontScale: 1,
-    padding: 14
   })
 };
 

@@ -33,9 +33,6 @@ export const def = {
     variant: 'gauge',
     title: '',
     showState: true,
-    barShape: 'rectangular',
-    fontScale: 1,
-    padding: 14
   })
 };
 

@@ -2,7 +2,7 @@ import React from 'react';
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, CsvField, TypographyFields, FormSection, defaults = {} } = fields;
+  const { TextField, CsvField, FormSection, defaults = {} } = fields;
   return (
     <>
       <FormSection title="Content">
@@ -21,9 +21,6 @@ export function Form({ values, patch, onChange, fields }) {
           onChange={(x) => patch({ title: x })} tokens
           placeholder="MARKETS"
         />
-      </FormSection>
-      <FormSection title="Style">
-        <TypographyFields values={v} onChange={onChange} />
       </FormSection>
     </>
   );

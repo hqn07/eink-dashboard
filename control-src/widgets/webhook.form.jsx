@@ -6,7 +6,7 @@ import React from 'react';
 // blank, the widget auto-renders the payload's top-level fields.
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, TypographyFields, FormSection, defaults = {} } = fields;
+  const { TextField, FormSection, defaults = {} } = fields;
   const key = (v.key || '').trim();
 
   return (
@@ -61,9 +61,6 @@ export function Form({ values, patch, onChange, fields }) {
           from the posted JSON (dots for nesting, numbers for arrays). Empty = automatic
           key/value list of the payload's top-level fields.
         </div>
-      </FormSection>
-      <FormSection title="Style">
-        <TypographyFields values={v} onChange={onChange} />
       </FormSection>
     </>
   );

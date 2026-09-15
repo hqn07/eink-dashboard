@@ -45,8 +45,6 @@ export const def = {
     contrast: 0,         // -100..100
     caption: '',
     title: '',
-    fontScale: 1,
-    padding: 0
   })
 };
 

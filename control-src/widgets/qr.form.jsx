@@ -2,7 +2,7 @@ import React from 'react';
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, TypographyFields, FormSection, defaults = {} } = fields;
+  const { TextField, FormSection, defaults = {} } = fields;
   const mode = v.mode === 'wifi' ? 'wifi' : 'url';
   return (
     <>
@@ -96,9 +96,6 @@ export function Form({ values, patch, onChange, fields }) {
             <option value="H">High (30%) — most robust</option>
           </select>
         </label>
-      </FormSection>
-      <FormSection title="Style">
-        <TypographyFields values={v} onChange={onChange} />
       </FormSection>
     </>
   );

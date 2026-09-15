@@ -7,18 +7,9 @@ const SPANS = [
   ['year', 'Year']
 ];
 
-const BAR_SHAPE_OPTS = [
-  { value: 'rectangular', label: 'Rectangular (default)' },
-  { value: 'pill',        label: 'Pill — rounded ends' },
-  { value: 'segmented',   label: 'Segmented — 10 cells' },
-  { value: 'ticked',      label: 'Ticked — 25/50/75 marks' },
-  { value: 'battery',     label: 'Battery — rounded + tip' },
-  { value: 'notched',     label: 'Notched — cells + tip' }
-];
-
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, SelectField, TypographyFields, FormSection, defaults = {} } = fields;
+  const { TextField, SelectField, FormSection, defaults = {} } = fields;
   const spans = Array.isArray(v.spans) ? v.spans : ['day', 'year'];
 
   const toggle = (key) => {
@@ -51,17 +42,6 @@ export function Form({ values, patch, onChange, fields }) {
           placeholder="PROGRESS"
           help="Leave blank to keep the default heading."
         />
-      </FormSection>
-      <FormSection title="Style">
-        <SelectField
-          label="Bar shape"
-          value={v.barShape || 'rectangular'}
-          defaultValue={defaults.barShape || 'rectangular'}
-          options={BAR_SHAPE_OPTS}
-          onChange={(x) => patch({ barShape: x })}
-          help="Segmented / ticked suit progress bars best."
-        />
-        <TypographyFields values={v} onChange={onChange} />
       </FormSection>
     </>
   );

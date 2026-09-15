@@ -2,7 +2,7 @@ import React from 'react';
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, TypographyFields, FormSection, defaults = {} } = fields;
+  const { TextField, FormSection, defaults = {} } = fields;
   const source = (v.source === 'ical' || v.source === 'both') ? v.source : 'todoist';
   return (
     <>
@@ -64,9 +64,6 @@ export function Form({ values, patch, onChange, fields }) {
           placeholder="TASKS"
           help="Optional title-bar override."
         />
-      </FormSection>
-      <FormSection title="Style">
-        <TypographyFields values={v} onChange={onChange} />
       </FormSection>
     </>
   );

@@ -35,8 +35,6 @@ export const def = {
     seed: 0,           // extra offset so two tiles differ on the same day
     density: 22,       // approximate cell size in px (smaller = finer)
     showDate: false,   // small corner date stamp
-    fontScale: 1,
-    padding: 0
   })
 };
 

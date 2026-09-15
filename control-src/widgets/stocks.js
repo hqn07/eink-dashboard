@@ -20,8 +20,6 @@ export const def = {
     variant: 'trmnl',
     symbols: ['AAPL', 'VOO'],
     title: '',
-    fontScale: 1,
-    padding: 14
   })
 };
 

@@ -2,7 +2,7 @@ import React from 'react';
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, TypographyFields, FormSection } = fields;
+  const { TextField, FormSection } = fields;
   return (
     <>
       <FormSection title="Content">
@@ -17,9 +17,6 @@ export function Form({ values, patch, onChange, fields }) {
           placeholder="ON THIS DAY · JUNE 16"
           help="Leave blank for the auto heading with today's date."
         />
-      </FormSection>
-      <FormSection title="Style">
-        <TypographyFields values={v} onChange={onChange} />
       </FormSection>
     </>
   );

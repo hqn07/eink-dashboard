@@ -9,7 +9,7 @@ import TimeField from '../components/TimeField.jsx';
 // it automatically from def.variants) — not this form's job.
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { ListEditor, TypographyFields, FormSection } = fields;
+  const { ListEditor, FormSection } = fields;
   const appendToken = (key) => (tok) => patch({ [key]: (v[key] || '') + tok });
   const variant = v.variant === 'card' ? 'card' : 'bar';
   return (
@@ -95,9 +95,6 @@ export function Form({ values, patch, onChange, fields }) {
             )}
           />
         )}
-      </FormSection>
-      <FormSection title="Style">
-        <TypographyFields values={v} onChange={onChange} />
       </FormSection>
     </>
   );

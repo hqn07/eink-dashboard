@@ -29,9 +29,6 @@ export const def = {
     variant: 'plain',
     spans: ['day', 'year'],   // any of: day, week, month, year
     title: '',
-    barShape: 'rectangular',
-    fontScale: 1,
-    padding: 14
   })
 };
 

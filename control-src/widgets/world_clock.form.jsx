@@ -72,7 +72,7 @@ function ZoneAdder({ v, patch }) {
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, ListEditor, SegmentedField, ToggleField, TypographyFields, FormSection, defaults = {} } = fields;
+  const { TextField, ListEditor, SegmentedField, ToggleField, FormSection, defaults = {} } = fields;
   const zones = Array.isArray(v.zones) ? v.zones : [];
 
   return (
@@ -130,9 +130,6 @@ export function Form({ values, patch, onChange, fields }) {
           onChange={(x) => patch({ showMeta: x })}
           help="Hidden automatically on small tiles."
         />
-      </FormSection>
-      <FormSection title="Style">
-        <TypographyFields values={v} onChange={onChange} />
       </FormSection>
     </>
   );

@@ -2,7 +2,7 @@ import React from 'react';
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { TextField, SelectField, LocationFields, TypographyFields, FormSection, defaults = {} } = fields;
+  const { TextField, SelectField, LocationFields, FormSection, defaults = {} } = fields;
   const isWeather = v.source === 'weather_temp' || v.source === 'weather_precip';
   return (
     <>
@@ -38,9 +38,6 @@ export function Form({ values, patch, onChange, fields }) {
           placeholder={isWeather ? 'TEMPERATURE' : 'BATTERY'}
           help="Leave blank to use the source name."
         />
-      </FormSection>
-      <FormSection title="Style">
-        <TypographyFields values={v} onChange={onChange} />
       </FormSection>
     </>
   );

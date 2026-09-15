@@ -23,8 +23,6 @@ export const def = {
   defaults: () => ({
     variant: 'gauge',
     title: '',
-    fontScale: 1,
-    padding: 14
   })
 };
 

@@ -42,8 +42,6 @@ export const def = {
     level: 'M',          // L / M / Q / H error-correction
     caption: '',         // shown under the code
     title: '',           // optional tile heading
-    fontScale: 1,
-    padding: 14
   })
 };
 

@@ -20,8 +20,6 @@ export const def = {
     base: 'USD',
     targets: ['EUR', 'GBP'],
     title: '',
-    fontScale: 1,
-    padding: 14
   })
 };
 

@@ -37,8 +37,6 @@ export const def = {
     count: 6,
     showDue: true,
     title: '',
-    fontScale: 1,
-    padding: 14
   })
 };
 

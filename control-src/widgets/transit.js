@@ -33,8 +33,6 @@ export const def = {
     direction: 'N',
     count: 5,
     title: '',
-    fontScale: 1,
-    padding: 14
   })
 };
 

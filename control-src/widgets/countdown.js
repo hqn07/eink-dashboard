@@ -36,8 +36,6 @@ export const def = {
     repeat: 'none',      // 'none' | 'weekly' | 'monthly' | 'yearly'
     label: '',           // e.g. "until launch"
     title: '',
-    fontScale: 1,
-    padding: 14
   })
 };
 

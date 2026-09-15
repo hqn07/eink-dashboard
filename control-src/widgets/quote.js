@@ -114,7 +114,5 @@ export const def = {
   defaults: () => ({
     variant: 'serif',
     quotes: [],          // empty → built-in rotation
-    fontScale: 1,
-    padding: 14
   })
 };

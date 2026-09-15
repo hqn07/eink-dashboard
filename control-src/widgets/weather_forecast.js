@@ -49,8 +49,6 @@ export const def = {
     hiloStyle:  'stack',    // 'stack' | 'inline' | 'arrows'
     showIcons:  true,
     showDayName: true,
-    fontScale: 1,
-    padding: 14
   })
 };
 

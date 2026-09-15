@@ -2,7 +2,7 @@ import React from 'react';
 
 export function Form({ values, patch, onChange, fields }) {
   const v = values || {};
-  const { ListEditor, TypographyFields, FormSection } = fields;
+  const { ListEditor, FormSection } = fields;
   const quotes = Array.isArray(v.quotes) ? v.quotes : [];
   return (
     <>
@@ -28,9 +28,6 @@ export function Form({ values, patch, onChange, fields }) {
             />
           )}
         />
-      </FormSection>
-      <FormSection title="Style">
-        <TypographyFields values={v} onChange={onChange} />
       </FormSection>
     </>
   );
