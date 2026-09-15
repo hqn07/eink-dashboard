@@ -22,9 +22,24 @@
 > multi-line rows were counted as single-line (headlines/tasks/transit drew
 > 3 rows into ~2.3; calendar and onthisday are two-line rows). 7 -> 3, and
 > the 3 left are clipped, not spilling.
-> **Still open, needing layout decisions rather than budget arithmetic:**
-> `text` overruns its bar by 34px; `weather_hero`'s stat block wants more
-> height than 800x480 gives it; `calendar` trims a row at one size.
+> **All seven fixed** (`d18609c`). Two were bugs in shared machinery, not in
+> the widget showing the symptom:
+> - **autofit never fitted single-line text.** It bailed on
+>   `clientHeight <= 0` — what a one-line element reports before its font is
+>   set — and measured `clientWidth`, the element's OWN width. A nowrap flex
+>   item sizes to its content, so every size "fit" itself. Now capped by the
+>   parent box, with auto height treated as unbounded for non-wrapping text.
+>   Affects every autofit element.
+> - **calendar** budgeted events but not the TODAY/LATER headings.
+> - **weather_hero** full tier ran 55px over; 56px of the stack was
+>   inter-block spacing, so full-tier-only spacing rules + 26px off the art
+>   fixed it without dropping content.
+> - **world_clock** zone labels now ellipsize instead of cutting mid-letter.
+>
+> **Scanning for clipped text needs care:** `scrollWidth > clientWidth` is
+> NORMAL on an element that is ellipsizing correctly. Only count it when the
+> computed `text-overflow` is not `ellipsis`, or you chase four false
+> positives like I did.
 >
 > **World clock face moved into CSS.** `.wclock-time` carries
 > `var(--face-grotesk)` (Inter, self-hosted) so every world-clock tile reads
