@@ -127,10 +127,24 @@ next flash.
 
 Each step is one commit, guards + panel photo before the next.
 
-1. **Defaults first, no removals.** For every widget in the table, make the
-   kept variant the `defaultVariant` and confirm it renders right at S/M/L.
-   Nothing is deleted yet, so this is reversible and invisible.
+1. **Defaults first, no removals.** — **DONE** (`cec5e99`). 17 widgets moved
+   off `trmnl`; both `def.defaultVariant` and `defaults().variant` updated,
+   all render non-empty at S/M/L.
 2. **Panel photo.** The four live widgets must look identical to today.
+   *Pre-verified locally:* rendering the exported live config against the
+   commit before the flips and diffing the PNGs gives 73 differing pixels of
+   384000, all of them the forecast's precipitation row (29%->31%, 2%->4%) —
+   live data drift between the two renders, nothing else. The panel photo is
+   still the final word, but the flips are not expected to move anything.
+
+   **This diff technique now works and should gate steps 3-5**, which DO
+   change stored behaviour:
+   ```
+   export PUPPETEER_EXECUTABLE_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+   # render current code, then `git checkout <ref> -- control-src/widgets/`,
+   # render again, diff the two PNGs, restore with `git checkout HEAD -- ...`
+   ```
+   Freeze the clock/weather first if an exact 0-pixel result is wanted.
 3. **Cut the variants** that step 1 made unreachable-by-default. Editor picker
    only shows what remains.
 4. **Cut the cosmetic keys** (`fontScale`, `padding`, `density`, `barShape`,
