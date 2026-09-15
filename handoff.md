@@ -147,12 +147,15 @@
 > 07-01 has been seen on the physical B panel.** Product intent = ship one
 > self-unit first, so this gates further polish.
 >
-> **⇒ TOP PRIORITY 2: confirm tini is live in prod.** The 08-23 outage fix
-> ships tini as PID 1 via `nixpacks.toml`; it was pushed but the deploy
-> was never confirmed on the box. Until it is, leave `BROWSER_IDLE_MS=0`
-> (resident browser) — re-enabling idle-close without a reaper is exactly
-> what took the fleet down. Check: container PID 1 is `tini`, and no
-> `chrome_crashpad_handler` accumulation across a few hours of wakes.
+> **⇒ TOP PRIORITY 2: watch for crashpad accumulation.** tini IS live —
+> `fd7f624` deployed successfully on 2026-08-23 and was still the ACTIVE
+> deploy 23 days later (confirmed from the Railway deploy list 09-15), so
+> the reaper is in place and the container has been stable since. What's
+> unproven is the long-run zombie count under real wake churn. Leave
+> `BROWSER_IDLE_MS=0` (resident browser) until that's checked — relaunch
+> churn without a working reaper is exactly what took the fleet down.
+> Check: container PID 1 is `tini`, and no `chrome_crashpad_handler`
+> pile-up across a few hours of device wakes.
 >
 > **Also pending from earlier sessions (not code work):**
 > - **Firmware roster before desolder.** Don't cut the buzzer + button
@@ -175,6 +178,12 @@
 >   (gzip 111 → 101). Vendor chunks (grid/icons/motion) are still eager
 >   because first paint needs them; `manualChunks` on those is what's left
 >   if the warning is worth chasing.
+>
+> **Deploy hygiene:** Railway auto-deploys every push to `main`, so
+> docs-only commits used to rebuild the whole image. `railway.json` now
+> sets `build.watchPatterns` to skip `**/*.md`, `docs/**`, `esp32/**` and
+> `test/visual-baseline/**`. `public/**` stays watched on purpose — the
+> CI-built firmware bins live in `public/firmware/` and must ship.
 >
 > **Open (small, not started):** heatmap 2px cell borders read a bit
 > heavy; two GxEPD2 copies on disk (`libraries/GxEPD2` 1.6.5 + misnested
