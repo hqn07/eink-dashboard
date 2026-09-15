@@ -294,109 +294,53 @@
 >   libraries/libraries/GxEPD2 1.6.9) — cleanup candidate, not urgent.
 
 
-> ## ▶ RESUME HERE (2026-09-15)
-> Run `/continue`. Everything below is on `origin/main` (tip `fd7f624`,
-> 2026-08-23). Repo state verified today: `check:widgets` 31 widgets wired
-> + token registry in sync, `lint:eink` clean, `build:css` produces no
-> drift against the committed `public/dashboard.css`. Working tree clean.
+> ## ▶ RESUME HERE (2026-09-16)
+> Everything below is on `origin/main` and deployed. 49 commits on
+> 2026-09-15. Guards on this machine: `check:widgets` 32 wired, `lint:eink`
+> clean, `test:api` **23/23**, both visual snapshots pass.
+> **Set `PUPPETEER_EXECUTABLE_PATH` before running anything visual** —
+> `export PUPPETEER_EXECUTABLE_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"`.
 >
-> **⇒ PRIORITY 1 — PARTLY DONE 2026-09-15.** A dashboard photo (not just the
-> calibration target) confirms the chunked-framing fix on a real render:
-> clean left and right edges, no wrapped strip, `PANEL_SHIFT_3C_PX=0`. The
-> `weather_forecast` / `clock` / `world_clock` / `ai` screen reads well on
-> glass. What is still unverified is every OTHER widget's visual work since
-> 07-01 — the four on that screen are now confirmed, the other 28 are not.
+> **⇒ FIRST: photograph the panel.** Several things changed that only glass
+> can judge: `weather_hero`'s art is 26px smaller at full tier, the AI tile
+> now gets news feeds, and list widgets drop a row at small sizes.
 >
-> **Original note (still true for the unverified widgets):**
-> Every visual change since 2026-07-01 (gauge/heatmap primitives, space-
-> aware fit ladder, moon NASA disc, uv widget, progress dots/pixels,
-> chess variants, `.tr-bar` shapes, 5-day calendar strip) is verified only
-> through the 1-bit sim harness (`node scripts/preview-components.mjs` —
-> a scratch file, rewritten per task: renders through the real face CSS +
-> Chrome, then `sharp.threshold(128)` to fake the panel). Until 09-15 the
-> panel itself was misaligned by the chunked-framing bug, so any photo
-> judgement was being made through a 56px shift — worth re-checking
-> anything that was assessed on glass before that date. Product intent =
-> ship one self-unit first, so this gates further polish.
+> **⇒ SECOND: confirm typing works in a list field.** The feed URL input,
+> quote's custom quotes, world_clock's zones. All three were unwritable
+> (`replaceRow`, `3289942`) and the fix is proven in logic but NOT in the
+> live UI — the control app blocks the JS runtime under headless puppeteer,
+> so this needs a human for thirty seconds.
 >
-> **⇒ TOP PRIORITY 2: tini never shipped — `nixpacks.toml` is inert.**
-> The Railway service's builder is **RAILPACK** (`get-service-config`,
-> 2026-09-15), so `nixpacks.toml` is not read at all: not the `tini` pkg,
-> not the `tini -g -- node server.js` start command, not its `[variables]`
-> block (`PUPPETEER_EXECUTABLE_PATH`, `PUPPETEER_SKIP_DOWNLOAD`,
-> `DATA_DIR` — Railpack apt-installs its own Chrome deps and the real
-> `DATA_DIR` is a Railway variable). An earlier note in this file claimed
-> tini was live because `fd7f624` deployed successfully; that was wrong —
-> a successful deploy says nothing about a file the builder ignores.
->
-> So of the Aug-23 outage fix, only the code layers are live:
-> `BROWSER_IDLE_MS=0` (resident browser — no relaunch churn, hence no
-> orphaned crashpad handlers) and the `--disable-crash-reporter` /
-> `--disable-breakpad` launch args in `lib/render.js`. The resident
-> browser is what's actually holding prod up, and there is **no reaper
-> behind it**. Do not raise `BROWSER_IDLE_MS` off 0 until either the
-> service builder is switched back to NIXPACKS or tini (or another init)
-> is arranged under Railpack — that combination is the exact Aug-23
-> fleet-down configuration.
->
-> Volume/DATA_DIR pairing is fine, checked 2026-09-15: the Railway
-> variable `DATA_DIR=/data` matches the volume mount at `/data`, so config
-> does survive redeploys. (The inert `nixpacks.toml` still says
-> `/app/data` — ignore it; it documents a builder that isn't in use.)
-> Check: container PID 1 is `tini`, and no `chrome_crashpad_handler`
-> pile-up across a few hours of device wakes.
->
-> **Also pending from earlier sessions (not code work):**
-> - **Firmware roster before desolder.** Don't cut the buzzer + button
->   until `/status` shows the device on fw **1.20.2** (buttonless WiFi
->   recovery). Alarms become pointless once the buzzer is gone.
-> - **History scrub** if open-sourcing resumes — wifi pass
->   `REDACTED` + two fleet tokens are still in old commits, and the
->   repo is still PRIVATE. Recipe in the 2026-07-07 entry, ~30 min.
->
-> **Closed since the old resume block (don't re-plan these):**
-> - **Transit widget — SHIPPED** (`b8e73a5` NYC MTA live arrivals,
->   extended `db3c3d9` to both platforms). It was listed as "open".
-> - **code-activity "SETUP NEEDED" in the editor — fixed in code.**
->   `/api/preview-data` now calls `buildWidgetData(cfg, units, layout)`,
->   whose per-item loop hits `fetchCodeActivity` like the panel does
->   (`lib/widget-data.js:234`). Worth one look in the editor to confirm
->   visually, but there's no missing plumbing.
-> - **Bundle-size split — partly done.** `7ea5316` lazy-loads the settings
->   modal / setup wizard / shortcuts overlay: index chunk 384 → 344 kB
->   (gzip 111 → 101). Vendor chunks (grid/icons/motion) are still eager
->   because first paint needs them; `manualChunks` on those is what's left
->   if the warning is worth chasing.
->
-> **Deploy hygiene — `railway.json` is IGNORED, same as `nixpacks.toml`.**
-> It sets `build.watchPatterns` to skip `**/*.md`, `docs/**`, `.github/**`,
-> `esp32/**` and `test/visual-baseline/**`, but observed behaviour on
-> 2026-09-15 is that docs-only and firmware-only commits still trigger full
-> deploys. This service takes its build config from the Railway dashboard,
-> not from the repo (builder is RAILPACK). To actually stop the churn, set
-> Watch Paths in Service → Settings → Build; otherwise delete
-> `railway.json`, which is currently decorative. Keep `public/**` watched
-> either way — CI-built firmware bins live in `public/firmware/`.
->
-> **Open (small, not started):** heatmap 2px cell borders read a bit
-> heavy; two GxEPD2 copies on disk (`libraries/GxEPD2` 1.6.5 + misnested
-> `libraries/libraries/GxEPD2` 1.6.9); `npm audit` vulns (node-ical axios
-> + esbuild via vite) all need breaking bumps, untouched on purpose.
->
-> **Visual baseline caveat:** `test/visual-baseline/` was last rebaselined
-> `192acaa` (2026-07-15), before chess variants (`16d8117`) and `.tr-bar`
-> shapes (`41860b7`). Both defaulted to the existing look, so the matrix
-> may still pass — but run `test:visual` before trusting a diff, and
-> `:update` only if the drift is intended. Baselines are machine-specific.
+> **Open, in rough priority order:**
+> - **`BROWSER_IDLE_MS` must stay 0.** The service builds with RAILPACK, so
+>   `nixpacks.toml` is inert and tini never shipped. The resident browser is
+>   what is holding prod up; idle-close without a reaper is the Aug-23
+>   fleet-down configuration.
+> - **`railway.json` is inert too** — watch paths must be set in the Railway
+>   dashboard, or docs pushes keep rebuilding the image.
+> - **The AI tile needs a prompt worth its space**, and "About you"
+>   (Settings > Tools) is still empty — without it the model knows the
+>   weather but not the reader. Editing the prompt is also the only way to
+>   bust the daily cache.
+> - **Setup stages 2 and 3** (`docs/setup-architecture.md`): the
+>   `homeValue()` read helper + Setup panel, then widgets inheriting. Both
+>   change how every location-aware widget reads data, so they want a photo
+>   between.
+> - **Open-sourcing history scrub** — wifi pass + two fleet tokens are still
+>   in old commits; repo still private. Recipe in the 2026-07-07 entry.
+> - **Firmware 1.21.0** was built by CI; confirm the device actually OTA'd
+>   (check `/status`). Its alarm loop can come out on the next flash.
 >
 > **Workflow per unit:** `build:css` → `lint:eink` → `check:widgets` →
 > `test:visual` (compare; `:update` only when the drift is intended) →
 > `vite build` (editor changes) → `test:api` (server). Commit + push each
-> unit (auto-push is on). New widget = wire all the spots
-> `scripts/check-widgets.mjs` guards (see `reference_widget_wiring`
-> memory): render module + `form.jsx` + `_registry.js` + `_ssr.js` +
-> `widgets.js` palette — plus a `POOL_META` category that actually exists
-> in `POOL_CATEGORIES` (see `7a0a551`).
+> unit (auto-push is on). New widget = wire every spot
+> `scripts/check-widgets.mjs` guards (see `reference_widget_wiring` memory):
+> render module + `form.jsx` + `_registry.js` + `_ssr.js` + `widgets.js`
+> palette — plus a `POOL_META` category that exists in `POOL_CATEGORIES`.
+> **String rows in a `ListEditor` need `replaceRow`** or the field cannot be
+> typed into. **Probe a guard before trusting it** — change something
+> deliberately and confirm it goes red.
 
 ## 2026-07-01 session (all pushed)
 
