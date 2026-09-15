@@ -1301,7 +1301,15 @@ html, body {
   color: #000;
 }
 .wclock-time {
-  font-family: 'DM Serif Display', serif;
+  /* Grotesk, NOT the serif the clock widget uses. The two clocks sit side by
+     side on the panel and need to read as different instruments — local time
+     in the serif display face, elsewhere-time in a neutral sans.
+     This lived as a per-tile `fontFamily: system` override until 2026-09-15;
+     moved here so every world-clock tile gets it and no tile has to carry a
+     font setting. Inter is self-hosted, so it renders identically wherever
+     the page is rasterised — `system-ui` resolved to whatever sans the
+     render container happened to ship. */
+  font-family: var(--face-grotesk);
   font-weight: 700;
   line-height: 1;
 }
