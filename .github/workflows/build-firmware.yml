@@ -49,12 +49,20 @@ jobs:
           arduino-cli core update-index
           arduino-cli core install esp32:esp32@3.2.0
 
-      - name: Install libraries
+      - name: Install libraries (pinned — see note)
         run: |
-          arduino-cli lib install "GxEPD2"
-          arduino-cli lib install "ArduinoJson"
-          arduino-cli lib install "Adafruit GFX Library"
-          arduino-cli lib install "Adafruit BusIO"
+          # PINNED ON PURPOSE. These were unpinned, so `lib install` took
+          # whatever was latest at build time: the same firmware source could
+          # produce a differently-behaving binary on a rebuild, with nothing
+          # in the repo to show what changed. The display driver is the one
+          # that matters — GxEPD2's GDEY075Z08 class (src/gdey3c/, added in
+          # 1.6.7) is what writes the panel RAM, so a silent bump there can
+          # move the image on glass. Bump these deliberately, one at a time,
+          # and reflash + photo the panel after a GxEPD2 change.
+          arduino-cli lib install "GxEPD2@1.6.9"
+          arduino-cli lib install "ArduinoJson@7.4.3"
+          arduino-cli lib install "Adafruit GFX Library@1.12.6"
+          arduino-cli lib install "Adafruit BusIO@1.17.4"
           # No external captive-portal lib — bw 1.10.0+ uses a manual
           # WebServer + DNSServer + Preferences flow that's built into
           # the ESP32 Arduino core. WiFiManager 2.0.17 was incompatible
