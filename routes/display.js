@@ -10,6 +10,7 @@ const { getCurrentImage } = require('../lib/render');
 const { effectiveRefresh, pushNow, FAST_INTERVAL_SECONDS, FAST_WINDOW_MS } = require('../lib/refresh');
 const { saveBatteryState } = require('../lib/battery-store');
 const { planesToPng, shiftPlanesLeft } = require('../lib/image');
+const { calibPlanes } = require('../lib/calib');
 const { strongEtag } = require('../lib/htmlutil');
 const { safeError } = require('../lib/http');
 
@@ -63,6 +64,22 @@ router.get('/display-3c.png', checkAdminAuth, async (req, res) => {
   }
 });
 
+// Preview of the alignment-calibration target, so it can be checked in a
+// browser before CALIB_3C puts it on glass. `?shift=N` previews what the
+// panel is sent at that compensation (default: the raw, unshifted target).
+router.get('/display-3c-calib.png', checkAdminAuth, async (req, res) => {
+  try {
+    const shift = parseInt(req.query.shift, 10) || 0;
+    const bin = shift ? shiftPlanesLeft(calibPlanes(), shift) : calibPlanes();
+    res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'no-store');
+    res.send(await planesToPng(bin));
+  } catch (err) {
+    console.error('3C CALIB PNG error:', err);
+    res.status(500).send(safeError(err).error);
+  }
+});
+
 // Raw 1-bit packed binary for ESP32 (smaller, no decode needed)
 // 800 * 480 / 8 = 48000 bytes
 router.get('/display.bin', checkDeviceAuth, async (req, res) => {
@@ -110,15 +127,35 @@ router.get('/display.bin', checkDeviceAuth, async (req, res) => {
 const PANEL_SHIFT_3C_PX =
   (((parseInt(process.env.PANEL_SHIFT_3C_PX, 10) || 0) % SCREEN_W) + SCREEN_W) % SCREEN_W;
 
+// Alignment-calibration mode. CALIB_3C=raw serves the measurement target
+// with NO shift applied (so a photo reads the panel's native offset);
+// CALIB_3C=shifted serves it through the current PANEL_SHIFT_3C_PX (so a
+// photo confirms the compensation actually lands). Anything falsy = off.
+// Deliberately env-driven: the device asks for /display-3c.bin and can't be
+// told to add a query param, so this is the only way to get a target onto
+// glass without reflashing or editing the user's screens.
+const CALIB_3C = (process.env.CALIB_3C || '').trim().toLowerCase();
+const CALIB_ON = CALIB_3C === 'raw' || CALIB_3C === 'shifted' || CALIB_3C === '1';
+const CALIB_SHIFTED = CALIB_3C === 'shifted';
+
 // Raw two-plane packed binary for the 3-color (B) panel.
 // 96000 bytes = black plane (48000) + red plane (48000), each MSB-first.
 router.get('/display-3c.bin', checkDeviceAuth, async (req, res) => {
   try {
     const cfg = await loadConfig();
     const variant = resolveVariant(req, cfg);
-    const entry = await getCurrentImage(variant);
-    let { bin, etag } = await entry.get3c();
-    if (PANEL_SHIFT_3C_PX) {
+    let bin, etag;
+    if (CALIB_ON) {
+      // Skip the render pipeline entirely — the target is pure pixel math,
+      // so it's deterministic and needs no Puppeteer round-trip.
+      bin = calibPlanes();
+      etag = `"calib-${CALIB_3C}-${PANEL_SHIFT_3C_PX}"`;
+      if (CALIB_SHIFTED && PANEL_SHIFT_3C_PX) bin = shiftPlanesLeft(bin, PANEL_SHIFT_3C_PX);
+    } else {
+      const entry = await getCurrentImage(variant);
+      ({ bin, etag } = await entry.get3c());
+    }
+    if (!CALIB_ON && PANEL_SHIFT_3C_PX) {
       bin = shiftPlanesLeft(bin, PANEL_SHIFT_3C_PX);
       // Deterministic transform → still a strong ETag; suffixing the shift
       // makes a recalibration invalidate the device's cached ETag so it
