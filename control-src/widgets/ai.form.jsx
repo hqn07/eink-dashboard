@@ -6,7 +6,7 @@ import React from 'react';
 // API call, and new text means a 15-26s colour redraw on the panel).
 export function Form({ values, patch, fields }) {
   const v = values || {};
-  const { TextField, SelectField, FormSection } = fields;
+  const { TextField, SelectField, ListEditor, FormSection } = fields;
   return (
     <>
       <FormSection title="Prompt">
@@ -29,6 +29,30 @@ export function Form({ values, patch, fields }) {
           onChange={(x) => patch({ title: x })}
           placeholder="AI"
           help="Shown in the tile's header bar."
+        />
+      </FormSection>
+      <FormSection title="Sources">
+        <div className="wsm-field-help" style={{ marginBottom: 6 }}>
+          The model has no web access. It only sees the dashboard's own data
+          plus any feeds you add here, so naming a site in the prompt will not
+          reach it &mdash; add the feed instead.
+        </div>
+        <ListEditor
+          label="RSS / Atom feeds"
+          items={Array.isArray(v.feedUrls) ? v.feedUrls : []}
+          onChange={(items) => patch({ feedUrls: items })}
+          blank=""
+          addLabel="Add feed"
+          help="Replaces the default news feed for this tile. e.g. https://news.google.com/rss"
+          renderRow={(it, set) => (
+            <input
+              type="url"
+              value={typeof it === 'string' ? it : ''}
+              placeholder="https://example.com/rss"
+              onChange={(e) => set(e.target.value)}
+              style={{ flex: 1 }}
+            />
+          )}
         />
       </FormSection>
       <FormSection title="Refresh">

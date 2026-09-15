@@ -26,7 +26,11 @@ export const def = {
   defaults: () => ({
     prompt: 'Brief me on today in two short sentences.',
     cadence: 'daily',
-    title: ''
+    title: '',
+    // Extra RSS/Atom feeds to read into the prompt. Data the system cannot
+    // know, so it stays a setting — the model has no web access of its own,
+    // and these are the only way to point it at a source you care about.
+    feedUrls: []
   })
 };
 
