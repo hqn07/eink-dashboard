@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { m, AnimatePresence } from 'framer-motion';
 import {
-  Gear, MagicWand, Keyboard, Broadcast, Bell, Archive, CaretRight,
+  Gear, MagicWand, Keyboard, Broadcast, Bell, Archive, CaretRight, User,
 } from '@phosphor-icons/react';
 import MacAgentBadge from './MacAgentBadge.jsx';
 import PushNowButton from './PushNowButton.jsx';
 import PanelPreview from './PanelPreview.jsx';
 import PinButton from './PinButton.jsx';
+import AboutPanel from './AboutPanel.jsx';
 import AlarmsPanel from './AlarmsPanel.jsx';
 import BackupPanel from './BackupPanel.jsx';
 
@@ -89,6 +90,20 @@ export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcut
             </button>
 
             <div className="settings-section-label">Tools</div>
+            <button
+              type="button"
+              className={`settings-row settings-row--expandable ${expanded === 'about' ? 'is-open' : ''}`}
+              aria-expanded={expanded === 'about'}
+              onClick={() => toggle('about')}
+            >
+              <User size={14} weight="bold" /> About you
+              <CaretRight className="settings-row-caret" size={12} weight="bold" />
+            </button>
+            {expanded === 'about' && (
+              <div className="settings-collapse-body">
+                <AboutPanel cfg={cfg} onReplaceConfig={onReplaceConfig} />
+              </div>
+            )}
             <button
               type="button"
               className={`settings-row settings-row--expandable ${expanded === 'alarms' ? 'is-open' : ''}`}

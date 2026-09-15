@@ -4,6 +4,14 @@
   "quietHours": { "enabled": false, "from": "01:00", "to": "06:00" },
   "alarms": [],
   "savedFeeds": [],
+  "home": {
+    "city": "",
+    "lat": null,
+    "lon": null,
+    "icalUrls": [],
+    "githubUser": "",
+    "about": ""
+  },
   "screens": [
     {
       "id": "day",

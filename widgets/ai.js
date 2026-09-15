@@ -132,6 +132,13 @@ function buildContext(ctx) {
 
   const now = new Date(Number.isFinite(ctx && ctx.now) ? ctx.now : Date.now());
   lines.unshift(`Now: ${now.toDateString()} ${now.toTimeString().slice(0, 5)}`);
+
+  // Who this is for. Everything above describes the world; without this the
+  // model is briefing a stranger, and a forecast summary is all it can
+  // honestly produce. Goes first so it frames the rest.
+  const about = ctx && ctx.home && typeof ctx.home.about === 'string'
+    ? ctx.home.about.trim() : '';
+  if (about) lines.unshift(`About the person reading this: ${about}`);
   return lines.join('\n');
 }
 
