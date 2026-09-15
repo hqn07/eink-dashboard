@@ -40,7 +40,7 @@ export const def = {
   })
 };
 
-const ROWS_BY_TIER = { tiny: 2, compact: 3, standard: 5, extended: 7, full: 9 };
+const ROWS_BY_TIER = { tiny: 2, compact: 2, standard: 5, extended: 7, full: 9 };
 
 // Empty checkbox glyph — solid 2px stroke SVG (threshold + invert safe;
 // a CSS-border box can vanish on the panel at small sizes).

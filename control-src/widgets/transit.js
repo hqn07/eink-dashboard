@@ -36,7 +36,7 @@ export const def = {
   })
 };
 
-const ROWS_BY_TIER = { tiny: 2, compact: 3, standard: 4, extended: 6, full: 8 };
+const ROWS_BY_TIER = { tiny: 2, compact: 2, standard: 4, extended: 6, full: 8 };
 
 // MTA route bullet — bordered circle with the route glyph. Solid 2px stroke
 // so it survives threshold + invert (a filled disc would clash with 1-bit).

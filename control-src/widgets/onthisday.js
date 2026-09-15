@@ -47,7 +47,7 @@ export function render(ctx) {
   const stale = d.stale ? ' <span class="otd-stale">OLD</span>' : '';
 
   if (variant === 'trmnl') {
-    const byTier = { tiny: 2, compact: 3, standard: 4, extended: 6, full: 7 };
+    const byTier = { tiny: 1, compact: 2, standard: 4, extended: 6, full: 7 };
     const cap = byTier[tier] || 3;
     const rows = d.events.slice(0, cap);
     // Under-full → rows grow to fill the card + title text grows with the
@@ -79,9 +79,11 @@ export function render(ctx) {
 
   const compact = variant === 'compact';
   // Row budget by tier; compact packs more + clamps each to one line.
+  // Each entry wraps to two lines at these widths, so a row is worth roughly
+  // two of a single-line list's. Budgets below are per-row, not per-line.
   const byTier = compact
-    ? { tiny: 3, compact: 4, standard: 6, extended: 8, full: 8 }
-    : { tiny: 2, compact: 3, standard: 4, extended: 6, full: 6 };
+    ? { tiny: 2, compact: 3, standard: 6, extended: 8, full: 8 }
+    : { tiny: 1, compact: 2, standard: 4, extended: 6, full: 6 };
   const rows = d.events.slice(0, byTier[tier] || 3);
   return `
     <div class="otd otd-list ${compact ? 'otd-compact' : ''}">

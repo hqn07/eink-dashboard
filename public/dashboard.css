@@ -2347,6 +2347,12 @@ img.icon { object-fit: contain; }
   display: flex;
   flex-direction: column;
   -webkit-font-smoothing: none;
+  /* A tile that overflows on a scrolling page is untidy; on a fixed 800x480
+     panel it draws on top of its neighbour, and there is no scrollbar to
+     reveal what was cut. Clip at the card so a mis-sized row can never
+     escape — the per-widget row counts below decide what fits, this is the
+     backstop for when they are wrong. */
+  overflow: hidden;
 }
 
 /* Title bar: label left, meta/chip right, hairline under. */

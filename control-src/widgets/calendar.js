@@ -157,7 +157,9 @@ export function render(ctx) {
 function renderTrmnl(all, settings, titleLabel, cellW, cellH, density) {
   const s = settings || {};
   const tier = pickTier(cellW, cellH, density);
-  const maxRows = { tiny: 2, compact: 3, standard: 5, extended: 7, full: 9 }[tier] || 4;
+  // Each event is a two-line row (day + title over time), so the budget is
+  // lower than a single-line list's at the same tier.
+  const maxRows = { tiny: 1, compact: 2, standard: 4, extended: 6, full: 8 }[tier] || 4;
   const showTime = s.showTime !== false;
   const showDay  = s.showDayLabel !== false;
   const list = all.slice(0, maxRows);

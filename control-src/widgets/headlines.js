@@ -43,7 +43,7 @@ export const def = {
 };
 
 // How many rows fit per tier — the render clamps the fetched list to this.
-const ROWS_BY_TIER = { tiny: 2, compact: 3, standard: 5, extended: 7, full: 9 };
+const ROWS_BY_TIER = { tiny: 2, compact: 2, standard: 5, extended: 7, full: 9 };
 
 export function render(ctx) {
   const { headlines, settings, cellW, cellH, density } = ctx;
