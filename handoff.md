@@ -1,5 +1,43 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-15 (late) — widget refresh pass + two guard holes closed
+> **The visual guard was decorative.** Two independent defects, both found by
+> probing rather than reading:
+> 1. `/widgets-matrix` built its cell class BY HAND (`class="cell cell-${id}"`)
+>    instead of calling `cellClasses()`, so since inverted became the default
+>    the snapshot protected a rendering that does not ship — every widget
+>    black-on-white in the guard, white-on-black on the panel. The exact
+>    hand-rebuilt-at-a-call-site failure of CLAUDE.md gotcha 7.
+> 2. Its threshold was a PERCENTAGE on a 45.8M-pixel canvas: 0.05% tolerated
+>    ~22,900 changed pixels. An underline across 11 tiles moved 1245 px and
+>    the guard said PASS. Now fails on an absolute count too (120 px matrix,
+>    2500 px editor — the editor is a live viewport and jitters).
+> **Always probe a guard before trusting it**: change something deliberately
+> and confirm it goes red.
+>
+> **Widget refresh.** With the matrix finally showing what ships, a scan for
+> descendants extending past their cell found **7 widgets spilling outside
+> their tile** — on a fixed panel that draws over the neighbour. `.tr-card`
+> now clips as a backstop, and the row budgets were corrected where
+> multi-line rows were counted as single-line (headlines/tasks/transit drew
+> 3 rows into ~2.3; calendar and onthisday are two-line rows). 7 -> 3, and
+> the 3 left are clipped, not spilling.
+> **Still open, needing layout decisions rather than budget arithmetic:**
+> `text` overruns its bar by 34px; `weather_hero`'s stat block wants more
+> height than 800x480 gives it; `calendar` trims a row at one size.
+>
+> **World clock face moved into CSS.** `.wclock-time` carries
+> `var(--face-grotesk)` (Inter, self-hosted) so every world-clock tile reads
+> as a different instrument from the serif local clock. It was a per-tile
+> `fontFamily: 'system'` on exactly one tile, with no UI to recreate it, and
+> `system-ui` resolved to whatever sans the render container shipped.
+> `fontFamily` consequently rejoined migration v5's strip list.
+>
+> **`scripts/contact-sheet.mjs`** clips tiles out of the matrix into labelled
+> sheets — reviewing 43 variants in one 50892px image is not possible. It
+> clips from the matrix rather than rendering widgets standalone because
+> `/preview/widget` skips autofit and produces nonsense.
+>
 > ## 2026-09-15 (evening) — config rebuild done, VERIFIED ON GLASS
 > The whole `docs/widget-config-plan.md` pass shipped and was photographed:
 > **235 settings keys -> 166, 99 variants -> 43, 12 per-tile knobs -> 1.**
