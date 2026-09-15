@@ -10,7 +10,7 @@ const { getCurrentImage } = require('../lib/render');
 const { effectiveRefresh, pushNow, FAST_INTERVAL_SECONDS, FAST_WINDOW_MS } = require('../lib/refresh');
 const { saveBatteryState } = require('../lib/battery-store');
 const { planesToPng, shiftPlanesLeft } = require('../lib/image');
-const { calibPlanes } = require('../lib/calib');
+const { calibPlanes, calibTag } = require('../lib/calib');
 const { strongEtag } = require('../lib/htmlutil');
 const { safeError } = require('../lib/http');
 
@@ -149,7 +149,7 @@ router.get('/display-3c.bin', checkDeviceAuth, async (req, res) => {
       // Skip the render pipeline entirely — the target is pure pixel math,
       // so it's deterministic and needs no Puppeteer round-trip.
       bin = calibPlanes();
-      etag = `"calib-${CALIB_3C}-${PANEL_SHIFT_3C_PX}"`;
+      etag = `"calib-${CALIB_3C}-${PANEL_SHIFT_3C_PX}-${calibTag()}"`;
       if (CALIB_SHIFTED && PANEL_SHIFT_3C_PX) bin = shiftPlanesLeft(bin, PANEL_SHIFT_3C_PX);
     } else {
       const entry = await getCurrentImage(variant);
