@@ -131,53 +131,98 @@
 >   libraries/libraries/GxEPD2 1.6.9) — cleanup candidate, not urgent.
 
 
-> ## ▶ RESUME HERE (2026-07-01) — handoff to Fable 5
-> Run `/continue`. All work below is on `origin/main`, verified only via
-> the 1-bit sim harness (`node scripts/preview-components.mjs` — a scratch
-> file, rewritten per task; renders a widget through the real face CSS +
-> Chrome, then `sharp.threshold(128)` to fake the panel). **Nothing this
-> session is verified on the physical B panel.**
+> ## ▶ RESUME HERE (2026-09-15)
+> Run `/continue`. Everything below is on `origin/main` (tip `fd7f624`,
+> 2026-08-23). Repo state verified today: `check:widgets` 31 widgets wired
+> + token registry in sync, `lint:eink` clean, `build:css` produces no
+> drift against the committed `public/dashboard.css`. Working tree clean.
 >
-> **⇒ TOP PRIORITY: panel-photo verify.** ~18 visual changes stacked
-> sim-only. Flash a screen, photo it, confirm they read on the real
-> 3-colour panel before more polish. Product intent = ship one self-unit
-> first, so this gates.
+> **⇒ TOP PRIORITY 1: panel-photo verify.** Still the oldest open item —
+> every visual change since 2026-07-01 (gauge/heatmap primitives, space-
+> aware fit ladder, moon NASA disc, uv widget, progress dots/pixels,
+> chess variants, `.tr-bar` shapes, 5-day calendar strip) is verified only
+> through the 1-bit sim harness (`node scripts/preview-components.mjs` —
+> a scratch file, rewritten per task: renders through the real face CSS +
+> Chrome, then `sharp.threshold(128)` to fake the panel). **Nothing since
+> 07-01 has been seen on the physical B panel.** Product intent = ship one
+> self-unit first, so this gates further polish.
 >
-> **This session (all pushed):**
-> - Gauge + heatmap primitives — `gaugeHtml()` / `heatmapHtml()` in
->   `control-src/widgets/_shared.js`; `225-trmnl-gauge-heatmap.css`. aqi
->   has a `gauge` variant. heatmap: `orient:'h'|'v'`, empty cells white.
-> - **Space-aware fit ladder** (calendar/world_clock/onthisday): dotted—no,
->   accent bar on `.tr-row-inner` (hugs text, not the grown band);
->   `.tr-clamp`+`--fit-lines` wrap-before-clip; `.tr-rows-fill` fills
->   under-full lists; `fillRowFont()` grows title text to fill big tiles.
-> - **Moon** (`widgets/moon.js`): fixed inverted polarity (lit=light,
->   shadow=dark); lit face is a real dithered **PD NASA** photo
->   (`_moon-image.js`, SVS 5187) clipped to the terminator; `flow` variant
->   = flat **phase timeline** (today centred, ⅛-cycle step so neighbours
->   are distinct + directional). Cover-flow 3-D was tried + dropped (round
->   discs → coins).
-> - **Dotted dividers** on TRMNL cards (was dashed).
-> - **Code Activity** widget — GitHub contribution heatmap, no-token
->   jogruber API, per-tile `username` (user = `hqn07`). Fills portrait
->   tiles via vertical orientation.
-> - **Editor placement fix** — removed the `<motion.div layout>` FLIP that
->   fought react-grid-layout (tiles flickered on drop / reverted on resize).
-> - **Autofit unified** — 4 copies → `control-src/autofit.js` (React
->   imports; server injects at `<!--__AUTOFIT__-->`).
+> **⇒ TOP PRIORITY 2: confirm tini is live in prod.** The 08-23 outage fix
+> ships tini as PID 1 via `nixpacks.toml`; it was pushed but the deploy
+> was never confirmed on the box. Until it is, leave `BROWSER_IDLE_MS=0`
+> (resident browser) — re-enabling idle-close without a reaper is exactly
+> what took the fleet down. Check: container PID 1 is `tini`, and no
+> `chrome_crashpad_handler` accumulation across a few hours of wakes.
 >
-> **Open (not started):** panel verify (#1); code-activity shows
-> "SETUP NEEDED" in the *editor* (preview-data doesn't fetch GitHub — only
-> the panel does); heatmap 2px cell borders read a bit heavy; bundle-size
-> split (vite >500 kB); transit/commute widget.
+> **Also pending from earlier sessions (not code work):**
+> - **Firmware roster before desolder.** Don't cut the buzzer + button
+>   until `/status` shows the device on fw **1.20.2** (buttonless WiFi
+>   recovery). Alarms become pointless once the buzzer is gone.
+> - **History scrub** if open-sourcing resumes — wifi pass
+>   `REDACTED` + two fleet tokens are still in old commits, and the
+>   repo is still PRIVATE. Recipe in the 2026-07-07 entry, ~30 min.
+>
+> **Closed since the old resume block (don't re-plan these):**
+> - **Transit widget — SHIPPED** (`b8e73a5` NYC MTA live arrivals,
+>   extended `db3c3d9` to both platforms). It was listed as "open".
+> - **code-activity "SETUP NEEDED" in the editor — fixed in code.**
+>   `/api/preview-data` now calls `buildWidgetData(cfg, units, layout)`,
+>   whose per-item loop hits `fetchCodeActivity` like the panel does
+>   (`lib/widget-data.js:234`). Worth one look in the editor to confirm
+>   visually, but there's no missing plumbing.
+> - **Bundle-size split — partly done.** `7ea5316` lazy-loads the settings
+>   modal / setup wizard / shortcuts overlay: index chunk 384 → 344 kB
+>   (gzip 111 → 101). Vendor chunks (grid/icons/motion) are still eager
+>   because first paint needs them; `manualChunks` on those is what's left
+>   if the warning is worth chasing.
+>
+> **Open (small, not started):** heatmap 2px cell borders read a bit
+> heavy; two GxEPD2 copies on disk (`libraries/GxEPD2` 1.6.5 + misnested
+> `libraries/libraries/GxEPD2` 1.6.9); `npm audit` vulns (node-ical axios
+> + esbuild via vite) all need breaking bumps, untouched on purpose.
+>
+> **Visual baseline caveat:** `test/visual-baseline/` was last rebaselined
+> `192acaa` (2026-07-15), before chess variants (`16d8117`) and `.tr-bar`
+> shapes (`41860b7`). Both defaulted to the existing look, so the matrix
+> may still pass — but run `test:visual` before trusting a diff, and
+> `:update` only if the drift is intended. Baselines are machine-specific.
 >
 > **Workflow per unit:** `build:css` → `lint:eink` → `check:widgets` →
 > `test:visual` (compare; `:update` only when the drift is intended) →
 > `vite build` (editor changes) → `test:api` (server). Commit + push each
-> unit (auto-push is on). New widget = 5 wiring spots (see
-> `reference_widget_wiring` memory + `scripts/check-widgets.mjs`).
+> unit (auto-push is on). New widget = wire all the spots
+> `scripts/check-widgets.mjs` guards (see `reference_widget_wiring`
+> memory): render module + `form.jsx` + `_registry.js` + `_ssr.js` +
+> `widgets.js` palette — plus a `POOL_META` category that actually exists
+> in `POOL_CATEGORIES` (see `7a0a551`).
 
-State as of 2026-06-16. Read this + `CLAUDE.md` + memory pointers below before touching anything.
+## 2026-07-01 session (all pushed)
+
+- Gauge + heatmap primitives — `gaugeHtml()` / `heatmapHtml()` in
+  `control-src/widgets/_shared.js`; `225-trmnl-gauge-heatmap.css`. aqi
+  has a `gauge` variant. heatmap: `orient:'h'|'v'`, empty cells white.
+- **Space-aware fit ladder** (calendar/world_clock/onthisday): dotted—no,
+  accent bar on `.tr-row-inner` (hugs text, not the grown band);
+  `.tr-clamp`+`--fit-lines` wrap-before-clip; `.tr-rows-fill` fills
+  under-full lists; `fillRowFont()` grows title text to fill big tiles.
+- **Moon** (`widgets/moon.js`): fixed inverted polarity (lit=light,
+  shadow=dark); lit face is a real dithered **PD NASA** photo
+  (`_moon-image.js`, SVS 5187) clipped to the terminator; `flow` variant
+  = flat **phase timeline** (today centred, ⅛-cycle step so neighbours
+  are distinct + directional). Cover-flow 3-D was tried + dropped (round
+  discs → coins).
+- **Dotted dividers** on TRMNL cards (was dashed).
+- **Code Activity** widget — GitHub contribution heatmap, no-token
+  jogruber API, per-tile `username` (user = `hqn07`). Fills portrait
+  tiles via vertical orientation.
+- **Editor placement fix** — removed the `<motion.div layout>` FLIP that
+  fought react-grid-layout (tiles flickered on drop / reverted on resize).
+- **Autofit unified** — 4 copies → `control-src/autofit.js` (React
+  imports; server injects at `<!--__AUTOFIT__-->`).
+
+Everything below is historical session log, newest first. Read the RESUME
+block above + `CLAUDE.md` + the memory pointers at the end of this file
+before touching anything.
 
 ## 2026-06-29 session
 
