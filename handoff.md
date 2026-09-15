@@ -1,5 +1,43 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-15 — panel offset SOLVED: it was HTTP chunked framing
+> Not a panel trait. `/display.bin` and `/display-3c.bin` answered with
+> `res.end(bin)` and no `Content-Length`, so Node framed the body as
+> `<hex size>\r\n` + data + `\r\n0\r\n\r\n`. The firmware reads
+> `http.getStreamPtr()` — the raw socket — which does not strip chunk
+> framing, so it drew the framing as pixels: `"17700\r\n"` is 7 bytes =
+> **56px** of shift on the whole image, and each further chunk boundary
+> over TLS inserts ~8 bytes = **64px** more, partway down.
+>
+> **How it was found.** `lib/calib.js` + `CALIB_3C` serve a measurement
+> target instead of the dashboard (no Puppeteer, no fonts, so it renders
+> even where Chrome is missing). Three consecutive draws were identical —
+> deterministic — and showed the black plane uniformly ~56px right, the red
+> plane ~56px down to about row 175 and ~120px below it. 7 bytes, then 8
+> more at ~65536 bytes in. Confirmed on a raw socket: the response body
+> literally begins with ASCII `17700\r\n`.
+>
+> Why nobody caught it: a whole-image rotation can't fix bytes inserted at
+> two different points in the stream, so `PANEL_SHIFT_3C_PX` could be tuned
+> forever without converging — and the "swap the GxEPD2 panel class" tests
+> in `fc1066d` / `542482d` were judged against a dashboard photo, which
+> can't distinguish this from a hardware offset.
+>
+> **Fixed:** `ccb7a56` sets `Content-Length` on both device binaries (fixes
+> the fleet with no reflash) + a `test:api` case asserting the framing on a
+> raw socket. `3efdb4f` = firmware **1.21.0**: `ImageBufferSink` lets
+> `HTTPClient::writeToStream()` decode chunked straight into the image
+> buffer, used only when `Content-Length` is missing so the well-tested raw
+> loop still handles the normal case.
+>
+> **`PANEL_SHIFT_3C_PX` must now be 0.** It was compensation for this bug;
+> any non-zero value actively misaligns the panel. Same for clearing
+> `CALIB_3C` once verified.
+>
+> Left alone deliberately: the BW sketch has the identical raw-stream
+> weakness, but that panel is **physically broken**, so it ships no
+> untested change. Its CI matrix entry is now dead weight.
+>
 > ## 2026-08-23 — PROD OUTAGE: Chromium zombie leak (fleet down)
 > `fd7f624`. The Aug-13 idle-close change launched + killed a fresh
 > Chromium per render; each one spawns a `chrome_crashpad_handler` that
