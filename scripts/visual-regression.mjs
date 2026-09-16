@@ -4,9 +4,10 @@
 // reaches the panel.
 //
 // Deterministic by construction: `?demo=1` makes the server render from
-// frozen demo data (no live weather/clock), so the only variation is
-// Chrome's own glyph rasterization — handled by a small pixel-diff
-// tolerance. Uses sharp (already a dep) for decode + diff; no new deps,
+// frozen demo data AND a frozen clock (lib/timefreeze.js), and the shot
+// waits for the page's own autofit pass to signal completion, so the only
+// variation is Chrome's own glyph rasterization — handled by a small
+// pixel-diff tolerance. Uses sharp (already a dep) for decode + diff; no new deps,
 // no test framework.
 //
 //   node scripts/visual-regression.mjs           # compare vs baseline
@@ -110,6 +111,37 @@ function startServer(dataDir) {
   });
 }
 
+// Chrome composites a fullPage screenshot in 16384px tiles, and on a page
+// this tall (~50892px) the tiles do not line up: everything past the first
+// boundary came back displaced by a few hundred pixels, and by a DIFFERENT
+// amount from run to run. Two thirds of the matrix was therefore never
+// really being compared — the baseline held whatever that run's tiling
+// produced, which is also where the intermittent 1299px diff came from.
+//
+// Capturing explicit clips well under the boundary and stitching them
+// sidesteps it. Verified: three consecutive captures are identical, and
+// slice heights of 3000 / 4000 / 8000 agree to ~20px of seam antialiasing,
+// against ~10.2M px of disagreement with fullPage.
+const SLICE_H = 4000;
+
+async function sliceShot(page) {
+  const { width, height } = await page.evaluate(() => ({
+    width: document.documentElement.scrollWidth,
+    height: document.documentElement.scrollHeight
+  }));
+  const parts = [];
+  for (let y = 0; y < height; y += SLICE_H) {
+    const h = Math.min(SLICE_H, height - y);
+    parts.push({
+      input: await page.screenshot({ clip: { x: 0, y, width, height: h } }),
+      top: y, left: 0
+    });
+  }
+  return sharp({
+    create: { width, height, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } }
+  }).composite(parts).png().toBuffer();
+}
+
 async function shootMatrix(browser) {
   const url = `http://localhost:${PORT}/widgets-matrix?demo=1${TOKEN ? `&token=${TOKEN}` : ''}`;
   const page = await browser.newPage();
@@ -118,8 +150,17 @@ async function shootMatrix(browser) {
     const resp = await page.goto(url, { waitUntil: 'networkidle0' });
     if (!resp || resp.status() !== 200) throw new Error(`matrix HTTP ${resp && resp.status()}`);
     await page.evaluate(() => document.fonts.ready);
-    await new Promise(r => setTimeout(r, 500));
-    return await page.screenshot({ fullPage: true });
+    // Wait for the page's OWN autofit pass, the same signal lib/render.js
+    // waits on. A fixed sleep was a race: autofit is chained off the page's
+    // document.fonts.ready, which is a different promise from the one this
+    // script awaits, and binary-searching font sizes across a 50892px page
+    // takes longer than the 500ms it was given. It usually won, which is
+    // worse than always losing — runs came back 0 px and then 1299 px on
+    // identical code, scattered as sub-pixel text jitter across 43 tiles.
+    // Throw rather than swallow the timeout: a screenshot taken before
+    // autofit settles is not a baseline, it is noise.
+    await page.waitForFunction(() => window.__autofitDone === true, { timeout: 15000 });
+    return await sliceShot(page);
   } finally {
     await page.close();
   }
