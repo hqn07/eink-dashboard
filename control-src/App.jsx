@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LazyMotion, domAnimation, m, AnimatePresence, MotionConfig } from 'framer-motion';
-import { Star, ArrowCounterClockwise, SlidersHorizontal, Trash, Lock, Cards, Copy } from '@phosphor-icons/react';
+import { Star, ArrowCounterClockwise, Trash, Lock, Cards, Copy, CircleHalf } from '@phosphor-icons/react';
 import { fetchConfig, saveConfig, fetchPreviewData, onUnauthorized } from './api.js';
 import {
   WIDGET_REGISTRY,
@@ -28,8 +28,6 @@ const SetupWizard = React.lazy(() => import('./components/SetupWizard.jsx'));
 import SettingsMenu from './components/SettingsMenu.jsx';
 import { homeValue, homeCoords } from './home.js';
 const ShortcutsHelp = React.lazy(() => import('./components/ShortcutsHelp.jsx'));
-import LiveDashboard from './components/LiveDashboard.jsx';
-import DeviceStatusCard from './components/DeviceStatusCard.jsx';
 import DeviceStatusChip from './components/DeviceStatusChip.jsx';
 import AttentionStrip from './components/AttentionStrip.jsx';
 import { useDeviceTelemetry } from './use-device-telemetry.js';
@@ -48,55 +46,6 @@ const STATUS = {
 };
 
 const MAX_SCREENS = 20;
-
-// Right-side always-on Live preview pane. The dashboard renders at
-// the real 800×480 size and is then CSS-scaled down to fit the
-// pane's actual width via a ResizeObserver, so the preview stays
-// crisp at any pane width.
-function PreviewPane({ data, label, onHide, refreshMinutes, telemetry }) {
-  const wrapRef = React.useRef(null);
-  const [scale, setScale] = useState(0.4);
-  useEffect(() => {
-    if (!wrapRef.current) return;
-    const ro = new ResizeObserver(entries => {
-      for (const e of entries) {
-        const w = e.contentRect.width;
-        if (w > 0) setScale(w / 800);
-      }
-    });
-    ro.observe(wrapRef.current);
-    return () => ro.disconnect();
-  }, []);
-  return (
-    <aside className="preview-pane">
-      <div className="preview-pane-head">
-        <span className="preview-pane-title">Live preview</span>
-        <button
-          type="button"
-          className="preview-pane-toggle"
-          onClick={onHide}
-          title="Hide preview pane"
-          aria-label="Hide preview pane"
-        >×</button>
-      </div>
-      <div className="preview-pane-frame" ref={wrapRef} style={{ height: 800 * scale * (480 / 800) }}>
-        <div
-          className="preview-pane-scale"
-          style={{
-            width: 800,
-            height: 480,
-            transform: `scale(${scale})`,
-            transformOrigin: 'top left'
-          }}
-        >
-          <LiveDashboard data={data} />
-        </div>
-      </div>
-      <div className="preview-pane-meta">{label}</div>
-      <DeviceStatusCard refreshMinutes={refreshMinutes} telemetry={telemetry} />
-    </aside>
-  );
-}
 
 // Header sync indicator — Figma/Notion style. Persistent, quiet,
 // surfaces only state + freshness. Caller passes the same `status`
@@ -163,7 +112,20 @@ export default function App() {
   const [editScreenId, setEditScreenId] = useState(() => {
     try { return localStorage.getItem('ctrl.editScreenId') || null; } catch { return null; }
   });
+  const [screenPanelOpen, setScreenPanelOpen] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
+  // 1-bit canvas. The CSS for this (.editor-wrap.editor-1bit, an SVG
+  // feComponentTransfer thresholding at 0.5 exactly as the server's sharp
+  // pipeline does) has existed since the redesign with nothing to switch it
+  // on — the only control ever written for it lived in a Preview component
+  // that was imported nowhere. This is the canvas telling the truth about
+  // what the panel will draw: thin strokes vanish, near-greys reveal dither.
+  const [oneBit, setOneBit] = useState(() => {
+    try { return localStorage.getItem('ctrl.oneBit') === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('ctrl.oneBit', oneBit ? '1' : '0'); } catch { /* private mode */ }
+  }, [oneBit]);
   // Schedule timeline starts collapsed unless the user has opened it
   // before; the strip is only relevant when the user has > 1 screen
   // with scheduling enabled, which is the minority case.
@@ -186,17 +148,8 @@ export default function App() {
   }, [status]);
   // Right-side live preview pane. Defaults to open since it's the main
   // win of the 3-col layout; user can dismiss and the state sticks.
-  const [previewPaneOpen, setPreviewPaneOpen] = useState(() => {
-    try { return localStorage.getItem('ctrl.previewPaneOpen') !== '0'; }
-    catch { return true; }
-  });
-  useEffect(() => {
-    try { localStorage.setItem('ctrl.previewPaneOpen', previewPaneOpen ? '1' : '0'); }
-    catch { /* ignore */ }
-  }, [previewPaneOpen]);
   // Mobile bottom-sheet drawer holding the sidebar contents. Driven
   // by a FAB shown only below the sidebar's narrow breakpoint.
-  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [previewKey, setPreviewKey] = useState(Date.now());
   const [previewData, setPreviewData] = useState(null);
   const [toast, setToast] = useState(null);
@@ -732,6 +685,8 @@ export default function App() {
           {cfg && (
             <SettingsMenu
               cfg={cfg}
+              telemetry={telemetry}
+              refreshMinutes={editScreen?.refreshMinutes ?? 30}
               onSetup={() => setShowWizard(true)}
               onShortcuts={() => setShortcutsOpen(true)}
               onReplaceConfig={(next) => {
@@ -764,6 +719,35 @@ export default function App() {
       />
 
       <AttentionStrip items={attention} onFixTile={(id) => setOpenSettingsId(id)} />
+
+      {/* Screen settings used to own a permanent 300px column for three
+       *  controls you set once. Same disclosure idiom as Schedule below, so
+       *  the canvas keeps the width by default and the controls are one
+       *  click away when wanted. */}
+      <div className={`schedule-collapsible schedule-card ${screenPanelOpen ? 'is-open' : ''}`}>
+        <button
+          type="button"
+          className="schedule-collapsible-trigger"
+          onClick={() => setScreenPanelOpen(o => !o)}
+          aria-expanded={screenPanelOpen}
+        >
+          <span className="schedule-collapsible-caret">{screenPanelOpen ? '▾' : '▸'}</span>
+          <span>Screen settings</span>
+          <span className="schedule-collapsible-summary">
+            {editScreen?.name || 'Screen'} · {(editScreen?.units || 'F') === 'C' ? '°C' : '°F'} · every {editScreen?.refreshMinutes ?? 30}m
+          </span>
+        </button>
+        {screenPanelOpen && editScreen && (
+          <div className="schedule-card-body">
+            <ScreenPanel
+              screen={editScreen}
+              isOverlap={overlapIds.has(editScreen.id)}
+              onUpdate={(patch) => updateScreen(editScreen.id, patch)}
+              onOpenTimeline={() => setTimelineOpen(true)}
+            />
+          </div>
+        )}
+      </div>
 
       <div className={`schedule-collapsible schedule-card ${timelineOpen ? 'is-open' : ''}`}>
         <button
@@ -809,17 +793,7 @@ export default function App() {
         </div>
       )}
 
-      <main className={`layout edit-mode ${previewPaneOpen ? 'preview-on' : 'preview-off'}`}>
-        <aside className="settings-sidebar">
-          {editScreen && (
-            <ScreenPanel
-              screen={editScreen}
-              isOverlap={overlapIds.has(editScreen.id)}
-              onUpdate={(patch) => updateScreen(editScreen.id, patch)}
-              onOpenTimeline={() => setTimelineOpen(true)}
-            />
-          )}
-        </aside>
+      <main className="layout edit-mode">
         <div className="canvas-column">
           <section className="card">
             <div className="section-title">
@@ -835,6 +809,14 @@ export default function App() {
                     <Star size={12} weight="bold" /> MAKE DEFAULT
                   </button>
                 )}
+                <button
+                  className={`btn btn-iconed btn-compact ${oneBit ? '' : 'btn-ghost'}`}
+                  title="Show the canvas the way the panel renders it — 1-bit threshold, no greys"
+                  aria-pressed={oneBit}
+                  onClick={() => setOneBit(v => !v)}
+                >
+                  <CircleHalf size={12} weight="bold" /> 1-BIT
+                </button>
                 {editScreen && (
                   <button
                     className={`btn btn-iconed btn-compact ${editCardStyle === 'cards' ? '' : 'btn-ghost'}`}
@@ -868,6 +850,7 @@ export default function App() {
             <EditorGrid
               layout={layout}
               showGrid={showGrid}
+              oneBit={oneBit}
               cardStyle={editCardStyle}
               readOnly={readOnly}
               previewData={livePreviewData}
@@ -887,25 +870,6 @@ export default function App() {
             </div>
           </section>
         </div>
-        {previewPaneOpen && (
-          <PreviewPane
-            data={livePreviewData}
-            telemetry={telemetry}
-            label={`${editScreen?.name || 'Screen'} · ${GRID_COLS}×${GRID_ROWS}`}
-            onHide={() => setPreviewPaneOpen(false)}
-            refreshMinutes={editScreen?.refreshMinutes ?? 30}
-          />
-        )}
-        {!previewPaneOpen && (
-          <button
-            type="button"
-            className="preview-pane-show"
-            onClick={() => setPreviewPaneOpen(true)}
-            title="Show live preview"
-          >
-            ◧ Show preview
-          </button>
-        )}
       </main>
 
       {!readOnly && (
@@ -921,90 +885,6 @@ export default function App() {
           disabled={!canSave}
         />
       )}
-
-      {/* Mobile FAB — only shown by CSS below the breakpoint where
-       *  the sidebar collapses out of the layout. */}
-      <button
-        type="button"
-        className="mobile-settings-fab"
-        onClick={() => setMobileDrawerOpen(true)}
-        aria-label="Open screen settings"
-      >
-        <SlidersHorizontal size={22} weight="bold" />
-      </button>
-
-      {/* Mobile bottom-sheet drawer. Hand-rolled (no Radix Dialog dep);
-       *  overlay + bottom-sliding sheet animated via framer. */}
-      <AnimatePresence>
-        {mobileDrawerOpen && (
-          <m.div
-            className="mobile-drawer-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setMobileDrawerOpen(false)}
-          >
-            <m.div
-              className="mobile-drawer"
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 380, damping: 34 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="mobile-drawer-handle" aria-hidden="true" />
-              <div className="mobile-drawer-head">
-                <span>Screen settings</span>
-                <button
-                  type="button"
-                  className="wsm-close"
-                  onClick={() => setMobileDrawerOpen(false)}
-                  aria-label="Close"
-                >×</button>
-              </div>
-              <div className="mobile-drawer-body">
-                {editScreen && (
-                  <ScreenPanel
-                    screen={editScreen}
-                    isOverlap={overlapIds.has(editScreen.id)}
-                    onUpdate={(patch) => updateScreen(editScreen.id, patch)}
-                  />
-                )}
-              </div>
-            </m.div>
-          </m.div>
-        )}
-      </AnimatePresence>
-
-      {shortcutsOpen && (
-        <React.Suspense fallback={null}>
-          <ShortcutsHelp open onClose={() => setShortcutsOpen(false)} />
-        </React.Suspense>
-      )}
-
-      <AnimatePresence>
-        {toast && (
-          <m.div
-            key={toast.msg}
-            className={`toast ${toast.action ? 'toast-actionable' : ''}`}
-            initial={{ y: 24, opacity: 0, scale: 0.96 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: 8, opacity: 0, scale: 0.96 }}
-            transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-          >
-            <span>{toast.msg}</span>
-            {toast.action && (
-              <button
-                type="button"
-                className="toast-action"
-                onClick={toast.action.onClick}
-              >
-                {toast.action.label}
-              </button>
-            )}
-          </m.div>
-        )}
-      </AnimatePresence>
 
       {/* Setup wizard: auto-shows on first run (no location set), or on
        *  demand via the header "Setup" button. */}

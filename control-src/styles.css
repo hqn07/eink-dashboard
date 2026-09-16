@@ -707,75 +707,6 @@ main.layout {
   font-size: var(--fs-xs);
 }
 
-/* Live preview pane (right column on ≥1200px). 800×480 dashboard
- * rendered into a fixed-width frame, scaled to fit the pane width
- * so it stays readable without scroll. */
-.preview-pane {
-  /* Flat like every other section; only the device frame inside
-   * carries a border. */
-  background: transparent;
-  border: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.preview-pane-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: var(--bw-rule) solid var(--line);
-  padding-bottom: 8px;
-}
-.preview-pane-title {
-  font-family: var(--font-sans-c);
-  text-transform: none;
-  letter-spacing: 0.3px;
-  font-size: var(--fs-lg);
-  font-weight: 700;
-}
-.preview-pane-toggle {
-  width: 22px;
-  height: 22px;
-  border: var(--bw-rule) solid var(--mute);
-  background: transparent;
-  color: var(--mute);
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.preview-pane-toggle:hover {
-  background: var(--ink);
-  color: #fff;
-  border-color: var(--ink);
-}
-.preview-pane-frame {
-  /* Device bezel — same frame language as .editor-wrap so both
-   * read as "this is the physical panel". */
-  width: 100%;
-  background: #fff;
-  border: var(--bw-frame) solid var(--ink);
-  overflow: hidden;
-  position: relative;
-}
-.preview-pane-scale {
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-.preview-pane-meta {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--mute);
-  text-align: center;
-}
-
 /* Device status card — fills the dead space under the preview with the
  * telemetry otherwise buried in header pills. */
 .device-status-card {
@@ -821,29 +752,6 @@ main.layout {
   letter-spacing: 0;
 }
 
-/* Compact "Show preview" pill that takes the place of the pane when
- * collapsed (still in the grid flow so the layout stays 3-col). */
-.preview-pane-show {
-  align-self: start;
-  position: sticky;
-  top: 16px;
-  background: transparent;
-  border: var(--bw-rule) dashed var(--mute);
-  color: var(--mute);
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  letter-spacing: 1.5px;
-  padding: 8px 12px;
-  border-radius: 0;
-  cursor: pointer;
-  text-transform: uppercase;
-}
-.preview-pane-show:hover {
-  background: var(--ink);
-  color: #fff;
-  border-color: var(--ink);
-}
-
 /* Field flash on pre-save validation fail. App.jsx scrolls the first
  * invalid field into view + adds .field-flash for 1.2s so the user
  * can see exactly which input blocked the save. */
@@ -851,29 +759,12 @@ main.layout {
   animation: fieldFlash 1.2s ease-out;
 }
 
-/* ============ MOBILE / TABLET RESPONSIVE ============
- * Below 760px the editor compresses for one-handed use: ScreenTabs
- * scroll horizontally instead of wrapping, the sidebar disappears
- * from flow, and a floating action button (FAB) opens the screen
- * settings as a bottom-sheet drawer. Linear / Notion mobile use
- * the same drawer pattern. */
-.mobile-settings-fab { display: none; }
-.mobile-drawer-overlay,
-.mobile-drawer { display: none; }
-
 @media (max-width: 760px) {
-  /* Sidebar drops out of the grid; canvas + preview take full
-   * width. Save bar already centers on its own. */
-  main.layout.edit-mode,
-  main.layout.edit-mode.preview-on {
+  /* Sidebar drops out of the grid; the canvas takes the full width.
+   * Save bar already centers on its own. */
+  main.layout.edit-mode {
     grid-template-columns: 1fr !important;
   }
-  /* `aside.` qualifier is load-bearing: the base rule
-   * `.settings-sidebar { display:flex }` lives AFTER this media query
-   * in the file, so an equal-specificity `display:none` here loses the
-   * cascade and the sidebar renders twice on phones (inline + drawer),
-   * pushing the canvas below the fold. */
-  aside.settings-sidebar { display: none; }
   /* ScreenTabs become a horizontal scroller so the tabs don't wrap
    * to 3 rows on a narrow viewport. */
   .screen-tabs {
@@ -884,83 +775,6 @@ main.layout {
   }
   .screen-tab { flex-shrink: 0; }
 
-  /* FAB — bottom-right corner, fixed to viewport so it's reachable
-   * from anywhere on the page. */
-  .mobile-settings-fab {
-    display: inline-flex;
-    position: fixed;
-    right: 16px;
-    bottom: 80px;
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    background: var(--ink);
-    color: #fff;
-    border: 0;
-    font-size: var(--fs-3xl);
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
-    z-index: 70;
-  }
-  .mobile-settings-fab:hover { background: #333; }
-
-  /* Bottom-sheet drawer. Overlay dims the page; sheet slides up
-   * from the bottom and stops at 80vh so the user can still see the
-   * canvas behind through the gap. */
-  .mobile-drawer-overlay {
-    display: flex;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    z-index: 80;
-    align-items: flex-end;
-    justify-content: center;
-  }
-  .mobile-drawer {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    max-height: 80vh;
-    background: var(--bg);
-    border-top: var(--bw-frame) solid var(--ink);
-    border-radius: 12px 12px 0 0;
-    overflow: hidden;
-  }
-  .mobile-drawer-handle {
-    width: 44px;
-    height: 4px;
-    background: var(--mute);
-    border-radius: 2px;
-    margin: 8px auto;
-    opacity: 0.5;
-  }
-  .mobile-drawer-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 6px 16px 12px;
-    border-bottom: var(--bw-rule) solid var(--line);
-    font-family: var(--font-sans-c);
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    font-size: var(--fs-md);
-    font-weight: 700;
-  }
-  .mobile-drawer-body {
-    overflow-y: auto;
-    padding: 14px 16px 24px;
-    -webkit-overflow-scrolling: touch;
-  }
-  /* The drawer header already says "Screen settings" — strip the
-   * panel's own card chrome + duplicate title inside the sheet. */
-  .mobile-drawer-body .screen-panel {
-    border: 0;
-    padding: 0;
-    box-shadow: none;
-  }
-  .mobile-drawer-body .screen-panel > .section-title { display: none; }
 }
 @keyframes fieldFlash {
   0%   { box-shadow: 0 0 0 0 rgba(204, 0, 0, 0.5); background-color: rgba(204, 0, 0, 0.18); }
@@ -1021,7 +835,6 @@ main.layout {
 .loc-badge.ok      { background: #fff; border-color: var(--ink); }
 .loc-badge.err     { background: var(--accent); color: #fff; border-color: var(--accent); }
 .loc-badge.idle    { color: var(--mute); }
-
 
 /* Schedule lock badge below the preview when running locked to a schedule */
 .schedule-lock-badge {
@@ -1100,84 +913,32 @@ main.layout {
   main.layout {
     grid-template-columns: minmax(440px, 1.1fr) 1fr;
   }
-  /* Edit mode: settings sidebar on the LEFT (industry pattern —
-   * Wix/VS Code/Customer's Canvas), canvas fills the rest. Sidebar
-   * is sticky so screen settings stay reachable while scrolling
-   * the canvas + pool. */
+  /* Edit mode is canvas-only: screen settings moved to a disclosure bar
+   * above it, so the thing being designed gets the whole width. */
   main.layout.edit-mode {
-    grid-template-columns: 300px 1fr;
-  }
-  .preview-stage { position: sticky; top: 24px; }
-  .settings-sidebar {
-    position: sticky;
-    top: 16px;
-    align-self: start;
-    max-height: calc(100vh - 32px);
-    overflow-y: auto;
+    grid-template-columns: 1fr;
   }
 }
 
-/* Wide viewports get a third column for the always-on Live preview
- * pane. Below 1200px the pane stays available via a toggle but the
- * canvas doesn't shrink. Webflow / Figma Make use the same
- * "canvas-narrow-only-when-preview-fits" rule. */
-@media (min-width: 1200px) {
-  main.layout.edit-mode.preview-on {
-    grid-template-columns: 280px 1fr 340px;
-  }
-  .preview-pane {
-    position: sticky;
-    top: 16px;
-    align-self: start;
-    max-height: calc(100vh - 32px);
-  }
-}
+.canvas-column { min-width: 0; }
 
-/* Below the breakpoint, sidebar stacks above the canvas. */
-.settings-sidebar { display: flex; flex-direction: column; gap: 16px; }
-.canvas-column    { min-width: 0; }
-
-/* ============ PREVIEW ============ */
-.preview-stage {
-  background: #fff;
-  border: var(--bw-heavy) solid var(--line);
-  border-radius: var(--r-md);
-  padding: 8px;
+/* Screen settings inside its disclosure bar. Stacked full-width inputs made
+ * sense in a 300px sidebar; across a 1400px bar a single text field spanning
+ * the whole window looks broken. Lay the three controls out as columns that
+ * collapse to a stack when there is no room. The bar's own trigger already
+ * says "Screen settings", so the panel's heading is a second one. */
+.schedule-card-body .screen-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 8px 24px;
+  align-items: start;
+  border: 0;
+  padding: 0;
+  box-shadow: none;
 }
-.preview-frame {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 800 / 480;
-  background: #fff;
-  border: var(--bw-hair) solid #ddd;
-  overflow: hidden;
-}
-/* 1-bit mode: SVG feComponentTransfer thresholds each channel at 0.5,
- * matching the server's sharp .threshold(128) step. Same filter id used
- * by the editor-canvas toggle so both previews match. */
-.preview-frame.preview-1bit .preview-canvas {
-  filter: url(#eink-threshold);
-}
-.preview-frame.preview-1bit {
-  outline: var(--bw-frame) dashed #000;
-  outline-offset: -2px;
-}
-.preview-frame iframe {
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-.preview-meta {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  margin-top: 8px;
-  color: var(--mute);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+.schedule-card-body .screen-panel > .section-title { display: none; }
+.schedule-card-body .screen-panel .field,
+.schedule-card-body .screen-panel .toggle-row { margin: 0; }
 
 /* ============ SECTIONS ============
  * Stage 1: cards are flat. The page is the paper — sections are
@@ -1406,7 +1167,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   background: #fff;
 }
 .todo-check.done { background: var(--ink); color: #fff; }
-
 
 /* ============ EDITOR (react-grid-layout) ============ */
 .editor-wrap {
@@ -2369,7 +2129,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 @media (max-width: 480px) {
   .app-header h1 { font-size: 20px; }
-  .preview-stage { transform: none; }
 }
 
 /* ============ WIDGET SETTINGS MODAL ============ */

@@ -8,6 +8,7 @@ import PanelPreview from './PanelPreview.jsx';
 import PinButton from './PinButton.jsx';
 import SetupPanel from './SetupPanel.jsx';
 import ConnectionsPanel from './ConnectionsPanel.jsx';
+import DeviceStatusCard from './DeviceStatusCard.jsx';
 import BackupPanel from './BackupPanel.jsx';
 
 // Single header settings menu. Consolidates what used to be separate
@@ -19,7 +20,7 @@ import BackupPanel from './BackupPanel.jsx';
 // trigger as a full-width menu row here (block prop). "You & your place"
 // (cfg.home) and Backup are heavy blocks, so they collapse behind
 // expandable rows to keep the menu short.
-export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcuts }) {
+export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcuts, telemetry, refreshMinutes }) {
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(null); // 'home' | 'connections' | 'backup' | null
   const ref = useRef(null);
@@ -62,6 +63,9 @@ export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcut
             transition={{ duration: 0.12 }}
           >
             <div className="settings-section-label">Device</div>
+            {telemetry && (
+              <DeviceStatusCard refreshMinutes={refreshMinutes} telemetry={telemetry} />
+            )}
             <PushNowButton block />
             <button
               type="button"

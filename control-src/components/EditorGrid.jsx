@@ -48,7 +48,7 @@ function showcaseSizeKey(def) {
   return def.defaultSize;
 }
 
-export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = false, previewData, seedCtx, onChange, onError, onCommitItemNow, openSettingsId, onSettingsOpened}) {
+export default function EditorGrid({ layout, showGrid, oneBit, cardStyle, readOnly = false, previewData, seedCtx, onChange, onError, onCommitItemNow, openSettingsId, onSettingsOpened}) {
   const cardsMode = cardStyle === 'cards';
   const wrapRef = useRef(null);
   const paletteRef = useRef(null);
@@ -501,7 +501,7 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
     <div>
       <m.div
         ref={wrapRef}
-        className={`editor-wrap ${showGrid ? 'show-grid' : ''} ${dropHover ? 'drop-target' : ''} ${cardsMode ? 'cards' : ''}`}
+        className={`editor-wrap ${showGrid ? 'show-grid' : ''} ${oneBit ? 'editor-1bit' : ''} ${dropHover ? 'drop-target' : ''} ${cardsMode ? 'cards' : ''}`}
         animate={shake ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
         transition={{ duration: 0.45 }}
         onDragOver={onCanvasDragOver}

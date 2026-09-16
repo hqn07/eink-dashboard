@@ -1,6 +1,6 @@
 # UX / UI / QoL proposals — 2026-09-16
 
-Status: **P10, P4, P5 and P8 shipped 2026-09-16.** Everything else is a
+Status: **P1, P4, P5, P8 and P10 shipped 2026-09-16.** Everything else is a
 proposal. Written after measuring the live system rather than from memory,
 and each item says what it costs and what it risks, because several of these
 are not obviously worth doing.
@@ -73,19 +73,38 @@ are weather before they can find them.
 
 Ordered by **outcome per unit of risk**, not by how quick they are.
 
-### P1 — Canvas-first editor *(high value, medium cost, low risk)*
+### P1 — Canvas-first editor — **DONE 2026-09-16**
 
-- Delete the Live preview pane. Move its one real differentiator — the 1-bit
-  / 3-colour threshold view — onto the canvas as a toggle. The canvas is
-  already bit-accurate; the pane's only edge was showing the threshold pass.
-- Move Screen Settings (name, units, refresh) into a popover on the screen
-  tab, where the object it configures already lives.
-- Result: canvas roughly doubles in width, and the editor stops rendering the
-  same screen twice.
+The editor gave the canvas the middle third: a permanent left column for three
+controls you set once, and a right column re-rendering the screen you were
+already looking at.
 
-**Risk:** people who use the preview pane as a "is this really what ships"
-check lose it until the canvas toggle lands. Ship the toggle in the same
-change, not after.
+Shipped:
+- **Live preview pane deleted.** Its supposed differentiator, the 1-bit
+  threshold view, turned out not to exist as a live control at all: the CSS
+  (`.editor-wrap.editor-1bit`) had been in the stylesheet since the redesign,
+  and the only toggle ever written for it lived in `components/Preview.jsx`,
+  which was imported nowhere. The canvas now has that toggle.
+- **Screen settings** moved from a 300px column into a disclosure bar above
+  the canvas, matching the Schedule bar already there — collapsed it shows
+  `Default · °F · every 30m`, expanded it is a four-column row.
+- **Device status** moved into Settings > Device, next to Push now, which is
+  where the other device controls already were.
+- **Mobile FAB + bottom-sheet drawer removed.** They existed only because the
+  sidebar was hidden below 760px; with screen settings inline at every width
+  they duplicated a visible control.
+
+Net: the canvas goes from one third of the window to all of it.
+
+Dead code removed with it: `components/Preview.jsx` (dead), the mobile drawer,
+and every CSS rule whose selectors were entirely `.preview-pane-*`,
+`.preview-frame/canvas/stage`, `.settings-sidebar` or `.mobile-drawer-*` —
+16 rules plus a 77-line block inside a media query.
+
+**Found, not fixed:** on a 375px viewport the bottom row of canvas tiles
+renders blank. All five tiles are in the DOM with sensible boxes, and it
+happens with the 1-bit filter off, so it predates this change. The panel
+itself always renders at 800×480, so this is an editor-preview issue only.
 
 ### P2 — Consolidate 30 widgets → 21 *(high value, high cost, medium risk)*
 
@@ -251,7 +270,7 @@ declaring only `big` — left over from the 2026-09-15 variant cut.
 
 1. **P10** documentation correctness, **P4** needs-attention strip, **P5**
    next-wake honesty — small, independent, immediately felt.
-2. **P1** canvas-first editor — the biggest single improvement to daily use.
+2. ~~P1~~ canvas-first editor — done.
 3. **P9** appearance retouches — cheap, and they are what you actually look at.
 4. **P2 pilot: Markets only** — judge the consolidation pattern on glass
    before committing to weather, clock and daily.
