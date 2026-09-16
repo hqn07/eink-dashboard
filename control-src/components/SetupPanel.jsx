@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { MapPin, GithubLogo, Clock } from '@phosphor-icons/react';
+import { MapPin, GithubLogo, Clock, CalendarBlank } from '@phosphor-icons/react';
 import { geocode, flagEmoji } from '../api.js';
 import { homeValue, homeCoords } from '../home.js';
 import SearchableSelect from './SearchableSelect.jsx';
+import UrlBadge from './UrlBadge.jsx';
 
 // The single editor for shared facts — stage 2 of docs/setup-architecture.md.
 //
@@ -46,6 +47,17 @@ export default function SetupPanel({ cfg, onReplaceConfig }) {
   const tz = homeValue(cfg, 'timezone') || 'UTC';
   const githubUser = homeValue(cfg, 'githubUser') || '';
   const about = typeof home.about === 'string' ? home.about : '';
+  const icalUrls = homeValue(cfg, 'icalUrls') || [];
+
+  // Deliberately NOT the shared ListEditor: it lives inside WidgetForm.jsx
+  // and is not exported, and pulling that module in here would drag the
+  // whole widget-form bundle into the main chunk for four text rows.
+  // Rows are replaced whole by index — a row editor that merges into the
+  // old value instead of replacing it is how the widget forms ended up
+  // with fields that could not be typed into (`3289942`).
+  const setUrl = (idx, url) => setHome({ icalUrls: icalUrls.map((u, i) => (i === idx ? url : u)) });
+  const removeUrl = (idx) => setHome({ icalUrls: icalUrls.filter((_, i) => i !== idx) });
+  const addUrl = () => setHome({ icalUrls: [...icalUrls, ''] });
 
   const [search, setSearch] = useState('');
   const [results, setResults] = useState([]);
@@ -144,6 +156,38 @@ export default function SetupPanel({ cfg, onReplaceConfig }) {
           Fills the Code Activity widget unless a tile overrides it.
         </span>
       </label>
+
+      <div className="wsm-field">
+        <span className="wsm-field-label">
+          <CalendarBlank size={12} weight="bold" /> Calendar feeds
+        </span>
+        <div className="wsm-list">
+          {icalUrls.map((u, idx) => (
+            <div className="wsm-list-row" key={idx}>
+              <input
+                type="url"
+                value={typeof u === 'string' ? u : ''}
+                placeholder="https://calendar.google.com/calendar/ical/..."
+                onChange={(e) => setUrl(idx, e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <UrlBadge url={typeof u === 'string' ? u : ''} />
+              <button type="button" className="btn btn-danger wsm-list-remove"
+                onClick={() => removeUrl(idx)}>×</button>
+            </div>
+          ))}
+          {!icalUrls.length && <div className="wsm-field-help">No feeds yet.</div>}
+        </div>
+        <button type="button" className="btn wsm-list-add" onClick={addUrl}>+ Add feed</button>
+        <span className="wsm-field-help">
+          Feeds the AI briefing and the <code>{'{{nextEvent}}'}</code> token.
+          Calendar tiles still use their own feeds — by contract an empty tile
+          resolves to no events rather than falling back here; tiles inherit in
+          stage 3. A secret iCal address grants read access to that calendar,
+          and Backup &gt; EXPORT writes it to a plain JSON file — treat an
+          exported backup as you would the URLs themselves.
+        </span>
+      </div>
 
       <label className="wsm-field">
         <span className="wsm-field-label">About you</span>

@@ -44,13 +44,20 @@
 > measured from the last generation, not clock-aligned, so generation time
 > drifts forward by up to one wake interval per cycle.
 >
+> **Calendar feeds are in the panel, export unchanged** — user's call: the
+> same URLs already ship in an export from per-tile calendar settings, so
+> redacting one copy while shipping the others is theatre, and redaction
+> would break backup round-trip. The field says so. Note these feed the AI
+> briefing and `{{nextEvent}}` ONLY: a calendar tile with no feeds of its
+> own resolves to [] by contract and does NOT fall back here
+> (`lib/widget-data.js` case 'calendar'). Tiles inheriting is stage 3.
+> Typing into the feed rows verified in a browser — the `replaceRow` bug
+> class (`3289942`) is not present.
+>
 > **Open:** stage 3 (widgets inherit + stop writing per-tile lat/lon) is
-> untouched, and wants a panel photo either side. **`home.icalUrls` is
-> declared and read but has no UI** — surfacing calendar URLs centrally
-> concentrates secrets that Backup > EXPORT writes to plain JSON, which is
-> the open question in the architecture doc. `control-src/components/
-> LocationPanel.jsx` (344 lines) is dead code — imported nowhere since the
-> wizard replaced it.
+> untouched, and wants a panel photo either side.
+> `control-src/components/LocationPanel.jsx` (344 lines) is dead code —
+> imported nowhere since the wizard replaced it.
 
 > ## 2026-09-15 (late) — widget refresh pass + two guard holes closed
 > **The visual guard was decorative.** Two independent defects, both found by
