@@ -1,6 +1,6 @@
 # UX / UI / QoL proposals — 2026-09-16
 
-Status: **batch 1 (P10, P4, P5) shipped 2026-09-16.** Everything else is a
+Status: **P10, P4, P5 and P8 shipped 2026-09-16.** Everything else is a
 proposal. Written after measuring the live system rather than from memory,
 and each item says what it costs and what it risks, because several of these
 are not obviously worth doing.
@@ -171,19 +171,35 @@ A 24×12 grid with free drag-and-resize asks a beginner to art-direct. Add:
 Nothing is taken away: manual placement still works. This is the floor being
 raised, not the ceiling lowered.
 
-### P8 — AI credentials in the app *(medium value, low cost, security tension)*
+### P8 — AI credentials in the app — **DONE 2026-09-16**
 
-`ai` is the only widget needing a key, and the tile currently instructs the
-user to "Set AI_API_KEY + AI_MODEL" — env vars that cannot be set from the
-editor at all. On Railway that means leaving the app to fix a tile.
+`ai` was the only widget needing a key, and the tile instructed the user to
+"Set AI_API_KEY + AI_MODEL" — env vars the editor could not set, so on a
+hosted instance the fix lived outside the app.
 
-A Connections section in Setup would fix it, **but** Backup → EXPORT writes
-config to a plain JSON file. We already decided (2026-09-16) not to redact
-calendar URLs there, on the grounds that the same URLs ship in per-tile
-settings anyway. **An API key is a different class of secret and that argument
-does not carry over.** So this needs a decision first: either keys live
-outside the exportable config, or export learns to redact. Do not ship the
-field before deciding.
+**Decision taken: keys live outside the exportable config**, rather than
+export learning to redact. Backup > Export is `JSON.stringify(cfg)` in the
+browser, so a secret that is not in `cfg` cannot be exported by a path that
+forgets to redact, and cannot be resurrected by an import written before the
+redaction existed. Structure beats a step someone has to remember.
+
+Shipped as:
+- `lib/secrets-store.js` → `DATA_DIR/secrets.json`, chmod 0600, never merged
+  into the config. Env vars stay as a fallback so a Railway-configured
+  instance keeps working; a key saved in the UI takes precedence.
+- `GET/PATCH /api/connections` — the value only travels inbound. The read
+  returns presence, source (`stored` / `env`) and the last four characters.
+- Settings > Tools > **Connections**. Provider URL and model are NOT secrets
+  and ride the config, so restoring a backup brings those back and asks only
+  for the key.
+- `test:api` asserts the key never appears in `/api/config` — the payload
+  export serialises. Probed by making the endpoint leak deliberately.
+
+**What this is not:** encryption at rest. The file sits on the same volume as
+everything else, and anyone who can read the volume can read the key. The
+threat addressed is the key leaving the box inside a backup file. Real
+at-rest encryption needs a key that is not also on the volume — an env secret
+or a KMS — and is worth doing if this goes multi-tenant.
 
 ### P9 — Appearance retouches *(medium value, low cost, low risk)*
 
@@ -241,7 +257,7 @@ declaring only `big` — left over from the 2026-09-15 variant cut.
    before committing to weather, clock and daily.
 5. **P3** Sources library, then **P6** + **P7** first-run and auto-arrange,
    which depend on it.
-6. **P8** after the secrets decision.
+6. ~~P8~~ done.
 
 Panel photo between each numbered step — every one of these changes what the
 device draws or what the user does to it.
@@ -249,6 +265,5 @@ device draws or what the user does to it.
 ## Open questions
 
 1. **P2**: pilot Markets first, or commit to all four merges?
-2. **P8**: should API keys live outside the exportable config, or should
-   export redact?
+2. ~~P8 secrets~~ — answered: keys live outside the exportable config. Done.
 3. ~~P11 Home Assistant~~ — answered: no HA, ruled out.

@@ -57,7 +57,9 @@ export function render(ctx) {
     return placeholder('AI', 'Write a prompt', 'msg', { cellW, cellH });
   }
   if (data && data.needsSetup) {
-    return placeholder('AI', 'Set AI_API_KEY + AI_MODEL', 'msg', { cellW, cellH });
+    // Names a fix the user can actually perform. It used to name two env
+    // vars, which on a hosted instance meant leaving the app entirely.
+    return placeholder('AI', 'Add a key in Settings > Connections', 'msg', { cellW, cellH });
   }
   if (!data || (!data.text && data.error)) {
     // Only reachable before the first successful generation — after that the

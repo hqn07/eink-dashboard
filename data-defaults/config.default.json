@@ -1,7 +1,11 @@
 {
   "gridVersion": 3,
   "timezone": "America/New_York",
-  "quietHours": { "enabled": false, "from": "01:00", "to": "06:00" },
+  "quietHours": {
+    "enabled": false,
+    "from": "01:00",
+    "to": "06:00"
+  },
   "savedFeeds": [],
   "home": {
     "city": "",
@@ -16,7 +20,11 @@
       "id": "day",
       "name": "Default",
       "isDefault": true,
-      "schedule": { "enabled": false, "from": "07:00", "to": "22:00" },
+      "schedule": {
+        "enabled": false,
+        "from": "07:00",
+        "to": "22:00"
+      },
       "units": "F",
       "refreshMinutes": 30,
       "chrome": {
@@ -29,10 +37,14 @@
         },
         "footer": {
           "enabled": true,
-          "text": "UPDATED {time} · REFRESH {refresh}MIN · THE DAILY {city}"
+          "text": "UPDATED {time} \u00b7 REFRESH {refresh}MIN \u00b7 THE DAILY {city}"
         }
       },
       "layout": []
     }
-  ]
+  ],
+  "ai": {
+    "baseUrl": "",
+    "model": ""
+  }
 }

@@ -3,12 +3,13 @@ node_modules/
 .env.*
 !.env.example
 .DS_Store
-data/config.json
-data/device-token.txt
-data/battery.json
-data/devices.json
-data/mac-state.json
-data/mac-state.json.tmp
+# Runtime state written into DATA_DIR. Ignore the directory's contents
+# wholesale rather than naming files: the previous list was per-file, and a
+# store added later (secrets.json, webhooks.json, battery-history.json) was
+# committable until someone remembered to extend it. data-defaults/ holds the
+# seed config that IS tracked.
+data/*
+!data/.gitkeep
 *.log
 .cache/
 .vscode/

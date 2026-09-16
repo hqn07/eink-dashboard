@@ -246,6 +246,65 @@ test('stale api_key gets flagged for re-enrollment', async () => {
   await fetch(tok('/api/device/' + dev.friendly_id), { method: 'DELETE' });
 });
 
+// --- Connections: the key must never reach the exportable config ---------
+//
+// The entire reason this store exists is that Backup > EXPORT serialises the
+// config, so a key living in the config travels in a file people email. That
+// makes "the value never appears in /api/config" the assertion worth owning:
+// it fails the moment someone "helpfully" merges secrets into the config for
+// convenience.
+const SENTINEL = 'sk-test-DO-NOT-EXPORT-4242';
+
+test('connections: key is stored, masked on read, and absent from the config', async () => {
+  const set = await fetch(tok('/api/connections'), {
+    method: 'PATCH', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ aiApiKey: SENTINEL }),
+  });
+  assert.equal(set.status, 200);
+  const setBody = await set.json();
+  // The write echoes a description, not the value.
+  assert.equal(JSON.stringify(setBody).includes(SENTINEL), false,
+    'PATCH response must not echo the key');
+  assert.equal(setBody.secrets.aiApiKey.configured, true);
+  assert.equal(setBody.secrets.aiApiKey.source, 'stored');
+  assert.equal(setBody.secrets.aiApiKey.hint, '…4242');
+
+  // The read is presence + mask only.
+  const read = await fetch(tok('/api/connections'));
+  assert.equal(read.status, 200);
+  const readText = await read.text();
+  assert.equal(readText.includes(SENTINEL), false, 'GET must not return the key');
+
+  // The payload Backup > Export serialises.
+  const cfg = await fetch(tok('/api/config'));
+  const cfgText = await cfg.text();
+  assert.equal(cfgText.includes(SENTINEL), false,
+    'the key must not be reachable through /api/config — that is what gets exported');
+
+  // Clearing removes the stored value (and falls back to the env var, which
+  // is unset in the test environment).
+  const cleared = await fetch(tok('/api/connections'), {
+    method: 'PATCH', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ aiApiKey: null }),
+  });
+  assert.equal(cleared.status, 200);
+  assert.equal((await cleared.json()).secrets.aiApiKey.configured, false);
+});
+
+test('connections: rejects unknown fields and oversized values', async () => {
+  const unknown = await fetch(tok('/api/connections'), {
+    method: 'PATCH', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ sshKey: 'nope' }),
+  });
+  assert.equal(unknown.status, 400);
+
+  const huge = await fetch(tok('/api/connections'), {
+    method: 'PATCH', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ aiApiKey: 'A'.repeat(600) }),
+  });
+  assert.equal(huge.status, 400);
+});
+
 test('webhook: validation + store + read-back', async () => {
   // Bad key (illegal chars) → 400
   const badKey = await fetch(tok('/api/webhook/no%20spaces'), {

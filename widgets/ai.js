@@ -8,12 +8,19 @@
 // endpoint, and every outbound call here has to go through fetchWithTimeout
 // anyway (house rule: no unbounded external call can hang the render queue).
 //
-//   AI_API_KEY   required — absent means the widget renders SETUP NEEDED
-//   AI_BASE_URL  default https://api.openai.com/v1
-//                DeepSeek: https://api.deepseek.com/v1
-//   AI_MODEL     required, no default. A wrong-but-plausible default would
-//                fail at request time with a confusing provider error; a
-//                missing one fails immediately with a message naming the fix.
+// CREDENTIALS. The key is read from the secrets store (Settings >
+// Connections), NOT from the config: Backup > EXPORT serialises the whole
+// config to a file the user may email, and a key that was never in the config
+// cannot leak through it. Provider URL and model are not secrets and live in
+// `cfg.ai`, so restoring a backup brings those back and asks only for the key.
+// Env vars remain a fallback so an instance configured through Railway keeps
+// working:
+//   aiApiKey / AI_API_KEY   required — absent renders SETUP NEEDED
+//   cfg.ai.baseUrl / AI_BASE_URL  default https://api.openai.com/v1
+//                                 DeepSeek: https://api.deepseek.com/v1
+//   cfg.ai.model / AI_MODEL required, no default. A wrong-but-plausible
+//                default would fail at request time with a confusing provider
+//                error; a missing one fails immediately naming the fix.
 //
 // CADENCE IS THE WHOLE DESIGN. The panel wakes every 15-30 min and a colour
 // redraw costs 15-26 s, so text that changed on every wake would redraw the
@@ -28,6 +35,8 @@ const fsp = require('fs/promises');
 const { fetchWithTimeout } = require('./_fetch');
 const { DATA_DIR, atomicWriteFile } = require('../lib/store');
 const status = require('./_status');
+const { getSecret } = require('../lib/secrets-store');
+const { loadConfig } = require('../lib/config-store');
 
 const CACHE_PATH = path.join(DATA_DIR, 'ai-cache.json');
 const REQUEST_TIMEOUT_MS = 30000;   // generation is slower than a data fetch
@@ -183,13 +192,23 @@ function sanitise(text) {
     .trim();
 }
 
+// Credentials + provider, resolved in one place so the SETUP NEEDED gate and
+// the request itself can never disagree about whether this tile is usable.
+async function resolveProvider() {
+  const cfg = await loadConfig().catch(() => ({}));
+  const ai = (cfg && cfg.ai) || {};
+  const key = await getSecret('aiApiKey');
+  const base = (ai.baseUrl || process.env.AI_BASE_URL || 'https://api.openai.com/v1')
+    .replace(/\/+$/, '');
+  const model = (ai.model || process.env.AI_MODEL || '').trim();
+  return { key, base, model };
+}
+
 // ---------- generation ----------
-async function generate(prompt, context) {
-  const key = process.env.AI_API_KEY;
-  const base = (process.env.AI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, '');
-  const model = process.env.AI_MODEL;
-  if (!key) throw new Error('AI_API_KEY not set');
-  if (!model) throw new Error('AI_MODEL not set');
+async function generate(prompt, context, provider) {
+  const { key, base, model } = provider;
+  if (!key) throw new Error('No AI key — add one in Settings > Connections');
+  if (!model) throw new Error('No AI model — set one in Settings > Connections');
 
   const body = {
     model,
@@ -244,7 +263,8 @@ async function fetchAi(settings, ctx, itemId) {
   const s = settings || {};
   const prompt = typeof s.prompt === 'string' ? s.prompt.trim() : '';
   if (!prompt) return null;
-  if (!process.env.AI_API_KEY || !process.env.AI_MODEL) {
+  const provider = await resolveProvider();
+  if (!provider.key || !provider.model) {
     return { text: '', at: 0, needsSetup: true };
   }
 
@@ -259,7 +279,7 @@ async function fetchAi(settings, ctx, itemId) {
 
   const t0 = Date.now();
   try {
-    const text = await generate(prompt, buildContext(ctx));
+    const text = await generate(prompt, buildContext(ctx), provider);
     const entry = { text, prompt, at: Date.now() };
     await saveCache({ ...cache, [itemId || 'default']: entry });
     status.record('ai', { ok: true, ms: Date.now() - t0 });

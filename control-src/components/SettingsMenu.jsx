@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { m, AnimatePresence } from 'framer-motion';
 import {
-  Gear, MagicWand, Keyboard, Archive, CaretRight, User,
+  Gear, MagicWand, Keyboard, Archive, CaretRight, User, Plug,
 } from '@phosphor-icons/react';
 import PushNowButton from './PushNowButton.jsx';
 import PanelPreview from './PanelPreview.jsx';
 import PinButton from './PinButton.jsx';
 import SetupPanel from './SetupPanel.jsx';
+import ConnectionsPanel from './ConnectionsPanel.jsx';
 import BackupPanel from './BackupPanel.jsx';
 
 // Single header settings menu. Consolidates what used to be separate
@@ -20,7 +21,7 @@ import BackupPanel from './BackupPanel.jsx';
 // expandable rows to keep the menu short.
 export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcuts }) {
   const [open, setOpen] = useState(false);
-  const [expanded, setExpanded] = useState(null); // 'home' | 'backup' | null
+  const [expanded, setExpanded] = useState(null); // 'home' | 'connections' | 'backup' | null
   const ref = useRef(null);
 
   useEffect(() => {
@@ -94,6 +95,20 @@ export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcut
             {expanded === 'home' && (
               <div className="settings-collapse-body">
                 <SetupPanel cfg={cfg} onReplaceConfig={onReplaceConfig} />
+              </div>
+            )}
+            <button
+              type="button"
+              className={`settings-row settings-row--expandable ${expanded === 'connections' ? 'is-open' : ''}`}
+              aria-expanded={expanded === 'connections'}
+              onClick={() => toggle('connections')}
+            >
+              <Plug size={14} weight="bold" /> Connections
+              <CaretRight className="settings-row-caret" size={12} weight="bold" />
+            </button>
+            {expanded === 'connections' && (
+              <div className="settings-collapse-body">
+                <ConnectionsPanel cfg={cfg} onReplaceConfig={onReplaceConfig} />
               </div>
             )}
             <button

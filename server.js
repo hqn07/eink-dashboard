@@ -131,6 +131,7 @@ app.use('/control-app', gateControlHtml, express.static(CONTROL_APP_DIR, {
 // header comment in each router for what it owns.
 app.use(require('./routes/render-pages')); // /dashboard SSR + /dev + /preview + /widgets-matrix
 app.use(require('./routes/config'));       // /api/config* + /api/preview-data
+app.use(require('./routes/connections')); // /api/connections (provider keys, never exported)
 app.use(require('./routes/display'));      // /display.* + /sleep + /api/wake (device-facing)
 app.get('/', (req, res) => res.redirect('/control'));
 app.use(require('./routes/auth'));         // /control* + /api/auth* (PIN login/setup)

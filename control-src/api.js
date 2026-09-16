@@ -253,6 +253,24 @@ export async function setPin(pin) {
   return r.ok;
 }
 
+// Provider credentials. The key only ever travels outbound-to-server; the
+// GET returns presence + a masked hint, never a value.
+export async function fetchConnections() {
+  const r = await authFetch('/api/connections');
+  if (!r.ok) throw new Error(`connections ${r.status}`);
+  return r.json();
+}
+
+export async function saveConnection(patch) {
+  const r = await authFetch('/api/connections', {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(patch)
+  });
+  if (!r.ok) throw new Error(`connections ${r.status}`);
+  return r.json();
+}
+
 // Unicode flag from 2-letter ISO country code. Falls back to globe.
 export function flagEmoji(cc) {
   if (!cc || typeof cc !== 'string' || cc.length !== 2) return '🌍';
