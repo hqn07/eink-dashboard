@@ -54,8 +54,27 @@
 > Typing into the feed rows verified in a browser — the `replaceRow` bug
 > class (`3289942`) is not present.
 >
-> **Open:** stage 3 (widgets inherit + stop writing per-tile lat/lon) is
-> untouched, and wants a panel photo either side.
+> **Stage 3 shipped too** (`aeb724e`). A weather tile with no location of
+> its own used to render **NO DATA forever** — `resolveLoc()` returned null
+> and a comment defended that as the self-contained-settings contract.
+> Inheriting a *location* doesn't breach it: the tile still gets its own
+> fetch and its own slot. Proven against HEAD — two tiles with `settings:{}`
+> render `--` before, 83°F after. Forms show "Using Setup: GAINESVILLE" +
+> Override; Override seeds city AND coords so it starts as an exact copy
+> (city alone silently costs the tile its severe-weather alerts).
+> **Migration v6** drops a tile location that merely restates Setup,
+> equal-only, comparing PLACES not strings — the wizard wrote
+> `Gainesville,Florida,US` and the tile autocomplete wrote
+> `Gainesville, Florida, US`, so the live config's one duplicate would have
+> survived on a space. **Found while testing: "Use Setup instead" did
+> nothing** — all three `LocationFields` call sites merged
+> (`{...v, ...loc}`), so clearing by deleting keys could never take. Same
+> merge-where-a-replace-is-needed bug as `replaceRow`. That makes three in
+> this codebase; suspect it wherever a child emits a whole object.
+> **⇒ Wants a panel photo** — this is the first change that alters what a
+> weather tile fetches.
+>
+> **Open:**
 > `control-src/components/LocationPanel.jsx` (344 lines) is dead code —
 > imported nowhere since the wizard replaced it.
 
