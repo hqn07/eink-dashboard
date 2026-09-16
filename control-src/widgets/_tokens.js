@@ -4,6 +4,8 @@
 // build on drift. Logic-less {{token}} interpolation; see the server
 // copy for the full contract notes.
 
+import { homeValue } from '../home.js';
+
 function fmtDate(d, tz, opts) {
   try {
     return new Intl.DateTimeFormat('en-US', { timeZone: tz || 'UTC', ...opts }).format(d);
@@ -86,7 +88,7 @@ export const TOKENS = {
   },
   city(ctx) {
     const cfg = ctx.cfg || {};
-    return cfg.city || (cfg.location && cfg.location.city) || '';
+    return homeValue(cfg, 'city') || (cfg.location && cfg.location.city) || '';
   },
   temp(ctx, fmt) {
     const w = ctx.weather;
@@ -196,7 +198,7 @@ export function buildTokenCtx(data, slot) {
   const sl = slot || {};
   return {
     now: Date.now(),
-    timezone: (d.cfg && d.cfg.timezone) || 'UTC',
+    timezone: homeValue(d.cfg, 'timezone') || 'UTC',
     cfg: d.cfg,
     weather: sl.weather || d.weather,
     events:  sl.events  || d.events,

@@ -3,6 +3,7 @@ import { m, AnimatePresence } from 'framer-motion';
 import { Check, Crosshair, Lock } from '@phosphor-icons/react';
 import { geocode, reverseGeocode, flagEmoji, setPin as apiSetPin } from '../api.js';
 import { SCREEN_PRESETS, inflatePresetLayout } from '../widgets.js';
+import { homeValue } from '../home.js';
 import LiveDashboard from './LiveDashboard.jsx';
 
 // Step indicator strip — Stripe / Vercel onboarding idiom: numbered
@@ -45,8 +46,8 @@ export default function SetupWizard({ cfg, onPatch, onApplyPreset, onClose }) {
   const [results, setResults] = useState([]);
   const [pick, setPick] = useState(null);
   const [tz, setTz] = useState(() => {
-    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || cfg.timezone || 'UTC'; }
-    catch { return cfg.timezone || 'UTC'; }
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || homeValue(cfg, 'timezone') || 'UTC'; }
+    catch { return homeValue(cfg, 'timezone') || 'UTC'; }
   });
   const [busy, setBusy] = useState(false);
   const [pin, setPin] = useState('');
@@ -80,12 +81,12 @@ export default function SetupWizard({ cfg, onPatch, onApplyPreset, onClose }) {
   const commitLocation = () => {
     if (!pick) return;
     const cityStr = [pick.name, pick.state, pick.country].filter(Boolean).join(',');
+    // New configs are written in the cfg.home shape (stage 2 of
+    // docs/setup-architecture.md). Old ones are never rewritten — homeValue()
+    // reads the legacy top-level keys, so both shapes work. `cityLabel` is
+    // not carried over: it was written here and read by nothing.
     onPatch({
-      city: cityStr,
-      cityLabel: (pick.name || '').toUpperCase(),
-      lat: pick.lat,
-      lon: pick.lon,
-      timezone: tz
+      home: { ...(cfg.home || {}), city: cityStr, lat: pick.lat, lon: pick.lon, timezone: tz }
     });
     setStep('preset');
   };

@@ -7,6 +7,8 @@
 // Day count auto-scales with the variant's long axis (rows → height,
 // columns → width); an explicit forecastDays setting wins.
 
+import { homeCoords } from '../home.js';
+
 import { escapeHtml, placeholder, semRed } from './_shared.js';
 import { icon } from './_weather_shared.js';
 
@@ -68,7 +70,7 @@ export function render(ctx) {
   if (!w || !w.forecast || !w.forecast.length) {
     const hasLoc =
       (settings && Number.isFinite(settings.lat) && Number.isFinite(settings.lon)) ||
-      (cfg && Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon));
+      !!homeCoords(cfg);
     return placeholder('FORECAST', hasLoc ? 'Forecast unavailable' : 'Set your location', 'weather', { cellW, cellH }, hasLoc ? 'nodata' : 'setup');
   }
   const s = settings || {};

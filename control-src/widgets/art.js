@@ -1,3 +1,5 @@
+import { homeValue } from '../home.js';
+
 import { escapeHtml } from './_shared.js';
 
 // Art — deterministic generative patterns for e-ink. No fetcher, no
@@ -51,7 +53,7 @@ function rng(seed) {
 
 // Seed from the local date in the dashboard's timezone + user offset.
 function daySeed(ctx, extra) {
-  const tz = (ctx.cfg && ctx.cfg.timezone) || 'UTC';
+  const tz = homeValue(ctx.cfg, 'timezone') || 'UTC';
   const now = Number.isFinite(ctx.now) ? ctx.now : Date.now();
   let key;
   try {
@@ -124,7 +126,7 @@ export function render(ctx) {
     : hitomezashi(pxW, pxH, step, rand);
   let stamp = '';
   if (s.showDate) {
-    const tz = (ctx.cfg && ctx.cfg.timezone) || 'UTC';
+    const tz = homeValue(ctx.cfg, 'timezone') || 'UTC';
     let label = '';
     try {
       label = new Intl.DateTimeFormat('en-US', { timeZone: tz, month: 'short', day: 'numeric' })

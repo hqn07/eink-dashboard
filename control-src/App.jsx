@@ -26,6 +26,7 @@ import ScheduleTimeline from './components/ScheduleTimeline.jsx';
 import QuietHours from './components/QuietHours.jsx';
 const SetupWizard = React.lazy(() => import('./components/SetupWizard.jsx'));
 import SettingsMenu from './components/SettingsMenu.jsx';
+import { homeValue, homeCoords } from './home.js';
 const ShortcutsHelp = React.lazy(() => import('./components/ShortcutsHelp.jsx'));
 import LiveDashboard from './components/LiveDashboard.jsx';
 import DeviceStatusCard from './components/DeviceStatusCard.jsx';
@@ -257,7 +258,7 @@ export default function App() {
     // mode anymore. The active scheduled screen is still surfaced via
     // the SCHEDULED badge in the timeline.
     return editScreen
-      || pickActiveScreen(cfg, nowMinutesLocal(cfg.timezone || 'UTC'))
+      || pickActiveScreen(cfg, nowMinutesLocal(homeValue(cfg, 'timezone') || 'UTC'))
       || screens[0];
   }, [cfg, editScreen, screens, nowTick]);
 
@@ -757,7 +758,7 @@ export default function App() {
               screens={screens}
               activeId={editScreenId}
               overlapIds={overlapIds}
-              timezone={cfg.timezone || 'UTC'}
+              timezone={homeValue(cfg, 'timezone') || 'UTC'}
               onSelect={setEditScreenId}
               onUpdateSchedule={(id, patch) => updateScreen(id, {
                 schedule: { ...(screens.find(s => s.id === id)?.schedule || { enabled: false }), ...patch, enabled: true }
@@ -843,9 +844,9 @@ export default function App() {
               readOnly={readOnly}
               previewData={livePreviewData}
               seedCtx={{
-                city: cfg.city || '',
-                lat: Number.isFinite(cfg.lat) ? cfg.lat : null,
-                lon: Number.isFinite(cfg.lon) ? cfg.lon : null
+                city: homeValue(cfg, 'city') || '',
+                lat: homeCoords(cfg)?.lat ?? null,
+                lon: homeCoords(cfg)?.lon ?? null
               }}
               onChange={(next) => updateScreenLayout(editScreen.id, next)}
               onError={showToast}
@@ -976,7 +977,7 @@ export default function App() {
 
       {/* Setup wizard: auto-shows on first run (no location set), or on
        *  demand via the header "Setup" button. */}
-      {((cfg.firstRun !== false && !cfg.lat) || showWizard) && (
+      {((cfg.firstRun !== false && !homeCoords(cfg)) || showWizard) && (
         <React.Suspense fallback={null}>
           <SetupWizard
             cfg={cfg}

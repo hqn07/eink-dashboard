@@ -1,3 +1,5 @@
+import { homeValue } from '../home.js';
+
 import { escapeHtml, pickTier, heatmapHtml, barShapeClass } from './_shared.js';
 
 // Progress — elapsed-fraction bars for the day / week / month / year. Pure
@@ -103,7 +105,7 @@ export function render(ctx) {
   const titleLabel = (typeof s.title === 'string' && s.title.trim())
     ? s.title.trim() : 'PROGRESS';
   const now = Number.isFinite(ctx.now) ? ctx.now : Date.now();
-  const tz = (ctx.cfg && ctx.cfg.timezone) || 'UTC';
+  const tz = homeValue(ctx.cfg, 'timezone') || 'UTC';
   const variant = ctx.variant || (def.variants[s.variant] ? s.variant : 'trmnl');
   const tier = pickTier(cellW || 0, cellH || 0, density);
   const showPct = tier !== 'tiny';

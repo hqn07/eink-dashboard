@@ -14,6 +14,8 @@
 // doesn't expose it). Default keeps the original feels/humid/wind/
 // cloud-or-rise behavior so old tiles look unchanged.
 
+import { homeValue, homeCoords } from '../home.js';
+
 import { pickTier, placeholder, tidyPlace } from './_shared.js';
 import { icon, alertBanner, sunBar, hourlyStrip } from './_weather_shared.js';
 
@@ -117,7 +119,7 @@ export function render(ctx) {
   if (!weather) {
     const hasLoc =
       (settings && Number.isFinite(settings.lat) && Number.isFinite(settings.lon)) ||
-      (cfg && Number.isFinite(cfg.lat) && Number.isFinite(cfg.lon));
+      !!homeCoords(cfg);
     return placeholder('WEATHER', hasLoc ? 'Weather unavailable' : 'Set your location', 'weather', { cellW, cellH }, hasLoc ? 'nodata' : 'setup');
   }
   const w = weather;
@@ -169,7 +171,7 @@ export function render(ctx) {
     // TRMNL-inspired title-bar card: label/value hero + icon, a 2×2 cell
     // grid, and a footer. Uses the shared .tr-* components (Inter grotesk,
     // dashed dividers, dither chips). See docs/trmnl-inspired-design.md.
-    const city = tidyPlace((s.city || (cfg && cfg.city) || '').toString());
+    const city = tidyPlace((s.city || homeValue(cfg, 'city') || '').toString());
     const showCells = (cellH || 0) >= 6 && tier !== 'tiny';
     const showFoot  = (cellH || 0) >= 8;
     const heroPx = { tiny: 0, compact: 56, standard: 72, extended: 84, full: 84 }[tier] || 72;

@@ -11,6 +11,8 @@
 // Unknown tokens (typos like {{wether}}) pass through raw so they stay
 // visible to the user — they don't honor `default`.
 
+const { homeValue } = require('../lib/home');
+
 function fmtDate(d, tz, opts) {
   try {
     return new Intl.DateTimeFormat('en-US', { timeZone: tz || 'UTC', ...opts }).format(d);
@@ -96,7 +98,7 @@ const TOKENS = {
   },
   city(ctx) {
     const cfg = ctx.cfg || {};
-    return cfg.city || (cfg.location && cfg.location.city) || '';
+    return homeValue(cfg, 'city') || (cfg.location && cfg.location.city) || '';
   },
   temp(ctx, fmt) {
     const w = ctx.weather;

@@ -1,3 +1,4 @@
+import { homeValue } from '../home.js';
 import React, { useEffect, useRef } from 'react';
 import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses } from '../widget-render.js';
 import { widgetById } from '../widgets.js';
@@ -92,7 +93,7 @@ export default function LiveDashboard({
   });
   const cfg = (data && data.cfg) || {};
   const layout = (data && data.layout) || [];
-  const nowM = nowMinsTZ(cfg.timezone || 'UTC');
+  const nowM = nowMinsTZ(homeValue(cfg, 'timezone') || 'UTC');
 
   const pageStyle = {
     gridTemplateRows: `0px minmax(0, 1fr) 0px`

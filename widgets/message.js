@@ -1,6 +1,7 @@
 // Pick the active message based on cfg.message.schedule, with simple
 // inline markdown (bold + italic) for the rendered text.
 const { renderTokens } = require('./_tokens');
+const { homeValue } = require('../lib/home');
 
 function nowMinsTZ(tz) {
   try {
@@ -33,7 +34,7 @@ function resolveMessage(cfg, ctx) {
   const schedule = Array.isArray(m.schedule) ? m.schedule : [];
   let picked = { text: m.text || '', subtitle: m.subtitle || '' };
   if (schedule.length) {
-    const nowM = nowMinsTZ(cfg.timezone || 'UTC');
+    const nowM = nowMinsTZ(homeValue(cfg, 'timezone') || 'UTC');
     const active = schedule.find(slot => inWindow(slot, nowM));
     if (active) picked = { text: active.text || '', subtitle: active.subtitle || '' };
   }

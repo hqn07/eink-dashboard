@@ -79,8 +79,38 @@ for (const id of palette) {
   }
 }
 
+// Home-facts helper parity: lib/home.js (CJS) and control-src/home.js (ESM)
+// are hand-mirrored. Compared by BEHAVIOUR rather than by source text — what
+// matters is that the server and the editor agree on where the user lives,
+// and a textual compare would both miss a real divergence in a rewritten
+// branch and cry over a reformat.
+{
+  const { createRequire } = await import('node:module');
+  const require = createRequire(import.meta.url);
+  const s = require(join(root, 'lib', 'home.js'));
+  const c = await import(join(root, 'control-src', 'home.js'));
+  const emptyHome = { city: '', lat: null, lon: null, icalUrls: [], githubUser: '', about: '' };
+  const fixtures = [
+    {},
+    { city: 'Legacy,FL,US', lat: 29.65, lon: -82.32, githubUser: 'x', home: emptyHome },
+    { home: { city: 'New,VN', lat: 10.77, lon: 106.7, about: 'hi', icalUrls: ['u'] } },
+    { city: 'OLD', home: { city: 'NEW' } },
+    { home: { lat: 29.65, lon: null } },
+    { timezone: 'America/New_York', home: { timezone: 'Asia/Ho_Chi_Minh' } },
+  ];
+  const sig = (m) => JSON.stringify(fixtures.map(f => [
+    ...m.HOME_KEYS.map(k => m.homeValue(f, k) ?? null),
+    m.homeCoords(f), m.homeLoc(f)
+  ]));
+  if ((s.HOME_KEYS || []).join(',') !== (c.HOME_KEYS || []).join(',')) {
+    problems.push('HOME_KEYS drift between lib/home.js and control-src/home.js');
+  } else if (sig(s) !== sig(c)) {
+    problems.push(`lib/home.js and control-src/home.js disagree:\n      server: ${sig(s)}\n      client: ${sig(c)}`);
+  }
+}
+
 if (problems.length) {
   console.error('check-widgets FAILED:\n  - ' + problems.join('\n  - '));
   process.exit(1);
 }
-console.log(`check-widgets: ${widgetIds.length} widgets wired (render + form + registry + palette); token registry in sync.`);
+console.log(`check-widgets: ${widgetIds.length} widgets wired (render + form + registry + palette); token registry + home helper in sync.`);
