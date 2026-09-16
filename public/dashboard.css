@@ -554,6 +554,21 @@ html, body {
 
 /* Matches the .tr-titlebar spec (grotesk, 11px, 1.5px, uppercase) so
  * non-TRMNL widget variants read with the same title voice as the cards. */
+/* The calendar's title bar can carry one piece of context on the right — the
+ * day, when every visible event shares one, instead of repeating it down the
+ * rows. Same shape as .tr-titlebar's .tr-meta.
+ *
+ * Scoped to .widget-cal deliberately: headlines, tasks and transit also use
+ * .widget-title and append a `stale` marker inline, and making the shared
+ * rule flex would have silently shunted that marker to the right edge in
+ * three widgets this change has no business restyling. */
+.widget-cal .widget-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.widget-title-tag { font-weight: 400; letter-spacing: 1px; flex: 0 0 auto; }
 .widget-title {
   font-family: var(--face-grotesk);
   font-weight: 700;
@@ -750,6 +765,10 @@ html, body {
   letter-spacing: 1px;
 }
 
+/* No day column at all: either the list is one day (hoisted to the title bar)
+ * or labels are switched off. Reclaiming the 50px column is the point — the
+ * title is what the row is for. */
+.item--nometa { grid-template-columns: 1fr auto; }
 .item > .content { min-width: 0; }
 .item > .content > .title {
   display: block;

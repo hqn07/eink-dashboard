@@ -32,6 +32,10 @@
   letter-spacing: 1px;
 }
 
+/* No day column at all: either the list is one day (hoisted to the title bar)
+ * or labels are switched off. Reclaiming the 50px column is the point — the
+ * title is what the row is for. */
+.item--nometa { grid-template-columns: 1fr auto; }
 .item > .content { min-width: 0; }
 .item > .content > .title {
   display: block;

@@ -219,22 +219,51 @@ function renderList(all, settings, titleLabel, cellW, cellH, density) {
   const list = all.slice(0, Math.max(1, t.events - sectionCount));
   const showDayLabel = !settings || settings.showDayLabel !== false;
   const showTime     = !settings || settings.showTime     !== false;
-  const row = ev => {
-    const desc = showTime && ev.startLabel ? escapeHtml(ev.startLabel) : '';
-    return `
-    <div class="item ${ev.isAllDay ? 'item--allday' : ''}">
-      <div class="meta">${showDayLabel ? escapeHtml(ev.dayLabel || '') : ''}</div>
+
+  // A day label is only worth a column when it distinguishes one row from
+  // another. Four consecutive rows each reading TODAY spend 58px of an
+  // eight-column tile saying the same word four times, while the titles they
+  // are squeezing wrap to three lines.
+  //
+  // Three cases, in order:
+  //   every visible event on one day -> the label is context, not data. It
+  //     moves to the title bar and every row gets the full width.
+  //   label repeats the row above (or its section heading) -> the cell stays,
+  //     empty, so the column alignment holds, but the word does not repeat.
+  //   otherwise -> show it.
+  const visibleDays = showDayLabel ? list.map(ev => (ev.dayLabel || '').trim()) : [];
+  const hoistedDay = (visibleDays.length && visibleDays.every(d => d && d === visibleDays[0]))
+    ? visibleDays[0] : '';
+
+  // `heading` is the section title when rendering inside one, so a row under
+  // TODAY does not also say TODAY.
+  const rowsFor = (evs, heading = '') => {
+    let prev = heading;
+    return evs.map((ev) => {
+      const label = showDayLabel ? (ev.dayLabel || '').trim() : '';
+      let cell;                       // '' = empty cell, null = no cell at all
+      if (!showDayLabel || hoistedDay) cell = null;
+      else if (label && label !== prev) { cell = label; prev = label; }
+      else cell = '';
+      const desc = showTime && ev.startLabel ? escapeHtml(ev.startLabel) : '';
+      return `
+    <div class="item ${ev.isAllDay ? 'item--allday' : ''}${cell === null ? ' item--nometa' : ''}">
+      ${cell === null ? '' : `<div class="meta">${escapeHtml(cell)}</div>`}
       <div class="content">
         <span class="title">${escapeHtml(ev.title || '')}</span>
         ${desc ? `<span class="description">${desc}</span>` : ''}
       </div>
     </div>`;
+    }).join('');
   };
+  const titleBar = `<div class="widget-title">${escapeHtml(titleLabel)}${
+    hoistedDay ? `<span class="widget-title-tag">${escapeHtml(hoistedDay)}</span>` : ''
+  }</div>`;
   if (!t.sections) {
     return `
       <div class="widget widget-cal">
-        <div class="widget-title">${escapeHtml(titleLabel)}</div>
-        ${list.map(row).join('')}
+        ${titleBar}
+        ${rowsFor(list)}
       </div>
     `;
   }
@@ -247,10 +276,10 @@ function renderList(all, settings, titleLabel, cellW, cellH, density) {
   }
   return `
     <div class="widget widget-cal">
-      <div class="widget-title">${escapeHtml(titleLabel)}</div>
+      ${titleBar}
       ${order.map(s => `
         <div class="cal-section-title${s === 'TODAY' ? semRed(settings, true) : ''}">${s}</div>
-        ${groups[s].map(row).join('')}
+        ${rowsFor(groups[s], s)}
       `).join('')}
     </div>
   `;

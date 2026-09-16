@@ -275,7 +275,7 @@ async function fetchAi(settings, ctx, itemId) {
     && slot.prompt === prompt
     && (Date.now() - (slot.at || 0)) < cadenceMs;
 
-  if (fresh) { status.cacheHit('ai'); return { text: slot.text, at: slot.at }; }
+  if (fresh) { status.cacheHit('ai'); return { text: slot.text, at: slot.at, cadenceMs }; }
 
   const t0 = Date.now();
   try {
@@ -283,12 +283,12 @@ async function fetchAi(settings, ctx, itemId) {
     const entry = { text, prompt, at: Date.now() };
     await saveCache({ ...cache, [itemId || 'default']: entry });
     status.record('ai', { ok: true, ms: Date.now() - t0 });
-    return { text, at: entry.at };
+    return { text, at: entry.at, cadenceMs };
   } catch (err) {
     status.record('ai', { ok: false, ms: Date.now() - t0, err: err.message });
     // Last good text beats an error on a wall display. Only when there has
     // never been one does the widget admit the failure.
-    if (slot && slot.text) return { text: slot.text, at: slot.at, stale: true };
+    if (slot && slot.text) return { text: slot.text, at: slot.at, stale: true, cadenceMs };
     return { text: '', at: 0, error: err.message };
   }
 }

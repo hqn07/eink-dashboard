@@ -80,10 +80,19 @@ export function render(ctx) {
   }
 
   const title = s.title ? escapeHtml(s.title) : 'AI';
-  // Stale means the last refresh attempt failed and this is the previous
-  // answer — worth saying quietly so old text isn't read as current.
-  const meta = [data.stale ? 'offline' : '', ago(data.at, now)]
-    .filter(Boolean).join(' · ');
+  // The age is furniture when the answer is as fresh as the user asked for.
+  // On a daily cadence the tile spent its title bar saying "18H AGO" about
+  // text that was behaving exactly as configured, which reads as staleness
+  // and is not. Show it only when it carries information:
+  //   offline — the last refresh failed and this is the previous answer;
+  //   overdue — the text is older than the cadence, so a generation has been
+  //             missed rather than merely not due yet.
+  const overdue = Number.isFinite(data.cadenceMs)
+    ? (now - data.at) > data.cadenceMs
+    : false;
+  const meta = (data.stale || overdue)
+    ? [data.stale ? 'offline' : '', ago(data.at, now)].filter(Boolean).join(' · ')
+    : '';
 
   const body = escapeHtml(data.text).replace(/\n+/g, '<br>');
 

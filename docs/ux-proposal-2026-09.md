@@ -1,6 +1,6 @@
 # UX / UI / QoL proposals — 2026-09-16
 
-Status: **P1, P4, P5, P8 and P10 shipped 2026-09-16.** Everything else is a
+Status: **P1, P4, P5, P8, P9 and P10 shipped 2026-09-16.** Everything else is a
 proposal. Written after measuring the live system rather than from memory,
 and each item says what it costs and what it risks, because several of these
 are not obviously worth doing.
@@ -220,20 +220,36 @@ threat addressed is the key leaving the box inside a backup file. Real
 at-rest encryption needs a key that is not also on the volume — an env secret
 or a KMS — and is worth doing if this goes multi-tenant.
 
-### P9 — Appearance retouches *(medium value, low cost, low risk)*
+### P9 — Appearance retouches — **DONE 2026-09-16** (two of three)
 
-Concrete, from the panel photo and the render code:
+- **Calendar no longer repeats the day label.** Four consecutive rows each
+  reading `TODAY` spent 58px of an eight-column tile saying one word four
+  times, while the titles they squeezed wrapped to three lines. Now: when
+  every visible event shares a day the label moves to the title bar and every
+  row gets the full width (`.item--nometa` drops the 50px column); when days
+  differ, a label shows only when it changes, and never when it merely repeats
+  its own section heading. No events are lost — the budget is unchanged.
+- **The AI tile's timestamp became a signal.** It showed the age on every
+  render, so a daily briefing announced `18H AGO` about text behaving exactly
+  as configured, which reads as staleness and is not. The server now sends
+  `cadenceMs` with the answer and the tile shows the age only when it carries
+  information: the refresh failed (`offline`), or the text is older than the
+  cadence, meaning a generation was actually missed.
 
-- **Calendar repeats the day label on every row.** Four consecutive rows each
-  reading `TODAY` while titles wrap to three lines. `sections` (TODAY / LATER
-  headings) only switch on at the `extended` and `full` tiers
-  (`calendar.js:205–209`). Collapse consecutive identical day labels to one,
-  and give the reclaimed width to the title.
-- **AI tile.** Its timestamp (`18H AGO`) currently carries the same visual
-  weight as the content. Demote it; let the text have the tile.
-- **Tile headers.** Title/subtitle treatment varies per widget. One rule,
-  applied in `_chrome.js`, would make thirty widgets read as one product —
-  this is the cheapest "unified system" win available.
+**The third item was withdrawn, because measuring it showed it was wrong.**
+The proposal claimed "title/subtitle treatment varies per widget" and that one
+rule in `_chrome.js` would unify thirty widgets. In fact `.tr-titlebar` covers
+26 of 30, and the other two idioms (`.widget-title`, `.col-title`) already
+carry an identical type spec — grotesk 700, 11px, 1.5px tracking, uppercase,
+2px rule. The `#000` hard-codes look like a bug on inverted tiles but are not:
+`.cell.cell-inverted *` overrides `border-color` with `!important`. There was
+nothing to unify, and a sweep would have been churn.
+
+What that measurement did surface: making `.widget-title` flex — which the
+calendar needed for its day tag — would have silently shunted the `stale`
+marker to the right edge in headlines, tasks and transit, three widgets this
+change has no business restyling. The rule is scoped to `.widget-cal`. The
+visual guard could not have caught it, because the demo data is never stale.
 
 ### P10 — Documentation correctness *(low cost, do it first)*
 
@@ -271,7 +287,7 @@ declaring only `big` — left over from the 2026-09-15 variant cut.
 1. **P10** documentation correctness, **P4** needs-attention strip, **P5**
    next-wake honesty — small, independent, immediately felt.
 2. ~~P1~~ canvas-first editor — done.
-3. **P9** appearance retouches — cheap, and they are what you actually look at.
+3. ~~P9~~ appearance retouches — done (two of three; the third was withdrawn).
 4. **P2 pilot: Markets only** — judge the consolidation pattern on glass
    before committing to weather, clock and daily.
 5. **P3** Sources library, then **P6** + **P7** first-run and auto-arrange,
