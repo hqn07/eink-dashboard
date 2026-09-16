@@ -48,7 +48,7 @@ function showcaseSizeKey(def) {
   return def.defaultSize;
 }
 
-export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = false, previewData, seedCtx, onChange, onError, onCommitItemNow }) {
+export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = false, previewData, seedCtx, onChange, onError, onCommitItemNow, openSettingsId, onSettingsOpened}) {
   const cardsMode = cardStyle === 'cards';
   const wrapRef = useRef(null);
   const paletteRef = useRef(null);
@@ -61,6 +61,16 @@ export default function EditorGrid({ layout, showGrid, cardStyle, readOnly = fal
   const [selectedId, setSelectedId] = useState(null);
   // Which tile (if any) currently has its settings modal open.
   const [modalForId, setModalForId] = useState(null);
+
+  // The needs-attention strip fixes a tile by opening its settings. The modal
+  // state lives here, so the request arrives as a prop and is acknowledged
+  // straight away — leaving it set would reopen the modal every time the user
+  // closed it.
+  useEffect(() => {
+    if (!openSettingsId) return;
+    if (layout.some(it => it.id === openSettingsId)) setModalForId(openSettingsId);
+    onSettingsOpened && onSettingsOpened();
+  }, [openSettingsId]);
   // 5px drag threshold so a single click (mousedown→up < 5px move) is
   // treated as a select, while a real drag is left for react-grid-layout.
   const downPosRef = useRef(null);

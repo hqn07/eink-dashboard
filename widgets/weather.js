@@ -143,9 +143,8 @@ async function geocodeCity(city) {
 // Accepts either:
 //   - a city query string ("Gainesville,FL,US"), or
 //   - { lat, lon } if precise coords are configured.
-// The second arg (apiKey) is ignored — Open-Meteo doesn't need one.
 // Kept in the signature so old callers don't break.
-async function fetchWeather(cityOrCoords, _apiKey, units = 'F') {
+async function fetchWeather(cityOrCoords, units = 'F') {
   const u = units === 'C' ? 'C' : 'F';
 
   // Resolve to lat/lon.

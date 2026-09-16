@@ -31,6 +31,10 @@ const ShortcutsHelp = React.lazy(() => import('./components/ShortcutsHelp.jsx'))
 import LiveDashboard from './components/LiveDashboard.jsx';
 import DeviceStatusCard from './components/DeviceStatusCard.jsx';
 import DeviceStatusChip from './components/DeviceStatusChip.jsx';
+import AttentionStrip from './components/AttentionStrip.jsx';
+import { useDeviceTelemetry } from './use-device-telemetry.js';
+import { presenceFrom } from './device-presence.js';
+import { scanTiles, scanDevice, attentionSignature } from './attention.js';
 import BeamComposer from './components/BeamComposer.jsx';
 import { SavedFeedsContext, deriveFeedName } from './components/saved-feeds-context.js';
 
@@ -49,7 +53,7 @@ const MAX_SCREENS = 20;
 // the real 800×480 size and is then CSS-scaled down to fit the
 // pane's actual width via a ResizeObserver, so the preview stays
 // crisp at any pane width.
-function PreviewPane({ data, label, onHide, refreshMinutes }) {
+function PreviewPane({ data, label, onHide, refreshMinutes, telemetry }) {
   const wrapRef = React.useRef(null);
   const [scale, setScale] = useState(0.4);
   useEffect(() => {
@@ -89,7 +93,7 @@ function PreviewPane({ data, label, onHide, refreshMinutes }) {
         </div>
       </div>
       <div className="preview-pane-meta">{label}</div>
-      <DeviceStatusCard refreshMinutes={refreshMinutes} />
+      <DeviceStatusCard refreshMinutes={refreshMinutes} telemetry={telemetry} />
     </aside>
   );
 }
@@ -299,6 +303,28 @@ export default function App() {
   const livePreviewData = previewData
     ? { ...previewData, cfg, layout: editScreen ? editScreen.layout : [], chrome: editScreen ? editScreen.chrome : null, cardStyle: editCardStyle }
     : { cfg, weather: null, events: [], units: (editScreen && editScreen.units) || 'F', layout: editScreen ? editScreen.layout : [], chrome: editScreen ? editScreen.chrome : null, cardStyle: editCardStyle };
+
+  // ============ NEEDS ATTENTION ============
+  // One poll of device telemetry for the header chip, the Device status card
+  // and the strip below — they used to fetch the same endpoints separately.
+  const telemetry = useDeviceTelemetry();
+  const screenRefreshMinutes = (editScreen && editScreen.refreshMinutes) ?? 30;
+  const presence = presenceFrom({
+    devices: telemetry.devices, battery: telemetry.battery,
+    refreshMinutes: screenRefreshMinutes, now: telemetry.now
+  });
+
+  // Keyed on settings + data, deliberately NOT on tile positions: dragging a
+  // tile changes the layout object every frame and must not re-run a scan
+  // that renders every widget to a string.
+  const attentionSig = attentionSignature(editScreen ? editScreen.layout : [], livePreviewData);
+  const tileAttention = useMemo(
+    () => scanTiles({ layout: editScreen ? editScreen.layout : [], previewData: livePreviewData }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [attentionSig]
+  );
+  const attention = [...tileAttention, ...scanDevice(presence)];
+  const [openSettingsId, setOpenSettingsId] = useState(null);
 
 
   // Toast supports an optional action button ({ label, onClick }) for
@@ -701,7 +727,7 @@ export default function App() {
           <SyncPill status={status} lastSavedAt={lastSavedAt} statusMsg={statusMsg} />
         </div>
         <div className="app-header-right">
-          <DeviceStatusChip refreshMinutes={cfg && Number(cfg.refreshMinutes)} />
+          <DeviceStatusChip refreshMinutes={cfg && Number(cfg.refreshMinutes)} telemetry={telemetry} />
           <BeamComposer />
           {cfg && (
             <SettingsMenu
@@ -736,6 +762,8 @@ export default function App() {
         }}
         canAdd={screens.length < MAX_SCREENS}
       />
+
+      <AttentionStrip items={attention} onFixTile={(id) => setOpenSettingsId(id)} />
 
       <div className={`schedule-collapsible schedule-card ${timelineOpen ? 'is-open' : ''}`}>
         <button
@@ -848,6 +876,8 @@ export default function App() {
                 lat: homeCoords(cfg)?.lat ?? null,
                 lon: homeCoords(cfg)?.lon ?? null
               }}
+              openSettingsId={openSettingsId}
+              onSettingsOpened={() => setOpenSettingsId(null)}
               onChange={(next) => updateScreenLayout(editScreen.id, next)}
               onError={showToast}
               onCommitItemNow={(item) => commitLayoutItemNow(editScreen.id, item)}
@@ -860,6 +890,7 @@ export default function App() {
         {previewPaneOpen && (
           <PreviewPane
             data={livePreviewData}
+            telemetry={telemetry}
             label={`${editScreen?.name || 'Screen'} · ${GRID_COLS}×${GRID_ROWS}`}
             onHide={() => setPreviewPaneOpen(false)}
             refreshMinutes={editScreen?.refreshMinutes ?? 30}

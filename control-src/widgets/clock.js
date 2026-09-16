@@ -2,11 +2,9 @@ import { escapeHtml, pickTier, placeholder } from './_shared.js';
 
 // Clock — server-rendered time + date line.
 //
-// Contract v2 (widgets-refresh W2): variants —
-//   big    — chunky serif time, date under (the original default)
-//   thin   — light weight, looser tracking
-//   banner — one horizontal strip: time left, date right; built for
-//            wide short tiles (24×2 text-bar replacement, XL 24×6)
+// One variant, `big` — chunky serif time with the date under it. `thin` and
+// `banner` were retired by the 2026-09-15 variant cut; migration v5 drops a
+// stored variant that no longer exists, so those tiles fall back here.
 // Legacy tiles carry `settings.style: 'big'|'thin'` from before the
 // variant system — the render maps that forward when no variant is set.
 

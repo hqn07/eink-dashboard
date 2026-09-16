@@ -1,59 +1,39 @@
-// Compact device-status readout under the Live Preview pane — surfaces
-// the telemetry that otherwise hides in header pills: ESP32 battery
-// (last push) and the screen's refresh cadence.
+// Compact device-status readout — the telemetry that otherwise hides on the
+// admin-only /status page: battery, when the panel last checked in, and when
+// it is next expected to.
+//
+// "Next wake" is the row that matters. A deep-sleeping ESP32 cannot be woken
+// remotely, so a saved change does not appear on the glass until the device
+// comes looking for it. Without this row a working dashboard looks broken for
+// up to a full refresh interval; with it, the wait is visible and expected.
 
-import React, { useEffect, useState } from 'react';
-import { fetchBattery } from '../api.js';
+import React from 'react';
+import { presenceFrom } from '../device-presence.js';
 
-const POLL_MS = 30000;
-
-function ago(at, now) {
-  if (!Number.isFinite(at)) return '—';
-  const s = Math.max(0, Math.floor((now - at) / 1000));
-  if (s < 60) return `${s}s ago`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
-}
-
-export default function DeviceStatusCard({ refreshMinutes }) {
-  const [battery, setBattery] = useState(null);   // { v, pct, at } | null
-  const [now, setNow] = useState(() => Date.now());
-
-  useEffect(() => {
-    let cancelled = false;
-    const pull = async () => {
-      const [b] = await Promise.allSettled([fetchBattery()]);
-      if (cancelled) return;
-      if (b.status === 'fulfilled') setBattery(b.value);
-      setNow(Date.now());
-    };
-    pull();
-    const id = setInterval(pull, POLL_MS);
-    return () => { cancelled = true; clearInterval(id); };
-  }, []);
-
-  // Advance the "ago" labels between polls.
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 10000);
-    return () => clearInterval(id);
-  }, []);
-
+export default function DeviceStatusCard({ refreshMinutes, telemetry }) {
+  const { battery, devices, now } = telemetry;
+  const p = presenceFrom({ devices, battery, refreshMinutes, now });
   const hasBattery = battery && Number.isFinite(battery.pct);
+
   const rows = [
     {
       k: 'E-ink battery',
       v: hasBattery
         ? `${battery.pct}%${Number.isFinite(battery.v) ? ` · ${battery.v.toFixed(2)}V` : ''}`
         : 'no data',
-      sub: hasBattery ? ago(battery.at, now) : null
+      sub: null
     },
     {
-      k: 'Refresh',
-      v: Number.isFinite(refreshMinutes) ? `every ${refreshMinutes}m` : '—',
-      sub: null
+      k: 'Last seen',
+      v: p.lastSeenLabel,
+      sub: p.stale && p.everSeen ? 'looks offline' : null
+    },
+    {
+      k: 'Next wake',
+      // Overdue is not an error: battery-saver and quiet hours both stretch
+      // the interval, so say it is late rather than implying it is lost.
+      v: !p.everSeen ? '—' : (p.overdue ? 'due now' : p.nextWakeLabel),
+      sub: p.everSeen ? `every ${p.cadenceMin}m` : null
     }
   ];
 
@@ -69,6 +49,10 @@ export default function DeviceStatusCard({ refreshMinutes }) {
           </span>
         </div>
       ))}
+      <div className="device-status-note">
+        Saved changes appear at the next wake — the panel sleeps and cannot be
+        woken remotely.
+      </div>
     </div>
   );
 }

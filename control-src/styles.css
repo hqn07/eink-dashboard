@@ -234,6 +234,47 @@ html, body {
 .sync-pill-error  { color: #c00; }
 .sync-pill { transition: color 200ms ease; }
 
+/* Needs-attention strip — one line under the screen tabs, present only when
+ * something is actually wrong. Deliberately not a permanent status bar: a bar
+ * that usually says "all good" stops being read. Accent-bordered rather than
+ * filled, so it reads as a notice and not an error state. */
+.attention-strip {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border: var(--bw) solid var(--ink);
+  border-left: var(--bw-heavy) solid var(--accent);
+  background: #fff;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+.attention-icon { flex: 0 0 auto; align-self: center; color: var(--accent); }
+.attention-count {
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.attention-items { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+.attention-sep { color: var(--mute); }
+.attention-item {
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.attention-item:hover { color: var(--accent); }
+/* The panel entry has no fix to offer — do not dress it as a button. */
+.attention-item-static { text-decoration: none; color: var(--mute); cursor: default; }
+
 /* DeviceStatusChip — same quiet mono-caption idiom as the sync pill.
  * Warm dot when the panel checked in on schedule; red + OFFLINE label
  * when it has missed several wake cycles. */
@@ -767,6 +808,18 @@ main.layout {
 .device-status-key { color: var(--mute); }
 .device-status-val { font-weight: 700; text-align: right; }
 .device-status-sub { font-weight: 400; color: var(--mute); }
+/* One quiet sentence under the rows explaining why a saved change is not on
+ * the glass yet — the panel is asleep, not broken. */
+.device-status-note {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  font-size: var(--fs-xs);
+  line-height: 1.45;
+  color: var(--mute);
+  text-transform: none;
+  letter-spacing: 0;
+}
 
 /* Compact "Show preview" pill that takes the place of the pane when
  * collapsed (still in the grid flow so the layout stays 3-col). */

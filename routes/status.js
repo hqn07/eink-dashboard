@@ -70,8 +70,6 @@ router.get('/status', checkAdminAuth, async (req, res) => {
       ? `<span class="ok">active</span> · ${dur(getFastWakeUntil() - Date.now())} left`
       : '<span class="muted">idle</span>',
       'Active = a Push-now fast-refresh window is currently open, so the device polls quickly. Idle is the normal resting state.']);
-    rows.push(['Weather key', ok(!!process.env.OPENWEATHER_API_KEY),
-      'OpenWeatherMap API key. Blank/— is usually FINE: the default weather uses Open-Meteo, which needs no key. Only set this if you add a widget that specifically needs OpenWeatherMap.']);
     rows.push(['Device token', ok(!!DEVICE_TOKEN),
       'A shared secret the device sends so strangers cannot pull your image endpoints. OK = set (recommended). Blank = anyone with the URL can fetch /display.*']);
     rows.push(['Control PIN', pinConfigured(cfg) ? '<span class="ok">SET</span>' : '<span class="warn">not set</span>',

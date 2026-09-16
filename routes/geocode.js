@@ -85,7 +85,7 @@ router.get('/api/weather-check', checkAdminAuth, async (req, res) => {
     const loc = (Number.isFinite(lat) && Number.isFinite(lon))
       ? { lat, lon }
       : city;
-    const w = await fetchWeather(loc, null, units);
+    const w = await fetchWeather(loc, units);
     if (w.stale) return res.json({ ok: false, error: 'not found' });
     res.json({
       ok: true,

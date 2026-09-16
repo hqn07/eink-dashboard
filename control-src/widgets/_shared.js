@@ -49,8 +49,14 @@ export function placeholder(title, hint, iconKey, ctx, kind = 'setup') {
   const cls = xs ? ' ph-xs' : sm ? ' ph-sm' : '';
   const ic = !xs && iconKey && PLACEHOLDER_ICONS[iconKey];
   const tag = PLACEHOLDER_TAGS[kind] != null ? PLACEHOLDER_TAGS[kind] : PLACEHOLDER_TAGS.setup;
+  // data-ph-* is how the editor's needs-attention strip finds tiles that are
+  // not configured, without a per-widget declaration that could drift from
+  // what the tile actually renders. It is on the element rather than read
+  // from the visible text because the hint and the badge are both dropped at
+  // small tile sizes — the tile still needs setup, it just has no room to
+  // say so.
   return `
-    <div class="widget widget-placeholder${cls}">
+    <div class="widget widget-placeholder${cls}" data-ph-kind="${escapeHtml(kind)}" data-ph-hint="${escapeHtml(hint || '')}">
       ${ic ? `<div class="ph-icon">${ic}</div>` : ''}
       <div class="ph-title">${title}</div>
       ${xs || sm ? '' : `<div class="ph-hint">${hint}</div>

@@ -1,8 +1,9 @@
 # UX / UI / QoL proposals — 2026-09-16
 
-Status: **proposals only, nothing built.** Written after measuring the live
-system rather than from memory. Each item says what it costs and what it
-risks, because several of these are not obviously worth doing.
+Status: **batch 1 (P10, P4, P5) shipped 2026-09-16.** Everything else is a
+proposal. Written after measuring the live system rather than from memory,
+and each item says what it costs and what it risks, because several of these
+are not obviously worth doing.
 
 The brief: *unified system, easy to use, adequate customisation, effortless
 and useful.* Consolidation, new widgets, open-source integration and
@@ -26,15 +27,14 @@ appearance retouches are all in scope.
 Two things this measurement corrected, which matter before planning anything:
 
 1. **The stack is keyless except AI.** Weather, forecast, sun, UV and air
-   quality all run on Open-Meteo. `fetchWeather(cityOrCoords, _apiKey, units)`
-   ignores its second argument — `widgets/weather.js` line 146 says so
-   outright. `OPENWEATHER_API_KEY` is threaded from `lib/widget-data.js` and
-   used by nothing.
-2. **Two CLAUDE.md gotchas are therefore wrong.** #5 ("Weather NO DATA means
+   quality all run on Open-Meteo. `fetchWeather()` took an `_apiKey` argument
+   and ignored it; `OPENWEATHER_API_KEY` was threaded from `lib/widget-data.js`
+   and read by nothing. **Fixed in P10** — the parameter is gone, so the
+   documentation cannot rot back.
+2. **Two CLAUDE.md gotchas were therefore wrong.** #5 ("Weather NO DATA means
    `OPENWEATHER_API_KEY` is missing or invalid") and #6 ("OpenWeatherMap UV
-   endpoint is deprecated — use One Call 3.0") describe a provider the code no
-   longer uses. They will send a future session hunting a key that does
-   nothing. Fixing these is free and belongs in the first batch.
+   endpoint is deprecated") described a provider the code no longer uses.
+   **Fixed in P10.**
 
 ---
 
@@ -208,11 +208,9 @@ declaring only `big` — left over from the 2026-09-15 variant cut.
 
 ### P11 — Open-source integrations *(exploration, not committed)*
 
-- **Home Assistant.** A generic "HA entity" widget (sensor value, state,
-  history sparkline) would make the panel useful in a way nothing else on the
-  list does — it is the difference between a dashboard and an instrument.
-  Reuses the existing fetch-and-render contract; auth is a long-lived token.
-  **Strongest candidate on this list.**
+- ~~**Home Assistant.**~~ **Ruled out 2026-09-16** — the user does not run
+  Home Assistant, so the widget would have no data to show. Do not revive this
+  without asking again.
 - **TRMNL plugins.** An existing ecosystem of e-ink recipes. Was scoped in
   `docs/trmnl-inspired-design.md` and parked in June "blocked on user input".
   Importing their Liquid templates would multiply the widget library for free,
@@ -243,7 +241,7 @@ declaring only `big` — left over from the 2026-09-15 variant cut.
    before committing to weather, clock and daily.
 5. **P3** Sources library, then **P6** + **P7** first-run and auto-arrange,
    which depend on it.
-6. **P8** after the secrets decision; **P11** Home Assistant after that.
+6. **P8** after the secrets decision.
 
 Panel photo between each numbered step — every one of these changes what the
 device draws or what the user does to it.
@@ -253,5 +251,4 @@ device draws or what the user does to it.
 1. **P2**: pilot Markets first, or commit to all four merges?
 2. **P8**: should API keys live outside the exportable config, or should
    export redact?
-3. **P11**: is Home Assistant actually in your house? The widget is only worth
-   building if it is.
+3. ~~P11 Home Assistant~~ — answered: no HA, ruled out.
