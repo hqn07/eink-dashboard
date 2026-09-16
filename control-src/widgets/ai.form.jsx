@@ -83,7 +83,10 @@ export function Form({ values, patch, fields }) {
           value={v.cadence || 'daily'}
           options={[
             { value: 'daily',  label: 'Daily — one generation each day' },
-            { value: 'hourly', label: 'Hourly — costs more, redraws more' }
+            { value: '12h',    label: 'Twice daily — every 12 hours' },
+            { value: '6h',     label: 'Every 6 hours' },
+            { value: '3h',     label: 'Every 3 hours' },
+            { value: 'hourly', label: 'Hourly — costs most, redraws most' }
           ]}
           onChange={(x) => patch({ cadence: x })}
           help="Cached in between, so ordinary panel wakes cost nothing. New text triggers a full colour redraw (15-26s), so daily is kinder to the battery."

@@ -37,8 +37,15 @@ const REQUEST_TIMEOUT_MS = 30000;   // generation is slower than a data fetch
 // not per token allowed, so a high ceiling costs nothing extra.
 const MAX_OUTPUT_TOKENS = 800;
 
+// Keys are stable config values — `hourly`/`daily` predate the others and
+// must keep resolving. A window is measured from the last generation, not
+// aligned to the clock, so the generation time drifts forward by up to one
+// wake interval per cycle.
 const CADENCES = {
   hourly: 60 * 60 * 1000,
+  '3h': 3 * 60 * 60 * 1000,
+  '6h': 6 * 60 * 60 * 1000,
+  '12h': 12 * 60 * 60 * 1000,
   daily: 24 * 60 * 60 * 1000,
 };
 const DEFAULT_CADENCE = 'daily';
