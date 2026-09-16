@@ -16,6 +16,7 @@ const { getBrowser, tryAcquirePage, releasePage } = require('../lib/render');
 const { preThreshold } = require('../lib/image');
 const { decodeSettingsParam } = require('../lib/htmlutil');
 const { safeError } = require('../lib/http');
+const { freezeTime, DEMO_INSTANT } = require('../lib/timefreeze');
 const { getActiveBeam } = require('../lib/beam-store');
 const dev = require('../lib/dev');
 
@@ -260,9 +261,15 @@ router.get('/widgets-matrix', checkAdminAuth, async (req, res) => {
     const payload = {
       cfg, units, screen: 1, layout: [],
       ...data,
-      generatedAt: new Date().toISOString()
+      generatedAt: demoOnly ? DEMO_INSTANT : new Date().toISOString()
     };
-    const html = renderPage({ payload, shell, ssr, mode: 'matrix' });
+    // Demo mode is the visual-regression snapshot, so the clock is frozen
+    // too — otherwise the date line, calendar grouping, moon phase and
+    // word-of-day redraw the baseline red every day. renderPage is
+    // synchronous, so nothing else can observe the swap.
+    const html = demoOnly
+      ? freezeTime(DEMO_INSTANT, () => renderPage({ payload, shell, ssr, mode: 'matrix' }))
+      : renderPage({ payload, shell, ssr, mode: 'matrix' });
     res.set('Content-Type', 'text/html; charset=utf-8');
     res.send(html);
   } catch (err) {
