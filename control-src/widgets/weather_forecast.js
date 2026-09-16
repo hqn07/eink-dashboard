@@ -7,7 +7,7 @@
 // Day count auto-scales with the variant's long axis (rows → height,
 // columns → width); an explicit forecastDays setting wins.
 
-import { homeCoords } from '../home.js';
+import { homeLoc } from '../home.js';
 
 import { escapeHtml, placeholder, semRed } from './_shared.js';
 import { icon } from './_weather_shared.js';
@@ -68,9 +68,13 @@ export function render(ctx) {
   const { weather, cfg, settings, cellW, cellH } = ctx;
   const w = weather;
   if (!w || !w.forecast || !w.forecast.length) {
+    // A tile with no location of its own inherits Setup, so "Set your
+    // location" must only show when NEITHER has one — otherwise a tile that
+    // is about to render fine tells the user to go configure it.
     const hasLoc =
       (settings && Number.isFinite(settings.lat) && Number.isFinite(settings.lon)) ||
-      !!homeCoords(cfg);
+      !!(settings && settings.city) ||
+      !!homeLoc(cfg);
     return placeholder('FORECAST', hasLoc ? 'Forecast unavailable' : 'Set your location', 'weather', { cellW, cellH }, hasLoc ? 'nodata' : 'setup');
   }
   const s = settings || {};

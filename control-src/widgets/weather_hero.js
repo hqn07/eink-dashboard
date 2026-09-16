@@ -14,7 +14,7 @@
 // doesn't expose it). Default keeps the original feels/humid/wind/
 // cloud-or-rise behavior so old tiles look unchanged.
 
-import { homeValue, homeCoords } from '../home.js';
+import { homeValue, homeLoc } from '../home.js';
 
 import { pickTier, placeholder, tidyPlace } from './_shared.js';
 import { icon, alertBanner, sunBar, hourlyStrip } from './_weather_shared.js';
@@ -119,7 +119,8 @@ export function render(ctx) {
   if (!weather) {
     const hasLoc =
       (settings && Number.isFinite(settings.lat) && Number.isFinite(settings.lon)) ||
-      !!homeCoords(cfg);
+      !!(settings && settings.city) ||
+      !!homeLoc(cfg);
     return placeholder('WEATHER', hasLoc ? 'Weather unavailable' : 'Set your location', 'weather', { cellW, cellH }, hasLoc ? 'nodata' : 'setup');
   }
   const w = weather;

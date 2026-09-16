@@ -1,7 +1,14 @@
 # Central Setup — shared facts, widget defaults, AI context
 
-Status: **design, not built** (2026-09-15). Written before any code so the
-schema question gets settled once.
+Status: **stages 1-3 shipped** (2026-09-16). Written before any code so the
+schema question got settled once; the stage headings below record what each
+step actually did.
+
+Not done: `home.tickers` and `home.feeds` from the sketch below were never
+added — no widget asked for them, and a fact nothing reads is just a field.
+`timezone` is read through the helper everywhere but new writes still go to
+the top level for it alone, because eight readers (including the scheduler)
+predate `cfg.home`.
 
 ## The problem
 
@@ -66,7 +73,7 @@ Two jobs, one block:
 2. **AI context** — everything here is available to the prompt, including
    `about`.
 
-## Stage 1 — `home.about`, and the AI reads it
+## Stage 1 — `home.about`, and the AI reads it — DONE
 
 Smallest useful slice. No migration, no UI restructuring.
 
@@ -80,7 +87,7 @@ live config.
 
 **Payoff:** the briefing knows who it is for.
 
-## Stage 2 — Setup becomes the single editor for shared facts
+## Stage 2 — Setup becomes the single editor for shared facts — DONE
 
 - A `homeValue(cfg, key)` read helper with legacy fallback:
   `cfg.home.city ?? cfg.city`. **Read-time only — no config rewrite.** An old
@@ -93,7 +100,7 @@ live config.
 **Payoff:** the facts are visible and editable in one place instead of being
 folklore.
 
-## Stage 3 — widgets inherit, and say so
+## Stage 3 — widgets inherit, and say so — DONE
 
 - Forms show the inherited value as the state, not a blank:
   `Location — using Setup: Gainesville  [Override]`.
@@ -102,6 +109,23 @@ folklore.
 
 **Payoff:** adding a weather tile asks nothing. This is the same goal as the
 knob removal, reached from the data side rather than the cosmetic side.
+
+Shipped 2026-09-16. Two things the plan did not anticipate:
+
+- **A blank weather tile used to render NO DATA, not inherit.** `resolveLoc()`
+  returned null and the comment above it defended that as the
+  self-contained-settings contract. Inheriting a *location* does not breach
+  that contract — the tile still gets its own fetch and its own slot; what it
+  inherits is where to look, not another tile's data.
+- **Migration v6 has to compare places, not strings.** The wizard wrote
+  `"Gainesville,Florida,US"` and the tile autocomplete wrote
+  `"Gainesville, Florida, US"` for the same spot, so the live config's one
+  duplicate would have survived on a space. Coordinates decide when present;
+  the city beside them is a label for the same point.
+
+Override seeds BOTH city and coordinates so it starts as an exact copy —
+city alone would have quietly cost the tile its severe-weather alerts, which
+need a coordinate pair.
 
 ## Not the thing we deleted
 

@@ -25,7 +25,9 @@ export function Form({ values, patch, onChange, fields }) {
         {isWeather && (
           <LocationFields
             values={v}
-            onChange={(loc) => onChange({ ...v, ...loc })}
+            // See the note in weather_hero.form.jsx — LocationFields emits a
+            // complete settings object and a merge here would defeat clearing.
+            onChange={onChange}
           />
         )}
       </FormSection>

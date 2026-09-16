@@ -367,8 +367,9 @@ test('config migration v5 strips cosmetics and keeps content', async () => {
       ],
     }],
   };
+  const { GRID_VERSION } = await import('../lib/screens.js');
   const out = migrateConfigToScreens(JSON.parse(JSON.stringify(cfg)));
-  assert.equal(out.gridVersion, 5);
+  assert.equal(out.gridVersion, GRID_VERSION);
   const [a, b, c] = out.screens[0].layout;
 
   // Cosmetics gone, including the item-level layout-density override.
@@ -401,4 +402,48 @@ test('config migration v5 strips cosmetics and keeps content', async () => {
   // A variant that no longer exists is dropped so the tile falls through to
   // the widget default instead of pinning something unreachable.
   assert.ok(!('variant' in b.settings), 'cut variant strip5 should be dropped');
+});
+
+// --- Config migration v6: drop per-tile locations that restate Setup -------
+//
+// Same asymmetry as v5, sharper: this deletes a location. Dropping one that
+// merely duplicates cfg.home costs nothing (the tile inherits the identical
+// value); dropping one that points somewhere ELSE silently moves a tile to
+// another city. So the override case is asserted as hard as the strip case.
+test('config migration v6 drops duplicated tile locations, keeps real overrides', async () => {
+  const { migrateConfigToScreens } = await import('../lib/screens.js');
+  const mk = (settings) => ({
+    gridVersion: 5,
+    firstRunSeeded: true,
+    // Legacy top-level shape on purpose — a config old enough to need v6 is
+    // exactly one written before cfg.home existed.
+    city: 'Gainesville,Florida,US', lat: 29.65163, lon: -82.32483,
+    screens: [{ id: 'x', isDefault: true, layoutKind: 'free',
+      layout: [{ id: 't', widgetId: 'weather_hero', settings }] }],
+  });
+  const out = (settings) => migrateConfigToScreens(mk(settings)).screens[0].layout[0].settings;
+
+  // The live config's actual shape: same place, different comma spacing.
+  assert.deepEqual(out({ city: 'Gainesville, Florida, US', lat: 29.65163, lon: -82.32483 }), {});
+  // Coordinates alone are enough to call it a duplicate; siblings survive.
+  assert.deepEqual(out({ lat: 29.65163, lon: -82.32483, variant: 'split' }), { variant: 'split' });
+  // City-only, spacing-insensitive.
+  assert.deepEqual(out({ city: 'Gainesville, Florida, US' }), {});
+
+  // A tile deliberately pointed elsewhere must survive intact.
+  const tokyo = { city: 'Tokyo,JP', lat: 35.68, lon: 139.69 };
+  assert.deepEqual(out(tokyo), tokyo);
+  assert.deepEqual(out({ city: 'Boston,MA,US' }), { city: 'Boston,MA,US' });
+  // Coordinates that differ are an override even when the city string matches.
+  assert.deepEqual(out({ city: 'Gainesville,Florida,US', lat: 1, lon: 2 }),
+    { city: 'Gainesville,Florida,US', lat: 1, lon: 2 });
+
+  // With no home to inherit from, nothing is touched — stripping there would
+  // leave the tile with no location at all.
+  const homeless = migrateConfigToScreens({
+    gridVersion: 5, firstRunSeeded: true,
+    screens: [{ id: 'x', isDefault: true, layoutKind: 'free',
+      layout: [{ id: 't', widgetId: 'weather_hero', settings: { lat: 1, lon: 2 } }] }],
+  });
+  assert.deepEqual(homeless.screens[0].layout[0].settings, { lat: 1, lon: 2 });
 });

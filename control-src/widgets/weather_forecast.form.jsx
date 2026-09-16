@@ -19,7 +19,12 @@ export function Form({ values, patch, onChange, fields }) {
       <FormSection title="Data">
         <LocationFields
           values={v}
-          onChange={(loc) => onChange({ ...v, ...loc })}
+          // Pass onChange straight through: LocationFields emits the COMPLETE
+          // next settings object, and a `{...v, ...loc}` merge here would
+          // silently undo "Use Setup instead", which works by deleting keys.
+          // Same merge-where-a-replace-is-needed bug as ListEditor's
+          // replaceRow (3289942).
+          onChange={onChange}
         />
         <SelectField
           label="Units (this tile only)"

@@ -1,8 +1,12 @@
 import React from 'react';
+import { homeValue } from '../home.js';
 
-export function Form({ values, patch, onChange, fields }) {
+export function Form({ values, patch, onChange, fields, cfg }) {
   const v = values || {};
   const { TextField, FormSection, defaults = {} } = fields;
+  // Blank inherits Setup — say whose account that is rather than showing
+  // "octocat" and letting the user assume nothing is configured.
+  const inherited = homeValue(cfg, 'githubUser') || '';
   return (
     <>
       <FormSection title="Content">
@@ -15,7 +19,10 @@ export function Form({ values, patch, onChange, fields }) {
           value={v.username || ''}
           defaultValue={defaults.username}
           onChange={(x) => patch({ username: x })}
-          placeholder="octocat"
+          placeholder={inherited || 'octocat'}
+          help={inherited
+            ? `Blank uses Setup: ${inherited}`
+            : 'Set one here, or in Settings > Tools > You & your place for every tile.'}
         />
         <TextField
           label="Tile heading"

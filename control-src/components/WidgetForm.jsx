@@ -2,8 +2,10 @@ import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as Switch from '@radix-ui/react-switch';
 import { CaretUp, CaretDown, DotsSixVertical, Crosshair } from '@phosphor-icons/react';
 import { geocode, reverseGeocode } from '../api.js';
+import { homeValue, homeCoords } from '../home.js';
 import { MIGRATED_FORMS, MIGRATED_DEFS } from '../widgets/_registry.js';
 import { TokenBareInput } from './TokenInput.jsx';
+import { HomeCtx } from './home-ctx.js';
 import { TokenCtx } from './token-ctx.js';
 import { buildTokenCtx } from '../widgets/_tokens.js';
 import {
@@ -574,8 +576,57 @@ function LocationAutocomplete({ value, onPick }) {
 // still possible. Lat/lon take precedence over city at fetch time.
 function LocationFields({ values, onChange }) {
   const v = values || {};
+  const cfg = useContext(HomeCtx);
   const [locating, setLocating] = useState(false);
   const [geoErr, setGeoErr] = useState('');
+
+  // Stage 3: a tile with no location of its own inherits Setup, and the form
+  // says so instead of showing three empty boxes that the user has to know
+  // are optional. A per-tile value is written ONLY when they press Override,
+  // which is what stops every new weather tile restating cfg.home.
+  const overridden = Number.isFinite(v.lat) || Number.isFinite(v.lon) || !!v.city;
+  const inheritedCity = homeValue(cfg, 'city') || '';
+  const inheritedCoords = homeCoords(cfg);
+  const inheritedLabel = inheritedCity
+    ? inheritedCity.split(',')[0]
+    : (inheritedCoords ? `${inheritedCoords.lat.toFixed(2)}, ${inheritedCoords.lon.toFixed(2)}` : '');
+  const clearOverride = () => {
+    const { lat, lon, city, ...rest } = v;
+    onChange(rest);
+  };
+
+  if (!overridden) {
+    return (
+      <div className="wsm-field">
+        <span className="wsm-field-label">Location</span>
+        <div className="loc-badge ok">
+          {inheritedLabel
+            ? <>Using Setup: <strong>{inheritedLabel.toUpperCase()}</strong></>
+            : <>No location in Setup yet</>}
+        </div>
+        <button
+          type="button"
+          className="btn"
+          style={{ marginTop: 6 }}
+          // Seed BOTH the city and the coordinates, so an override starts as
+          // an exact copy of what it inherited. City alone would quietly cost
+          // the tile its severe-weather alerts, which need a coordinate pair.
+          onClick={() => onChange({
+            ...v,
+            city: inheritedCity || '',
+            ...(inheritedCoords || {})
+          })}
+        >
+          Override for this tile
+        </button>
+        <span className="wsm-field-help">
+          {inheritedLabel
+            ? 'Settings > Tools > You & your place changes it for every tile at once.'
+            : 'Set one in Settings > Tools > You & your place, or override it here.'}
+        </span>
+      </div>
+    );
+  }
 
   // Browser geolocation → precise lat/lon, plus a reverse-geocode to fill
   // the city label with the closest named place. HTTPS-only (works on the
@@ -605,8 +656,17 @@ function LocationFields({ values, onChange }) {
   return (
     <>
       <div className="wsm-field-help" style={{ marginBottom: 6 }}>
-        Pick from search to set lat/lon. Manual lat/lon overrides city. Leave blank to inherit global.
+        This tile has its own location. Pick from search to set lat/lon;
+        manual lat/lon overrides city.
       </div>
+      <button
+        type="button"
+        className="btn"
+        onClick={clearOverride}
+        style={{ marginBottom: 8, width: '100%' }}
+      >
+        {inheritedLabel ? `Use Setup instead (${inheritedLabel})` : 'Clear and use Setup'}
+      </button>
       <button
         type="button"
         className="btn"
@@ -1021,7 +1081,9 @@ export default function WidgetForm(props) {
   }, [previewData, item]);
   return (
     <TokenCtx.Provider value={liveTokenCtx}>
-      <WidgetFormInner {...props} />
+      <HomeCtx.Provider value={(previewData && previewData.cfg) || null}>
+        <WidgetFormInner {...props} />
+      </HomeCtx.Provider>
     </TokenCtx.Provider>
   );
 }
@@ -1098,6 +1160,10 @@ function WidgetFormInner({ widgetId, values, onChange, item, previewData, onHove
           MigratedForm={MigratedForm}
           formProps={{
             values: v, patch, onChange,
+            // cfg so a form can show what a blank field inherits from Setup
+            // (stage 3). Same source as HomeCtx; passed explicitly because
+            // most forms are plain functions, not hook consumers.
+            cfg: (previewData && previewData.cfg) || null,
             fields: { ...FIELD_PRIMITIVES, defaults }
           }}
           leadingSections={leadingSections}
