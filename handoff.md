@@ -1,5 +1,57 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-16 — setup stage 2 + the visual guard was lying about 2/3 of the matrix
+> **`fullPage` screenshots are tiled at 16384px, and the tiles don't line
+> up.** The matrix page is ~50892px. Past the first boundary, content came
+> back displaced by a few hundred px, by a DIFFERENT amount per run — so
+> everything below y=16384 (two thirds of the matrix) was never really being
+> compared; the baseline just held whatever that run's tiling produced.
+> Found by forensics on an intermittent 1299px diff: the changed rows
+> repeated at *exactly* 16384px intervals. `scripts/visual-regression.mjs`
+> now captures 4000px clips and stitches them with sharp (`2cc064a`).
+> Verified three ways: 3 consecutive runs identical, slice heights
+> 3000/4000/8000 agree to ~20px of seam AA, vs ~10.2M px of disagreement
+> with fullPage. It also waits on `window.__autofitDone` — the signal
+> `lib/render.js` already used — instead of sleeping 500ms and hoping.
+> **Earlier the same day:** the matrix baseline went red within a day of
+> every capture because `?demo=1` froze the DATA but not the CLOCK, and 13
+> render modules plus the token parser read `new Date()` directly. Fixed by
+> freezing at the render choke point (`lib/timefreeze.js`, `48d04fb`) rather
+> than threading a `now` through 13 modules: `renderPage` is fully
+> synchronous, so swapping `global.Date` around it cannot leak into another
+> request. `FrozenDate` delegates `Symbol.hasInstance` because
+> `calendar.js` branches on `ev.start instanceof Date`, which a subclass
+> answers false for. Frozen at Mon 15 Jun 2026 10:30 EDT.
+>
+> **Setup stage 2 shipped** (`b27561c` read side, `95a2273` panel).
+> `homeValue(cfg, key)` reads `cfg.home` first, falls back to the legacy
+> top-level key, rewrites nothing. **The fallback is deliberately not
+> `??`** — defaults ship `home:{city:"",lat:null}`, so a live config with a
+> top-level `city` would have resolved to `""` and sent weather to NO DATA.
+> Absent means empty, not just null. `timezone` was included rather than
+> deferred: it was read in eight places and routing only some would let the
+> scheduler and the widgets disagree about what time it is.
+> Hand-mirrored CJS/ESM like `_tokens.js`; `check:widgets` compares them by
+> BEHAVIOUR over fixtures (probed by breaking the mirror).
+> Settings > Tools > **"You & your place"** = location / timezone / GitHub
+> user / About you; the old "Setup" row is now "Setup wizard".
+> `cityLabel` is gone — SetupWizard was its only writer and nothing read it.
+> Verified in a browser on a throwaway DATA_DIR: picking a city writes
+> `home.*` only, and the server then fetched weather from a config with no
+> top-level coordinates.
+>
+> **AI cadence** (`9823957`): daily / 12h / 6h / 3h / hourly. The window is
+> measured from the last generation, not clock-aligned, so generation time
+> drifts forward by up to one wake interval per cycle.
+>
+> **Open:** stage 3 (widgets inherit + stop writing per-tile lat/lon) is
+> untouched, and wants a panel photo either side. **`home.icalUrls` is
+> declared and read but has no UI** — surfacing calendar URLs centrally
+> concentrates secrets that Backup > EXPORT writes to plain JSON, which is
+> the open question in the architecture doc. `control-src/components/
+> LocationPanel.jsx` (344 lines) is dead code — imported nowhere since the
+> wizard replaced it.
+
 > ## 2026-09-15 (late) — widget refresh pass + two guard holes closed
 > **The visual guard was decorative.** Two independent defects, both found by
 > probing rather than reading:
