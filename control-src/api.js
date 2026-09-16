@@ -253,21 +253,6 @@ export async function setPin(pin) {
   return r.ok;
 }
 
-export async function weatherCheck({ city, lat, lon, units }) {
-  const params = new URLSearchParams();
-  if (Number.isFinite(lat) && Number.isFinite(lon)) {
-    params.set('lat', lat); params.set('lon', lon);
-  } else if (city) {
-    params.set('city', city);
-  } else {
-    return { ok: false };
-  }
-  if (units) params.set('units', units);
-  const r = await authFetch(`/api/weather-check?${params.toString()}`);
-  if (!r.ok) return { ok: false };
-  return r.json();
-}
-
 // Unicode flag from 2-letter ISO country code. Falls back to globe.
 export function flagEmoji(cc) {
   if (!cc || typeof cc !== 'string' || cc.length !== 2) return '🌍';

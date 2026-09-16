@@ -447,8 +447,11 @@
 > - **Setup stage 3 leftovers**: `home.tickers` / `home.feeds` were never
 >   added (nothing reads them), and `timezone` is read through `homeValue()`
 >   everywhere but new writes still go to the top level for it alone.
-> - **`control-src/components/LocationPanel.jsx` is dead code** (344 lines),
->   imported nowhere since the wizard replaced it.
+> - **`GET /api/weather-check` (`routes/geocode.js`) is now unreferenced.**
+>   Its only caller was `LocationPanel`, deleted 2026-09-16; the client
+>   helper went with it. The route still works and is admin-gated — left in
+>   place deliberately in case a "test this location" button wants it, but
+>   nothing calls it today.
 > - **Open-sourcing history scrub** — wifi pass + two fleet tokens are still
 >   in old commits; repo still private. Recipe in the 2026-07-07 entry.
 > - **Firmware 1.21.0** was built by CI; confirm the device actually OTA'd

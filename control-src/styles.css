@@ -969,16 +969,6 @@ main.layout {
 .loc-badge.err     { background: var(--accent); color: #fff; border-color: var(--accent); }
 .loc-badge.idle    { color: var(--mute); }
 
-.recent-cities {
-  margin-top: 10px;
-}
-.recent-label {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: var(--mute);
-}
 
 /* Schedule lock badge below the preview when running locked to a schedule */
 .schedule-lock-badge {
@@ -1364,14 +1354,6 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 .todo-check.done { background: var(--ink); color: #fff; }
 
-/* ============ SCHEDULE GROUP ============ */
-.sched-group {
-  border-left: var(--bw-heavy) solid var(--ink);
-  padding: 4px 0 4px 14px;
-  margin-top: 8px;
-  transition: opacity 0.2s ease;
-}
-.sched-group.disabled { opacity: 0.4; pointer-events: none; }
 
 /* ============ EDITOR (react-grid-layout) ============ */
 .editor-wrap {
