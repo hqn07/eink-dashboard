@@ -47,13 +47,9 @@
 .cell-accent-red .tb-text,              /* text bar headline */
 .cell-accent-red .msg-text,
 .cell-accent-red .moon-name,            /* moon phase */
-.cell-accent-red .eink-batt-pct,        /* battery percents */
-.cell-accent-red .mac-batt-pct,
-.cell-accent-red .mac-np-title {        /* now-playing track title */
+.cell-accent-red .eink-batt-pct {       /* battery percent */
   color: var(--face-red);
 }
-/* now-playing progress fill is a background, not text */
-.cell-accent-red .mac-np-bar-fill { background: var(--face-red); }
 /* sparkline value (text) + the trend line (stroke) */
 .cell-accent-red .spark-value { color: var(--face-red); }
 .cell-accent-red .spark-line { stroke: var(--face-red); }

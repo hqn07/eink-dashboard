@@ -136,7 +136,6 @@ app.get('/', (req, res) => res.redirect('/control'));
 app.use(require('./routes/auth'));         // /control* + /api/auth* (PIN login/setup)
 app.use(require('./routes/geocode'));      // /api/geocode + reverse + weather-check
 app.use(require('./routes/battery'));      // /api/battery report/read
-app.use(require('./routes/mac-state'));    // /api/mac-state (mac-agent push)
 app.use(require('./routes/firmware'));     // /api/firmware/manifest + /firmware/:file
 app.use(require('./routes/devices'));      // /api/setup + /api/devices + /api/device/:id + /api/log(s)
 app.use(require('./routes/webhook'));      // /api/webhook/:key (push JSON -> webhook widget)

@@ -146,9 +146,6 @@ function buildContext(ctx) {
     lines.push('Headlines: ' + heads.map((h) => h.title || '').filter(Boolean).join(' | '));
   }
 
-  const np = ctx && ctx.macNowPlaying;
-  if (np && np.title) lines.push(`Now playing: ${np.title}${np.artist ? ` — ${np.artist}` : ''}`);
-
   const batt = ctx && ctx.battery;
   if (batt && Number.isFinite(batt.pct)) lines.push(`Panel battery: ${Math.round(batt.pct)}%`);
 

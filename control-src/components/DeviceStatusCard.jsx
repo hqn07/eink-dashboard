@@ -1,9 +1,9 @@
 // Compact device-status readout under the Live Preview pane — surfaces
 // the telemetry that otherwise hides in header pills: ESP32 battery
-// (last push), the screen's refresh cadence, and mac-agent freshness.
+// (last push) and the screen's refresh cadence.
 
 import React, { useEffect, useState } from 'react';
-import { fetchBattery, fetchMacState } from '../api.js';
+import { fetchBattery } from '../api.js';
 
 const POLL_MS = 30000;
 
@@ -20,16 +20,14 @@ function ago(at, now) {
 
 export default function DeviceStatusCard({ refreshMinutes }) {
   const [battery, setBattery] = useState(null);   // { v, pct, at } | null
-  const [macAt, setMacAt] = useState(null);       // timestamp | null
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     let cancelled = false;
     const pull = async () => {
-      const [b, m] = await Promise.allSettled([fetchBattery(), fetchMacState()]);
+      const [b] = await Promise.allSettled([fetchBattery()]);
       if (cancelled) return;
       if (b.status === 'fulfilled') setBattery(b.value);
-      if (m.status === 'fulfilled') setMacAt(m.value && m.value.at);
       setNow(Date.now());
     };
     pull();
@@ -55,11 +53,6 @@ export default function DeviceStatusCard({ refreshMinutes }) {
     {
       k: 'Refresh',
       v: Number.isFinite(refreshMinutes) ? `every ${refreshMinutes}m` : '—',
-      sub: null
-    },
-    {
-      k: 'Mac agent',
-      v: macAt ? ago(macAt, now) : 'never',
       sub: null
     }
   ];

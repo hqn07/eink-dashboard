@@ -37,7 +37,7 @@ const PresetContext = React.createContext({ widgetId: null, item: null, previewD
 // — only these show the "Semantic red" toggle. Keep in sync with the
 // widgets that import semRed from _shared.js.
 const SEMANTIC_RED_WIDGETS = new Set([
-  'aqi', 'eink_battery', 'mac_battery', 'countdown',
+  'aqi', 'eink_battery', 'countdown',
   'calendar', 'weather_forecast', 'weather_hero', 'sparkline'
 ]);
 
@@ -1174,9 +1174,7 @@ function WidgetFormInner({ widgetId, values, onChange, item, previewData, onHove
   }
 
   switch (widgetId) {
-    // mac_nowplaying — migrated to control-src/widgets/mac_nowplaying.jsx
 
-    // mac_battery — migrated to control-src/widgets/mac_battery.jsx
 
     // clock — migrated to control-src/widgets/clock.js
 

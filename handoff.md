@@ -1,5 +1,45 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-16 (later) — Mac push agent removed
+> The agent had been POSTing `/api/mac-state` every 30s and getting **401**
+> since at least 14:00: the `DEVICE_TOKEN` in the Mac's `.env` (file dated
+> May 30) no longer matches production's. The route was never the problem —
+> `checkAdminAuth` does accept `DEVICE_TOKEN`. Rather than re-key it, the
+> user chose to remove the agent.
+>
+> Gone: `mac-agent.js`, `widgets/macnowplaying.js`, `widgets/macbattery.js`,
+> `widgets/_mac_state.js`, `routes/mac-state.js`, `MacAgentBadge.jsx`, and
+> both widget modules + forms. **32 → 30 widgets.** Also the `now_playing`
+> screen preset (it existed only for that tile), the Settings menu's whole
+> Status section, the Device card's "Mac agent" row, the `mac-agent` npm
+> script, the Mac block in `.env.example`, and ~50 dead CSS rules.
+> The launchd job is unloaded and its plist moved out of `~/Library/
+> LaunchAgents` (kept in this session's scratchpad if it is ever wanted).
+> **Config migration v7** drops `mac_nowplaying` / `mac_battery` tiles so no
+> config is left pointing at a widget that no longer exists. It is a FIXED
+> id list, not "anything unknown" — a widget missing because its module
+> failed to load is a bug to fix, and silently deleting the user's tile
+> would destroy the evidence.
+>
+> **The visual guard earned its keep**: it went 500 on
+> `DEMO_ARTWORK_B64 is not defined`. The base64 demo image was introduced
+> for now-playing album art but the **`photo` widget reuses it**, and the
+> grep that cleared it excluded the file it was defined in. Restored, and
+> the comment no longer calls it album art. Worth remembering that
+> "unused after I delete X" needs checking INSIDE the defining file too.
+>
+> Shared CSS needed the same care: the battery variant rules are written as
+> `.eink-batt-inline, .mac-batt-inline { }`, so the dead selectors came out
+> of the lists rather than the rules being deleted.
+>
+> `V5_LIVE_VARIANTS` in `lib/screens.js` still names both widgets. That is
+> correct and must stay — it is frozen history, and a migration has to give
+> the same answer whenever it runs.
+>
+> Verified: 30 wired, `test:api` 24/24, both baselines re-captured (matrix
+> 45.8M → 43.6M px) and passing 0px, server boots clean, `/dashboard` 200,
+> `/api/mac-state` now 404. Editor bundle 343 → 328 kB.
+
 > ## 2026-09-16 — setup stage 2 + the visual guard was lying about 2/3 of the matrix
 > **`fullPage` screenshots are tiled at 16384px, and the tiles don't line
 > up.** The matrix page is ~50892px. Past the first boundary, content came

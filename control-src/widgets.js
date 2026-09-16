@@ -56,11 +56,9 @@ const POOL_META = {
   calendar:         { category: 'Calendar', blurb: 'Upcoming events agenda', keywords: 'events agenda ical schedule appointments' },
   tasks:            { category: 'Calendar', blurb: 'Todoist / iCal to-do list', keywords: 'todo todoist tasks checklist reminders' },
   transit:          { category: 'Calendar', blurb: 'NYC MTA live arrivals', keywords: 'transit subway train bus mta arrivals commute' },
-  mac_nowplaying:   { category: 'Media',    blurb: 'Now playing from your Mac', keywords: 'music song spotify apple playing media track album' },
   photo:            { category: 'Media',    blurb: 'Your image, dithered to 1-bit', keywords: 'photo image picture dither' },
   headlines:        { category: 'News',     blurb: 'RSS or Hacker News headlines', keywords: 'news rss feed hn hacker headlines atom' },
   eink_battery:     { category: 'System',   blurb: 'This display’s battery level', keywords: 'battery power display device charge' },
-  mac_battery:      { category: 'System',   blurb: 'Your Mac’s battery level', keywords: 'battery power mac laptop charge' },
   sparkline:        { category: 'Data',     blurb: 'Weather or battery trend line', keywords: 'trend graph chart line sparkline' },
   fx:               { category: 'Data',     blurb: 'Currency exchange rates (no key)', keywords: 'currency forex exchange fx usd eur rate' },
   crypto:           { category: 'Data',     blurb: 'Crypto prices + 24h change (no key)', keywords: 'crypto bitcoin btc eth ethereum coin price' },
@@ -87,8 +85,6 @@ export const WIDGET_REGISTRY = [
   { ...migratedDef('calendar') },
   // Mac-only widgets — only render data when the server is running on
   // the user's Mac (LAN path). On Railway/Linux they show MAC OFFLINE.
-  { ...migratedDef('mac_nowplaying') },
-  { ...migratedDef('mac_battery') },
   { ...migratedDef('eink_battery') },
   { ...migratedDef('clock') },
   // No-key widgets (2026-06-16). This array is the editor palette's
@@ -279,18 +275,6 @@ export const SCREEN_PRESETS = [
     description: 'Just the weather, full-bleed.',
     layout: [
       { widgetId: 'weather_hero', x: 0, y: 0, w: 24, h: 12 }
-    ]
-  },
-  {
-    id: 'now_playing',
-    name: 'Now Playing',
-    description: 'Mac · Now Playing dominant on the right, weather + clock left.',
-    layout: [
-      { widgetId: 'text',           x: 0,  y: 0,  w: 12, h: 1,
-        settings: { variant: 'bar', text: '{{city}} · {{date|long}}', align: 'left', upper: true, fontFamily: 'sans' } },
-      { widgetId: 'weather_hero',   x: 0,  y: 1,  w: 12, h: 7 },
-      { widgetId: 'clock',          x: 0,  y: 8,  w: 12, h: 4 },
-      { widgetId: 'mac_nowplaying', x: 12, y: 0,  w: 12, h: 12 }
     ]
   },
   {

@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { m, AnimatePresence } from 'framer-motion';
 import {
-  Gear, MagicWand, Keyboard, Broadcast, Bell, Archive, CaretRight, User,
+  Gear, MagicWand, Keyboard, Archive, CaretRight, User,
 } from '@phosphor-icons/react';
-import MacAgentBadge from './MacAgentBadge.jsx';
 import PushNowButton from './PushNowButton.jsx';
 import PanelPreview from './PanelPreview.jsx';
 import PinButton from './PinButton.jsx';
@@ -11,7 +10,7 @@ import SetupPanel from './SetupPanel.jsx';
 import BackupPanel from './BackupPanel.jsx';
 
 // Single header settings menu. Consolidates what used to be separate
-// header controls — Mac-agent status, Setup wizard, Panel view, PIN/Lock,
+// header controls — Setup wizard, Panel view, PIN/Lock,
 // keyboard shortcuts, and Tools (shared facts + backup) — into one gear
 // dropdown, grouped into labelled sections (Option A layout).
 //
@@ -61,12 +60,6 @@ export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcut
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.12 }}
           >
-            <div className="settings-section-label">Status</div>
-            <div className="settings-status-row">
-              <Broadcast size={14} weight="bold" />
-              <MacAgentBadge />
-            </div>
-
             <div className="settings-section-label">Device</div>
             <PushNowButton block />
             <button

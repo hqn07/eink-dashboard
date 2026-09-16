@@ -29,8 +29,6 @@ import * as crypto           from './crypto.js';
 import * as eink_battery     from './eink_battery.js';
 import * as fx               from './fx.js';
 import * as headlines        from './headlines.js';
-import * as mac_battery      from './mac_battery.js';
-import * as mac_nowplaying   from './mac_nowplaying.js';
 import * as moon             from './moon.js';
 import * as onthisday        from './onthisday.js';
 import * as photo            from './photo.js';
@@ -62,8 +60,6 @@ import { Form as cryptoForm }          from './crypto.form.jsx';
 import { Form as einkBatteryForm }     from './eink_battery.form.jsx';
 import { Form as fxForm }              from './fx.form.jsx';
 import { Form as headlinesForm }       from './headlines.form.jsx';
-import { Form as macBatteryForm }      from './mac_battery.form.jsx';
-import { Form as macNowPlayingForm }   from './mac_nowplaying.form.jsx';
 import { Form as moonForm }            from './moon.form.jsx';
 import { Form as onThisDayForm }       from './onthisday.form.jsx';
 import { Form as photoForm }           from './photo.form.jsx';
@@ -83,7 +79,7 @@ import { Form as worldClockForm }      from './world_clock.form.jsx';
 import { Form as wordofdayForm }       from './wordofday.form.jsx';
 
 const MODULES = [
-  ai, aqi, art, calendar, chess, stocks, codeactivity, clock, countdown, eink_battery, mac_battery, mac_nowplaying,
+  ai, aqi, art, calendar, chess, stocks, codeactivity, clock, countdown, eink_battery,
   headlines, moon, onthisday, photo, progress, qr, fx, crypto, quote, sparkline, sun, tasks, text, transit, uv, webhook, weather_forecast, weather_hero, world_clock, wordofday
 ];
 
@@ -100,8 +96,6 @@ const FORMS = {
   crypto:           cryptoForm,
   eink_battery:     einkBatteryForm,
   fx:               fxForm,
-  mac_battery:      macBatteryForm,
-  mac_nowplaying:   macNowPlayingForm,
   moon:             moonForm,
   headlines:        headlinesForm,
   onthisday:        onThisDayForm,

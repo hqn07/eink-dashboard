@@ -109,7 +109,7 @@ export function render(ctx) {
 
   // Lightning glyph appears when voltage is above the TP4056 charge
   // threshold (~4.10V). Solid black SVG for threshold + invert safety,
-  // same approach as mac_battery's charging indicator.
+  // inline SVG so it inherits the cell's colour on either theme.
   const charging = Number.isFinite(battery.v) && battery.v > 4.10;
   const bolt = charging
     ? '<svg class="eink-batt-bolt" viewBox="0 0 24 24" width="0.7em" height="0.7em" aria-hidden="true"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" fill="#000"/></svg>'

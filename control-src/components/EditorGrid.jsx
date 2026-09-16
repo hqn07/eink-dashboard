@@ -36,13 +36,11 @@ function smallestSizeKey(def) {
 // smallest preset. Fallback: the widget's defaultSize.
 const SHOWCASE_SIZE_BY_ID = {
   clock:            'S',
-  mac_battery:      'S',
   eink_battery:     'S',
   text:             'S',
   calendar:         'M',
   weather_forecast: 'M',
-  weather_hero:     'L',
-  mac_nowplaying:   'L'
+  weather_hero:     'L'
 };
 function showcaseSizeKey(def) {
   const hint = SHOWCASE_SIZE_BY_ID[def.id];

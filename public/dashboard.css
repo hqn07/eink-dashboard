@@ -825,55 +825,12 @@ html, body {
 }
 
 /* ---------- Mac · Now Playing ---------- */
-.mac-np-card {
-  display: flex; flex-direction: column; gap: var(--face-gap-6);
-  font-family: var(--face-mono);
-  /* Absolute fill of the nearest positioned ancestor (.cell when the
-   * tile has no fontScale, .cell-scale when it does). Without this,
-   * percentage heights inside the flex-column .cell or the scaled
-   * .cell-scale wrapper don't always resolve to a definite size in
-   * Chromium, so the card's children flex correctly but the card
-   * itself collapses to content height — leaving a big dead band of
-   * whitespace below the song info. */
-  position: absolute;
-  inset: 0;
-}
-.mac-np-head { display: flex; align-items: center; gap: var(--face-gap-8); }
+
 /* Per-tile header alignment knob — moves the "NOW PLAYING" heading
  * (plus its inline state glyph when present) inside the row. */
-.mac-np-head-left   { justify-content: flex-start; }
-.mac-np-head-center { justify-content: center; }
-.mac-np-head-right  { justify-content: flex-end; }
-
-/* Per-tile text alignment knob — applies to the artist / song /
- * source block inside `.mac-np-text`. The stacked layout already
- * centers; this rule overrides when the user picks something else. */
-.mac-np-text-left   .mac-np-text { text-align: left;   align-items: flex-start; }
-.mac-np-text-center .mac-np-text { text-align: center; align-items: center; }
-.mac-np-text-right  .mac-np-text { text-align: right;  align-items: flex-end; }
-.mac-np-stacked.mac-np-text-left   .mac-np-stacked-text { text-align: left;  align-items: flex-start; }
-.mac-np-stacked.mac-np-text-center .mac-np-stacked-text { text-align: center; align-items: center; }
-.mac-np-stacked.mac-np-text-right  .mac-np-stacked-text { text-align: right;  align-items: flex-end; }
 
 /* Art position knob (horizontal layout only). Flip the body's flex
  * direction so the cover sits on the chosen side of the text block. */
-.mac-np-body-art-right { flex-direction: row; }
-.mac-np-body-art-left  { flex-direction: row-reverse; }
-.mac-np-state {
-  font-size: 18px; font-weight: 700;
-  font-family: var(--face-mono);
-}
-.mac-np-body {
-  display: flex; gap: var(--face-gap-12); flex: 1; min-height: 0;
-}
-.mac-np-art {
-  flex-shrink: 0;
-  border: var(--face-rule) solid #000;
-  image-rendering: pixelated;
-  background: #fff;
-}
-.mac-np-art-shape-rounded { border-radius: 10px; overflow: hidden; }
-.mac-np-art-shape-circle  { border-radius: 50%; overflow: hidden; }
 
 /* Inner wrapper that carries the user's fontScale transform. Sized
  * inverse to the scale so the post-transform paint still fills the
@@ -959,239 +916,44 @@ html, body {
 .cell.cell-inverted .eink-batt-bar-tip { background: #fff; }
 .cell.cell-inverted .eink-batt-age { color: #fff; } /* #aaa lied in the editor; device thresholds it to white */
 
-/* Battery variants (shared by eink_battery + mac_battery so the two
- * tiles read as a pair). inline = one centered row, the bar stretches
- * into the leftover width; minimal = percent alone, centered. */
-.eink-batt-inline,
-.mac-batt-inline {
+/* Battery variants. inline = one centered row, the bar stretches into the
+ * leftover width; minimal = percent alone, centered. */
+.eink-batt-inline {
   flex-direction: row;
   align-items: center;
   gap: var(--face-gap-12);
 }
-.eink-batt-inline .col-title,
-.mac-batt-inline .col-title { margin: 0; white-space: nowrap; }
+.eink-batt-inline .col-title { margin: 0; white-space: nowrap; }
 .eink-batt-inline .eink-batt-bar {
   flex: 1 1 0;
   width: auto;
   margin: 0 6px 0 0; /* keeps the tip nub off the percent */
 }
-.eink-batt-inline .eink-batt-pct,
-.mac-batt-inline .mac-batt-pct { flex: 0 0 auto; align-self: center; }
-.mac-batt-inline .mac-batt-state { margin-left: auto; }
+.eink-batt-inline .eink-batt-pct { flex: 0 0 auto; align-self: center; }
 /* minimal: stretch (not center) so the autofit percent measures the
  * full cell width; the text itself centers via justify-content. */
-.eink-batt-minimal,
-.mac-batt-minimal {
+.eink-batt-minimal {
   align-items: stretch;
   justify-content: center;
 }
 /* Gauge percent stretches across the tile so autofit can grow it with
  * the cell; content stays left-aligned to match title + volts. */
-.eink-batt .eink-batt-pct,
-.mac-batt .mac-batt-pct { align-self: stretch; justify-content: flex-start; }
-.eink-batt-minimal .eink-batt-pct,
-.mac-batt-minimal .mac-batt-pct { justify-content: center; }
-
-/* Mac battery base — mirrors .eink-batt so the variant rules above
- * can share one layout model. */
-.mac-batt {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--face-gap-6);
-  height: 100%;
-}
-.mac-batt-pct {
-  font-family: 'DM Serif Display', serif;
-  font-weight: 700;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  gap: var(--face-gap-6);
-}
-.mac-batt-state {
-  font-family: var(--face-mono);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  color: #000;
-}
-.mac-np-art-empty {
-  display: flex; align-items: center; justify-content: center;
-  font-size: 32px;
-}
-.mac-np-text {
-  flex: 1; min-width: 0;
-  display: flex; flex-direction: column; justify-content: center; gap: var(--face-gap-4);
-}
-.mac-np-title {
-  /* Inherits font-family from .mac-np-card so the per-tile typography
-   * picker takes effect; the default still resolves to DM Serif via
-   * typographyCss's `serif` key in widget-render.js. */
-  font-family: inherit;
-  font-weight: 700;
-  line-height: 1.05;
-  overflow: hidden;
-  /* Wrap long titles to multiple lines instead of clipping at the
-   * widget edge. Cell height (via autofit's data-max-font) limits
-   * total vertical space; the actual line count adapts. */
-  word-wrap: break-word;
-  overflow-wrap: anywhere;
-  display: block;
-}
-.mac-np-meta {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.mac-np-source {
-  /* Was 10px / #555 / letter-spacing 3px — invisible at 1-bit
-   * threshold once Sharp rounds the gray pixels. Heavier weight,
-   * pure black, modest tracking so the words survive dithering. */
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  color: #000;
-  text-transform: uppercase;
-}
-.mac-np-glyph {
-  /* Inline SVG play/pause glyph used by mac_nowplaying. Vertical-align
-   * so it lines up with adjacent text baselines rather than sitting
-   * on the baseline. */
-  vertical-align: -0.15em;
-}
-.mac-batt-bolt {
-  /* Solid SVG lightning bolt rendered inline next to the battery
-   * percentage. Inherits black on normal theme + flips to white on
-   * `.cell-inverted` via the global SVG fill rule. */
-  vertical-align: -0.1em;
-  margin-left: 0.15em;
-}
-.mac-np-progress {
-  display: flex; flex-direction: column; gap: var(--face-gap-4);
-}
-.mac-np-bar {
-  height: 4px;
-  border: var(--face-rule) solid #000;
-  background: #fff;
-  position: relative;
-}
-.mac-np-bar-fill {
-  position: absolute; left: 0; top: 0; bottom: 0;
-  background: #000;
-}
-.mac-np-time {
-  font-size: 11px;
-  letter-spacing: 2px;
-  font-weight: 700;
-}
+.eink-batt .eink-batt-pct { align-self: stretch; justify-content: flex-start; }
+.eink-batt-minimal .eink-batt-pct { justify-content: center; }
 
 /* Stacked layout (extended / full tier) — art centered with time
  * bookends, title block beneath. */
-.mac-np-stacked .mac-np-stacked-row {
-  display: flex; align-items: center; justify-content: center;
-  gap: var(--face-gap-16);
-  flex: 1; min-height: 0;
-}
-.mac-np-bookend {
-  font-family: var(--face-mono);
-  font-weight: 700;
-  font-size: 22px;
-  letter-spacing: 1px;
-  min-width: 64px;
-  text-align: center;
-}
-.mac-np-stacked .mac-np-bookend-left  { text-align: right; }
-.mac-np-stacked .mac-np-bookend-right { text-align: left;  }
-.mac-np-state-big {
-  text-align: center;
-  font-family: var(--face-mono);
-  font-weight: 700;
-  font-size: 42px;
-  line-height: 1;
-  /* Pin state-big + everything below (text, progress) to the bottom of
-   * the card. Without this, when the song has no progress data the text
-   * block floats just below the art and the bottom of the cell is dead
-   * whitespace. `margin-top: auto` inside the flex-column card eats
-   * remaining space above this element so it (and its trailing
-   * siblings) hug the bottom edge. */
-  margin: 10px 0 0 0;
-  margin-top: auto;
-}
-.mac-np-stacked .mac-np-stacked-text {
-  display: flex; flex-direction: column; align-items: stretch; gap: var(--face-gap-4);
-  text-align: center;
-  width: 100%;
-}
-.mac-np-stacked .mac-np-title { text-align: center; width: 100%; }
-.mac-np-stacked .mac-np-meta  { text-align: center; width: 100%; }
-.mac-np-stacked .mac-np-source { text-align: center; width: 100%; }
-.mac-np-bar-only {
-  margin-top: 6px;
-}
 
 /* ---- Side-space variants (extended / full tier) ---- */
 /* vertical_text: rotate the "NOW PLAYING" label 90° on each side of the
  * cover art. */
-.mac-np-bookend-vert {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  letter-spacing: 4px;
-  font-size: 18px;
-  font-weight: 700;
-  font-family: var(--face-mono);
-}
-.mac-np-bookend-vert.mac-np-bookend-left  { transform: rotate(180deg); }
 
 /* play_state: big play/pause glyph mirroring on both sides. */
-.mac-np-bookend-glyph {
-  font-size: 56px;
-  line-height: 1;
-  font-family: var(--face-mono);
-  font-weight: 700;
-}
 
 /* bars: stacked dither bars per side. Pure decoration. */
-.mac-np-bookend-bars {
-  display: flex; flex-direction: column; gap: var(--face-gap-6);
-  min-width: 36px;
-  align-items: stretch;
-}
-.mac-np-bookend-bars > span {
-  display: block;
-  height: 6px;
-  background: #000;
-}
-.mac-np-bookend-bars > span:nth-child(2),
-.mac-np-bookend-bars > span:nth-child(4),
-.mac-np-bookend-bars > span:nth-child(6) {
-  height: 3px;
-}
 
 /* metadata: artist on the left, album / source on the right. Two-line
  * stack with a tiny label above the value. */
-.mac-np-bookend-meta {
-  display: flex; flex-direction: column; gap: var(--face-gap-4);
-  min-width: 110px;
-  font-size: 13px;
-  letter-spacing: 1px;
-}
-.mac-np-bookend-meta .bookend-label {
-  font-family: var(--face-mono);
-  font-weight: 700;
-  font-size: 11px;
-  letter-spacing: 2px;
-  color: #000;
-}
-.mac-np-bookend-meta .bookend-value {
-  font-family: var(--face-serif);
-  font-size: 16px;
-  line-height: 1.1;
-}
 
 /* ---------- Clock widget ---------- */
 .clock {
@@ -2153,13 +1915,9 @@ img.icon { object-fit: contain; }
 .cell-accent-red .tb-text,              /* text bar headline */
 .cell-accent-red .msg-text,
 .cell-accent-red .moon-name,            /* moon phase */
-.cell-accent-red .eink-batt-pct,        /* battery percents */
-.cell-accent-red .mac-batt-pct,
-.cell-accent-red .mac-np-title {        /* now-playing track title */
+.cell-accent-red .eink-batt-pct {       /* battery percent */
   color: var(--face-red);
 }
-/* now-playing progress fill is a background, not text */
-.cell-accent-red .mac-np-bar-fill { background: var(--face-red); }
 /* sparkline value (text) + the trend line (stroke) */
 .cell-accent-red .spark-value { color: var(--face-red); }
 .cell-accent-red .spark-line { stroke: var(--face-red); }

@@ -16,8 +16,6 @@ import * as crypto           from './crypto.js';
 import * as eink_battery     from './eink_battery.js';
 import * as fx               from './fx.js';
 import * as headlines        from './headlines.js';
-import * as mac_battery      from './mac_battery.js';
-import * as mac_nowplaying   from './mac_nowplaying.js';
 import * as moon             from './moon.js';
 import * as onthisday        from './onthisday.js';
 import * as photo            from './photo.js';
@@ -37,7 +35,7 @@ import * as world_clock      from './world_clock.js';
 import * as wordofday        from './wordofday.js';
 
 const MODULES = [
-  ai, aqi, art, calendar, chess, stocks, codeactivity, clock, countdown, eink_battery, mac_battery, mac_nowplaying,
+  ai, aqi, art, calendar, chess, stocks, codeactivity, clock, countdown, eink_battery,
   headlines, moon, onthisday, photo, progress, qr, fx, crypto, quote, sparkline, sun, tasks, text, transit, uv, webhook, weather_forecast, weather_hero, world_clock, wordofday
 ];
 
