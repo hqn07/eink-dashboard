@@ -1,5 +1,12 @@
 # E-Ink Dashboard — Handoff
 
+> ## ✅ 2026-09-16 — ALL OF TODAY VERIFIED ON GLASS
+> User photographed the panel after the last deploy: **everything works.**
+> That covers setup stages 2 and 3 (weather tiles now inherit `cfg.home`,
+> migration v6 dropped the duplicated tile location), the AI cadence
+> options, the Mac-agent removal (v7 dropped its tiles), and the two
+> visual-guard fixes. Nothing on the panel regressed.
+
 > ## 2026-09-16 (later) — Mac push agent removed
 > The agent had been POSTing `/api/mac-state` every 30s and getting **401**
 > since at least 14:00: the `DEVICE_TOKEN` in the Mac's `.env` (file dated
@@ -412,24 +419,21 @@
 >   libraries/libraries/GxEPD2 1.6.9) — cleanup candidate, not urgent.
 
 
-> ## ▶ RESUME HERE (2026-09-16)
-> Everything below is on `origin/main` and deployed. 49 commits on
-> 2026-09-15. Guards on this machine: `check:widgets` 32 wired, `lint:eink`
-> clean, `test:api` **23/23**, both visual snapshots pass.
+> ## ▶ RESUME HERE (2026-09-16, end of day)
+> Everything is on `origin/main` and deployed (`dd75d9e`). Guards on this
+> machine: `check:widgets` **30 wired**, `check:css` in sync, `lint:eink`
+> clean, `test:api` **24/24**, both visual snapshots **0 px**.
 > **Set `PUPPETEER_EXECUTABLE_PATH` before running anything visual** —
 > `export PUPPETEER_EXECUTABLE_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"`.
 >
-> **⇒ FIRST: photograph the panel.** Several things changed that only glass
-> can judge: `weather_hero`'s art is 26px smaller at full tier, the AI tile
-> now gets news feeds, and list widgets drop a row at small sizes.
->
-> **⇒ SECOND: confirm typing works in a list field.** The feed URL input,
-> quote's custom quotes, world_clock's zones. All three were unwritable
-> (`replaceRow`, `3289942`) and the fix is proven in logic but NOT in the
-> live UI — the control app blocks the JS runtime under headless puppeteer,
-> so this needs a human for thirty seconds.
+> **Panel is photographed and good.** No verification debt outstanding.
 >
 > **Open, in rough priority order:**
+> - **The Mac's `.env` `DEVICE_TOKEN` is stale** — it no longer matches
+>   production, which is what killed the agent. Nothing depends on it now,
+>   but any future local tool that talks to prod will 401 until it is
+>   re-copied from the Railway dashboard. Railway's MCP returns variable
+>   values REDACTED, so this needs a human or the Railway CLI.
 > - **`BROWSER_IDLE_MS` must stay 0.** The service builds with RAILPACK, so
 >   `nixpacks.toml` is inert and tini never shipped. The resident browser is
 >   what is holding prod up; idle-close without a reaper is the Aug-23
@@ -437,13 +441,14 @@
 > - **`railway.json` is inert too** — watch paths must be set in the Railway
 >   dashboard, or docs pushes keep rebuilding the image.
 > - **The AI tile needs a prompt worth its space**, and "About you"
->   (Settings > Tools) is still empty — without it the model knows the
->   weather but not the reader. Editing the prompt is also the only way to
->   bust the daily cache.
-> - **Setup stages 2 and 3** (`docs/setup-architecture.md`): the
->   `homeValue()` read helper + Setup panel, then widgets inheriting. Both
->   change how every location-aware widget reads data, so they want a photo
->   between.
+>   (Settings > Tools > You & your place) is still empty — without it the
+>   model knows the weather but not the reader. Editing the prompt is also
+>   the only way to bust the daily cache. Cadence now offers 3h/6h/12h.
+> - **Setup stage 3 leftovers**: `home.tickers` / `home.feeds` were never
+>   added (nothing reads them), and `timezone` is read through `homeValue()`
+>   everywhere but new writes still go to the top level for it alone.
+> - **`control-src/components/LocationPanel.jsx` is dead code** (344 lines),
+>   imported nowhere since the wizard replaced it.
 > - **Open-sourcing history scrub** — wifi pass + two fleet tokens are still
 >   in old commits; repo still private. Recipe in the 2026-07-07 entry.
 > - **Firmware 1.21.0** was built by CI; confirm the device actually OTA'd
@@ -456,10 +461,18 @@
 > `scripts/check-widgets.mjs` guards (see `reference_widget_wiring` memory):
 > render module + `form.jsx` + `_registry.js` + `_ssr.js` + `widgets.js`
 > palette — plus a `POOL_META` category that exists in `POOL_CATEGORIES`.
-> **String rows in a `ListEditor` need `replaceRow`** or the field cannot be
-> typed into. **Probe a guard before trusting it** — change something
-> deliberately and confirm it goes red.
-
+>
+> **Three lessons that keep repeating:**
+> 1. **Merge where a replace is needed.** `ListEditor` string rows need
+>    `replaceRow`; `LocationFields` call sites had to stop doing
+>    `{...v, ...loc}` or "Use Setup instead" could never clear a key.
+>    Suspect it wherever a child emits a whole object.
+> 2. **Probe a guard before trusting it.** Change something deliberately and
+>    confirm it goes red. Two harness holes and one useless threshold were
+>    found this way.
+> 3. **"Unused after I delete X" must be checked inside the defining file
+>    too** — `DEMO_ARTWORK_B64` was still used by the `photo` widget.
+>
 ## 2026-07-01 session (all pushed)
 
 - Gauge + heatmap primitives — `gaugeHtml()` / `heatmapHtml()` in
