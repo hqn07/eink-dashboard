@@ -7,21 +7,21 @@ import MacAgentBadge from './MacAgentBadge.jsx';
 import PushNowButton from './PushNowButton.jsx';
 import PanelPreview from './PanelPreview.jsx';
 import PinButton from './PinButton.jsx';
-import AboutPanel from './AboutPanel.jsx';
+import SetupPanel from './SetupPanel.jsx';
 import BackupPanel from './BackupPanel.jsx';
 
 // Single header settings menu. Consolidates what used to be separate
 // header controls — Mac-agent status, Setup wizard, Panel view, PIN/Lock,
-// keyboard shortcuts, and Tools (about + backup) — into one gear
+// keyboard shortcuts, and Tools (shared facts + backup) — into one gear
 // dropdown, grouped into labelled sections (Option A layout).
 //
 // Panel view + PIN keep their own modal/popover logic; they render their
-// trigger as a full-width menu row here (block prop). About + Backup are
-// heavy blocks, so they collapse behind expandable rows to keep the menu
-// short.
+// trigger as a full-width menu row here (block prop). "You & your place"
+// (cfg.home) and Backup are heavy blocks, so they collapse behind
+// expandable rows to keep the menu short.
 export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcuts }) {
   const [open, setOpen] = useState(false);
-  const [expanded, setExpanded] = useState(null); // 'about' | 'backup' | null
+  const [expanded, setExpanded] = useState(null); // 'home' | 'backup' | null
   const ref = useRef(null);
 
   useEffect(() => {
@@ -74,7 +74,7 @@ export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcut
               className="settings-row"
               onClick={() => { setOpen(false); onSetup && onSetup(); }}
             >
-              <MagicWand size={14} weight="bold" /> Setup
+              <MagicWand size={14} weight="bold" /> Setup wizard
             </button>
             <PanelPreview block />
 
@@ -91,16 +91,16 @@ export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcut
             <div className="settings-section-label">Tools</div>
             <button
               type="button"
-              className={`settings-row settings-row--expandable ${expanded === 'about' ? 'is-open' : ''}`}
-              aria-expanded={expanded === 'about'}
-              onClick={() => toggle('about')}
+              className={`settings-row settings-row--expandable ${expanded === 'home' ? 'is-open' : ''}`}
+              aria-expanded={expanded === 'home'}
+              onClick={() => toggle('home')}
             >
-              <User size={14} weight="bold" /> About you
+              <User size={14} weight="bold" /> You &amp; your place
               <CaretRight className="settings-row-caret" size={12} weight="bold" />
             </button>
-            {expanded === 'about' && (
+            {expanded === 'home' && (
               <div className="settings-collapse-body">
-                <AboutPanel cfg={cfg} onReplaceConfig={onReplaceConfig} />
+                <SetupPanel cfg={cfg} onReplaceConfig={onReplaceConfig} />
               </div>
             )}
             <button
