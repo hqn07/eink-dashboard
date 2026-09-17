@@ -11,6 +11,7 @@ const { resolveVariant, resolveScreenLayout } = require('../lib/screens');
 const { buildWidgetData } = require('../lib/widget-data');
 const { loadBatteryState, loadBatteryHistory } = require('../lib/battery-store');
 const { renderPage } = require('../lib/ssr');
+const { allowInlineScript } = require('../lib/csp');
 const { loadDashboardHtml, loadSsr } = require('../lib/ssr-shell');
 const { getBrowser, tryAcquirePage, releasePage } = require('../lib/render');
 const { preThreshold } = require('../lib/image');
@@ -92,12 +93,12 @@ router.get('/dev/widget/:id', checkAdminAuth, async (req, res) => {
     };
     let html = renderPage({ payload, shell, ssr, mode: 'dev' });
     // EventSource auto-reload on any source file change.
-    const reloadScript = `<script>
+    const reloadScript = `<script>${allowInlineScript(`
       try {
         const es = new EventSource('/dev/events');
         es.addEventListener('reload', () => location.reload());
       } catch(e) {}
-    </script>`;
+    `)}</script>`;
     html = html.replace('</body>', reloadScript + '</body>');
     res.set('Content-Type', 'text/html; charset=utf-8');
     res.send(html);

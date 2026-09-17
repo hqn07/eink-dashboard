@@ -9,6 +9,7 @@ const { loadConfig } = require('../lib/config-store');
 const {
   gateControlHtml, authBlock, pinConfigured, verifyPin, setPinInConfig,
   makeSession, sessionValid, setSessionCookie, clearSessionCookie,
+  lockoutRemainingMs, recordLoginFailure, clearLoginFailures,
 } = require('../lib/auth');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
@@ -82,8 +83,21 @@ router.get('/control/setup', async (req, res) => {
 router.post('/api/auth/login', async (req, res) => {
   const cfg = await loadConfig();
   if (!pinConfigured(cfg)) return res.status(400).json({ error: 'no_pin_set' });
+
+  // Backoff before the compare, so a locked-out caller learns nothing about
+  // whether the PIN they sent was right.
+  const waitMs = lockoutRemainingMs(cfg);
+  if (waitMs > 0) {
+    res.set('Retry-After', String(Math.ceil(waitMs / 1000)));
+    return res.status(429).json({ error: 'locked_out', retryAfterMs: waitMs });
+  }
+
   const pin = (req.body && req.body.pin) || '';
-  if (!verifyPin(cfg, pin)) return res.status(401).json({ error: 'bad_pin' });
+  if (!verifyPin(cfg, pin)) {
+    await recordLoginFailure();
+    return res.status(401).json({ error: 'bad_pin' });
+  }
+  await clearLoginFailures();
   setSessionCookie(res, makeSession(authBlock(cfg).sessionSecret));
   res.json({ ok: true });
 });

@@ -18,6 +18,7 @@ require('./lib/errlog');
 
 const PORT = process.env.PORT || 3000;
 const { DEVICE_TOKEN, IS_PROD } = require('./lib/env');
+const { scriptSrc } = require('./lib/csp');
 
 // server.js is the composition root: it wires middleware + mounts the routers
 // under routes/. Nearly all logic lives in lib/ modules; the only pieces used
@@ -64,6 +65,33 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('X-DNS-Prefetch-Control', 'off');
+  // HSTS: Railway terminates TLS, so this costs one header and forecloses a
+  // downgrade. Production only — sending it from localhost would pin http://
+  // localhost to https:// in the developer's browser and be a nuisance to undo.
+  if (IS_PROD) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  // CSP as defence in depth, not as a fix for a live hole: the widget HTML
+  // that reaches dangerouslySetInnerHTML IS escaped (every user string goes
+  // through escapeHtml, audited 2026-09-17). Widget markup carries inline
+  // style= everywhere and the face CSS is generated, so 'unsafe-inline' for
+  // styles is unavoidable; script-src stays strict, which is the part that
+  // matters. data: covers the dithered photo/QR data URIs.
+  // script-src carries a sha256 per inline block the server emits (lib/csp.js).
+  // `script-src 'self'` alone silently blocked the autofit pass and moved the
+  // rendered panel by 0.347% — caught only by check:visual.
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    `script-src ${scriptSrc()}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "font-src 'self'",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "form-action 'self'",
+    "frame-ancestors 'self'",
+  ].join('; '));
   next();
 });
 // gzip text responses (the ~380KB control bundle, SSR HTML, JSON APIs).
@@ -108,6 +136,28 @@ const apiLimiter = rateLimit({
   // don't let it eat the budget that saves need.
   skip: (req) => req.path === '/preview-data'
 });
+
+// The login endpoint needs its OWN limit, and this is why: the 300 above was
+// raised from 60 because the EDITOR is chatty, and /api/auth/login silently
+// inherited a number tuned for a completely unrelated problem. At 300/min a
+// 4-digit PIN (the enforced minimum) falls in ~33 minutes.
+//
+// 10 per 15 min per IP. An IP limit alone is cheap to evade with a botnet, so
+// routes/auth.js also keeps a per-install failure counter with backoff — this
+// is the cheap first line, not the whole defence.
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'rate_limited' },
+  // Only failures should count against the budget, so a legitimate user who
+  // logs in, logs out and logs back in is never locked out by their own use.
+  skipSuccessfulRequests: true,
+});
+app.use('/api/auth/login', loginLimiter);
+app.use('/api/auth/set-pin', loginLimiter);
+
 app.use('/api/', apiLimiter);
 
 // React control panel build output (built by Vite via `npm run build`).

@@ -79,3 +79,62 @@ test('once a PIN exists, /control/setup bounces to login', async () => {
   assert.equal(r.status, 302);
   assert.match(r.headers.get('location') || '', /\/control\/login$/);
 });
+
+// --- Changing the PIN must evict every existing session --------------------
+//
+// The whole reason to change a PIN is that you believe someone else has it.
+// Before this, sessionSecret was preserved across the change, so every cookie
+// issued under the old PIN stayed valid for its full 30 days — the one thing
+// the action had to do was the one thing it did not do.
+test('changing the PIN invalidates old sessions and keeps the caller signed in', async () => {
+  // Sign in with the PIN set by the bootstrap test above.
+  const login = await fetch(url('/api/auth/login'), {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ pin: '2468' }),
+  });
+  assert.equal(login.status, 200);
+  const oldJar = login.headers.get('set-cookie').split(';')[0];
+  assert.equal((await fetch(url('/api/config'), { headers: { cookie: oldJar } })).status, 200,
+    'sanity: the old session works before the change');
+
+  // Change it, authorised by that same session.
+  const change = await fetch(url('/api/auth/set-pin'), {
+    method: 'POST', headers: { 'content-type': 'application/json', cookie: oldJar },
+    body: JSON.stringify({ pin: '13579' }),
+  });
+  assert.equal(change.status, 200);
+  const newJar = change.headers.get('set-cookie').split(';')[0];
+
+  // The old cookie is dead...
+  assert.equal((await fetch(url('/api/config'), { headers: { cookie: oldJar } })).status, 401,
+    'the session that existed before the PIN change must be evicted');
+  // ...and the caller is not locked out of their own browser.
+  assert.equal((await fetch(url('/api/config'), { headers: { cookie: newJar } })).status, 200,
+    'the caller who changed the PIN keeps working');
+  assert.notEqual(oldJar, newJar);
+});
+
+// --- Repeated wrong PINs back off ------------------------------------------
+test('failed logins trigger an escalating lockout', async () => {
+  const guess = (pin) => fetch(url('/api/auth/login'), {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ pin }),
+  });
+
+  // The first few wrong guesses are plain 401s — someone mistyping their own
+  // PIN should never meet a lockout.
+  for (let i = 0; i < 3; i++) {
+    assert.equal((await guess('0000')).status, 401, `guess ${i + 1} should be a plain 401`);
+  }
+
+  // Past the grace count the endpoint starts refusing outright.
+  const locked = await guess('0000');
+  assert.equal(locked.status, 429, 'the 4th failure must start the backoff');
+  assert.ok(Number(locked.headers.get('retry-after')) > 0, 'expected a Retry-After');
+
+  // And it refuses even the CORRECT PIN while locked, so the response cannot
+  // be used as an oracle for whether a guess was right.
+  const rightButLocked = await guess('13579');
+  assert.equal(rightButLocked.status, 429,
+    'a locked-out caller must not learn that their PIN was correct');
+});
