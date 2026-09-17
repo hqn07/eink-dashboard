@@ -29,7 +29,9 @@ before(async () => {
   proc = spawn('node', ['server.js'], {
     cwd: ROOT,
     env: { ...process.env, PORT: String(PORT), DATA_DIR: dataDir,
-      DEVICE_TOKEN: TOKEN, PRERENDER: '0', NODE_ENV: 'test' },
+      DEVICE_TOKEN: TOKEN, PRERENDER: '0', NODE_ENV: 'test',
+      // Exercises the enrollment recovery hatch; see its test below.
+      ENROLL_RECOVERY_MAC: 'aa:bb:cc:dd:ee:ff' },
     stdio: 'ignore',
   });
   // Wait for /health to come up (server seeds config on first run).
@@ -330,6 +332,44 @@ test('config migration v9 folds sun/uv/aqi, quote/word/otd and world_clock', asy
   assert.equal(local.widgetId, 'clock');
   assert.equal(local.settings.variant, 'big');
   assert.equal(local.settings.format, '24h');
+});
+
+// --- Enrollment recovery hatch -------------------------------------------
+//
+// The trap it exists for: a device whose compiled fleet token no longer
+// matches cannot authenticate AND cannot re-enroll, because enrollment needs
+// that same token. With no way to reflash, the panel is stuck forever.
+//
+// The assertion that matters is the NARROWNESS. A hatch that let any MAC
+// enroll would be no better than turning auth off, which is what it exists to
+// avoid — so the wrong-MAC case is tested as hard as the right one.
+test('enrollment recovery hatch admits one MAC and refuses the rest', async () => {
+  const RECOVER = 'aa:bb:cc:dd:ee:ff';   // matches ENROLL_RECOVERY_MAC above
+  const OTHER   = '11:22:33:44:55:66';
+  const post = (mac, withToken) => fetch(withToken ? tok('/api/setup') : `${BASE}/api/setup`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ mac }),
+  });
+
+  // The narrow case: the named MAC enrolls with NO fleet token, which is the
+  // whole point — a device that cannot authenticate can still get a key.
+  const rec = await post(RECOVER, false);
+  assert.equal(rec.status, 200, 'the recovery MAC must be able to enroll without the token');
+  const body = await rec.json();
+  assert.ok(body.api_key && body.friendly_id, 'recovery enrollment returns a key');
+
+  // The assertion that keeps this from being "auth off": ANY other MAC is
+  // still refused without the token.
+  assert.equal((await post(OTHER, false)).status, 401,
+    'a MAC that is not the recovery MAC must still be refused');
+
+  // And the normal authenticated path is unaffected.
+  assert.equal((await post(OTHER, true)).status, 200);
+
+  // The recovered device is listed, so the operator can confirm and then
+  // unset ENROLL_RECOVERY_MAC.
+  const roster = await (await fetch(tok('/api/devices'))).json();
+  assert.ok(roster.devices.some(d => d.mac === RECOVER), 'recovered device appears in the roster');
 });
 
 // --- Connections: the key must never reach the exportable config ---------

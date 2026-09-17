@@ -10,14 +10,29 @@ const { loadDeviceLogs, appendDeviceLog } = require('../lib/logs-store');
 
 router.post('/api/setup', async (req, res) => {
   try {
+    const mac = String((req.body && req.body.mac) || '').toLowerCase().trim();
     // Gate enrollment behind DEVICE_TOKEN when one is set, so a stranger can't
     // mint a device key (and then read /display.*). Open when no token is
     // configured (local dev / first run). Firmware sends the token via addToken().
+    //
+    // ENROLL_RECOVERY_MAC is the narrow way out of a real trap: a device whose
+    // compiled fleet token no longer matches the server cannot authenticate,
+    // and cannot re-enroll either, because enrollment needs that same token.
+    // Without physical access to reflash, the panel is stuck forever. Setting
+    // this to one known MAC lets exactly that device enroll and obtain a
+    // durable per-device api_key; every other endpoint stays gated, and every
+    // other MAC is still refused. Unset it once the device is back.
     if (DEVICE_TOKEN) {
       const tok = req.query.token || req.headers['x-device-token'];
-      if (tok !== DEVICE_TOKEN) return res.status(401).json({ error: 'unauthorized' });
+      const recoveryMac = String(process.env.ENROLL_RECOVERY_MAC || '').toLowerCase().trim();
+      const recovering = !!recoveryMac && mac === recoveryMac;
+      if (tok !== DEVICE_TOKEN && !recovering) {
+        return res.status(401).json({ error: 'unauthorized' });
+      }
+      if (recovering && tok !== DEVICE_TOKEN) {
+        console.warn(`[setup] recovery enrollment for ${mac} — ENROLL_RECOVERY_MAC is set; unset it once the device is back`);
+      }
     }
-    const mac = String((req.body && req.body.mac) || '').toLowerCase().trim();
     if (!/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/.test(mac)) {
       return res.status(400).json({ error: 'bad_mac' });
     }
