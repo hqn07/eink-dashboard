@@ -40,3 +40,6 @@ test/visual/current.png
 # one-off component preview (scripts/preview-components.mjs)
 test/_component-preview.png
 test/_component-preview-1bit.png
+
+# Arduino CLI build output
+esp32/*/build/
