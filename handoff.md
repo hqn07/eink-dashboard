@@ -1,5 +1,65 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-16 (evening) — UX program: P1-P11 all resolved, 30 -> 23 widgets
+> Ten proposals shipped, one ruled out, two of my own claims retracted by
+> measurement. **Nothing since the last panel photo has been seen on glass.**
+>
+> **Widget count 30 -> 23.** Four merges, all converting rather than dropping:
+> markets (stocks+crypto+fx, v8), outdoors (sun+uv+aqi), daily
+> (quote+wordofday+onthisday), clock (+world_clock) — the last three in v9.
+> The renderers were NOT rewritten: each view keeps its module as
+> `_view-*.js`, underscore-prefixed so the palette ignores it, and the parent
+> picks one. Rewriting eight proven renderers to save nothing would have been
+> pure regression risk.
+> **`weather_hero` + `weather_forecast` were deliberately NOT merged** even
+> though the proposal said 5 -> 1. Markets merged cleanly because its three
+> shared a size ladder; hero runs 8x4..24x12 and forecast 6x8..24x6 — a tall
+> showpiece and a wide outlook. One ladder would mis-serve both.
+>
+> **Editor is canvas-first** (P1): the Live preview pane is gone. Its only
+> differentiator, the 1-bit threshold view, turned out never to have had a
+> live control — the CSS was in the stylesheet and the only toggle ever
+> written lived in `components/Preview.jsx`, imported nowhere. The canvas has
+> it now. Screen settings moved to a disclosure bar; the mobile FAB + drawer
+> went with the sidebar they existed for.
+>
+> **`tidy()`** (`control-src/autolayout.js`) shelf-packs tiles in reading
+> order, only ever SHRINKS a tile, and returns what would not fit instead of
+> deleting it. First version sorted sizes largest-first and one weather_hero
+> claimed 12x12, dropping half the screen. The first-run wizard now asks what
+> you want to see and builds from the answers with the same packer, sizing
+> for the SET (try L, then M, then S) so everything picked actually appears.
+>
+> **A pre-existing bug the wizard work exposed:** the wizard's mount gate was
+> `firstRun !== false && !homeCoords(cfg)`, re-evaluated every render — so the
+> moment the location step saved a city the wizard unmounted itself. Nobody
+> had ever reached the layout or PIN steps on a real first run. It latches
+> open now.
+>
+> **Two of my own claims were wrong and are retracted:**
+> 1. "Tile headers vary per widget" (P9). `.tr-titlebar` covers 26 of 30 and
+>    the other two idioms already carry an identical type spec. Nothing to
+>    unify. The `#000` hard-codes are not an inverted-tile bug either —
+>    `.cell.cell-inverted *` overrides border-color with `!important`.
+> 2. "Canvas tiles render blank at 375px". Re-measured: `.live-tile-scale`
+>    applies `scale(0.43875)` and every tile renders. The original reading was
+>    taken after a viewport change without a reload, before the
+>    ResizeObserver had resized the canvas.
+>
+> **Keys live outside the exportable config** (P8): `DATA_DIR/secrets.json`,
+> 0600, never merged into cfg, because Backup > Export is a
+> `JSON.stringify(cfg)` in the browser. `test:api` asserts the key never
+> reaches `/api/config`, probed by making the endpoint leak deliberately.
+> NOT encryption at rest — the file is on the same volume.
+>
+> **Guard thresholds tightened twice.** The editor snapshot allowed 2500px
+> while real changes measured 1823 and 2029 — they PASSED as "no change".
+> Now 250px, verified stable at 0px.
+>
+> **Still open:** the git history scrub (wifi password + two fleet tokens in
+> old commits) — destructive, needs an explicit decision. And the Mac's
+> `.env` DEVICE_TOKEN is still stale.
+
 > ## ✅ 2026-09-16 — ALL OF TODAY VERIFIED ON GLASS
 > User photographed the panel after the last deploy: **everything works.**
 > That covers setup stages 2 and 3 (weather tiles now inherit `cfg.home`,
