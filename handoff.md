@@ -1,5 +1,39 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-16 (night) — history scrub PREPARED on a branch, main untouched
+> `origin/history-scrub` is a filter-repo rewrite of main with the firmware
+> binaries and the wifi password removed. **main is deliberately unchanged**
+> (still 46 firmware paths in its history) because the user's instruction was
+> to scrub without affecting it.
+>
+> **What the measurement found, which the old note did not say:**
+> - The wifi password was **live at the tip of main**, quoted in plaintext by
+>   the very handoff entry recording that the scrub had not been done. Fixed
+>   forward in `be8abe1` — a normal commit, not a rewrite.
+> - The fleet token is not in any text file. It is compiled into **27 firmware
+>   binaries** under `public/firmware/`, which is why the recipe drops that
+>   path wholesale rather than text-replacing.
+> - That particular token is the one in this Mac's `.env`, and it **no longer
+>   authenticates against production** (`/api/wake` returns 401), so it has
+>   already been rotated server-side. The second token in those bins has not
+>   been verified and must be assumed live.
+>
+> **The branch does not remediate anything on its own.** The secrets remain
+> reachable through main until main itself is rewritten, and a rewrite is not
+> remediation either — anything ever pushed to a remote should be treated as
+> disclosed. **Rotation is the fix**; the scrub only stops it being handed to
+> the next person who clones.
+>
+> To adopt it: verify `origin/history-scrub`, then
+> `git push --force origin history-scrub:main`, then have every clone re-clone
+> (a rewrite orphans existing ones). Rotate `DEVICE_TOKEN` in Railway, in this
+> Mac's `.env` and in `esp32/*/secrets.h`, and reflash or OTA the panel — a
+> device holding the old fleet token falls back to it. Delete the branch to
+> abandon the whole thing: `git push origin --delete history-scrub`.
+>
+> Scrubbed repo: 711 -> 663 commits, 57 MB -> 46 MB, 327 files at tip,
+> server.js / package.json / App.jsx / screens.js / markets.js all present.
+
 > ## 2026-09-16 (evening) — UX program: P1-P11 all resolved, 30 -> 23 widgets
 > Ten proposals shipped, one ruled out, two of my own claims retracted by
 > measurement. **Nothing since the last panel photo has been seen on glass.**
