@@ -36,8 +36,11 @@ export const GRID_ROWS = 12;
 // constant is kept in step as well, but it is no longer load-bearing.
 //
 // The client migrator only implements v1-v4; the server owns v5+. It does not
-// need to catch up, because the server migrates whatever it is handed.
-export const GRID_VERSION = 10;
+// need to catch up, because the server migrates whatever it is handed. Nothing
+// here gates on this value above 4 — it is only the number stamped onto a
+// saved config — but keep it equal to lib/screens.js GRID_VERSION anyway, so a
+// config that never reaches the server's stamp is not labelled older than it is.
+export const GRID_VERSION = 11;
 export const SCREENS = [1, 2];
 
 // Sizes are in 24x12 grid units. With body ≈ 800px × 392-452px, cells
