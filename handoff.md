@@ -1,39 +1,40 @@
 # E-Ink Dashboard — Handoff
 
-> ## 2026-09-16 (night) — history scrub PREPARED on a branch, main untouched
-> `origin/history-scrub` is a filter-repo rewrite of main with the firmware
-> binaries and the wifi password removed. **main is deliberately unchanged**
-> (still 46 firmware paths in its history) because the user's instruction was
-> to scrub without affecting it.
+> ## 2026-09-16 (night) — history scrub DONE, main rewritten
+> `main` is rewritten: the wifi password and the token-bearing firmware
+> binaries are gone from every commit.
 >
-> **What the measurement found, which the old note did not say:**
-> - The wifi password was **live at the tip of main**, quoted in plaintext by
->   the very handoff entry recording that the scrub had not been done. Fixed
->   forward in `be8abe1` — a normal commit, not a rewrite.
-> - The fleet token is not in any text file. It is compiled into **27 firmware
->   binaries** under `public/firmware/`, which is why the recipe drops that
->   path wholesale rather than text-replacing.
-> - That particular token is the one in this Mac's `.env`, and it **no longer
->   authenticates against production** (`/api/wake` returns 401), so it has
->   already been rotated server-side. The second token in those bins has not
->   been verified and must be assumed live.
+> **The catch that nearly broke the panel.** The first scrub removed
+> `public/firmware` from ALL commits — including the tip, which ships the
+> five bins the device OTAs from. Force-pushing that would have 404'd
+> `/firmware/:file` for a device in the field. The six current files are
+> CI-built and were verified secret-free, so they are restored on top of the
+> purged history. **Final trees are byte-identical to the old main**, which is
+> why Railway SKIPPED the redeploy — the rewrite changed history only, not one
+> current file.
 >
-> **The branch does not remediate anything on its own.** The secrets remain
-> reachable through main until main itself is rewritten, and a rewrite is not
-> remediation either — anything ever pushed to a remote should be treated as
-> disclosed. **Rotation is the fix**; the scrub only stops it being handed to
-> the next person who clones.
+> **What was actually exposed, measured rather than assumed:**
+> - The wifi password was live at the TIP, quoted by the handoff entry that
+>   recorded the scrub as not-done. Removed forward first.
+> - The fleet token is in no text file. It was compiled into **27 historical
+>   firmware binaries**, which is why the path is dropped wholesale.
+> - That token is the one in this Mac's `.env` and it already 401s against
+>   production, so it had been rotated server-side. The second token in those
+>   bins is unverified and must be assumed live.
 >
-> To adopt it: verify `origin/history-scrub`, then
-> `git push --force origin history-scrub:main`, then have every clone re-clone
-> (a rewrite orphans existing ones). Rotate `DEVICE_TOKEN` in Railway, in this
-> Mac's `.env` and in `esp32/*/secrets.h`, and reflash or OTA the panel — a
-> device holding the old fleet token falls back to it. Delete the branch to
-> abandon the whole thing: `git push origin --delete history-scrub`.
+> **A rewrite is not remediation.** Anything ever pushed should be treated as
+> disclosed — forks, clones and caches do not get rewritten. **Rotate
+> `DEVICE_TOKEN`** (Railway -> this Mac's `.env` -> `esp32/*/secrets.h`) and
+> reflash/OTA: a device still holding the old fleet token falls back to it.
 >
-> Scrubbed repo: 711 -> 663 commits, 57 MB -> 46 MB, 327 files at tip,
-> server.js / package.json / App.jsx / screens.js / markets.js all present.
-
+> **Leftovers to clean when you are satisfied:**
+> - `pre-scrub-backup` — LOCAL branch pinning the old history, secrets and all.
+> - `origin/history-scrub` — now redundant.
+> - Any other clone of this repo is orphaned and must be re-cloned.
+>
+> Verified after the rewrite: 23 wired, test:api 28/28, vite builds,
+> `/health` 200, firmware still present at the tip.
+>
 > ## 2026-09-16 (evening) — UX program: P1-P11 all resolved, 30 -> 23 widgets
 > Ten proposals shipped, one ruled out, two of my own claims retracted by
 > measurement. **Nothing since the last panel photo has been seen on glass.**
