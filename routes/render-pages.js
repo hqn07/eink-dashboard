@@ -253,7 +253,7 @@ router.get('/widgets-matrix', checkAdminAuth, async (req, res) => {
     // demo data — deterministic output for the visual-regression snapshot.
     const demoOnly = req.query.demo === '1' || req.query.demo === 'true';
     const fakeLayout = [
-      { widgetId: 'weather_hero' }, { widgetId: 'weather_forecast' },
+      { widgetId: 'weather' },
       { widgetId: 'calendar' }, { widgetId: 'text' }
     ];
     const data = demoOnly ? {} : await buildWidgetData(cfg, units, fakeLayout);

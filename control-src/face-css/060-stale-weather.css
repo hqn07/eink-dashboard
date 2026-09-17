@@ -1,7 +1,7 @@
 /* ============ STALE WEATHER ============ */
 .weather-hero { position: relative; }
 
-/* ===== weather_hero tier layouts ===== */
+/* ===== weather hero-view tier layouts ===== */
 .hero-tier-tiny {
   display: flex; align-items: center; justify-content: center;
   height: 100%; padding: 4px;

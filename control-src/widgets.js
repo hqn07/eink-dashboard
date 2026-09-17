@@ -9,6 +9,7 @@
 // `...migratedDef('<id>')` shorthand below. Inlined defs still work
 // for unmigrated widgets.
 import { MIGRATED_DEFS } from './widgets/_registry.js';
+import { sizeSpec, variantOf, resolveSize } from './widgets/_sizes.js';
 function migratedDef(id) {
   return MIGRATED_DEFS[id] || (() => { throw new Error(`No migrated def for ${id}`); })();
 }
@@ -46,8 +47,7 @@ const POOL_META = {
   outdoors:         { category: 'Weather',  blurb: 'Sun, UV or air quality for your place', keywords: 'sun sunrise sunset daylight uv index air quality aqi pollution pm25 outdoors' },
   markets:          { category: 'Money',    blurb: 'Stocks, crypto and currency pairs in one list', keywords: 'stock ticker etf index crypto bitcoin btc eth currency fx exchange rate money price' },
   ai:               { category: 'Text',     blurb: 'Your prompt plus the dashboard data, in a few lines', keywords: 'ai llm gpt deepseek openai briefing summary prompt' },
-  weather_hero:     { category: 'Weather',  blurb: 'Current conditions — big temp + icon', keywords: 'temperature forecast conditions now' },
-  weather_forecast: { category: 'Weather',  blurb: 'Multi-day / hourly outlook', keywords: 'forecast hourly daily rain outlook' },
+  weather:          { category: 'Weather',  blurb: 'Conditions now, or the days ahead', keywords: 'temperature weather conditions now current forecast hourly daily rain outlook hi lo' },
   clock:            { category: 'Time',     blurb: 'Time and date here, or across zones', keywords: 'clock time date hour world zone timezone utc' },
   countdown:        { category: 'Time',     blurb: 'Days until a target date', keywords: 'countdown timer days until deadline' },
   progress:         { category: 'Time',     blurb: 'Day / week / month / year % bars', keywords: 'progress year week percent bars' },
@@ -73,8 +73,7 @@ function withPoolMeta(def) {
 }
 
 export const WIDGET_REGISTRY = [
-  { ...migratedDef('weather_hero') },
-  { ...migratedDef('weather_forecast') },
+  { ...migratedDef('weather') },
   { ...migratedDef('text') },
   { ...migratedDef('calendar') },
   // Mac-only widgets — only render data when the server is running on
@@ -116,22 +115,24 @@ export function widgetById(id) {
 // x/y-coords in 24x12 grid units.
 const DEFAULT_LAYOUTS = {
   1: [
-    { id: 'weather_hero',     x: 0,  y: 0, size: 'M', enabled: true },
-    { id: 'weather_forecast', x: 8,  y: 0, size: 'M', enabled: true },
-    { id: 'text',             x: 14, y: 0, size: 'M', enabled: true, settings: { variant: 'card' } },
-    { id: 'calendar',         x: 14, y: 4, size: 'M', enabled: true }
+    { id: 'weather',  x: 0,  y: 0, size: 'M', enabled: true },
+    { id: 'weather',  x: 8,  y: 0, size: 'M', enabled: true, settings: { variant: 'forecast' } },
+    { id: 'text',     x: 14, y: 0, size: 'M', enabled: true, settings: { variant: 'card' } },
+    { id: 'calendar', x: 14, y: 4, size: 'M', enabled: true }
   ],
   2: [
-    { id: 'weather_hero',     x: 0, y: 0, size: 'XL', enabled: true },
-    { id: 'weather_forecast', x: 0, y: 0, size: 'M',  enabled: false },
-    { id: 'text',             x: 0, y: 0, size: 'M',  enabled: false, settings: { variant: 'card' } },
-    { id: 'calendar',         x: 0, y: 0, size: 'M',  enabled: false }
+    { id: 'weather',  x: 0, y: 0, size: 'XL', enabled: true },
+    { id: 'text',     x: 0, y: 0, size: 'M',  enabled: false, settings: { variant: 'card' } },
+    { id: 'calendar', x: 0, y: 0, size: 'M',  enabled: false }
   ]
 };
 
-function sizeFor(def, sizeKey) {
-  const k = sizeKey && def.sizes[sizeKey] ? sizeKey : def.defaultSize;
-  return { size: k, ...def.sizes[k] };
+// Variant-aware: a def may hang its own `sizes` / `defaultSize` off an
+// individual variant (weather's forecast views do), so the tile's settings
+// decide which ladder this reads. See widgets/_sizes.js.
+function sizeFor(def, sizeKey, settings) {
+  const spec = sizeSpec(def, variantOf(def, settings));
+  return resolveSize(spec, sizeKey) || { size: spec.defaultSize, w: 8, h: 4 };
 }
 
 // Resolve a raw layout array into one with width/height filled in.
@@ -145,7 +146,7 @@ export function expandLayout(rawLayout = []) {
     const def = widgetById(widgetId);
     if (!def) continue;
     if (raw.enabled === false) continue; // dropped widgets simply aren't in the layout anymore
-    const sz = sizeFor(def, raw.size);
+    const sz = sizeFor(def, raw.size, raw.settings);
     items.push({
       id: raw.id || newInstanceId(widgetId),
       widgetId,
@@ -220,10 +221,10 @@ export const SCREEN_PRESETS = [
     name: 'Editorial',
     description: 'Newspaper feel: weather + forecast + text card + calendar.',
     layout: [
-      { widgetId: 'weather_hero',     x: 0,  y: 0, w: 8,  h: 12 },
-      { widgetId: 'weather_forecast', x: 8,  y: 0, w: 6,  h: 12 },
-      { widgetId: 'text',             x: 14, y: 0, w: 10, h: 4, settings: { variant: 'card' } },
-      { widgetId: 'calendar',         x: 14, y: 4, w: 10, h: 8 }
+      { widgetId: 'weather',  x: 0,  y: 0, w: 8,  h: 12 },
+      { widgetId: 'weather',  x: 8,  y: 0, w: 6,  h: 12, settings: { variant: 'forecast' } },
+      { widgetId: 'text',     x: 14, y: 0, w: 10, h: 4, settings: { variant: 'card' } },
+      { widgetId: 'calendar', x: 14, y: 4, w: 10, h: 8 }
     ]
   },
   {
@@ -242,7 +243,7 @@ export const SCREEN_PRESETS = [
       { widgetId: 'calendar',         x: 9,  y: 2, w: 8, h: 6,
         settings: { variant: 'list', title: 'TODAY' } },
       { widgetId: 'daily', settings: { variant: 'onthisday' },        x: 9,  y: 8, w: 8, h: 4 },
-      { widgetId: 'weather_forecast', x: 17, y: 2, w: 7, h: 6 },
+      { widgetId: 'weather',          x: 17, y: 2, w: 7, h: 6, settings: { variant: 'forecast' } },
       { widgetId: 'daily', x: 17, y: 8, w: 7, h: 4,
         settings: { variant: 'quote' } }
     ]
@@ -261,7 +262,7 @@ export const SCREEN_PRESETS = [
     name: 'Just Weather',
     description: 'Just the weather, full-bleed.',
     layout: [
-      { widgetId: 'weather_hero', x: 0, y: 0, w: 24, h: 12 }
+      { widgetId: 'weather', x: 0, y: 0, w: 24, h: 12 }
     ]
   },
   {
@@ -271,8 +272,8 @@ export const SCREEN_PRESETS = [
     layout: [
       { widgetId: 'text',             x: 0,  y: 0,  w: 24, h: 1,
         settings: { variant: 'bar', text: '{{date|long}} · {{city}}', align: 'center', upper: true, fontFamily: 'serif' } },
-      { widgetId: 'weather_hero',     x: 0,  y: 1,  w: 8,  h: 8 },
-      { widgetId: 'weather_forecast', x: 8,  y: 1,  w: 6,  h: 8 },
+      { widgetId: 'weather',          x: 0,  y: 1,  w: 8,  h: 8 },
+      { widgetId: 'weather',          x: 8,  y: 1,  w: 6,  h: 8, settings: { variant: 'forecast' } },
       { widgetId: 'calendar',         x: 14, y: 1,  w: 10, h: 11 },
       { widgetId: 'clock',            x: 0,  y: 9,  w: 14, h: 3 }
     ]
@@ -285,7 +286,7 @@ export const SCREEN_PRESETS = [
       { widgetId: 'text',             x: 0, y: 0,  w: 24, h: 1,
         settings: { variant: 'bar', text: '{{day}} · {{date|short}}', align: 'center', upper: true, fontFamily: 'sans' } },
       { widgetId: 'text',             x: 0, y: 2,  w: 24, h: 7, settings: { variant: 'card' } },
-      { widgetId: 'weather_forecast', x: 0, y: 10, w: 18, h: 2 },
+      { widgetId: 'weather',          x: 0, y: 10, w: 18, h: 2, settings: { variant: 'forecast' } },
       { widgetId: 'clock',            x: 18, y: 9, w: 6,  h: 3 }
     ]
   },
@@ -353,7 +354,19 @@ function migrateLayoutV2ToV3(layout) {
 const WIDGET_ID_MIGRATIONS = {
   // merged into `text` 2026-06-12
   message:  { id: 'text', settings: (s) => ({ ...s, variant: 'card' }) },
-  text_bar: { id: 'text', settings: (s) => ({ ...s, variant: 'bar' }) }
+  text_bar: { id: 'text', settings: (s) => ({ ...s, variant: 'bar' }) },
+  // The weather pair merged 2026-09-17 (see the v10 note in lib/screens.js
+  // for why the size ladders held it up). Here rather than behind a
+  // gridVersion gate because this table also runs on the pre-screens legacy
+  // path, and weather_hero is old enough to appear there.
+  weather_hero: {
+    id: 'weather',
+    settings: (s) => ({ ...s, variant: s.variant === 'split' ? 'now_split' : 'now' })
+  },
+  weather_forecast: {
+    id: 'weather',
+    settings: (s) => ({ ...s, variant: s.variant === 'rows' ? 'forecast_rows' : 'forecast' })
+  },
 };
 function migrateWidgetIds(layout) {
   return (layout || []).flatMap(it => {
@@ -488,10 +501,21 @@ export function pickActiveScreen(cfg, nowMinutes) {
 
 // Helper for the editor: build a fresh layout item for a new instance
 // of the given widget at given position/size.
-export function makeInstance(widgetId, { x = 0, y = 0, w, h, sizeKey } = {}, seedCtx) {
+export function makeInstance(widgetId, { x = 0, y = 0, w, h, sizeKey, variant } = {}, seedCtx) {
   const def = widgetById(widgetId);
   if (!def) return null;
-  const sz = sizeFor(def, sizeKey);
+  // Seed settings from the registry factory so the tile is self-contained
+  // from the moment it's dropped. `seedCtx` (e.g. the saved setup-wizard
+  // location) is a one-time hint; once on the tile, settings are owned
+  // exclusively by the tile.
+  let settings = (typeof def.defaults === 'function') ? def.defaults(seedCtx) : undefined;
+  if (variant && def.variants && def.variants[variant]) {
+    settings = { ...(settings || {}), variant };
+  }
+  // Settings before size, not after: the variant they carry is what selects
+  // the ladder, so a tile asked for at a specific view is measured as that
+  // view rather than as the widget's default one.
+  const sz = sizeFor(def, sizeKey, settings);
   const inst = {
     id: newInstanceId(widgetId),
     widgetId,
@@ -501,12 +525,6 @@ export function makeInstance(widgetId, { x = 0, y = 0, w, h, sizeKey } = {}, see
     size: sz.size,
     flush: false
   };
-  // Seed settings from the registry factory so the tile is self-contained
-  // from the moment it's dropped. `seedCtx` (e.g. the saved setup-wizard
-  // location) is a one-time hint; once on the tile, settings are owned
-  // exclusively by the tile.
-  if (typeof def.defaults === 'function') {
-    inst.settings = def.defaults(seedCtx);
-  }
+  if (settings) inst.settings = settings;
   return inst;
 }

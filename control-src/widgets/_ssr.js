@@ -24,12 +24,11 @@ import * as tasks            from './tasks.js';
 import * as text             from './text.js';
 import * as transit          from './transit.js';
 import * as webhook          from './webhook.js';
-import * as weather_forecast from './weather_forecast.js';
-import * as weather_hero     from './weather_hero.js';
+import * as weather          from './weather.js';
 
 const MODULES = [
   ai, art, outdoors, daily, calendar, chess, markets, codeactivity, clock, countdown, eink_battery,
-  headlines, moon, photo, progress, qr, sparkline, tasks, text, transit, webhook, weather_forecast, weather_hero
+  headlines, moon, photo, progress, qr, sparkline, tasks, text, transit, webhook, weather
 ];
 
 export const DEFS = Object.fromEntries(MODULES.map(m => [m.def.id, m.def]));
@@ -53,3 +52,7 @@ export {
 // no live data (clock, batteries, now-playing) so the matrix shows
 // real layouts instead of SETUP NEEDED placeholders.
 export { demoCtxForWidget } from './_pool_demo.js';
+
+// The size contract. lib/ssr.js is CJS and cannot import the ESM module
+// directly, so the matrix reaches its per-variant ladders through here.
+export { sizeSpec, variantOf, sizeSpecFor } from './_sizes.js';

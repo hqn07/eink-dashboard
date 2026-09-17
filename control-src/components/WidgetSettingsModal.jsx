@@ -4,6 +4,7 @@ import { X } from '@phosphor-icons/react';
 import Skeleton, { SkeletonTheme } from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import { GRID_COLS, GRID_ROWS, widgetById } from '../widgets.js';
+import { growToMin } from '../widgets/_sizes.js';
 import {
   renderWidget, typographyCss, cellClasses, scaleWrap
 } from '../widget-render.js';
@@ -273,6 +274,20 @@ export default function WidgetSettingsModal({
     setDraft(prev => ({ ...prev, ...patch }));
   }
 
+  // Switching view can switch size ladders (weather's forecast wants 6x6 where
+  // its hero wants 6x4), so the draft grows to the incoming view's minimum and
+  // the preview shows the real shape immediately. The save handler re-applies
+  // the same growth against the live item — this copy is for the preview, that
+  // one is what persists.
+  function applySettings(prev, next) {
+    const withSettings = { ...prev, settings: next };
+    const before = (prev.settings && prev.settings.variant) || null;
+    const after = (next && next.variant) || null;
+    if (before === after) return withSettings;
+    return growToMin(withSettings, widgetById(prev.widgetId),
+      { cols: GRID_COLS, rows: GRID_ROWS });
+  }
+
   // Preview renders the FULL 800×480 page DOM (same grid the live
   // dashboard uses) then translate+clip+scale to surface only the
   // draft cell. CSS grid `1fr` rounding is identical to live, so there
@@ -375,7 +390,7 @@ export default function WidgetSettingsModal({
                     itemId={draft.id}
                     layout={layout}
                     settings={draft.settings}
-                    onSettingsChange={(next) => setDraft(prev => ({ ...prev, settings: next }))}
+                    onSettingsChange={(next) => setDraft(prev => applySettings(prev, next))}
                     item={draft}
                     previewData={previewData}
                     onHoverPreset={setHoveredPresetValues}

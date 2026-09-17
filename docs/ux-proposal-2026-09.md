@@ -117,7 +117,7 @@ or **source** setting. Per the 2026-09-15 rule, these are settings that change
 
 | Merge | From | To |
 |---|---|---|
-| **Weather** | weather_hero, weather_forecast, sun, uv, aqi | one `weather`, views: now / forecast / sun / uv / air |
+| **Weather** | weather_hero, weather_forecast, sun, uv, aqi | `weather` (views: now / now_split / forecast / forecast_rows) + `outdoors` (sun / uv / air). Shipped as two, not one: the sun/uv/air trio shares a 6x4..10x6 ladder that neither weather view goes near. |
 | **Markets** | stocks, crypto, fx | one `markets`, a symbol list mixing `AAPL`, `BTC-USD`, `EUR/USD` |
 | **Clock** | clock, world_clock | one `clock`, a zone list (empty = local) |
 | **Daily card** | quote, wordofday, onthisday | one `daily`, source picker |

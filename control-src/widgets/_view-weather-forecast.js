@@ -1,5 +1,11 @@
 // Weather · Forecast — N-day high/low outlook.
 //
+// A VIEW of the `weather` widget (underscore-prefixed so check:widgets skips
+// it). The def below still owns this view's size ladder — a wide, short
+// outlook, 6x8..24x6 — which weather.js attaches to the two forecast
+// variants. It deliberately does not match the hero's ladder; that mismatch
+// is the reason per-variant sizes exist (see widgets/_sizes.js).
+//
 // Contract v2 (widgets-refresh W2): two layout variants —
 //   rows    — vertical list, one day per row (the original)
 //   columns — horizontal strip, one day per column; built for the wide

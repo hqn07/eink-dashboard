@@ -493,7 +493,7 @@ html, body {
  * them share the leftover height instead of overflowing — without this
  * the last row's temps clip at the bottom on tight tiles (e.g. 6×8
  * showing 4 days). min-height:0 lets rows compress below content size. */
-.cell-weather_forecast .fc-row {
+.cell-weather .fc-row {
   flex: 1 1 0;
   min-height: 0;
   padding: 4px 0;
@@ -1315,7 +1315,7 @@ img.icon { object-fit: contain; }
 /* ============ STALE WEATHER ============ */
 .weather-hero { position: relative; }
 
-/* ===== weather_hero tier layouts ===== */
+/* ===== weather hero-view tier layouts ===== */
 .hero-tier-tiny {
   display: flex; align-items: center; justify-content: center;
   height: 100%; padding: 4px;
@@ -1947,14 +1947,14 @@ img.icon { object-fit: contain; }
 /* --- Layer 3: per-widget accent toggle --- */
 /* Tint the tile heading + hero figure red when Accent = Red. Targets the
    universal .col-title plus each number-centric widget's hero element so
-   widgets without a heading (weather_hero, onthisday) still respond. */
+   widgets without a heading (weather's hero views, onthisday) still respond. */
 .cell-accent-red .col-title,            /* universal heading */
 .cell-accent-red .widget-title,         /* calendar heading */
 .cell-accent-red .cal-section-title,
 .cell-accent-red .cd-num,               /* countdown */
 .cell-accent-red .cd-unit,
 .cell-accent-red .aqi-num,              /* air quality index */
-.cell-accent-red .temp-num,             /* weather_hero temperature */
+.cell-accent-red .temp-num,             /* weather hero temperature */
 .cell-accent-red .temp-deg,
 .cell-accent-red .otd-feature-year,     /* on-this-day year */
 .cell-accent-red .clock-time,           /* clock */

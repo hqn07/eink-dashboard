@@ -1,4 +1,5 @@
-// Weather helpers shared between weather_hero + weather_forecast.
+// Helpers shared between the `weather` widget's two view modules,
+// _view-weather-now.js and _view-weather-forecast.js.
 //
 // Weather icons are vendored from sevesalm/eInk-weather-display
 // (BSD-3-Clause) under public/icons/sevesalm/. We pull them via

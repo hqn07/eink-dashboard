@@ -1,5 +1,56 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-17 — the weather pair merged; size ladders moved onto variants
+> **Widget count 23 -> 22.** `weather_hero` + `weather_forecast` are now one
+> `weather` widget with four views: `now`, `now_split`, `forecast`,
+> `forecast_rows`. Config migration **v10** — but the rewrite lives in
+> `WIDGET_ID_MIGRATIONS` (lib/screens.js) rather than behind a version gate,
+> because that table also runs on the pre-screens legacy path and
+> `weather_hero` is old enough to appear there.
+>
+> **The thing that unblocked it was not the merge.** This pair was held back
+> at v9 with a measured objection: hero runs `8x4..24x12`, a tall showpiece;
+> forecast runs `6x8..24x6`, a wide outlook. One `sizes` would have had the
+> pool card, add-to-canvas and `tidy()` all seed a forecast tile at the hero's
+> shape. So the contract changed instead: **a variant may declare its own
+> `sizes` / `defaultSize` / `minSize`, and it wins for tiles drawing it.**
+> Def-level values stay the DEFAULT variant's, so every consumer that has only
+> a widget id still gets a sensible answer without asking.
+>
+> `control-src/widgets/_sizes.js` is the resolver — `variantOf`, `sizeSpec`,
+> `sizeSpecFor`, `resolveSize`, `growToMin`. Every size call site goes through
+> it: `widgets.js` sizeFor/makeInstance, `autolayout.js` candidateSizes +
+> layoutFromWidgetIds, EditorGrid's pool card / showcase / RGL minima /
+> keyboard resize, WidgetForm's variant thumbnails, and the matrix.
+> `lib/layout.js` restates the rule in CJS (one lookup with a fallback — it
+> loads synchronously and cannot import the ESM module).
+>
+> **Switching view now resizes the tile** when it has to: `growToMin` raises
+> w/h to the incoming view's minimum and slides it back onto the grid. Only
+> GROWS, only on an actual variant change. Applied twice on purpose — in the
+> modal so the preview shows the real shape, and again in EditorGrid's
+> `onSave` against the LIVE item, because that handler deliberately does not
+> copy geometry from the draft (the tile may have been dragged meanwhile).
+> Verified end to end: an 8x4 `now` tile switched to `forecast` persisted as
+> **8x6**.
+>
+> **The matrix now iterates variants OUTSIDE sizes** (`lib/ssr.js`), so each
+> variant is rendered on its own ladder. Rows are variant-major now, which is
+> why the baseline moved 20% — re-captured, back to 0px. `weather` produces
+> `XS..XL x {now, now_split}` + `S..XL x {forecast, forecast_rows}` = 18 rows.
+>
+> **`npm run check:visual` was already failing before this work** — 90.95%,
+> a stale baseline from before inverted-on-black became the default, plus a QR
+> that renders blank in that fixture. Confirmed by stashing and re-running on
+> clean `main`. Untouched here; it needs its own look.
+>
+> The merged form shows Data (location + units, shared) and then only the
+> active view's fields — the two old forms were 9 and 10 fields, the worst
+> pair in the September audit. Both renderers are untouched; the view modules
+> are `_view-weather-now.js` / `_view-weather-forecast.js` and each still owns
+> its own ladder, which `weather.js` reads off them so no shape is written
+> twice.
+>
 > ## 2026-09-17 — DEVICE_TOKEN rotated; panel unaffected
 > New 48-char `DEVICE_TOKEN` in Railway, in this Mac's `.env`, and in both
 > `esp32/*/secrets.h` (all gitignored). **Panel verified fine after the
@@ -114,6 +165,8 @@
 > though the proposal said 5 -> 1. Markets merged cleanly because its three
 > shared a size ladder; hero runs 8x4..24x12 and forecast 6x8..24x6 — a tall
 > showpiece and a wide outlook. One ladder would mis-serve both.
+> *(SUPERSEDED 2026-09-17 — see the top entry. The objection was answered by
+> letting a variant carry its own ladder, not by overruling it.)*
 >
 > **Editor is canvas-first** (P1): the Live preview pane is gone. Its only
 > differentiator, the 1-bit threshold view, turned out never to have had a

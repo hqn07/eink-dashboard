@@ -91,12 +91,11 @@ export const DEMO_CODE_ACTIVITY = (() => {
 export function demoCtxForWidget(id, cellW, cellH) {
   const base = { cellW, cellH, units: 'F', cfg: {} };
   switch (id) {
-    case 'weather_hero':
+    case 'weather':
+      // One demo payload for both views — the merged widget's variant rides
+      // in on the caller's settings, so this must not pin one.
       return { ...base, weather: DEMO_WEATHER,
         settings: { lat: 0, lon: 0, stats: ['feels','humid','wind','cloud'] } };
-    case 'weather_forecast':
-      return { ...base, weather: DEMO_WEATHER,
-        settings: { lat: 0, lon: 0 } };
     case 'calendar':
       return { ...base, events: DEMO_EVENTS,
         settings: { icalUrls: ['demo'] } };

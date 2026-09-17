@@ -4,6 +4,7 @@ import { CaretUp, CaretDown, DotsSixVertical, Crosshair } from '@phosphor-icons/
 import { geocode, reverseGeocode } from '../api.js';
 import { homeValue, homeCoords } from '../home.js';
 import { MIGRATED_FORMS, MIGRATED_DEFS } from '../widgets/_registry.js';
+import { sizeSpec } from '../widgets/_sizes.js';
 import { TokenBareInput } from './TokenInput.jsx';
 import { HomeCtx } from './home-ctx.js';
 import { TokenCtx } from './token-ctx.js';
@@ -38,7 +39,7 @@ const PresetContext = React.createContext({ widgetId: null, item: null, previewD
 // widgets that import semRed from _shared.js.
 const SEMANTIC_RED_WIDGETS = new Set([
   'aqi', 'eink_battery', 'countdown',
-  'calendar', 'weather_forecast', 'weather_hero', 'sparkline'
+  'calendar', 'weather', 'sparkline'
 ]);
 
 const DEFAULT_OPEN_SECTIONS = ['Data', 'Content', 'Layout', 'Style'];
@@ -980,11 +981,15 @@ function PresetCard({ preset, isActive, ctx, currentValues, onPick, thumbSize })
   const { widgetId, item, previewData } = ctx;
   const THUMB_W = 160;
   const THUMB_H = 90;
-  // thumbSize (from def.variantThumb) overrides the live tile size when
-  // a widget's variants only manifest at a specific tier — otherwise
-  // every thumbnail would render the same small-tile layout.
-  const cellW = (thumbSize && thumbSize.w) || (item && item.w) || 8;
-  const cellH = (thumbSize && thumbSize.h) || (item && item.h) || 4;
+  // thumbSize overrides the live tile size when a variant's layout only
+  // manifests at a specific tier — otherwise every thumbnail would render the
+  // same small-tile layout. `preset.thumbSize` (a variant with its own size
+  // ladder) wins over the def-wide `def.variantThumb`, because a card showing
+  // the forecast at the hero's 8x12 would be advertising a shape that view
+  // never takes.
+  const size = preset.thumbSize || thumbSize;
+  const cellW = (size && size.w) || (item && item.w) || 8;
+  const cellH = (size && size.h) || (item && item.h) || 4;
   // Approx pixel size matching the dashboard body — 24 cols × ~33px,
   // 12 rows × ~33px. Close enough that the preset's tier resolves the
   // same way it will on the actual tile.
@@ -1107,9 +1112,17 @@ function WidgetFormInner({ widgetId, values, onChange, item, previewData, onHove
     // visual variant picker above their form — same live-thumbnail
     // card UI as presets, applying { variant: <name> }.
     const variantPresets = (def && def.variants)
-      ? Object.entries(def.variants).map(([id, val]) => ({
-          id, label: (val && val.label) || id, values: { variant: id }
-        }))
+      ? Object.entries(def.variants).map(([id, val]) => {
+          const spec = sizeSpec(def, id);
+          // Only when the variant declares its OWN ladder; otherwise leave
+          // thumbSize unset so the card keeps rendering at the live tile size,
+          // which is what every single-ladder widget wants.
+          const own = (val && val.sizes) ? (spec.sizes[spec.defaultSize] || null) : null;
+          return {
+            id, label: (val && val.label) || id, values: { variant: id },
+            thumbSize: own,
+          };
+        })
       : null;
     // Variant + Color are injected as rail sections (Option A) so everything
     // lives behind the left nav — no floating block above the tabs. Variant
@@ -1226,8 +1239,8 @@ function WidgetFormInner({ widgetId, values, onChange, item, previewData, onHove
     // calendar — migrated to control-src/widgets/calendar.jsx
 
     // ----- Location-derived widgets -----
-    // weather_hero — migrated to control-src/widgets/weather_hero.jsx
-    // weather_forecast — migrated to control-src/widgets/weather_forecast.jsx
+    // weather (was weather_hero + weather_forecast) — migrated to
+    // control-src/widgets/weather.form.jsx
 
     default:
       return (

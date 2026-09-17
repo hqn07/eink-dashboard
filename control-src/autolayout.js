@@ -1,3 +1,7 @@
+// _sizes.js is a leaf module with no registry imports, so it does not
+// compromise the rule below: this file still loads outside a bundler.
+import { sizeSpec, sizeSpecFor } from './widgets/_sizes.js';
+
 // Automatic tile placement for a fixed 24x12 panel.
 //
 // The editor asks a beginner to art-direct: free drag-and-resize on a grid
@@ -30,13 +34,17 @@ function candidateSizes(item, def, GRID_COLS, GRID_ROWS) {
     ? clamp({ w: item.w, h: item.h }) : null;
   const ceiling = current ? current.w * current.h : Infinity;
 
-  const declared = Object.values((def && def.sizes) || {})
+  // The tile's OWN variant picks the ladder: a weather tile drawing the
+  // forecast must be offered 6x8, not the hero's 8x4, or tidy would shrink it
+  // into a shape that view was never laid out for.
+  const spec = sizeSpecFor(def, item);
+  const declared = Object.values(spec.sizes || {})
     .filter(s => s && Number.isFinite(s.w) && Number.isFinite(s.h))
     .map(clamp)
     .filter(s => s.w * s.h <= ceiling)
     .sort((a, b) => (b.w * b.h) - (a.w * a.h));
 
-  const min = (def && def.minSize) || { w: 4, h: 2 };
+  const min = spec.minSize || { w: 4, h: 2 };
   const out = [];
   const seen = new Set();
   for (const s of [...(current ? [current] : []), ...declared, clamp(min)]) {
@@ -128,29 +136,37 @@ export function tidy(layout, widgetById, grid = DEFAULT_GRID) {
 // from large to small and take the first rung where nothing is left out.
 const SIZE_RUNGS = ['L', 'M', 'S', 'XS'];
 
-function sizeAt(def, key) {
-  const sizes = (def && def.sizes) || {};
+function sizeAt(def, key, variant) {
+  const spec = sizeSpec(def, variant);
+  const sizes = spec.sizes || {};
   if (sizes[key]) return sizes[key];
   // Fall back to the next smaller rung this widget actually declares, then
   // to its minimum: not every widget offers every rung.
   const order = SIZE_RUNGS.slice(SIZE_RUNGS.indexOf(key) + 1);
   for (const k of order) if (sizes[k]) return sizes[k];
   for (const k of SIZE_RUNGS) if (sizes[k]) return sizes[k];
-  return (def && def.minSize) || { w: 8, h: 4 };
+  return spec.minSize || { w: 8, h: 4 };
 }
 
+// `ids` entries may be a bare widget id or `{ id, variant }` — a caller that
+// knows which view it wants (Setup offering "forecast", not just "weather")
+// gets that view's ladder and that view's settings on the seeded tile.
 export function layoutFromWidgetIds(ids, widgetById, newInstanceId, grid = DEFAULT_GRID) {
-  const list = Array.isArray(ids) ? ids : [];
+  const list = (Array.isArray(ids) ? ids : []).map(
+    e => (e && typeof e === 'object') ? { id: e.id, variant: e.variant || null } : { id: e, variant: null });
   let best = null;
   for (const rung of SIZE_RUNGS) {
-    const seeded = list.map((id) => {
+    const seeded = list.map(({ id, variant }) => {
       const def = widgetById ? widgetById(id) : null;
-      const size = sizeAt(def, rung);
+      const v = (variant && def && def.variants && def.variants[variant])
+        ? variant : (def && def.defaultVariant) || null;
+      const size = sizeAt(def, rung, v);
       return {
         id: newInstanceId ? newInstanceId(id) : `${id}-${Math.random().toString(36).slice(2, 8)}`,
         widgetId: id,
         x: 0, y: 0, w: size.w, h: size.h,
         flush: false,
+        settings: variant ? { variant } : undefined,
       };
     });
     // Reading order for a fresh set is the pick order, which readingOrder()

@@ -570,7 +570,8 @@ test('config migration v5 strips cosmetics and keeps content', async () => {
     { lat: a.settings.lat, lon: a.settings.lon, city: a.settings.city,
       forecastDays: a.settings.forecastDays, includeToday: a.settings.includeToday,
       variant: a.settings.variant },
-    { lat: 1, lon: 2, city: 'Town', forecastDays: 4, includeToday: true, variant: 'columns' });
+    // 'columns' rode through the v10 weather merge as 'forecast'.
+    { lat: 1, lon: 2, city: 'Town', forecastDays: 4, includeToday: true, variant: 'forecast' });
   assert.deepEqual(b.settings.icalUrls, ['https://example.com/c.ics']);
   assert.equal(b.settings.showTime, true);
 
@@ -606,12 +607,18 @@ test('config migration v6 drops duplicated tile locations, keeps real overrides'
     screens: [{ id: 'x', isDefault: true, layoutKind: 'free',
       layout: [{ id: 't', widgetId: 'weather_hero', settings }] }],
   });
-  const out = (settings) => migrateConfigToScreens(mk(settings)).screens[0].layout[0].settings;
+  // These tiles are weather_hero, so the v10 merge also stamps a `variant` on
+  // the way through. That is v10's business, asserted in its own test; drop it
+  // here so this one stays about what v6 does to a location.
+  const out = (settings) => {
+    const { variant, ...rest } = migrateConfigToScreens(mk(settings)).screens[0].layout[0].settings;
+    return rest;
+  };
 
   // The live config's actual shape: same place, different comma spacing.
   assert.deepEqual(out({ city: 'Gainesville, Florida, US', lat: 29.65163, lon: -82.32483 }), {});
   // Coordinates alone are enough to call it a duplicate; siblings survive.
-  assert.deepEqual(out({ lat: 29.65163, lon: -82.32483, variant: 'split' }), { variant: 'split' });
+  assert.deepEqual(out({ lat: 29.65163, lon: -82.32483, variant: 'split' }), {});
   // City-only, spacing-insensitive.
   assert.deepEqual(out({ city: 'Gainesville, Florida, US' }), {});
 
@@ -630,5 +637,57 @@ test('config migration v6 drops duplicated tile locations, keeps real overrides'
     screens: [{ id: 'x', isDefault: true, layoutKind: 'free',
       layout: [{ id: 't', widgetId: 'weather_hero', settings: { lat: 1, lon: 2 } }] }],
   });
-  assert.deepEqual(homeless.screens[0].layout[0].settings, { lat: 1, lon: 2 });
+  assert.deepEqual(homeless.screens[0].layout[0].settings, { lat: 1, lon: 2, variant: 'now' });
+});
+
+// --- Config migration v10: the weather pair becomes one widget ------------
+//
+// A converting migration, like v8 and v9: the tile keeps its settings, its
+// heading and its place on the grid, and only the module drawing it changes.
+// Asserted per variant because the mapping is the whole migration — a tile
+// that came out as the wrong VIEW would look like a working merge while
+// quietly showing the user something they did not ask for.
+test('config migration v10 folds the weather pair into one widget', async () => {
+  const { migrateConfigToScreens, GRID_VERSION } = await import('../lib/screens.js');
+  const mk = (tiles) => migrateConfigToScreens({
+    gridVersion: 9, firstRunSeeded: true,
+    home: { city: 'Tokyo,JP', lat: 35.68, lon: 139.69 },
+    screens: [{ id: 'x', isDefault: true, layoutKind: 'free', layout: tiles }],
+  }).screens[0].layout;
+
+  const out = mk([
+    { id: 'a', widgetId: 'weather_hero',     x: 0, y: 0, w: 8,  h: 12, settings: { variant: 'classic' } },
+    { id: 'b', widgetId: 'weather_hero',     x: 8, y: 0, w: 8,  h: 12, settings: { variant: 'split' } },
+    { id: 'c', widgetId: 'weather_forecast', x: 16, y: 0, w: 4, h: 6,  settings: { variant: 'columns' } },
+    { id: 'd', widgetId: 'weather_forecast', x: 20, y: 0, w: 4, h: 6,  settings: { variant: 'rows' } },
+  ]);
+  assert.deepEqual(out.map(t => t.widgetId), ['weather', 'weather', 'weather', 'weather']);
+  assert.deepEqual(out.map(t => t.settings.variant),
+    ['now', 'now_split', 'forecast', 'forecast_rows']);
+  // Position and size are the user's; the merge does not re-place anything,
+  // not even the 4x6 tile that is now under the forecast view's 6x6 minimum.
+  assert.deepEqual(out.map(t => [t.x, t.y, t.w, t.h]),
+    [[0, 0, 8, 12], [8, 0, 8, 12], [16, 0, 4, 6], [20, 0, 4, 6]]);
+
+  // No stored variant: each old widget lands on the view it used to draw by
+  // default, not on the merged widget's default.
+  const bare = mk([
+    { id: 'a', widgetId: 'weather_hero',     x: 0, y: 0, w: 8, h: 12 },
+    { id: 'b', widgetId: 'weather_forecast', x: 8, y: 0, w: 6, h: 12 },
+  ]);
+  assert.deepEqual(bare.map(t => t.settings.variant), ['now', 'forecast']);
+
+  // Other settings ride through untouched, and the config records the bump.
+  const kept = mk([{ id: 'a', widgetId: 'weather_forecast', x: 0, y: 0, w: 6, h: 12,
+    settings: { variant: 'rows', city: 'Boston,MA,US', forecastDays: 5, hiloStyle: 'arrows' } }]);
+  assert.equal(kept[0].settings.city, 'Boston,MA,US');
+  assert.equal(kept[0].settings.forecastDays, 5);
+  assert.equal(kept[0].settings.hiloStyle, 'arrows');
+  assert.equal(GRID_VERSION, 10);
+
+  // Idempotent: a tile already on the merged widget is left exactly alone.
+  const again = mk([{ id: 'a', widgetId: 'weather', x: 0, y: 0, w: 8, h: 12,
+    settings: { variant: 'forecast_rows' } }]);
+  assert.equal(again[0].widgetId, 'weather');
+  assert.equal(again[0].settings.variant, 'forecast_rows');
 });

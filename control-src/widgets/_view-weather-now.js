@@ -1,5 +1,12 @@
-// Weather · Current — hero tile with big temperature + icon. Larger
-// tiers add stats, alert banner, sun-bar, and hourly strip.
+// Weather · Now — hero view with big temperature + icon. Larger tiers add
+// stats, alert banner, sun-bar and hourly strip.
+//
+// A VIEW of the `weather` widget, not a palette entry of its own (that is
+// why the filename is underscore-prefixed — check:widgets skips it). The
+// def below is still the source of truth for this view's size ladder:
+// weather.js reads `sizes` / `defaultSize` / `minSize` straight off it, so
+// the tall-showpiece shape is written once, here, next to the render that
+// needs it.
 //
 // Contract v2 (widgets-refresh W2): three layout variants —
 //   classic — centered stack (icon over temp), the original editorial look

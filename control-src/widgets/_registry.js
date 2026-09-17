@@ -37,8 +37,7 @@ import * as tasks            from './tasks.js';
 import * as text             from './text.js';
 import * as transit          from './transit.js';
 import * as webhook          from './webhook.js';
-import * as weather_forecast from './weather_forecast.js';
-import * as weather_hero     from './weather_hero.js';
+import * as weather          from './weather.js';
 
 import { Form as dailyForm }        from './daily.form.jsx';
 import { Form as outdoorsForm }     from './outdoors.form.jsx';
@@ -61,12 +60,11 @@ import { Form as tasksForm }           from './tasks.form.jsx';
 import { Form as textForm }            from './text.form.jsx';
 import { Form as transitForm }         from './transit.form.jsx';
 import { Form as webhookForm }         from './webhook.form.jsx';
-import { Form as weatherForecastForm } from './weather_forecast.form.jsx';
-import { Form as weatherHeroForm }     from './weather_hero.form.jsx';
+import { Form as weatherForm }         from './weather.form.jsx';
 
 const MODULES = [
   ai, art, outdoors, daily, calendar, chess, markets, codeactivity, clock, countdown, eink_battery,
-  headlines, moon, photo, progress, qr, sparkline, tasks, text, transit, webhook, weather_forecast, weather_hero
+  headlines, moon, photo, progress, qr, sparkline, tasks, text, transit, webhook, weather
 ];
 
 const FORMS = {
@@ -91,8 +89,7 @@ const FORMS = {
   text:             textForm,
   transit:          transitForm,
   webhook:          webhookForm,
-  weather_forecast: weatherForecastForm,
-  weather_hero:     weatherHeroForm
+  weather:          weatherForm
 };
 
 export const MIGRATED_DEFS = Object.fromEntries(

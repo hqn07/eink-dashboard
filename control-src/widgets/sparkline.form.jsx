@@ -25,7 +25,7 @@ export function Form({ values, patch, onChange, fields }) {
         {isWeather && (
           <LocationFields
             values={v}
-            // See the note in weather_hero.form.jsx — LocationFields emits a
+            // See the note in weather.form.jsx — LocationFields emits a
             // complete settings object and a merge here would defeat clearing.
             onChange={onChange}
           />

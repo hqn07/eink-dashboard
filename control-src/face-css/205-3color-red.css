@@ -60,14 +60,14 @@
 /* --- Layer 3: per-widget accent toggle --- */
 /* Tint the tile heading + hero figure red when Accent = Red. Targets the
    universal .col-title plus each number-centric widget's hero element so
-   widgets without a heading (weather_hero, onthisday) still respond. */
+   widgets without a heading (weather's hero views, onthisday) still respond. */
 .cell-accent-red .col-title,            /* universal heading */
 .cell-accent-red .widget-title,         /* calendar heading */
 .cell-accent-red .cal-section-title,
 .cell-accent-red .cd-num,               /* countdown */
 .cell-accent-red .cd-unit,
 .cell-accent-red .aqi-num,              /* air quality index */
-.cell-accent-red .temp-num,             /* weather_hero temperature */
+.cell-accent-red .temp-num,             /* weather hero temperature */
 .cell-accent-red .temp-deg,
 .cell-accent-red .otd-feature-year,     /* on-this-day year */
 .cell-accent-red .clock-time,           /* clock */

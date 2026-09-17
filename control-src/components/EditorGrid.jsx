@@ -4,6 +4,7 @@ import { m, AnimatePresence } from 'framer-motion';
 import { Gear, X, Copy } from '@phosphor-icons/react';
 import * as HoverCard from '@radix-ui/react-hover-card';
 import { WIDGET_REGISTRY, POOL_CATEGORIES, GRID_COLS, GRID_ROWS, widgetById, makeInstance, newInstanceId } from '../widgets.js';
+import { sizeSpec, sizeSpecFor, growToMin } from '../widgets/_sizes.js';
 import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses } from '../widget-render.js';
 import { demoCtxForWidget } from '../widgets/_pool_demo.js';
 import { autofitText } from '../autofit.js';
@@ -22,30 +23,31 @@ const DASH_H = 480;
 const HEADER_H_BASE = 60;
 const FOOTER_H_BASE = 28;
 
-// Pick a widget's smallest registered size by area — used for the pool
-// preview and for the initial drop size when a widget is added.
-function smallestSizeKey(def) {
-  return Object.keys(def.sizes).reduce((a, b) => {
-    const sa = def.sizes[a]; const sb = def.sizes[b];
+// Pick the smallest registered size by area — used for the pool preview and
+// for the initial drop size when a widget is added. Reads the spec, not the
+// def, so a variant with its own ladder is measured on its own terms.
+function smallestSizeKey(spec) {
+  const sizes = spec.sizes || {};
+  return Object.keys(sizes).reduce((a, b) => {
+    const sa = sizes[a]; const sb = sizes[b];
     return (sb.w * sb.h) < (sa.w * sa.h) ? b : a;
-  }, def.defaultSize);
+  }, spec.defaultSize);
 }
 
 // Showcase size per widget — what HoverCard renders on hover. Picked
 // by hand so each widget looks its best instead of always the
 // smallest preset. Fallback: the widget's defaultSize.
 const SHOWCASE_SIZE_BY_ID = {
-  clock:            'S',
-  eink_battery:     'S',
-  text:             'S',
-  calendar:         'M',
-  weather_forecast: 'M',
-  weather_hero:     'L'
+  clock:        'S',
+  eink_battery: 'S',
+  text:         'S',
+  calendar:     'M',
+  weather:      'L'
 };
-function showcaseSizeKey(def) {
+function showcaseSizeKey(def, spec) {
   const hint = SHOWCASE_SIZE_BY_ID[def.id];
-  if (hint && def.sizes[hint]) return hint;
-  return def.defaultSize;
+  if (hint && spec.sizes && spec.sizes[hint]) return hint;
+  return spec.defaultSize;
 }
 
 export default function EditorGrid({ layout, showGrid, oneBit, cardStyle, readOnly = false, previewData, seedCtx, onChange, onError, onCommitItemNow, openSettingsId, onSettingsOpened}) {
@@ -234,7 +236,7 @@ export default function EditorGrid({ layout, showGrid, oneBit, cardStyle, readOn
 
   const rglLayout = enabled.map(l => {
     const def = widgetById(l.widgetId);
-    const min = (def && def.minSize) || { w: 1, h: 1 };
+    const min = sizeSpecFor(def, l).minSize || { w: 1, h: 1 };
     return {
       i: l.id,
       x: l.x, y: l.y, w: l.w, h: l.h,
@@ -358,10 +360,14 @@ export default function EditorGrid({ layout, showGrid, oneBit, cardStyle, readOn
 
   // Add a NEW instance of the given widget type. Multiple instances of
   // the same widget can coexist on the canvas.
-  const addToCanvas = (widgetId) => {
+  const addToCanvas = (widgetId, variant = null) => {
     const def = widgetById(widgetId);
     if (!def) return;
-    const candidates = Object.entries(def.sizes)
+    // Size ladder of the view being added, which for everything but the
+    // merged widgets is just the def's.
+    const spec = sizeSpec(def, (variant && def.variants && def.variants[variant])
+      ? variant : def.defaultVariant);
+    const candidates = Object.entries(spec.sizes || {})
       .map(([key, sz]) => ({ key, w: sz.w, h: sz.h }))
       .sort((a, b) => (a.w * a.h) - (b.w * b.h));
     candidates.push({ key: null, w: 1, h: 1 });
@@ -369,7 +375,7 @@ export default function EditorGrid({ layout, showGrid, oneBit, cardStyle, readOn
     for (const c of candidates) {
       const slot = findFreeSlot(c.w, c.h, enabled);
       if (slot) {
-        const inst = makeInstance(widgetId, { x: slot.x, y: slot.y, w: c.w, h: c.h, sizeKey: c.key }, seedCtx);
+        const inst = makeInstance(widgetId, { x: slot.x, y: slot.y, w: c.w, h: c.h, sizeKey: c.key, variant }, seedCtx);
         if (inst) {
           onChange([...layout, inst]);
           pushRecent(widgetId);
@@ -454,8 +460,9 @@ export default function EditorGrid({ layout, showGrid, oneBit, cardStyle, readOn
       if (!dir || mod) return;
       e.preventDefault();
       const def = widgetById(item.widgetId);
-      const minW = (def && def.minSize && def.minSize.w) || 2;
-      const minH = (def && def.minSize && def.minSize.h) || 1;
+      const itemMin = sizeSpecFor(def, item).minSize;
+      const minW = (itemMin && itemMin.w) || 2;
+      const minH = (itemMin && itemMin.h) || 1;
       let cand;
       if (e.shiftKey) {
         cand = { ...item,
@@ -744,8 +751,9 @@ export default function EditorGrid({ layout, showGrid, oneBit, cardStyle, readOn
           <div className="palette-section-head">{cat}</div>
           <div className="palette-grid">
           {palette.filter(d => (d.category || 'Text') === cat).map(def => {
-            const sizeKey = smallestSizeKey(def);
-            const { w, h } = def.sizes[sizeKey];
+            const poolSpec = sizeSpec(def, def.defaultVariant);
+            const sizeKey = smallestSizeKey(poolSpec);
+            const { w, h } = poolSpec.sizes[sizeKey];
             // Pool tiles render with frozen demo data so a brand-new
             // user doesn't see "SETUP NEEDED" placeholders before
             // they've configured anything. Each render gets its own
@@ -765,8 +773,8 @@ export default function EditorGrid({ layout, showGrid, oneBit, cardStyle, readOn
             // widgets don't take over the page. Renders the same
             // widget-render output the canvas uses so it matches what
             // the user gets on drop.
-            const showcaseKey = showcaseSizeKey(def);
-            const { w: sw, h: sh } = def.sizes[showcaseKey];
+            const showcaseKey = showcaseSizeKey(def, poolSpec);
+            const { w: sw, h: sh } = poolSpec.sizes[showcaseKey];
             const showcaseW = sw * (DASH_W / GRID_COLS);
             const showcaseH = sh * (BODY_H / GRID_ROWS);
             const showcaseScale = Math.min(
@@ -871,6 +879,19 @@ export default function EditorGrid({ layout, showGrid, oneBit, cardStyle, readOn
                 visibility: updated.visibility,
                 settings: updated.settings
               };
+              // Geometry is deliberately NOT copied from the modal draft —
+              // the tile may have been dragged while the modal was open. But a
+              // new variant can bring a new minimum size, so re-derive that
+              // growth from the LIVE item and send it only when it moved.
+              const live = layout.find(it => it.id === updated.id);
+              if (live) {
+                const grown = growToMin({ ...live, ...patch }, widgetById(live.widgetId),
+                  { cols: GRID_COLS, rows: GRID_ROWS });
+                if (grown.w !== live.w || grown.h !== live.h) {
+                  patch.x = grown.x; patch.y = grown.y;
+                  patch.w = grown.w; patch.h = grown.h;
+                }
+              }
               if (onCommitItemNow) {
                 // Persist immediately + refresh preview so the editor shows
                 // updated data without a second click on the main save bar.

@@ -46,8 +46,11 @@ const WIZARD_STEPS = ['Location', 'Layout', 'Security'];
 // rather than as widget names. Picking a preset means adopting someone else's
 // idea of a day; picking interests builds a screen out of what YOU asked for,
 // and the packer arranges it.
+// A `widgets` entry is a widget id, or `{ id, variant }` when the interest
+// wants a specific view of a merged widget — "Weather" means both the
+// conditions now and the days ahead, which are now two views of one widget.
 const INTERESTS = [
-  { id: 'weather',  label: 'Weather',        widgets: ['weather_hero', 'weather_forecast'] },
+  { id: 'weather',  label: 'Weather',        widgets: [{ id: 'weather', variant: 'now' }, { id: 'weather', variant: 'forecast' }] },
   { id: 'calendar', label: "What's on",      widgets: ['calendar'] },
   { id: 'clock',    label: 'The time',       widgets: ['clock'] },
   { id: 'news',     label: 'Headlines',      widgets: ['headlines'] },
@@ -117,9 +120,16 @@ export default function SetupWizard({ cfg, onPatch, onApplyPreset, onApplyLayout
   // in silence.
   const buildFromInterests = () => {
     const ids = [];
+    const seen = new Set();
     for (const it of INTERESTS) {
       if (!picked.has(it.id)) continue;
-      for (const w of it.widgets) if (!ids.includes(w)) ids.push(w);
+      for (const w of it.widgets) {
+        const spec = (typeof w === 'string') ? { id: w, variant: null } : w;
+        const key = `${spec.id}:${spec.variant || ''}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        ids.push(spec);
+      }
     }
     if (!ids.length) { setStep('pin'); return; }
     const r = layoutFromWidgetIds(ids, widgetById, newInstanceId, { cols: GRID_COLS, rows: GRID_ROWS });

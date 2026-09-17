@@ -20,7 +20,7 @@
  * them share the leftover height instead of overflowing — without this
  * the last row's temps clip at the bottom on tight tiles (e.g. 6×8
  * showing 4 days). min-height:0 lets rows compress below content size. */
-.cell-weather_forecast .fc-row {
+.cell-weather .fc-row {
   flex: 1 1 0;
   min-height: 0;
   padding: 4px 0;
