@@ -3,6 +3,7 @@ import { MapPin, GithubLogo, Clock, CalendarBlank } from '@phosphor-icons/react'
 import { geocode, flagEmoji } from '../api.js';
 import { homeValue, homeCoords } from '../home.js';
 import SearchableSelect from './SearchableSelect.jsx';
+import SavedFeedsManager from './SavedFeedsManager.jsx';
 import UrlBadge from './UrlBadge.jsx';
 
 // The single editor for shared facts — stage 2 of docs/setup-architecture.md.
@@ -48,6 +49,7 @@ export default function SetupPanel({ cfg, onReplaceConfig }) {
   const githubUser = homeValue(cfg, 'githubUser') || '';
   const about = typeof home.about === 'string' ? home.about : '';
   const icalUrls = homeValue(cfg, 'icalUrls') || [];
+  const tickers = homeValue(cfg, 'tickers') || [];
 
   // Deliberately NOT the shared ListEditor: it lives inside WidgetForm.jsx
   // and is not exported, and pulling that module in here would drag the
@@ -187,6 +189,33 @@ export default function SetupPanel({ cfg, onReplaceConfig }) {
           and Backup &gt; EXPORT writes it to a plain JSON file — treat an
           exported backup as you would the URLs themselves.
         </span>
+      </div>
+
+      <label className="wsm-field">
+        <span className="wsm-field-label">Default tickers</span>
+        <input
+          type="text"
+          value={tickers.join(', ')}
+          placeholder="AAPL, BTC, EUR/USD"
+          onChange={(e) => setHome({
+            tickers: e.target.value.split(',').map(x => x.trim()).filter(Boolean)
+          })}
+        />
+        <span className="wsm-field-help">
+          A Markets tile with no symbols of its own uses this list, so a new
+          one asks nothing. Same rules as the tile: a slash is a currency
+          pair, a known coin ticker is crypto, anything else is a stock.
+        </span>
+      </label>
+
+      <div className="wsm-field">
+        <span className="wsm-field-label">Saved feeds</span>
+        <span className="wsm-field-help">
+          The library behind &ldquo;My feeds&rdquo; in calendar and headline
+          tiles. Anything you save while editing a tile shows up here, where
+          it can be renamed or removed without hunting through widgets.
+        </span>
+        <SavedFeedsManager />
       </div>
 
       <label className="wsm-field">

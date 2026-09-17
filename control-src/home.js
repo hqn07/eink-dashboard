@@ -19,7 +19,7 @@
 // top-level `city` alongside that empty block would resolve to "" and the
 // weather would silently go NO DATA. Absent means empty, not just null.
 
-export const HOME_KEYS = ['city', 'lat', 'lon', 'timezone', 'icalUrls', 'githubUser', 'about'];
+export const HOME_KEYS = ['city', 'lat', 'lon', 'timezone', 'icalUrls', 'githubUser', 'tickers', 'about'];
 
 export function present(v) {
   if (v == null) return false;

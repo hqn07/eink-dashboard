@@ -1,4 +1,5 @@
 import { escapeHtml, placeholder, staleMark, pickTier } from './_shared.js';
+import { homeValue } from '../home.js';
 
 // Markets — stocks, crypto and currency pairs in one tile.
 //
@@ -45,9 +46,12 @@ export function render(ctx) {
   const titleLabel = (typeof s.title === 'string' && s.title.trim())
     ? s.title.trim() : 'MARKETS';
 
-  const wanted = Array.isArray(s.symbols) && s.symbols.filter(Boolean).length;
+  // Inherited symbols count as configured: a tile using the Setup list is not
+  // waiting for the user to do anything.
+  const shared = homeValue(ctx && ctx.cfg, 'tickers') || [];
+  const wanted = (Array.isArray(s.symbols) && s.symbols.filter(Boolean).length) || shared.length;
   if (!m || !Array.isArray(m.rows) || !m.rows.length) {
-    return placeholder(titleLabel, wanted ? 'No quotes' : 'Add symbols', 'msg',
+    return placeholder(titleLabel, wanted ? 'No quotes' : 'Add symbols, or a list in Setup', 'msg',
       { cellW, cellH }, wanted ? 'nodata' : 'setup');
   }
 
