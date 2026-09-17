@@ -24,8 +24,9 @@ const { scriptSrc } = require('./lib/csp');
 // under routes/. Nearly all logic lives in lib/ modules; the only pieces used
 // directly here are the startup warmer, the PIN-reset recovery, the config
 // migrator wiring, and a couple of middleware deps.
-const { loadConfig, saveConfig, setMigrator: _setConfigMigrator } = require('./lib/config-store');
-const { migrateConfigToScreens } = require('./lib/screens');
+const { loadConfig, saveConfig, setMigrator: _setConfigMigrator,
+        setGridVersion: _setConfigGridVersion } = require('./lib/config-store');
+const { migrateConfigToScreens, GRID_VERSION } = require('./lib/screens');
 const {
   invalidateImage, warmActiveImage, PRERENDER_ENABLED, PRERENDER_INTERVAL_MS,
   BROWSER_IDLE_MS,
@@ -48,6 +49,9 @@ if (!DEVICE_TOKEN) {
 // Wire the config-store to migrate loaded configs to the current screen schema.
 // Injected (not imported by config-store) to avoid a require cycle.
 _setConfigMigrator(migrateConfigToScreens);
+// So saveConfig can stamp the server's schema version on every write and a
+// client running an older mirrored migrator cannot write a stale one back.
+_setConfigGridVersion(GRID_VERSION);
 
 // ---------- App ----------
 

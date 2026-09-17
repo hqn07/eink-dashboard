@@ -683,7 +683,9 @@ test('config migration v10 folds the weather pair into one widget', async () => 
   assert.equal(kept[0].settings.city, 'Boston,MA,US');
   assert.equal(kept[0].settings.forecastDays, 5);
   assert.equal(kept[0].settings.hiloStyle, 'arrows');
-  assert.equal(GRID_VERSION, 10);
+  // Not pinned to an exact number: this test is about the weather merge, and
+  // pinning the constant makes every later migration fail an unrelated test.
+  assert.ok(GRID_VERSION >= 10, 'the weather merge landed at v10 or later');
 
   // Idempotent: a tile already on the merged widget is left exactly alone.
   const again = mk([{ id: 'a', widgetId: 'weather', x: 0, y: 0, w: 8, h: 12,
@@ -932,4 +934,90 @@ test('quiet hours: fixed mode still works and is also capped', async () => {
   // Wrap past midnight is still handled.
   const wrapped = quietMinutesRemaining(mk(nowMin - 30, nowMin + 60));
   assert.ok(wrapped > 0 && wrapped <= 60 + 1, 'a window spanning now, possibly wrapped');
+});
+
+// --- Migrations must reach a fixed point ----------------------------------
+//
+// The chain runs on EVERY config load and is never written back, so it is fed
+// its own output forever. That makes idempotency a correctness requirement,
+// not a nicety — and it was broken: v9 turns world_clock/stack into
+// clock/zones, then v5's frozen V5_LIVE_VARIANTS.clock = ['big'] deleted
+// `zones` on the next pass, because v5 runs BEFORE v9 and judged a v9-era tile
+// by v5-era rules. `zones` stayed in settings, so the tile silently rendered
+// local time instead of Saigon. Found on the real panel, not by reading.
+test('migrations are idempotent — re-running never loses a setting', async () => {
+  const { migrateConfigToScreens, GRID_VERSION } = await import('../lib/screens.js');
+
+  const seeds = [
+    ['world_clock/stack', { widgetId: 'world_clock', settings: { variant: 'stack', zones: ['SAIGON|Asia/Saigon'] } }],
+    ['world_clock/big',   { widgetId: 'world_clock', settings: { variant: 'big', zones: ['SAIGON|Asia/Saigon'] } }],
+    ['clock/zones',       { widgetId: 'clock', settings: { variant: 'zones', zones: ['SAIGON|Asia/Saigon'] } }],
+    ['clock/zones_big',   { widgetId: 'clock', settings: { variant: 'zones_big', zones: ['SAIGON|Asia/Saigon'] } }],
+    ['sun -> outdoors',   { widgetId: 'sun', settings: {} }],
+    ['outdoors/air',      { widgetId: 'outdoors', settings: { variant: 'air' } }],
+    ['daily/onthisday',   { widgetId: 'daily', settings: { variant: 'onthisday' } }],
+    ['weather_hero/split',{ widgetId: 'weather_hero', settings: { variant: 'split' } }],
+    ['weather/forecast',  { widgetId: 'weather', settings: { variant: 'forecast' } }],
+    ['markets/trmnl',     { widgetId: 'markets', settings: { variant: 'trmnl', symbols: ['AAPL'] } }],
+  ];
+
+  for (const [label, tile] of seeds) {
+    // Start from a version old enough that every migration runs.
+    let cfg = {
+      gridVersion: 1, firstRunSeeded: true,
+      home: { lat: 29.6, lon: -82.3, timezone: 'America/New_York' },
+      screens: [{ id: 's', isDefault: true, layoutKind: 'free',
+        layout: [{ id: 't', x: 0, y: 0, w: 8, h: 4, ...tile }] }],
+    };
+
+    const pass = () => {
+      cfg = migrateConfigToScreens(JSON.parse(JSON.stringify(cfg)));
+      const t = cfg.screens[0].layout[0];
+      return { id: t.widgetId, settings: t.settings || {} };
+    };
+
+    const first = pass();
+    for (let i = 2; i <= 4; i++) {
+      const again = pass();
+      assert.deepEqual(again, first,
+        `${label}: pass ${i} differs from pass 1 — the chain is not a fixed point`);
+    }
+
+    // And the same again when the stored version is stale, which is what
+    // actually happened in production: the editor stamped its own
+    // GRID_VERSION (4) onto an already-migrated config, sending it back
+    // through v5 with v9's output already in place.
+    for (let i = 0; i < 3; i++) {
+      cfg.gridVersion = 4;
+      const stale = pass();
+      assert.deepEqual(stale, first,
+        `${label}: a stale stored gridVersion must not strip anything`);
+    }
+    assert.equal(cfg.gridVersion, GRID_VERSION);
+  }
+});
+
+// --- v11: repair a world clock whose variant was already deleted ----------
+test('v11 restores a zone clock stripped by the v5/v9 ordering bug', async () => {
+  const { migrateConfigToScreens } = await import('../lib/screens.js');
+  const mk = (settings) => migrateConfigToScreens({
+    gridVersion: 10, firstRunSeeded: true, home: { lat: 29.6, lon: -82.3 },
+    screens: [{ id: 's', isDefault: true, layoutKind: 'free',
+      layout: [{ id: 't', widgetId: 'clock', x: 0, y: 0, w: 8, h: 4, settings }] }],
+  }).screens[0].layout[0].settings;
+
+  // The exact damaged shape seen in production: zones intact, variant gone.
+  assert.equal(mk({ zones: ['SAIGON|Asia/Saigon'], format: '12h', showMeta: true }).variant,
+    'zones_big', 'a single zone reads best as the large single-place view');
+  assert.equal(mk({ zones: ['SAIGON|Asia/Saigon', 'LONDON|Europe/London'] }).variant,
+    'zones', 'several zones read best as label/time rows');
+
+  // Must not invent a variant where there is nothing to infer from.
+  assert.equal(mk({ format: '12h', showDate: true }).variant, undefined,
+    'a clock with no zones is a local clock — leave it alone');
+  assert.equal(mk({ zones: [], format: '12h' }).variant, undefined,
+    'an empty zones array is not evidence of a world clock');
+  // Must never override a variant the user actually has.
+  assert.equal(mk({ variant: 'big', zones: ['SAIGON|Asia/Saigon'] }).variant, 'big',
+    'an existing variant wins — the repair only fills a gap');
 });

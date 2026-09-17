@@ -21,10 +21,23 @@ export const GRID_ROWS = 12;
 // v1 = 12x6  (Apr 2026 → May 2026, rectangular cells)
 // v2 = 12x12 (May 18 2026, finer h but rectangular cells)
 // v3 = 24x12 (square cells, fine in both axes)
-// v4 = screens gain layoutKind (server had this; client copy had
-//      drifted to v3 — the two migrateConfigToScreens implementations
-//      are hand-mirrored, keep them in sync)
-export const GRID_VERSION = 4;
+// v4 = screens gain layoutKind
+//
+// This drifted to 4 while the server reached 10, and that drift was not
+// harmless: the editor stamps this value onto every config it saves, so
+// saving from the browser wrote gridVersion:4 over an already-migrated
+// config. The next server load then re-ran v5 against v9's output and
+// silently deleted a world clock's `zones` variant — the tile kept its zones
+// and rendered local time instead.
+//
+// Two things now stop that recurring: lib/config-store stamps the SERVER's
+// version on every write regardless of what a client sends (the client is not
+// the authority here), and the server's v5 strip is safe to re-run. This
+// constant is kept in step as well, but it is no longer load-bearing.
+//
+// The client migrator only implements v1-v4; the server owns v5+. It does not
+// need to catch up, because the server migrates whatever it is handed.
+export const GRID_VERSION = 10;
 export const SCREENS = [1, 2];
 
 // Sizes are in 24x12 grid units. With body ≈ 800px × 392-452px, cells
