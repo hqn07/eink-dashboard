@@ -13,8 +13,29 @@ const { planesToPng, shiftPlanesLeft } = require('../lib/image');
 const { calibPlanes, calibTag } = require('../lib/calib');
 const { strongEtag } = require('../lib/htmlutil');
 const { safeError } = require('../lib/http');
+const { findNewestFirmwareCached } = require('../lib/firmware');
 
 const SCREEN_W = 800, SCREEN_H = 480;
+
+// Advertise the newest published build for the calling device's board.
+//
+// The device fetches this endpoint every cycle anyway, so telling it the
+// newest version here costs zero extra round trips — it can then skip
+// /api/firmware/manifest entirely when there is nothing new. That is what
+// makes checking for updates on a button press free. The manifest endpoint
+// stays authoritative (it hands out the URL); this header is only a hint that
+// lets the device decide whether to ask.
+//
+// Set on the 304 path too — an unchanged image is the common case, and a
+// device that skipped the redraw still wants to know about firmware.
+async function setFirmwareHint(req, res) {
+  const board = String(req.headers['fw-board'] || '').toLowerCase();
+  if (!/^[a-z0-9]{1,16}$/.test(board)) return;
+  try {
+    const newest = await findNewestFirmwareCached(board);
+    if (newest) res.set('X-Firmware-Latest', newest.version);
+  } catch (_) { /* a hint is never worth failing the image fetch over */ }
+}
 
 // Parse + validate the battery telemetry the firmware sends as headers on
 // every image fetch. Returns the pct when valid (and persists it), else null.
@@ -189,6 +210,7 @@ router.get('/display-3c.bin', checkDeviceAuth, async (req, res) => {
     res.set('X-Refresh-Seconds', String(refresh3c.seconds));
     res.set('ETag', etag);
     res.set('Cache-Control', 'no-store');
+    await setFirmwareHint(req, res);
     // Conditional GET: identical image → 304, firmware skips the slow
     // ~15-26 s color refresh entirely and goes back to sleep.
     if (req.headers['if-none-match'] === etag) {

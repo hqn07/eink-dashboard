@@ -49,7 +49,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.23.0"
+#define FW_VERSION "1.24.0"
 #define FW_BOARD   "b"
 #define OTA_MIN_BATT_PCT 50
 
@@ -163,6 +163,11 @@ int         g_serverRefreshSec = -1;
 // 0 on every cycle entry so a fail screen always shows the *current*
 // cycle's failure, not a stale one from before.
 int         g_lastHttpCode = 0;
+// Newest published firmware for this board, from the X-Firmware-Latest
+// response header on /display-3c.bin. Empty = the server did not say (older
+// server, or the fetch failed), in which case checkForUpdate falls back to
+// asking the manifest. Set every cycle, so it is plain RAM, not RTC.
+String      g_latestFw = "";
 // Survives deep sleep — `time_t` of the last successful download
 // (set immediately after pushImage). 0 = never. drawFailScreen shows
 // "Last good: Nm ago" so the user knows whether this is a fresh
@@ -263,6 +268,29 @@ void beepLowBattery() {
 // secrets.h answered /health first (LAN preferred). All HTTP helpers
 // below use this instead of the raw config constants.
 const char* activeServerBase = "";
+
+// Compare two "major.minor.patch" strings. Returns >0 when a is newer than
+// b, 0 when equal, <0 when older. Anything unparseable compares as 0 so a
+// malformed value can never look like an upgrade.
+int cmpFwVersion(const String& a, const String& b) {
+  int am = 0, an = 0, ap = 0, bm = 0, bn = 0, bp = 0;
+  if (sscanf(a.c_str(), "%d.%d.%d", &am, &an, &ap) != 3) return 0;
+  if (sscanf(b.c_str(), "%d.%d.%d", &bm, &bn, &bp) != 3) return 0;
+  if (am != bm) return am - bm;
+  if (an != bn) return an - bn;
+  return ap - bp;
+}
+
+// Stash the server's X-Firmware-Latest hint. Sent on /display-3c.bin, which
+// the device fetches every cycle anyway, so learning about a new build costs
+// no extra request. checkForUpdate uses it to decide whether the manifest is
+// even worth asking.
+void captureFirmwareHint(HTTPClient& http) {
+  if (!http.hasHeader("X-Firmware-Latest")) return;
+  String v = http.header("X-Firmware-Latest");
+  v.trim();
+  if (v.length() > 0 && v.length() < 16) g_latestFw = v;
+}
 
 // Wrap HTTPClient.begin so HTTPS URLs go through WiFiClientSecure
 // with setInsecure() — Railway, Render, etc. all use TLS. Without
@@ -947,8 +975,9 @@ uint8_t* downloadImage() {
   if (g_lastEtag[0]) http.addHeader("If-None-Match", g_lastEtag);
   // Retain the response headers we care about: refresh hint + ETag +
   // stale-enrollment flag.
-  const char* keepHeaders[] = { "X-Refresh-Rate", "ETag", "X-Refresh-Seconds", "X-Enroll-Stale" };
-  http.collectHeaders(keepHeaders, 4);
+  const char* keepHeaders[] = { "X-Refresh-Rate", "ETag", "X-Refresh-Seconds",
+                                "X-Enroll-Stale", "X-Firmware-Latest" };
+  http.collectHeaders(keepHeaders, 5);
 
   int code = http.GET();
   // Server didn't recognize our api_key (roster lost / re-provisioned
@@ -959,6 +988,7 @@ uint8_t* downloadImage() {
     Serial.println("Server flagged stale enrollment — clearing api_key, re-enroll next cycle");
     saveAuthToNVS("", "");
   }
+  captureFirmwareHint(http);
   // 304 Not Modified — image identical to what's already on the panel.
   // Skip the redraw entirely; caller leaves the screen as-is and sleeps.
   if (code == 304) {
@@ -1235,20 +1265,38 @@ void postBattery(float v, int pct) {
 
 // =================== OTA ===================
 //
-// Each timer wake: GET /api/firmware/manifest?board=...&from=FW_VERSION.
-// Server returns 204 when up-to-date, otherwise {version, url, size}.
-// If newer, run httpUpdate which flashes the inactive OTA partition and
-// reboots into the new build. Skipped on button wake (user wants instant
-// refresh, not a 30s flash) and on low battery (brick risk if LiPo dies
-// mid-flash). setInsecure() skips TLS cert validation — DEVICE_TOKEN in
-// the URL is the auth, cert pinning isn't worth the rotation pain.
-void checkForUpdate(int battPct, bool buttonWake) {
-  if (buttonWake) {
-    Serial.println("OTA: skip on button wake");
-    return;
-  }
+// Runs at the END of a cycle, AFTER the panel has been drawn, and does NOT
+// reboot. Both of those are deliberate.
+//
+// This used to run before the draw and reboot on success, so finding an
+// update cost the user a ~33 s flash + reboot BEFORE the ~26 s redraw they
+// were waiting on — which is why button wakes skipped it entirely. Draw
+// first, then flash, and the wait disappears: the panel is already correct
+// before a byte is downloaded.
+//
+// rebootOnUpdate(false) means httpUpdate writes and validates the inactive
+// OTA slot, marks it bootable, and returns. We then deep sleep. Waking from
+// deep sleep is a CPU reset, so the bootloader brings up the new build on the
+// next natural wake — no reboot the user can see, and no second 26 s redraw
+// that an immediate reboot would force. A flash interrupted by power loss
+// never gets marked bootable, so the old slot keeps booting.
+//
+// Because none of it is user-visible any more, button wakes check too. The
+// only cost on a button press is a manifest round trip (~0.9 s), and usually
+// not even that: /display-3c.bin already told us the newest version via
+// X-Firmware-Latest, so we skip the request unless it is actually newer.
+//
+// Still skipped on low battery — brick risk if the LiPo dies mid-flash.
+// setInsecure() skips TLS cert validation; DEVICE_TOKEN in the URL is the
+// auth, and cert pinning isn't worth the rotation pain.
+void checkForUpdate(int battPct) {
   if (battPct < OTA_MIN_BATT_PCT) {
     Serial.printf("OTA: skip, battery %d%% < %d%%\n", battPct, OTA_MIN_BATT_PCT);
+    return;
+  }
+  // Free path: the image fetch already told us what the newest build is.
+  if (g_latestFw.length() > 0 && cmpFwVersion(g_latestFw, FW_VERSION) <= 0) {
+    Serial.printf("OTA: up-to-date via header (%s)\n", g_latestFw.c_str());
     return;
   }
 
@@ -1293,7 +1341,8 @@ void checkForUpdate(int battPct, bool buttonWake) {
   WiFiClient plainClient;
   bool isHttps = binUrl.startsWith("https://");
 
-  httpUpdate.rebootOnUpdate(true);
+  // Do NOT reboot here — see the note above. Deep-sleep wake boots the new slot.
+  httpUpdate.rebootOnUpdate(false);
   t_httpUpdate_return result = isHttps
     ? httpUpdate.update(secureClient, binUrl)
     : httpUpdate.update(plainClient, binUrl);
@@ -1308,8 +1357,7 @@ void checkForUpdate(int battPct, bool buttonWake) {
       Serial.println("OTA: no updates");
       break;
     case HTTP_UPDATE_OK:
-      // Unreachable — rebootOnUpdate(true) restarts before we return.
-      Serial.println("OTA: applied (rebooting)");
+      Serial.println("OTA: staged — next wake boots the new build");
       break;
   }
 }
@@ -1672,7 +1720,6 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
   if (g_apiKey.length() == 0) enrollDevice();
   postBattery(battV, battPct);
   flushDeviceLog();   // report any failure buffered from a previous cycle
-  checkForUpdate(battPct, buttonWake);   // may not return (reboots on success)
   syncTime();
 
   // A manual button press means "refresh now" — drop the cached ETag so
@@ -1726,6 +1773,12 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
       beep(30);   // press ack (ISR no longer drives the buzzer)
     }
   } while (refreshRequested);
+
+  // Panel is already up to date, so a flash from here costs the user nothing.
+  // Stages into the inactive slot and returns; the next wake boots it.
+  // Runs even when the draw failed — a device that cannot render is exactly
+  // the one that most needs to be able to update itself.
+  checkForUpdate(battPct);
 
   return sleepSec;
 }
@@ -1817,8 +1870,9 @@ void loop() {
   // it never changes while we stay awake. USB-powered sessions loop
   // here without sleeping, so only the FIRST iteration may trust it;
   // re-reading it every pass made a button-initiated USB session beep
-  // on every cycle and skip OTA indefinitely (checkForUpdate skips on
-  // buttonWake). Later iterations are timer-equivalent, except when
+  // on every cycle. (It also skipped OTA indefinitely back when
+  // checkForUpdate ignored button wakes; it no longer does.) Later
+  // iterations are timer-equivalent, except when
   // the previous pass ended on a button press (early-refresh break in
   // the USB wait loop below).
   static bool s_firstLoop = true;
