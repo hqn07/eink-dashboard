@@ -59,6 +59,22 @@
 > (`loadConfig` runs inside `withConfigLock` in four places and the lock has no
 > reentrancy — the constraint is now documented at the top of `lib/screens.js`).
 >
+> **`npm audit` still reports 4 high, on purpose.** All are `extract-zip` via
+> `@puppeteer/browsers`, reachable only when puppeteer downloads and extracts a
+> browser — which this project never does (`PUPPETEER_SKIP_DOWNLOAD=1` +
+> nix chromium in `nixpacks.toml`, system Chrome locally). `puppeteer@25.11.0`
+> clears them and passed all three snapshots at 0 px, but it was **reverted**:
+> production renders against nix's chromium at an unknown version, puppeteer 25
+> speaks a newer CDP, and a mismatch means every render fails and the panel goes
+> dark — to fix code that never executes. Do it when someone can watch the
+> deploy.
+>
+> **Local install gotcha found while reverting:** `npm ci` fails on this machine
+> because puppeteer's postinstall tries to download Chrome and trips over a
+> half-downloaded `~/.cache/puppeteer/chrome-headless-shell` directory. Use
+> `PUPPETEER_SKIP_DOWNLOAD=1 npm ci` (and delete that cache dir if it is already
+> broken). Related to CLAUDE.md gotcha 1.
+>
 > `test:api` 33/33 · both visual snapshots 0px · `check:visual` 0.000% ·
 > `check:widgets` 22 · `eink-lint` clean.
 >
