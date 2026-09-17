@@ -1,5 +1,49 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-17 (later still) — D2, sun-driven quiet hours
+> `cfg.quietHours` gains `mode: 'fixed' | 'sun'`. Sun mode sleeps from
+> sunset+60min to sunrise-60min instead of a fixed clock window, because the
+> window you want is "while the panel is unreadable" and that moves by hours
+> across the year.
+>
+> **Measured: 48 → 31 wakes/day, 35% fewer** (43% December, 28% July), wake
+> energy 19.3 → 12.6 mAh/day. Ships **disabled**, default mode `sun`, so no
+> existing device changed behaviour.
+>
+> **`lib/sun.js` computes sunrise/sunset locally** — NOAA equation, no network,
+> no async. The `sun` widget's Open-Meteo fetch is deliberately NOT reused: a
+> cadence decision must not depend on an upstream being up, and
+> `quietMinutesRemaining` is synchronous. Verified against published times for
+> London, New York, Gainesville and **Tokyo** — Tokyo specifically, because the
+> sign of the `lon/360` term is what implementations get backwards and a flip
+> is nearly invisible near Greenwich while being ~9 h wrong at 140°E. I tested
+> both conventions numerically rather than trusting the formula.
+>
+> The whole path works in **epoch ms**, which removes timezone arithmetic
+> entirely. Nights are found by scanning day −1/0/+1 so the UTC day boundary
+> never matters at any longitude. Polar day/night returns null and the feature
+> just does not engage.
+>
+> **New safety rail: `QUIET_MAX_SLEEP_MIN` (240) caps a single quiet sleep in
+> BOTH modes.** The device is unreachable while asleep, so a bad window — wrong
+> timezone, clock skew, an arithmetic slip — silently takes the panel off the
+> air for however long it was told. The cap means the worst case is one extra
+> wake. Fixed mode previously could hand out 1440 minutes.
+>
+> No firmware change needed: `X-Refresh-Seconds` already accepts [10, 86400]
+> and casts to `uint64_t` before the µs multiply. Verified end to end with a
+> Tokyo config at 22:53 JST → `X-Refresh-Seconds: 14400`, and `/status` reads
+> `240 min · quiet hours (sun) · sunset 17:47 → sunrise 05:25`.
+>
+> **Both of my tests were wrong first**, and the reasons generalise:
+> - Fixed mode goes through `localMinutesNow`, which reads `new Date()` —
+>   stubbing `Date.now` does not affect it, so the test silently read the wall
+>   clock and would fail outside 01:00–06:00 UTC.
+> - The "offsets swallow the night" case used a ~12 h September night that
+>   2×180 min cannot swallow. Now uses a ~5.2 h midsummer night at Oslo.
+>
+> `test:api` 36/36 · both visual snapshots 0px · `check:visual` 0.000%.
+>
 > ## 2026-09-17 (later) — the whole audit, fixed
 > A deep scan found 20 bugs/inefficiencies; all are now fixed or deliberately
 > closed with the reason recorded. Commits `efdc1a9` · `18f8d00` · `06af986` ·
