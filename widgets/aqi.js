@@ -9,9 +9,10 @@
 const { fetchWithTimeout } = require('./_fetch');
 const { geocodeCity } = require('./weather');
 const status = require('./_status');
+const { BoundedMap } = require('./_cache');
 
 const CACHE_MS = 30 * 60 * 1000; // AQI moves slowly; 30 min is plenty.
-const cacheMap = new Map();      // key: "lat,lon" → { at, data }
+const cacheMap = new BoundedMap(64);      // key: "lat,lon" → { at, data }
 
 // EPA US AQI bands. `band` is the 0-based index used to position the
 // scale marker; `label` is the short panel word (mono-cap legible).

@@ -4,6 +4,7 @@
 
 const { fetchWithTimeout } = require('./_fetch');
 const status = require('./_status');
+const { BoundedMap } = require('./_cache');
 const CACHE_MS = 10 * 60 * 1000;
 // After a failed/aborted fetch we cache the stub for a short window so an
 // Open-Meteo outage doesn't make EVERY render re-wait the timeout — that
@@ -14,7 +15,7 @@ const NEG_CACHE_MS = 60 * 1000;
 // Hard cap the upstream wait well under the render budget so even a retry
 // leaves room for the screenshot.
 const FETCH_MS = 5000;
-const cacheMap = new Map(); // key: "lat,lon|F" → { at, data, neg? }
+const cacheMap = new BoundedMap(64); // key: "lat,lon|F" → { at, data, neg? }
 
 const WIND_DIRS = ['N','NE','E','SE','S','SW','W','NW'];
 function windDir(deg) {
@@ -105,8 +106,10 @@ function wmo(code) {
   return WMO[code] || { desc: 'UNKNOWN', main: 'Clear' };
 }
 
-// Geocoding cache keyed by lower-case city query.
-const geoCache = new Map();
+// Geocoding cache keyed by lower-case city query. Also bounded — every distinct
+// city string a user ever typed into a tile would otherwise stick for the life
+// of the process, and the 24h TTL means nothing ever falls out on its own.
+const geoCache = new BoundedMap(256);
 const GEO_CACHE_MS = 24 * 60 * 60 * 1000;
 
 async function geocodeCity(city) {

@@ -7,9 +7,10 @@
 const ical = require('node-ical');
 const { fetchWithTimeout } = require('./_fetch');
 const status = require('./_status');
+const { BoundedMap } = require('./_cache');
 
 const CACHE_MS = 10 * 60 * 1000;
-const cache = new Map(); // url → { at, events }
+const cache = new BoundedMap(32); // url → { at, events }
 
 // Safety cap per recurring event. The window is only 14 days, but a
 // pathological FREQ=MINUTELY rule could still explode into thousands of

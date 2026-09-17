@@ -4,9 +4,10 @@
 
 const { fetchWithTimeout } = require('./_fetch');
 const status = require('./_status');
+const { BoundedMap } = require('./_cache');
 
 const CACHE_MS = 5 * 60 * 1000; // 5 min — well under CoinGecko's free limit.
-const cache = new Map();         // key: "ids|vs" → { at, data }
+const cache = new BoundedMap(32);         // key: "ids|vs" → { at, data }
 
 // Common CoinGecko id → ticker symbol. Falls back to the upper-cased id when
 // unmapped, so any valid CoinGecko id still renders (just less pretty).

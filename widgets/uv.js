@@ -6,9 +6,10 @@
 const { fetchWithTimeout } = require('./_fetch');
 const { geocodeCity } = require('./weather');
 const status = require('./_status');
+const { BoundedMap } = require('./_cache');
 
 const CACHE_MS = 30 * 60 * 1000;
-const cache = new Map();          // key: "lat,lon" → { at, data }
+const cache = new BoundedMap(64);          // key: "lat,lon" → { at, data }
 
 async function fetchUv(cityOrCoords) {
   let lat, lon;

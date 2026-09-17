@@ -6,9 +6,10 @@
 
 const { fetchWithTimeout } = require('./_fetch');
 const status = require('./_status');
+const { BoundedMap } = require('./_cache');
 
 const CACHE_MS = 6 * 60 * 60 * 1000;  // events for a date don't change.
-const cacheMap = new Map();           // key: "MM-DD" → { at, data }
+const cacheMap = new BoundedMap(16);           // key: "MM-DD" → { at, data }
 const UA = 'eink-dashboard/1.0 (https://github.com/hqn07/eink-dashboard; personal e-ink project)';
 const MONTHS = ['January','February','March','April','May','June',
   'July','August','September','October','November','December'];

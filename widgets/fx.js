@@ -5,9 +5,10 @@
 
 const { fetchWithTimeout } = require('./_fetch');
 const status = require('./_status');
+const { BoundedMap } = require('./_cache');
 
 const CACHE_MS = 30 * 60 * 1000; // ECB publishes ~once/day; 30 min is plenty.
-const cache = new Map();          // key: "BASE|A,B,C" → { at, data }
+const cache = new BoundedMap(32);          // key: "BASE|A,B,C" → { at, data }
 
 async function fetchFx(settings) {
   const s = settings || {};

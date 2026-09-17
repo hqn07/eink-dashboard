@@ -4,9 +4,10 @@
 // tile alive.
 const { fetchWithTimeout } = require('./_fetch');
 const status = require('./_status');
+const { BoundedMap } = require('./_cache');
 
 const CACHE_MS = 15 * 60 * 1000;
-const cache = new Map(); // symbol → { at, quote }
+const cache = new BoundedMap(128); // symbol → { at, quote }
 
 const SYM_RE = /^[A-Z0-9.^=-]{1,12}$/;
 

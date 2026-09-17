@@ -9,6 +9,7 @@
 const GtfsRt = require('gtfs-realtime-bindings');
 const { fetchWithTimeout } = require('./_fetch');
 const status = require('./_status');
+const { BoundedMap } = require('./_cache');
 
 const FEED_BASE = 'https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2F';
 
@@ -26,7 +27,7 @@ const LINE_TO_FEED = {
 };
 
 const CACHE_MS = 45 * 1000; // real-time — short cache so arrivals stay fresh
-const cache = new Map();     // feed → { at, feedMsg }
+const cache = new BoundedMap(16);     // feed → { at, feedMsg }
 
 async function loadFeed(feedName) {
   const hit = cache.get(feedName);

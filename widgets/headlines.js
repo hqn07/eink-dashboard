@@ -6,9 +6,10 @@
 const { XMLParser } = require('fast-xml-parser');
 const { fetchWithTimeout, fetchPublicUrl } = require('./_fetch');
 const status = require('./_status');
+const { BoundedMap } = require('./_cache');
 
 const CACHE_MS = 10 * 60 * 1000;
-const cache = new Map(); // url → { at, data }
+const cache = new BoundedMap(32); // url → { at, data }
 
 const HN_FEEDS = {
   top:  'https://hnrss.org/frontpage',

@@ -6,9 +6,10 @@
 const ical = require('node-ical');
 const { fetchWithTimeout, fetchPublicUrl } = require('./_fetch');
 const status = require('./_status');
+const { BoundedMap } = require('./_cache');
 
 const CACHE_MS = 5 * 60 * 1000;
-const cache = new Map(); // key → { at, data }
+const cache = new BoundedMap(32); // key → { at, data }
 
 // Todoist priority is 4=urgent … 1=normal. Map to our 1=highest scale so the
 // renderer can flag urgent tasks red regardless of source.

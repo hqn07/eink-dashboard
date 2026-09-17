@@ -2,8 +2,9 @@
 // for non-US locations.
 const { fetchWithTimeout } = require('./_fetch');
 const status = require('./_status');
+const { BoundedMap } = require('./_cache');
 const CACHE_MS = 10 * 60 * 1000;
-const cache = new Map();
+const cache = new BoundedMap(64);
 
 async function fetchAlerts({ lat, lon }) {
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return [];

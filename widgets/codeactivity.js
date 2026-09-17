@@ -8,9 +8,10 @@
 
 const { fetchWithTimeout } = require('./_fetch');
 const status = require('./_status');
+const { BoundedMap } = require('./_cache');
 
 const CACHE_MS = 60 * 60 * 1000;  // contributions change slowly; 1h is plenty.
-const cacheMap = new Map();       // key: username → { at, data }
+const cacheMap = new BoundedMap(32);       // key: username → { at, data }
 
 async function fetchCodeActivity(username) {
   const user = (typeof username === 'string' ? username.trim() : '');
