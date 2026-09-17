@@ -2,8 +2,9 @@
  * The B panel (GDEY075Z08) adds a red plane. The server's plane-split
  * classifier keys on the strong vermilion below; anything that resolves
  * to color:var(--face-red) lands on the red plane. On a BW panel the
- * same vermilion greyscales to luma ~96 → solid black at threshold(128),
- * so red elements stay readable (never disappear). Three layers:
+ * same vermilion greyscales to luma ~96 → solid black at threshold(128), so
+ * red stays readable on a WHITE tile. On an inverted tile it needs the
+ * lighter shade below or it turns black on black. Three layers:
  *   1. base .face-red utilities — manual opt-in
  *   2. semantic auto-red — applied by meaning (renderers add .face-red)
  *   3. per-widget accent toggle (.cell-accent-red) — opt-in per tile
@@ -11,6 +12,34 @@
 :root {
   --face-red: #d32f2f;       /* eink-lint-allow: 3-color red, →black on BW */
   --face-red-rule: #d32f2f;  /* eink-lint-allow */
+}
+
+/* Red has to survive BOTH pipelines, and which shade does that depends on
+ * what is behind it.
+ *
+ * On white, #d32f2f greyscales under the mono pipeline
+ * (greyscale -> linear(1.6,-77) -> normalise -> threshold(128)) to black:
+ * readable. On an INVERTED tile it also goes black — against a black
+ * background, which means it vanishes. Since the 2026-09-15 redesign made
+ * inverted the default for every tile, that was every semantic red on the
+ * BW panel: a Markets tile lost the down arrow AND the percentage, so a
+ * falling stock and a flat one rendered identically.
+ *
+ * The fix is one lighter red on dark cells, chosen to satisfy both pipelines
+ * at once. The BW path is greyscale -> linear(1.6,-77) -> normalise ->
+ * threshold(128), so a colour needs Rec.709 luma >= ~128 AFTER the linear
+ * step to come out white: #ff7a7a lands at 163, #d32f2f at 54 and even
+ * #ff5252 only at 113 (measured on a real render — a synthetic swatch
+ * misleads, because normalise() stretches an image that has no true white).
+ * isRedPixel() in lib/image.js was widened from g,b<110 to <130 to accept it,
+ * which is safe: a grey pixel fails the r-max(g,b)>45 dominance test whatever
+ * the cap.
+ * Redefining the TOKEN rather than the .face-red rule means borders, SVG
+ * strokes and fills follow automatically — every use reads var(--face-red).
+ */
+.cell.cell-inverted {
+  --face-red: #ff7a7a;       /* eink-lint-allow: 3-color red on dark, →white on BW */
+  --face-red-rule: #ff7a7a;  /* eink-lint-allow */
 }
 
 /* --- Layer 1: base utilities (manual opt-in) --- */

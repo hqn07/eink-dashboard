@@ -1,5 +1,39 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-16 (late) — semantic red was INVISIBLE on the BW panel
+> User caught it on a Markets tile: a falling stock lost its ▼ AND its
+> percentage, so down and flat rendered identically. Not cosmetic — data gone.
+>
+> **Cause.** `--face-red: #d32f2f` greyscales to 82; the mono pipeline is
+> `greyscale -> linear(1.6,-77) -> normalise -> threshold(128)`, so it lands
+> at 54 → black. Fine on a white tile. But the 2026-09-15 redesign made
+> INVERTED the default for every tile, and black-on-black is nothing. Every
+> semantic red was affected — AQI, battery, countdown, calendar TODAY,
+> weather precip — not just markets.
+>
+> **Fix.** `.cell.cell-inverted` redefines the TOKEN (`--face-red: #ff7a7a`),
+> so borders, SVG strokes and fills follow automatically — everything reads
+> `var(--face-red)`. `isRedPixel()` in `lib/image.js` widened from g,b<110 to
+> <130 so the lighter shade still lands on the red plane; safe because a grey
+> pixel fails `r-max(g,b)>45` at any ceiling.
+>
+> **Measured on real renders, not by hand:** BEFORE 683 white px in the change
+> column, AFTER 1050 — exactly +367, and 367 is the red-pixel count in the
+> 3-colour render. Red plane unchanged at 367 before and after, so the B panel
+> loses nothing.
+>
+> **Two false results on the way, both worth knowing:**
+> 1. A synthetic swatch said `#ff5252` would work. It does not: `normalise()`
+>    stretches an image with no true white, so a swatch of black+red flatters
+>    the colour. On a real render #ff5252 lands at 113 — still black. **Test
+>    face colours through `/display.png`, never a synthetic patch.**
+> 2. Three "before/after" comparisons came back byte-identical because the
+>    server restart had silently failed with EADDRINUSE and a stale process
+>    kept serving, its Chrome holding the old CSS. `public/dashboard.html`
+>    also pins the stylesheet at `?v=N` (now 20), so a CSS edit does not bust
+>    the render cache on its own. **Wait for the port to free and confirm
+>    "listening" before trusting a render comparison.**
+
 > ## 2026-09-16 (night) — history scrub DONE, main rewritten
 > `main` is rewritten: the wifi password and the token-bearing firmware
 > binaries are gone from every commit.
