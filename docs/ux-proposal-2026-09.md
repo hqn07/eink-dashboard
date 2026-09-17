@@ -130,9 +130,35 @@ each time.
 
 **Risk, stated plainly:** consolidation moves a choice from the palette into a
 dropdown. That is a win when the palette is what you scan and the dropdown is
-what you set once — which is this product — but it is not free. **Recommend
-piloting with Markets alone** (three near-identical widgets, lowest coupling)
-and judging the pattern on the panel before committing to the other three.
+what you set once — which is this product — but it is not free.
+
+### Markets pilot — **DONE 2026-09-16**, 30 -> 28
+
+`markets` takes one mixed list (`AAPL, BTC, EUR/USD`), rendered in the order
+written. Kind is inferred — a slash means a currency pair, a known coin ticker
+means crypto, anything else is a stock — with `stock:` / `crypto:` / `fx:` to
+settle an ambiguous ticker like ETH.
+
+No new network code: it parses the list into buckets and calls the three
+existing fetchers, so their caching, timeouts, SSRF guard and partial-failure
+behaviour are untouched. The server modules stay; only the widget-facing
+modules were removed.
+
+Migration v8 CONVERTS rather than drops (unlike v7): symbols, heading and grid
+position all survive, and CoinGecko ids carry over verbatim because
+`markets.js` classifies a known id as crypto.
+
+**Verified live**: one tile returning `AAPL 332.41 +0.32% / BTC 76,339 +0.70%
+/ EUR/USD 1.1537 / VOO 693.24 -0.43%` — a stock after a currency pair, proving
+rows follow the user's order rather than provider grouping. That mixed tile
+was impossible before.
+
+**One bug the live render caught that the unit test did not:** `Number(null)`
+is `0`, which is finite, so currency pairs rendered a confident `▲0.0%`.
+Absent must stay absent.
+
+**Verdict on the pattern: it holds.** Judge it on the panel before merging
+weather, clock and daily.
 
 ### P3 — One "Sources" library *(high value, medium cost, low risk)*
 

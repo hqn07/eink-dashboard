@@ -246,6 +246,53 @@ test('stale api_key gets flagged for re-enrollment', async () => {
   await fetch(tok('/api/device/' + dev.friendly_id), { method: 'DELETE' });
 });
 
+// --- Config migration v8: three market widgets become one ------------------
+//
+// v7 dropped tiles; this one CONVERTS them, so the assertion that matters is
+// that nothing the user configured is lost — symbols, heading, and the tile's
+// place on the grid all have to survive. A migration that quietly emptied a
+// tile would look like a working merge right up until the panel redrew.
+test('config migration v8 converts stocks/crypto/fx into markets', async () => {
+  const { migrateConfigToScreens } = await import('../lib/screens.js');
+  const mk = (widgetId, settings) => ({
+    gridVersion: 7, firstRunSeeded: true,
+    screens: [{ id: 'x', isDefault: true, layoutKind: 'free',
+      layout: [{ id: 't', widgetId, x: 3, y: 4, w: 8, h: 5, settings }] }],
+  });
+  const out = (widgetId, settings) => migrateConfigToScreens(mk(widgetId, settings)).screens[0].layout[0];
+
+  const st = out('stocks', { symbols: ['AAPL', 'VOO'], title: 'MY MONEY', variant: 'trmnl' });
+  assert.equal(st.widgetId, 'markets');
+  assert.deepEqual(st.settings.symbols, ['AAPL', 'VOO']);
+  assert.equal(st.settings.title, 'MY MONEY', 'a custom heading must survive the merge');
+  assert.deepEqual([st.x, st.y, st.w, st.h], [3, 4, 8, 5], 'the tile must not move');
+
+  // CoinGecko ids carry over verbatim — markets.js classifies a known id as
+  // crypto, so the tile resolves to the same coins it did before.
+  const cr = out('crypto', { coins: ['bitcoin', 'ethereum'], vs: 'eur' });
+  assert.equal(cr.widgetId, 'markets');
+  assert.deepEqual(cr.settings.symbols, ['bitcoin', 'ethereum']);
+  assert.equal(cr.settings.vs, 'eur', 'the quote currency must survive');
+
+  // A base + targets list becomes explicit pairs.
+  const fx = out('fx', { base: 'USD', targets: ['EUR', 'GBP'] });
+  assert.equal(fx.widgetId, 'markets');
+  assert.deepEqual(fx.settings.symbols, ['USD/EUR', 'USD/GBP']);
+
+  // The old keys must not linger: markets reads `symbols`, and a stale
+  // `coins`/`targets` would be dead weight that a later reader could mistake
+  // for intent.
+  for (const t of [st, cr, fx]) {
+    for (const dead of ['coins', 'base', 'targets']) {
+      assert.ok(!(dead in t.settings), `${dead} should not survive into markets`);
+    }
+  }
+
+  // Untouched widgets stay untouched.
+  const other = out('clock', { format: '12h' });
+  assert.equal(other.widgetId, 'clock');
+});
+
 // --- Connections: the key must never reach the exportable config ---------
 //
 // The entire reason this store exists is that Backup > EXPORT serialises the

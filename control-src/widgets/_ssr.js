@@ -3,18 +3,16 @@
 // JSX into Node's import graph (which would happen if we imported
 // _registry.js — that pulls in every <id>.form.jsx).
 
+import * as markets       from './markets.js';
 import * as ai               from './ai.js';
 import * as aqi              from './aqi.js';
 import * as art              from './art.js';
 import * as chess            from './chess.js';
-import * as stocks           from './stocks.js';
 import * as calendar         from './calendar.js';
 import * as codeactivity     from './codeactivity.js';
 import * as clock            from './clock.js';
 import * as countdown        from './countdown.js';
-import * as crypto           from './crypto.js';
 import * as eink_battery     from './eink_battery.js';
-import * as fx               from './fx.js';
 import * as headlines        from './headlines.js';
 import * as moon             from './moon.js';
 import * as onthisday        from './onthisday.js';
@@ -35,8 +33,8 @@ import * as world_clock      from './world_clock.js';
 import * as wordofday        from './wordofday.js';
 
 const MODULES = [
-  ai, aqi, art, calendar, chess, stocks, codeactivity, clock, countdown, eink_battery,
-  headlines, moon, onthisday, photo, progress, qr, fx, crypto, quote, sparkline, sun, tasks, text, transit, uv, webhook, weather_forecast, weather_hero, world_clock, wordofday
+  ai, aqi, art, calendar, chess, markets, codeactivity, clock, countdown, eink_battery,
+  headlines, moon, onthisday, photo, progress, qr, quote, sparkline, sun, tasks, text, transit, uv, webhook, weather_forecast, weather_hero, world_clock, wordofday
 ];
 
 export const DEFS = Object.fromEntries(MODULES.map(m => [m.def.id, m.def]));

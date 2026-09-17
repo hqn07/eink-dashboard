@@ -20,14 +20,12 @@ import * as ai               from './ai.js';
 import * as aqi              from './aqi.js';
 import * as art              from './art.js';
 import * as chess            from './chess.js';
-import * as stocks           from './stocks.js';
+import * as markets       from './markets.js';
 import * as calendar         from './calendar.js';
 import * as codeactivity     from './codeactivity.js';
 import * as clock            from './clock.js';
 import * as countdown        from './countdown.js';
-import * as crypto           from './crypto.js';
 import * as eink_battery     from './eink_battery.js';
-import * as fx               from './fx.js';
 import * as headlines        from './headlines.js';
 import * as moon             from './moon.js';
 import * as onthisday        from './onthisday.js';
@@ -47,18 +45,16 @@ import * as weather_hero     from './weather_hero.js';
 import * as world_clock      from './world_clock.js';
 import * as wordofday        from './wordofday.js';
 
+import { Form as marketsForm }      from './markets.form.jsx';
 import { Form as aiForm }              from './ai.form.jsx';
 import { Form as aqiForm }             from './aqi.form.jsx';
 import { Form as artForm }             from './art.form.jsx';
 import { Form as chessForm }           from './chess.form.jsx';
-import { Form as stocksForm }          from './stocks.form.jsx';
 import { Form as calendarForm }        from './calendar.form.jsx';
 import { Form as codeActivityForm }    from './codeactivity.form.jsx';
 import { Form as clockForm }           from './clock.form.jsx';
 import { Form as countdownForm }       from './countdown.form.jsx';
-import { Form as cryptoForm }          from './crypto.form.jsx';
 import { Form as einkBatteryForm }     from './eink_battery.form.jsx';
-import { Form as fxForm }              from './fx.form.jsx';
 import { Form as headlinesForm }       from './headlines.form.jsx';
 import { Form as moonForm }            from './moon.form.jsx';
 import { Form as onThisDayForm }       from './onthisday.form.jsx';
@@ -79,23 +75,21 @@ import { Form as worldClockForm }      from './world_clock.form.jsx';
 import { Form as wordofdayForm }       from './wordofday.form.jsx';
 
 const MODULES = [
-  ai, aqi, art, calendar, chess, stocks, codeactivity, clock, countdown, eink_battery,
-  headlines, moon, onthisday, photo, progress, qr, fx, crypto, quote, sparkline, sun, tasks, text, transit, uv, webhook, weather_forecast, weather_hero, world_clock, wordofday
+  ai, aqi, art, calendar, chess, markets, codeactivity, clock, countdown, eink_battery,
+  headlines, moon, onthisday, photo, progress, qr, quote, sparkline, sun, tasks, text, transit, uv, webhook, weather_forecast, weather_hero, world_clock, wordofday
 ];
 
 const FORMS = {
+  markets:          marketsForm,
   ai:               aiForm,
   aqi:              aqiForm,
   art:              artForm,
   chess:            chessForm,
-  stocks:           stocksForm,
   calendar:         calendarForm,
   codeactivity:     codeActivityForm,
   clock:            clockForm,
   countdown:        countdownForm,
-  crypto:           cryptoForm,
   eink_battery:     einkBatteryForm,
-  fx:               fxForm,
   moon:             moonForm,
   headlines:        headlinesForm,
   onthisday:        onThisDayForm,

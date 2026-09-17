@@ -141,6 +141,20 @@ export function demoCtxForWidget(id, cellW, cellH) {
         weather: { hourly: temps.map((temp, i) => ({ label: `${i}`, temp, precip: 10 })) },
         settings: { source: 'weather_temp', title: 'TEMPERATURE' } };
     }
+    case 'markets':
+      // One of each kind, so the pool card shows what the tile is FOR: a
+      // stock, a coin and a currency pair in one list.
+      return { ...base,
+        markets: {
+          vs: 'usd',
+          rows: [
+            { label: 'AAPL',    value: 227.52,   change: 0.8,  kind: 'stock' },
+            { label: 'BTC',     value: 64213,    change: -1.4, kind: 'crypto' },
+            { label: 'EUR/USD', value: 1.0842,   change: null, kind: 'fx' },
+          ],
+          stale: false
+        },
+        settings: {} };
     case 'aqi':
       return { ...base, aqi: DEMO_AQI, settings: {} };
     case 'tasks':

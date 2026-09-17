@@ -63,4 +63,6 @@ async function fetchCrypto(settings) {
   }
 }
 
-module.exports = { fetchCrypto };
+// SYMBOLS is exported so widgets/markets.js can build the reverse map and
+// accept the tickers people actually type (BTC) rather than CoinGecko ids.
+module.exports = { fetchCrypto, SYMBOLS };

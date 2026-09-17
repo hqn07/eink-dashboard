@@ -42,6 +42,7 @@ export const POOL_CATEGORIES = ['Weather', 'Time', 'Calendar', 'Media', 'News', 
 // user is likely to type ("music", "todo", "rss", "btc") find the widget
 // even when they aren't in its name.
 const POOL_META = {
+  markets:          { category: 'Money',    blurb: 'Stocks, crypto and currency pairs in one list', keywords: 'stock ticker etf index crypto bitcoin btc eth currency fx exchange rate money price' },
   ai:               { category: 'Text',     blurb: 'Your prompt plus the dashboard data, in a few lines', keywords: 'ai llm gpt deepseek openai briefing summary prompt' },
   weather_hero:     { category: 'Weather',  blurb: 'Current conditions — big temp + icon', keywords: 'temperature forecast conditions now' },
   weather_forecast: { category: 'Weather',  blurb: 'Multi-day / hourly outlook', keywords: 'forecast hourly daily rain outlook' },
@@ -60,13 +61,11 @@ const POOL_META = {
   headlines:        { category: 'News',     blurb: 'RSS or Hacker News headlines', keywords: 'news rss feed hn hacker headlines atom' },
   eink_battery:     { category: 'System',   blurb: 'This display’s battery level', keywords: 'battery power display device charge' },
   sparkline:        { category: 'Data',     blurb: 'Weather or battery trend line', keywords: 'trend graph chart line sparkline' },
-  fx:               { category: 'Data',     blurb: 'Currency exchange rates (no key)', keywords: 'currency forex exchange fx usd eur rate' },
   crypto:           { category: 'Data',     blurb: 'Crypto prices + 24h change (no key)', keywords: 'crypto bitcoin btc eth ethereum coin price' },
   codeactivity:     { category: 'Data',     blurb: 'GitHub contribution heatmap', keywords: 'github git commits contributions heatmap code' },
   text:             { category: 'Text',     blurb: 'Token strip or message card', keywords: 'text message token label heading note' },
   art:              { category: 'Fun',      blurb: 'Daily generative pattern — reseeds every morning', keywords: 'art generative pattern decorative random' },
   chess:            { category: 'Fun',      blurb: 'Lichess puzzle of the day', keywords: 'chess puzzle lichess board game' },
-  stocks:           { category: 'Money',    blurb: 'Stock/ETF quotes — no API key needed', keywords: 'stock stocks etf ticker market shares finance' },
   quote:            { category: 'Text',     blurb: 'Quote + attribution', keywords: 'quote quotation saying author' },
   wordofday:        { category: 'Text',     blurb: 'Daily vocabulary word + definition', keywords: 'word vocabulary definition dictionary' },
   webhook:          { category: 'Data',     blurb: 'Push any JSON, see it on the panel', keywords: 'webhook json push api custom' },
@@ -90,16 +89,14 @@ export const WIDGET_REGISTRY = [
   // No-key widgets (2026-06-16). This array is the editor palette's
   // source of truth — a widget missing here renders server-side but
   // never shows in the add-widget pool. Keep in sync with _registry.js.
+  { ...migratedDef('markets') },
   { ...migratedDef('ai') },
   { ...migratedDef('aqi') },
   { ...migratedDef('art') },
   { ...migratedDef('chess') },
-  { ...migratedDef('stocks') },
   { ...migratedDef('sun') },
   { ...migratedDef('countdown') },
   { ...migratedDef('progress') },
-  { ...migratedDef('fx') },
-  { ...migratedDef('crypto') },
   { ...migratedDef('moon') },
   { ...migratedDef('world_clock') },
   { ...migratedDef('quote') },
