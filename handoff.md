@@ -1,5 +1,33 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-17 — DEVICE_TOKEN rotated; the panel had to be rescued
+> Rotation is done: new 48-char `DEVICE_TOKEN` in Railway, in this Mac's
+> `.env`, and in both `esp32/*/secrets.h` (all gitignored).
+>
+> **The trap, which is worth understanding before ever rotating again.** The
+> panel was NOT using its per-device api_key — the roster's `last_seen` was
+> stuck at 2026-07-07 while the device completed a successful wake minutes
+> earlier, and `findDeviceByKey()` bumps `last_seen` on every api_key hit. It
+> was riding the fleet token. Rotating that token locks the device out AND
+> blocks its recovery, because `/api/setup` is gated behind the same token —
+> `enrollDevice()` (firmware line 860) sends it. With no USB reflash
+> available that is a permanent brick.
+>
+> **The way out, and why it is not "turn the token off".** Clearing
+> `DEVICE_TOKEN` would open every device endpoint, image binaries included,
+> to anyone with the URL. Instead `ENROLL_RECOVERY_MAC` (`c8fa9c5`) names ONE
+> MAC that may enroll without the fleet token. Verified in production: the
+> named MAC enrolls (200), any other MAC is still refused (401). The device
+> gets a durable per-device api_key and stops depending on the fleet token at
+> all — strictly better than where it started.
+>
+> **UNSET `ENROLL_RECOVERY_MAC` once the panel is confirmed back.** The server
+> logs a warning on every use so it cannot sit there unnoticed.
+>
+> Old token is unrecoverable — Railway redacts variable values to the MCP
+> connection, so there is no rollback. That is the reason the recovery hatch
+> had to exist rather than simply restoring the previous value.
+
 > ## 2026-09-16 (late) — semantic red was INVISIBLE on the BW panel
 > User caught it on a Markets tile: a falling stock lost its ▼ AND its
 > percentage, so down and flat rendered identically. Not cosmetic — data gone.
