@@ -789,3 +789,147 @@ test('fetch guard caps response size and validates every redirect hop', async ()
     await new Promise(r => srv.close(r));
   }
 });
+
+// --- D2: sun-driven quiet hours -------------------------------------------
+//
+// The sun maths is worth testing hard because it fails silently and hours
+// late: a wrong answer means the panel sleeps when it should be awake, and
+// nobody finds out until they look at a stale screen the next morning.
+test('sunTimes matches published sunrise/sunset across longitudes', async () => {
+  const { sunTimes } = await import('../lib/sun.js').then(m => m.default || m);
+  const hhmm = (ms) => new Date(ms).toISOString().slice(11, 16);
+  const mins = (s) => Number(s.slice(0, 2)) * 60 + Number(s.slice(3));
+  const near = (got, want, tol, what) => {
+    let d = Math.abs(mins(got) - mins(want));
+    if (d > 720) d = 1440 - d;                 // across the UTC midnight wrap
+    assert.ok(d <= tol, `${what}: got ${got}Z, expected ~${want}Z (${d} min off)`);
+  };
+
+  // Published times (timeanddate.com), converted to UTC. Tolerance 6 min: this
+  // is the simplified NOAA form, which trades a few minutes for having no
+  // dependencies — irrelevant against the ±60 min offsets the caller uses.
+  const cases = [
+    ['London',      51.5074,  -0.1278, Date.UTC(2026, 5, 21, 12), '03:43', '20:21'],
+    ['New York',    40.7128, -74.0060, Date.UTC(2026, 5, 21, 12), '09:25', '00:31'],
+    ['Gainesville', 29.6516, -82.3248, Date.UTC(2026, 8, 17, 12), '11:19', '23:35'],
+    ['Tokyo',       35.6762, 139.6503, Date.UTC(2026, 5, 21, 12), '19:25', '10:00'],
+  ];
+  for (const [name, lat, lon, when, wantRise, wantSet] of cases) {
+    const t = sunTimes(when, lat, lon);
+    assert.ok(t, `${name}: expected a solution`);
+    near(hhmm(t.rise), wantRise, 6, `${name} sunrise`);
+    near(hhmm(t.set), wantSet, 6, `${name} sunset`);
+  }
+
+  // Tokyo is the case that catches a flipped longitude sign: near Greenwich a
+  // sign error is almost invisible, at 140°E it is ~9 hours wrong.
+  const tokyo = sunTimes(Date.UTC(2026, 5, 21, 12), 35.6762, 139.6503);
+  assert.ok(Math.abs(mins(hhmm(tokyo.rise)) - mins('19:25')) < 30,
+    'a flipped lon sign would put Tokyo sunrise ~9h out');
+
+  // Polar: no solution rather than a bogus one.
+  assert.equal(sunTimes(Date.UTC(2026, 5, 21, 12), 69.65, 18.96), null,
+    'midsummer above the Arctic Circle has no sunrise/sunset');
+  assert.equal(sunTimes(Date.UTC(2026, 11, 21, 12), 78.22, 15.63), null,
+    'polar night has no sunrise/sunset');
+});
+
+test('quiet hours: sun mode sleeps through the night and never past the cap', async () => {
+  const { quietMinutesRemaining, QUIET_MAX_SLEEP_MIN } =
+    await import('../lib/refresh.js').then(m => m.default || m);
+  const { currentNight } = await import('../lib/sun.js').then(m => m.default || m);
+
+  const LAT = 29.6516, LON = -82.3248;   // Gainesville
+  const cfg = (extra) => ({
+    home: { lat: LAT, lon: LON, timezone: 'America/New_York' },
+    quietHours: { enabled: true, mode: 'sun', afterSunsetMin: 60, beforeSunriseMin: 60, ...extra },
+  });
+
+  // Drive real wall-clock time, since quietMinutesRemaining reads Date.now().
+  const realNow = Date.now;
+  const at = (ms) => { Date.now = () => ms; };
+  try {
+    const noon = Date.UTC(2026, 8, 17, 16);          // ~midday local
+    at(noon);
+    assert.equal(quietMinutesRemaining(cfg()), 0, 'midday is not quiet');
+
+    const night = currentNight(Date.UTC(2026, 8, 18, 6), LAT, LON);
+    assert.ok(night, 'expected a night around 06:00Z');
+
+    // Just after sunset, before the offset has elapsed: still awake.
+    at(night.start + 10 * 60000);
+    assert.equal(quietMinutesRemaining(cfg()), 0,
+      'the hour after sunset is still readable, so still awake');
+
+    // Deep in the night: quiet, and bounded by the cap.
+    at(night.start + 3 * 3600000);
+    const deep = quietMinutesRemaining(cfg());
+    assert.ok(deep > 0, 'the middle of the night must be quiet');
+    assert.ok(deep <= QUIET_MAX_SLEEP_MIN,
+      `a single quiet sleep must never exceed the ${QUIET_MAX_SLEEP_MIN} min cap, got ${deep}`);
+
+    // Inside the pre-sunrise offset: awake again, so the morning screen is
+    // current before anyone looks at it.
+    at(night.end - 20 * 60000);
+    assert.equal(quietMinutesRemaining(cfg()), 0, 'awake before sunrise');
+
+    // Offsets big enough to swallow the night collapse to "no window" rather
+    // than producing a negative or wrapped duration. Needs a genuinely SHORT
+    // night: Gainesville in September is ~12 h, which 2x180 min cannot swallow,
+    // so this uses midsummer at Oslo's latitude (~5.2 h of darkness).
+    const OSLO = [59.91, 10.75];
+    const shortNight = currentNight(Date.UTC(2026, 5, 21, 23), ...OSLO);
+    assert.ok(shortNight && (shortNight.end - shortNight.start) < 6 * 3600000,
+      'expected a sub-6h midsummer night to test the swallow case');
+    at(shortNight.start + 60 * 60000);
+    const osloCfg = {
+      home: { lat: OSLO[0], lon: OSLO[1] },
+      quietHours: { enabled: true, mode: 'sun', afterSunsetMin: 180, beforeSunriseMin: 180 },
+    };
+    assert.equal(quietMinutesRemaining(osloCfg), 0,
+      'offsets that swallow the night must disable it, not underflow');
+
+    // No location -> no window, whatever the mode says.
+    assert.equal(quietMinutesRemaining({ quietHours: cfg().quietHours }), 0,
+      'sun mode without coordinates must fall back to normal cadence');
+
+    // Disabled wins over everything.
+    assert.equal(quietMinutesRemaining(cfg({ enabled: false })), 0);
+  } finally {
+    Date.now = realNow;
+  }
+});
+
+test('quiet hours: fixed mode still works and is also capped', async () => {
+  const { quietMinutesRemaining, QUIET_MAX_SLEEP_MIN } =
+    await import('../lib/refresh.js').then(m => m.default || m);
+
+  // Built around the REAL clock rather than a stub: fixed mode goes through
+  // localMinutesNow, which reads `new Date()` — stubbing Date.now does not
+  // touch that, and an earlier version of this test silently read the wall
+  // clock and failed whenever the suite ran outside 01:00-06:00 UTC.
+  const hm = (mins) => `${String(Math.floor(mins / 60) % 24).padStart(2, '0')}:`
+                     + `${String(mins % 60).padStart(2, '0')}`;
+  const d = new Date();
+  const nowMin = d.getUTCHours() * 60 + d.getUTCMinutes();
+  const mk = (fromMin, toMin) => ({
+    home: { timezone: 'UTC' },
+    quietHours: { enabled: true, mode: 'fixed',
+      from: hm((fromMin + 1440) % 1440), to: hm((toMin + 1440) % 1440) },
+  });
+
+  // A window that started an hour ago and runs for another 5 — so ~300 min
+  // remain, which the cap must cut down.
+  const inside = quietMinutesRemaining(mk(nowMin - 60, nowMin + 300));
+  assert.ok(inside > 0, 'inside the fixed window must be quiet');
+  assert.ok(inside <= QUIET_MAX_SLEEP_MIN,
+    `the cap applies to fixed mode too — expected <= ${QUIET_MAX_SLEEP_MIN}, got ${inside}`);
+
+  // A window that ended an hour ago.
+  assert.equal(quietMinutesRemaining(mk(nowMin - 180, nowMin - 60)), 0,
+    'outside the window must not be quiet');
+
+  // Wrap past midnight is still handled.
+  const wrapped = quietMinutesRemaining(mk(nowMin - 30, nowMin + 60));
+  assert.ok(wrapped > 0 && wrapped <= 60 + 1, 'a window spanning now, possibly wrapped');
+});

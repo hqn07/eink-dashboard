@@ -790,6 +790,7 @@ export default function App() {
             <div className="schedule-card-sub">
               <QuietHours
                 value={cfg.quietHours}
+                hasLocation={!!homeCoords(cfg)}
                 onChange={(next) => mutateCfg(prev => ({ ...prev, quietHours: next }))}
               />
             </div>

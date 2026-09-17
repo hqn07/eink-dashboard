@@ -3,8 +3,11 @@
   "timezone": "America/New_York",
   "quietHours": {
     "enabled": false,
+    "mode": "sun",
     "from": "01:00",
-    "to": "06:00"
+    "to": "06:00",
+    "afterSunsetMin": 60,
+    "beforeSunriseMin": 60
   },
   "savedFeeds": [],
   "home": {

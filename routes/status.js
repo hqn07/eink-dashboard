@@ -10,6 +10,8 @@ const { loadDevicesSync } = require('../lib/devices-store');
 const { imageCache, PRERENDER_ENABLED, PRERENDER_INTERVAL_MS } = require('../lib/render');
 const { resolveRefreshMinutes } = require('../lib/screens');
 const { effectiveRefresh, getFastWakeUntil } = require('../lib/refresh');
+const { currentNight } = require('../lib/sun');
+const { homeCoords, homeValue } = require('../lib/home');
 const { errLog: _errLog } = require('../lib/errlog');
 const { relAge, dur, batteryTrend, sparkline } = require('../lib/statusfmt');
 const { safeError } = require('../lib/http');
@@ -46,7 +48,25 @@ router.get('/status', checkAdminAuth, async (req, res) => {
     if (refresh.fast) {
       refreshNote = `<span class="warn">FAST</span> ${refresh.seconds}s · push-now window`;
     } else if (refresh.quiet) {
-      refreshNote = `${refresh.minutes} min · <span class="warn">quiet hours</span> (sleeping through)`;
+      // Show WHICH night is being slept through. A quiet window is decided
+      // hours before anyone sees the consequence, so the one place you can
+      // check it has to say more than "quiet".
+      let window = '';
+      const q = cfg.quietHours || {};
+      if (q.mode === 'sun') {
+        const coords = homeCoords(cfg);
+        const night = coords ? currentNight(Date.now(), coords.lat, coords.lon) : null;
+        if (night) {
+          const tz = homeValue(cfg, 'timezone') || 'UTC';
+          const t = (ms) => new Date(ms).toLocaleTimeString('en-GB',
+            { timeZone: tz, hour: '2-digit', minute: '2-digit' });
+          window = ` · sunset ${esc(t(night.start))} → sunrise ${esc(t(night.end))}`;
+        }
+      } else {
+        window = ` · ${esc(q.from)}–${esc(q.to)}`;
+      }
+      refreshNote = `${refresh.minutes} min · <span class="warn">quiet hours</span>`
+        + ` (${esc(q.mode === 'sun' ? 'sun' : 'fixed')})${window}`;
     } else if (refresh.battSaver) {
       refreshNote = `${refresh.minutes} min · <span class="warn">battery-saver</span> (base ${baseMin})`;
     } else {

@@ -596,15 +596,47 @@ main.layout {
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
 }
+/* The body now holds a mode switch above the times, so it stacks. The
+   .is-disabled class moved from .quiet-hours-times to this wrapper so the
+   whole group dims together when the feature is off. */
+.quiet-hours-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.quiet-hours-body.is-disabled { opacity: 0.4; }
 .quiet-hours-times.is-disabled { opacity: 0.4; }
-.quiet-hours-times input[type="time"] {
+.quiet-hours-times input[type="time"],
+.quiet-hours-times input[type="number"] {
   font-family: var(--font-mono);
   padding: 3px 6px;
   border: var(--bw-rule, 1px) solid var(--ink);
   background: #fff;
 }
+.quiet-hours-times input[type="number"] { width: 52px; text-align: right; }
 .quiet-hours-dash { color: var(--mute, #8a877e); }
 .quiet-hours-note { color: var(--mute, #8a877e); font-size: var(--fs-xs, 10px); }
+.quiet-hours-modes { display: flex; gap: 6px; }
+.quiet-mode {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  font-size: var(--fs-xs, 10px);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  border: var(--bw-rule, 1px) solid var(--ink);
+  background: #fff;
+  cursor: pointer;
+}
+.quiet-mode.is-active { background: var(--ink); color: var(--paper, #fff); }
+.quiet-mode:disabled { cursor: default; }
+.quiet-hours-warn {
+  font-size: var(--fs-xs, 10px);
+  color: var(--mute, #8a877e);
+  max-width: 34ch;
+  line-height: 1.4;
+}
 .schedule-collapsible-trigger {
   display: flex;
   align-items: center;
