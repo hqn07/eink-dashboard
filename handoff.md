@@ -1,5 +1,67 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-17 (later) — the whole audit, fixed
+> A deep scan found 20 bugs/inefficiencies; all are now fixed or deliberately
+> closed with the reason recorded. Commits `efdc1a9` · `18f8d00` · `06af986` ·
+> `66dcc19` · `240b97a` · `117dd55`. Full writeup lives in the Obsidian vault
+> (`EInk Modular — Audit 2026-09-17`), which is now the project's main context
+> channel alongside this file.
+>
+> **The worst finding was a chain, not a bug.** `sharp@0.33.5` carried
+> high-severity libvips/libheif CVEs, and the bytes it decodes come from
+> `photo` widget `settings.imageUrl` → `fetchPublicUrl` (whose SSRF guard
+> checked only the FIRST url, then let `fetch` follow redirects anywhere) →
+> `arrayBuffer()` (uncapped). Three findings that each read as moderate alone.
+> All three links are closed: sharp 0.35.4, per-hop redirect validation, and a
+> byte-counting size cap in `_fetch.js`.
+>
+> The sharp bump was **verified byte-identical before applying** — libvips
+> 8.15.3 → 8.18.6, and `sha1(display.bin)` / `sha1(display-3c.bin)` match
+> exactly on both versions. That is what the visual suite is for.
+>
+> **Auth:** `/api/auth/login` had inherited the general 300/min limiter — a
+> number raised from 60 *because the editor is chatty*. A 4-digit PIN fell in
+> ~33 minutes. Now a dedicated 10/15min limiter plus a persisted failure
+> counter with doubling backoff, checked BEFORE the PIN compare so a locked-out
+> caller cannot use the response as an oracle. Changing the PIN now rotates
+> `sessionSecret`, which it did not: every cookie issued under the old PIN
+> stayed valid for 30 days.
+>
+> **Two bugs the FIXING introduced, both caught by tests rather than review:**
+> - **CSP `script-src 'self'` silently blocked the inlined autofit pass.** Text
+>   rendered at fallback metrics and the panel moved **0.347%** — under
+>   `check:visual`'s 0.50% threshold, so it would have shipped as a real
+>   regression that only the pixel diff could see. Inline scripts are now
+>   hashed (`lib/csp.js`); **wrap any new inline script in `allowInlineScript()`
+>   or it will be blocked.** Back to 0.000%.
+> - **The first bounded cache deleted expired entries on read**, which removed
+>   the serve-last-good-on-upstream-failure fallback at exactly the moment it
+>   is needed. `BoundedMap` is now a Map subclass that only bounds *size*; each
+>   fetcher keeps its own TTL logic untouched.
+>
+> **And two tests that passed for the wrong reason**, worth remembering as a
+> class: a redirect test whose server was on loopback was blocked at hop 0 and
+> followed zero redirects; and an assertion that an under-declared
+> `content-length` would overrun the cap, when HTTP framing truncates at the
+> declared length so it cannot. Both rewritten to assert the real behaviour.
+>
+> Also: `atomicWriteFile` was atomic but not durable (no fsync — a power loss
+> could leave the zero-length config.json that `loadConfig` correctly refuses
+> to recover from); one failed render called `killBrowser()` out from under a
+> concurrent one; stale-while-revalidate had no ceiling so a permanently
+> failing re-render served the same frame forever while the panel looked
+> healthy; thirteen widget caches never evicted; the AI prompt's label map had
+> rotted to describing 10 of 22 widgets; and `dev.last_seen_at` was bumped in
+> memory only, which misled the token-rotation debugging earlier the same day.
+>
+> Left alone on purpose: `normalise()`'s content-dependent threshold (real, but
+> the fix costs contrast and nothing has misbehaved), and persisting migrations
+> (`loadConfig` runs inside `withConfigLock` in four places and the lock has no
+> reentrancy — the constraint is now documented at the top of `lib/screens.js`).
+>
+> `test:api` 33/33 · both visual snapshots 0px · `check:visual` 0.000% ·
+> `check:widgets` 22 · `eink-lint` clean.
+>
 > ## 2026-09-17 — QR, chess, moon and the world clock all rendered blank
 > `check:visual` had been failing at ~91% and I'd written it off as a stale
 > baseline. It wasn't only that. The fixture's QR was a solid white square,
