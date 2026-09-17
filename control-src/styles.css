@@ -234,6 +234,29 @@ html, body {
 .sync-pill-error  { color: #c00; }
 .sync-pill { transition: color 200ms ease; }
 
+/* First-run interest chips. Multi-select, and deliberately worded as things
+ * a person cares about ("What's on") rather than widget names — the wizard is
+ * asking about their day, not about the software. */
+.interest-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 4px;
+}
+.interest-chip {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.5px;
+  padding: 8px 14px;
+  border: var(--bw) solid var(--ink);
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.interest-chip:hover { background: #f2efe7; }
+.interest-chip.is-on { background: var(--ink); color: #fff; }
+
 /* Needs-attention strip — one line under the screen tabs, present only when
  * something is actually wrong. Deliberately not a permanent status bar: a bar
  * that usually says "all good" stops being read. Accent-bordered rather than

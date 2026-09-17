@@ -2,7 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { m, AnimatePresence } from 'framer-motion';
 import { Check, Crosshair, Lock } from '@phosphor-icons/react';
 import { geocode, reverseGeocode, flagEmoji, setPin as apiSetPin } from '../api.js';
-import { SCREEN_PRESETS, inflatePresetLayout } from '../widgets.js';
+import { SCREEN_PRESETS, inflatePresetLayout, widgetById, newInstanceId, GRID_COLS, GRID_ROWS } from '../widgets.js';
+import { layoutFromWidgetIds } from '../autolayout.js';
 import { homeValue } from '../home.js';
 import LiveDashboard from './LiveDashboard.jsx';
 
@@ -40,8 +41,27 @@ function StepIndicator({ currentStep, steps }) {
 //   3. Optional control-panel PIN
 // Sets `cfg.firstRun = false` when finished so it doesn't reappear.
 const WIZARD_STEPS = ['Location', 'Layout', 'Security'];
-export default function SetupWizard({ cfg, onPatch, onApplyPreset, onClose }) {
+
+// What a person wants on a wall panel, phrased as things they care about
+// rather than as widget names. Picking a preset means adopting someone else's
+// idea of a day; picking interests builds a screen out of what YOU asked for,
+// and the packer arranges it.
+const INTERESTS = [
+  { id: 'weather',  label: 'Weather',        widgets: ['weather_hero', 'weather_forecast'] },
+  { id: 'calendar', label: "What's on",      widgets: ['calendar'] },
+  { id: 'clock',    label: 'The time',       widgets: ['clock'] },
+  { id: 'news',     label: 'Headlines',      widgets: ['headlines'] },
+  { id: 'outdoors', label: 'Sun & air',      widgets: ['outdoors'] },
+  { id: 'markets',  label: 'Markets',        widgets: ['markets'] },
+  { id: 'tasks',    label: 'To-do list',     widgets: ['tasks'] },
+  { id: 'daily',    label: 'Something to read', widgets: ['daily'] },
+  { id: 'art',      label: 'Something to look at', widgets: ['art'] },
+  { id: 'battery',  label: 'Panel battery',  widgets: ['eink_battery'] },
+];
+export default function SetupWizard({ cfg, onPatch, onApplyPreset, onApplyLayout, onClose }) {
   const [step, setStep] = useState('location');
+  const [picked, setPicked] = useState(() => new Set(['weather', 'calendar', 'clock']));
+  const [buildNote, setBuildNote] = useState('');
   const [search, setSearch] = useState('');
   const [results, setResults] = useState([]);
   const [pick, setPick] = useState(null);
@@ -92,6 +112,27 @@ export default function SetupWizard({ cfg, onPatch, onApplyPreset, onClose }) {
   };
 
   // Layout chosen → apply it, then move on to the optional PIN step.
+  // Build a screen from the interests, arranged by the same packer the TIDY
+  // button uses. Anything that does not fit is reported rather than dropped
+  // in silence.
+  const buildFromInterests = () => {
+    const ids = [];
+    for (const it of INTERESTS) {
+      if (!picked.has(it.id)) continue;
+      for (const w of it.widgets) if (!ids.includes(w)) ids.push(w);
+    }
+    if (!ids.length) { setStep('pin'); return; }
+    const r = layoutFromWidgetIds(ids, widgetById, newInstanceId, { cols: GRID_COLS, rows: GRID_ROWS });
+    if (onApplyLayout) onApplyLayout(r.layout);
+    // If the panel could not hold everything, say which ones did not make it.
+    // Asking someone what they want and then quietly dropping half of it is
+    // worse than not asking.
+    setBuildNote(r.dropped.length
+      ? `${r.dropped.length} didn't fit and were left out — add them from the widget pool.`
+      : '');
+    setStep('pin');
+  };
+
   const choosePreset = (preset) => {
     if (preset && onApplyPreset) onApplyPreset(preset);
     setStep('pin');
@@ -200,6 +241,57 @@ export default function SetupWizard({ cfg, onPatch, onApplyPreset, onClose }) {
           initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}>
           <StepIndicator currentStep={2} steps={WIZARD_STEPS} />
           <header>
+            <h2>What do you want to see?</h2>
+            <div className="terminal-line">&gt; PICK WHAT MATTERS · THE LAYOUT IS BUILT FROM YOUR ANSWERS</div>
+          </header>
+
+          <div className="interest-grid">
+            {INTERESTS.map(it => {
+              const on = picked.has(it.id);
+              return (
+                <button
+                  key={it.id}
+                  type="button"
+                  className={`interest-chip ${on ? 'is-on' : ''}`}
+                  aria-pressed={on}
+                  onClick={() => setPicked(prev => {
+                    const next = new Set(prev);
+                    if (next.has(it.id)) next.delete(it.id); else next.add(it.id);
+                    return next;
+                  })}
+                >
+                  {it.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="btn-row" style={{ justifyContent: 'space-between', marginTop: 20 }}>
+            <button className="btn btn-ghost" onClick={() => setStep('location')}>← BACK</button>
+            <div className="btn-row" style={{ marginTop: 0, gap: 8 }}>
+              <button className="btn btn-ghost" onClick={() => setStep('presets')}>USE A PRESET INSTEAD</button>
+              <button className="btn btn-primary" onClick={buildFromInterests} disabled={!picked.size}>
+                BUILD MY SCREEN →
+              </button>
+            </div>
+          </div>
+        </m.div>
+      </m.div>
+    );
+  }
+
+  // ---- Preset gallery (still reachable, no longer the default path) ----
+  //
+  // The presets are good; they are just somebody else's day. They stay one
+  // click away for people who would rather start from a finished screen.
+  if (step === 'presets') {
+    return (
+      <m.div className="wizard-overlay"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+        <m.div className="wizard-modal preset-modal"
+          initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}>
+          <StepIndicator currentStep={2} steps={WIZARD_STEPS} />
+          <header>
             <h2>Pick a starting layout</h2>
             <div className="terminal-line">&gt; START FROM A PRESET · YOU CAN EDIT EVERYTHING AFTER</div>
           </header>
@@ -211,7 +303,7 @@ export default function SetupWizard({ cfg, onPatch, onApplyPreset, onClose }) {
           </div>
 
           <div className="btn-row" style={{ justifyContent: 'space-between', marginTop: 20 }}>
-            <button className="btn btn-ghost" onClick={() => setStep('location')}>← BACK</button>
+            <button className="btn btn-ghost" onClick={() => setStep('preset')}>← BACK</button>
             <button className="btn btn-ghost" onClick={() => setStep('pin')}>SKIP — KEEP CURRENT</button>
           </div>
         </m.div>

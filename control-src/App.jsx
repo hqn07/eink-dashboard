@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LazyMotion, domAnimation, m, AnimatePresence, MotionConfig } from 'framer-motion';
-import { Star, ArrowCounterClockwise, Trash, Lock, Cards, Copy, CircleHalf } from '@phosphor-icons/react';
+import { Star, ArrowCounterClockwise, Trash, Lock, Cards, Copy, CircleHalf, SquaresFour } from '@phosphor-icons/react';
 import { fetchConfig, saveConfig, fetchPreviewData, onUnauthorized } from './api.js';
 import {
   WIDGET_REGISTRY,
+  widgetById,
   GRID_COLS,
   GRID_ROWS,
   compactLayout,
@@ -33,6 +34,7 @@ import AttentionStrip from './components/AttentionStrip.jsx';
 import { useDeviceTelemetry } from './use-device-telemetry.js';
 import { presenceFrom } from './device-presence.js';
 import { scanTiles, scanDevice, attentionSignature } from './attention.js';
+import { tidy } from './autolayout.js';
 import BeamComposer from './components/BeamComposer.jsx';
 import { SavedFeedsContext, deriveFeedName } from './components/saved-feeds-context.js';
 
@@ -350,6 +352,15 @@ export default function App() {
   // Manual re-launch of the setup wizard (it otherwise only auto-shows on
   // first run when no location is set).
   const [showWizard, setShowWizard] = useState(false);
+  // The first-run wizard LATCHES open. Its gate used to be evaluated on every
+  // render — `firstRun !== false && !homeCoords(cfg)` — which stopped being
+  // true the instant the location step saved a city, so the wizard unmounted
+  // itself half way through and the later steps were unreachable. The
+  // condition decides when to OPEN it; only onClose closes it.
+  const [wizardOpen, setWizardOpen] = useState(false);
+  useEffect(() => {
+    if (cfg && cfg.firstRun !== false && !homeCoords(cfg)) setWizardOpen(true);
+  }, [cfg]);
 
   const addScreen = () => {
     if (cfg && cfg.screens && cfg.screens.length >= MAX_SCREENS) {
@@ -809,6 +820,24 @@ export default function App() {
                     <Star size={12} weight="bold" /> MAKE DEFAULT
                   </button>
                 )}
+                {editScreen && (
+                  <button
+                    className="btn btn-ghost btn-iconed btn-compact"
+                    title="Pack the tiles top-to-bottom with no overlaps, keeping their order"
+                    onClick={() => {
+                      const r = tidy(layout, widgetById, { cols: GRID_COLS, rows: GRID_ROWS });
+                      updateScreenLayout(editScreen.id, r.layout);
+                      // A dropped tile is not deleted — it is simply not in the
+                      // new arrangement, and saying so is the difference between
+                      // a tidy and a silent loss.
+                      showToast(r.dropped.length
+                        ? `Tidied — ${r.dropped.length} tile${r.dropped.length === 1 ? '' : 's'} did not fit and were left out`
+                        : 'Tidied');
+                    }}
+                  >
+                    <SquaresFour size={12} weight="bold" /> TIDY
+                  </button>
+                )}
                 <button
                   className={`btn btn-iconed btn-compact ${oneBit ? '' : 'btn-ghost'}`}
                   title="Show the canvas the way the panel renders it — 1-bit threshold, no greys"
@@ -888,11 +917,15 @@ export default function App() {
 
       {/* Setup wizard: auto-shows on first run (no location set), or on
        *  demand via the header "Setup" button. */}
-      {((cfg.firstRun !== false && !homeCoords(cfg)) || showWizard) && (
+      {(wizardOpen || showWizard) && (
         <React.Suspense fallback={null}>
           <SetupWizard
             cfg={cfg}
             onPatch={patchCfg}
+            onApplyLayout={(next) => {
+              const defaultId = (screens.find(s => s.isDefault) || screens[0])?.id;
+              if (defaultId) updateScreenLayout(defaultId, next);
+            }}
             onApplyPreset={(preset) => {
               // Replace the default screen's layout with the chosen preset.
               const defaultId = (screens.find(s => s.isDefault) || screens[0])?.id;
@@ -900,7 +933,7 @@ export default function App() {
               const layout = inflatePresetLayout(preset);
               updateScreenLayout(defaultId, layout);
             }}
-            onClose={() => setShowWizard(false)}
+            onClose={() => { setWizardOpen(false); setShowWizard(false); }}
           />
         </React.Suspense>
       )}
