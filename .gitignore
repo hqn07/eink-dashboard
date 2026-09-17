@@ -32,6 +32,10 @@ public/control-app/
 
 # visual-regression diff output (baseline PNG is committed; diff is not)
 test/visual-baseline/*.diff.png
+# check-visual writes the failing render here for eyeballing — scratch, not a
+# baseline. It got committed once (73e07e5) because `git add -A` ran while a
+# failure was on disk.
+test/visual/current.png
 
 # one-off component preview (scripts/preview-components.mjs)
 test/_component-preview.png
