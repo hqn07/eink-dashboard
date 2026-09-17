@@ -109,8 +109,7 @@ export function demoCtxForWidget(id, cellW, cellH) {
       return { ...base,
         ai: { text: 'Cool and clear this morning, high near 78. Two meetings before noon, nothing after 3.', at: base.now - 3 * 3600 * 1000 },
         settings: { prompt: 'Brief me on today.', cadence: 'daily' } };
-    case 'uv':
-      return { ...base, uv: { uv: 7.4, uvMax: 9.2 }, settings: {} };
+
     case 'webhook':
       return { ...base,
         webhook: { data: { steps: 8432, goal: 10000, note: 'Morning run done' },
@@ -131,7 +130,12 @@ export function demoCtxForWidget(id, cellW, cellH) {
         settings: {} };
     }
     case 'clock':
-      return { ...base, clockNow: DEMO_CLOCK, settings: {} };
+      // Local view needs clockNow; the two zone views render from settings
+      // and a frozen `now`. The matrix draws all three, so supply both.
+      return { ...base,
+        now: Date.UTC(2026, 5, 1, 16, 20, 0),
+        clockNow: DEMO_CLOCK,
+        settings: { zones: ['LONDON|Europe/London', 'TOKYO|Asia/Tokyo', 'NEW YORK|America/New_York'], format: '12h' } };
     case 'sparkline': {
       // Show the weather-temperature trend in the pool so the card reads as
       // a general metric chart, not a battery-only sparkline. A believable
@@ -155,8 +159,16 @@ export function demoCtxForWidget(id, cellW, cellH) {
           stale: false
         },
         settings: {} };
-    case 'aqi':
-      return { ...base, aqi: DEMO_AQI, settings: {} };
+    case 'outdoors':
+      // One widget, three views, and the matrix renders every variant — so
+      // all three need data or two of the three snapshots would be
+      // placeholders.
+      return { ...base,
+        sun: { sunrise: Date.UTC(2026, 5, 1, 9, 34), sunset: Date.UTC(2026, 5, 1, 23, 58),
+               daylightSec: 51840, stale: false },
+        uv: { uv: 7.4, uvMax: 9.2 },
+        aqi: DEMO_AQI,
+        settings: {} };
     case 'tasks':
       return { ...base, tasks: {
         items: [
@@ -191,8 +203,10 @@ export function demoCtxForWidget(id, cellW, cellH) {
           { title: 'Building a paper-like reading device from scratch', age: '11h' }
         ], stale: false
       }, settings: { source: 'hn' } };
-    case 'onthisday':
-      return { ...base, onThisDay: {
+    case 'daily':
+      // Frozen now → a fixed day-of-year → the same built-in quote and word
+      // every run, which is what makes the matrix deterministic.
+      return { ...base, now: Date.UTC(2026, 5, 1, 12, 0, 0), onThisDay: {
         dateLabel: 'JUNE 16',
         events: [
           { year: 1963, text: 'Valentina Tereshkova becomes the first woman in space aboard Vostok 6.' },
@@ -203,16 +217,7 @@ export function demoCtxForWidget(id, cellW, cellH) {
           { year: 1846, text: 'The Bear Flag Revolt begins in California.' }
         ], stale: false
       }, settings: {} };
-    case 'quote':
-      // Frozen now → a fixed day-of-year → deterministic built-in quote.
-      return { ...base, now: Date.UTC(2026, 5, 1, 12, 0, 0), settings: {} };
-    case 'world_clock':
-      // Frozen now → deterministic times across zones for the matrix.
-      return {
-        ...base,
-        now: Date.UTC(2026, 5, 1, 16, 20, 0),
-        settings: { zones: ['LONDON|Europe/London', 'TOKYO|Asia/Tokyo', 'NEW YORK|America/New_York'], format: '12h' }
-      };
+
     case 'moon':
       // Frozen now ≈ 8 days into the cycle → a clean first-quarter disc
       // (~58% lit, waxing) for the matrix / visual-regression.

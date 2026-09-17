@@ -1,13 +1,17 @@
-import { escapeHtml, pickTier, placeholder } from './_shared.js';
+import { def as localDef, render as renderLocal } from './_view-clock.js';
+import { def as zonesDef, render as renderZones } from './_view-worldclock.js';
 
-// Clock — server-rendered time + date line.
+// Clock — the time here, or the time in several places.
 //
-// One variant, `big` — chunky serif time with the date under it. `thin` and
-// `banner` were retired by the 2026-09-15 variant cut; migration v5 drops a
-// stored variant that no longer exists, so those tiles fall back here.
-// Legacy tiles carry `settings.style: 'big'|'thin'` from before the
-// variant system — the render maps that forward when no variant is set.
-
+// `clock` and `world_clock` were two palette entries for one question. Their
+// ladders nearly matched (6x3 / 8x4 / 12x6 against 6x4 / 8x5 / 10x6) and the
+// distinction a user actually makes is "whose time?", which is a view.
+//
+// Unlike the other merges, this one keeps BOTH of the zone view's variants
+// rather than flattening them: `stack` and `big` are genuinely different
+// layouts, and collapsing them would have lost something. So the merged
+// variant list is local + the two zone layouts, and the renderers are
+// untouched — this file only maps a name to a module.
 export const def = {
   id: 'clock',
   label: 'Clock',
@@ -21,58 +25,26 @@ export const def = {
   },
   defaultSize: 'M',
   variants: {
-    big:    { label: 'Big — chunky serif' }
+    big:       { label: 'Local — time + date' },
+    zones:     { label: 'Zones — label · time rows' },
+    zones_big: { label: 'Zones — one place, large' }
   },
+  // `big` keeps its name so every existing local-clock tile resolves without
+  // a migration; only world_clock tiles are rewritten.
   defaultVariant: 'big',
-  degrade: {
-    tiny: ['date']
-  },
-  defaults: () => ({
-    variant: 'big',
-    format: '12h', showDate: true,
-  })
+  defaults: () => ({ variant: 'big', format: '12h', showDate: true })
+};
+
+const VIEWS = {
+  big:       { render: renderLocal, def: localDef, inner: 'big' },
+  zones:     { render: renderZones, def: zonesDef, inner: 'stack' },
+  zones_big: { render: renderZones, def: zonesDef, inner: 'big' },
 };
 
 export function render(ctx) {
-  const { clockNow, settings, cellW, cellH, density } = ctx;
-  if (!clockNow) {
-    return placeholder('CLOCK', 'Waiting for time', 'msg', { cellW, cellH }, 'nodata');
-  }
-  const c = clockNow;
-  const s = settings || {};
-  const variant = (s.variant && def.variants[s.variant]) ? s.variant
-    : (s.style === 'thin' || c.style === 'thin') ? 'thin'  // pre-variant tiles
-    : ctx.variant || 'big';
-  const tier = pickTier(cellW, cellH, density);
-  // Date line is legible from `compact` up; tiny tiles drop it so the
-  // time can use the full cell.
-  const dateAllowed = tier !== 'tiny';
-  const ampm = c.ampm ? `<span class="clock-ampm">${c.ampm}</span>` : '';
-  const date = dateAllowed && c.dateLine
-    ? `<div class="clock-date">${escapeHtml(c.dateLine)}</div>`
-    : '';
-  if (variant === 'trmnl') {
-    return `<div class="tr-card">
-      <div class="tr-titlebar"><span>Clock</span>${(dateAllowed && c.dateLine) ? `<span class="tr-meta">${escapeHtml(c.dateLine)}</span>` : ''}</div>
-      <div class="tr-body" style="justify-content:center;align-items:center">
-        <div class="tr-lv" style="text-align:center"><div class="tr-v autofit" data-min-font="28" style="font-size:80px">${c.timeStr}${c.ampm ? `<span class="tr-deg">${c.ampm}</span>` : ''}</div></div>
-      </div>
-    </div>`;
-  }
-
-  if (variant === 'banner') {
-    return `
-      <div class="clock clock-banner clock-big">
-        <div class="clock-time autofit" data-min-font="22">${c.timeStr}${ampm}</div>
-        ${date}
-      </div>
-    `;
-  }
-  const cls = variant === 'thin' ? 'clock-thin' : 'clock-big';
-  return `
-    <div class="clock ${cls}">
-      <div class="clock-time autofit" data-min-font="22">${c.timeStr}${ampm}</div>
-      ${date}
-    </div>
-  `;
+  const s = (ctx && ctx.settings) || {};
+  const view = VIEWS[ctx && ctx.variant] || VIEWS[s.variant] || VIEWS.big;
+  // The inner renderer resolves `ctx.variant` against its own table, so it
+  // gets its own name: 'zones_big' means nothing to the world-clock module.
+  return view.render({ ...ctx, variant: view.inner });
 }

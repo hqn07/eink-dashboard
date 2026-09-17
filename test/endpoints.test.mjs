@@ -293,6 +293,45 @@ test('config migration v8 converts stocks/crypto/fx into markets', async () => {
   assert.equal(other.widgetId, 'clock');
 });
 
+// --- Config migration v9: view-only widgets fold into their parents --------
+test('config migration v9 folds sun/uv/aqi, quote/word/otd and world_clock', async () => {
+  const { migrateConfigToScreens } = await import('../lib/screens.js');
+  const mk = (widgetId, settings) => ({
+    gridVersion: 8, firstRunSeeded: true,
+    screens: [{ id: 'x', isDefault: true, layoutKind: 'free',
+      layout: [{ id: 't', widgetId, x: 2, y: 3, w: 8, h: 5, settings }] }],
+  });
+  const out = (widgetId, settings = {}) => migrateConfigToScreens(mk(widgetId, settings)).screens[0].layout[0];
+
+  const pairs = [
+    ['sun', 'outdoors', 'sun'], ['uv', 'outdoors', 'uv'], ['aqi', 'outdoors', 'air'],
+    ['quote', 'daily', 'quote'], ['wordofday', 'daily', 'word'], ['onthisday', 'daily', 'onthisday'],
+  ];
+  for (const [from, widget, variant] of pairs) {
+    const t = out(from);
+    assert.equal(t.widgetId, widget, `${from} should fold into ${widget}`);
+    assert.equal(t.settings.variant, variant);
+    assert.deepEqual([t.x, t.y, t.w, t.h], [2, 3, 8, 5], `${from} tile must not move`);
+  }
+
+  // Per-view settings have to survive, or the merge silently resets choices.
+  assert.equal(out('sun', { hour24: true }).settings.hour24, true);
+  assert.equal(out('aqi', { showPollutants: false }).settings.showPollutants, false);
+  assert.deepEqual(out('quote', { quotes: ['a — b'] }).settings.quotes, ['a — b']);
+
+  // world_clock keeps BOTH its layouts rather than collapsing to one.
+  assert.equal(out('world_clock', { variant: 'stack' }).settings.variant, 'zones');
+  assert.equal(out('world_clock', { variant: 'big' }).settings.variant, 'zones_big');
+  assert.equal(out('world_clock', {}).widgetId, 'clock');
+
+  // A local clock tile is deliberately untouched: the merged widget kept the
+  // `big` variant name so it needs no rewrite.
+  const local = out('clock', { variant: 'big', format: '24h' });
+  assert.equal(local.widgetId, 'clock');
+  assert.equal(local.settings.variant, 'big');
+  assert.equal(local.settings.format, '24h');
+});
+
 // --- Connections: the key must never reach the exportable config ---------
 //
 // The entire reason this store exists is that Backup > EXPORT serialises the

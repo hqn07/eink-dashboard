@@ -17,9 +17,10 @@
 // client bundle pulls it in.
 
 import * as ai               from './ai.js';
-import * as aqi              from './aqi.js';
 import * as art              from './art.js';
 import * as chess            from './chess.js';
+import * as daily         from './daily.js';
+import * as outdoors      from './outdoors.js';
 import * as markets       from './markets.js';
 import * as calendar         from './calendar.js';
 import * as codeactivity     from './codeactivity.js';
@@ -28,26 +29,21 @@ import * as countdown        from './countdown.js';
 import * as eink_battery     from './eink_battery.js';
 import * as headlines        from './headlines.js';
 import * as moon             from './moon.js';
-import * as onthisday        from './onthisday.js';
 import * as photo            from './photo.js';
 import * as progress         from './progress.js';
 import * as qr               from './qr.js';
-import * as quote            from './quote.js';
 import * as sparkline        from './sparkline.js';
-import * as sun              from './sun.js';
 import * as tasks            from './tasks.js';
 import * as text             from './text.js';
 import * as transit          from './transit.js';
-import * as uv               from './uv.js';
 import * as webhook          from './webhook.js';
 import * as weather_forecast from './weather_forecast.js';
 import * as weather_hero     from './weather_hero.js';
-import * as world_clock      from './world_clock.js';
-import * as wordofday        from './wordofday.js';
 
+import { Form as dailyForm }        from './daily.form.jsx';
+import { Form as outdoorsForm }     from './outdoors.form.jsx';
 import { Form as marketsForm }      from './markets.form.jsx';
 import { Form as aiForm }              from './ai.form.jsx';
-import { Form as aqiForm }             from './aqi.form.jsx';
 import { Form as artForm }             from './art.form.jsx';
 import { Form as chessForm }           from './chess.form.jsx';
 import { Form as calendarForm }        from './calendar.form.jsx';
@@ -57,32 +53,27 @@ import { Form as countdownForm }       from './countdown.form.jsx';
 import { Form as einkBatteryForm }     from './eink_battery.form.jsx';
 import { Form as headlinesForm }       from './headlines.form.jsx';
 import { Form as moonForm }            from './moon.form.jsx';
-import { Form as onThisDayForm }       from './onthisday.form.jsx';
 import { Form as photoForm }           from './photo.form.jsx';
 import { Form as progressForm }        from './progress.form.jsx';
 import { Form as qrForm }              from './qr.form.jsx';
-import { Form as quoteForm }           from './quote.form.jsx';
 import { Form as sparklineForm }       from './sparkline.form.jsx';
-import { Form as sunForm }             from './sun.form.jsx';
 import { Form as tasksForm }           from './tasks.form.jsx';
 import { Form as textForm }            from './text.form.jsx';
 import { Form as transitForm }         from './transit.form.jsx';
-import { Form as uvForm }              from './uv.form.jsx';
 import { Form as webhookForm }         from './webhook.form.jsx';
 import { Form as weatherForecastForm } from './weather_forecast.form.jsx';
 import { Form as weatherHeroForm }     from './weather_hero.form.jsx';
-import { Form as worldClockForm }      from './world_clock.form.jsx';
-import { Form as wordofdayForm }       from './wordofday.form.jsx';
 
 const MODULES = [
-  ai, aqi, art, calendar, chess, markets, codeactivity, clock, countdown, eink_battery,
-  headlines, moon, onthisday, photo, progress, qr, quote, sparkline, sun, tasks, text, transit, uv, webhook, weather_forecast, weather_hero, world_clock, wordofday
+  ai, art, outdoors, daily, calendar, chess, markets, codeactivity, clock, countdown, eink_battery,
+  headlines, moon, photo, progress, qr, sparkline, tasks, text, transit, webhook, weather_forecast, weather_hero
 ];
 
 const FORMS = {
+  daily:            dailyForm,
+  outdoors:         outdoorsForm,
   markets:          marketsForm,
   ai:               aiForm,
-  aqi:              aqiForm,
   art:              artForm,
   chess:            chessForm,
   calendar:         calendarForm,
@@ -92,22 +83,16 @@ const FORMS = {
   eink_battery:     einkBatteryForm,
   moon:             moonForm,
   headlines:        headlinesForm,
-  onthisday:        onThisDayForm,
   photo:            photoForm,
   progress:         progressForm,
   qr:               qrForm,
-  quote:            quoteForm,
   sparkline:        sparklineForm,
-  sun:              sunForm,
   tasks:            tasksForm,
   text:             textForm,
   transit:          transitForm,
-  uv:               uvForm,
   webhook:          webhookForm,
   weather_forecast: weatherForecastForm,
-  weather_hero:     weatherHeroForm,
-  world_clock:      worldClockForm,
-  wordofday:        wordofdayForm
+  weather_hero:     weatherHeroForm
 };
 
 export const MIGRATED_DEFS = Object.fromEntries(

@@ -1,44 +1,12 @@
 import React from 'react';
+import { Form as LocalForm } from './_view-clock.form.jsx';
+import { Form as ZonesForm } from './_view-worldclock.form.jsx';
 
-// Layout (big / thin / banner) lives in the auto-rendered variant
-// picker (contract v2) — no hand-rolled style field here.
-const PRESETS = [
-  { id: 'big',  label: 'Big chunky with date',
-    values: { variant: 'big',  showDate: true,  format: '12h' } },
-  { id: 'thin', label: 'Thin clean with date',
-    values: { variant: 'thin', showDate: true,  format: '12h' } },
-  { id: 'time_only', label: 'Time only (no date)',
-    values: { variant: 'big',  showDate: false, format: '12h' } },
-  { id: '24h', label: '24-hour minimal',
-    values: { variant: 'thin', showDate: true,  format: '24h' } }
-];
-
-export function Form({ values, patch, onChange, fields }) {
-  const v = values || {};
-  const { SegmentedField, ToggleField, FormSection, PresetField, defaults = {} } = fields;
-  const fmt = v.format === '24h' ? '24h' : '12h';
-  const showDate = v.showDate !== false;
-  return (
-    <>
-      <FormSection title="Content">
-        <PresetField presets={PRESETS} onApply={(vals) => onChange({ ...v, ...vals })} />
-        <SegmentedField
-          label="Format"
-          value={fmt}
-          defaultValue={defaults.format}
-          options={[
-            { value: '12h', short: '12h', label: '12-hour (3:34 PM)' },
-            { value: '24h', short: '24h', label: '24-hour (15:34)' }
-          ]}
-          onChange={(x) => patch({ format: x })}
-        />
-        <ToggleField
-          label="Show date below time"
-          value={showDate}
-          defaultValue={defaults.showDate}
-          onChange={(x) => patch({ showDate: x })}
-        />
-      </FormSection>
-    </>
-  );
+// Two views, two existing forms. The zones view carries a full IANA zone
+// picker with favourites and search; folding its fields into a merged form by
+// hand would have meant reimplementing that for no gain. This dispatches
+// instead, so each view keeps the form it already had.
+export function Form(props) {
+  const view = (props.values && props.values.variant) || 'big';
+  return view === 'big' ? <LocalForm {...props} /> : <ZonesForm {...props} />;
 }

@@ -42,15 +42,13 @@ export const POOL_CATEGORIES = ['Weather', 'Time', 'Calendar', 'Media', 'News', 
 // user is likely to type ("music", "todo", "rss", "btc") find the widget
 // even when they aren't in its name.
 const POOL_META = {
+  daily:            { category: 'Text',     blurb: 'A quote, a word, or what happened today', keywords: 'quote quotation word vocabulary definition history on this day daily card' },
+  outdoors:         { category: 'Weather',  blurb: 'Sun, UV or air quality for your place', keywords: 'sun sunrise sunset daylight uv index air quality aqi pollution pm25 outdoors' },
   markets:          { category: 'Money',    blurb: 'Stocks, crypto and currency pairs in one list', keywords: 'stock ticker etf index crypto bitcoin btc eth currency fx exchange rate money price' },
   ai:               { category: 'Text',     blurb: 'Your prompt plus the dashboard data, in a few lines', keywords: 'ai llm gpt deepseek openai briefing summary prompt' },
   weather_hero:     { category: 'Weather',  blurb: 'Current conditions — big temp + icon', keywords: 'temperature forecast conditions now' },
   weather_forecast: { category: 'Weather',  blurb: 'Multi-day / hourly outlook', keywords: 'forecast hourly daily rain outlook' },
-  aqi:              { category: 'Weather',  blurb: 'Air quality index + category', keywords: 'air quality pollution pm2.5 smog' },
-  sun:              { category: 'Weather',  blurb: 'Sunrise / sunset + daylight (no key)', keywords: 'sunrise sunset daylight golden hour' },
-  uv:               { category: 'Weather',  blurb: 'UV index + WHO band (no key)', keywords: 'ultraviolet uv sun index' },
-  clock:            { category: 'Time',     blurb: 'Time + date', keywords: 'clock time date hour' },
-  world_clock:      { category: 'Time',     blurb: 'Time across multiple zones', keywords: 'timezone zones world cities utc' },
+  clock:            { category: 'Time',     blurb: 'Time and date here, or across zones', keywords: 'clock time date hour world zone timezone utc' },
   countdown:        { category: 'Time',     blurb: 'Days until a target date', keywords: 'countdown timer days until deadline' },
   progress:         { category: 'Time',     blurb: 'Day / week / month / year % bars', keywords: 'progress year week percent bars' },
   moon:             { category: 'Time',     blurb: 'Moon phase + illumination', keywords: 'moon phase lunar illumination' },
@@ -66,10 +64,7 @@ const POOL_META = {
   text:             { category: 'Text',     blurb: 'Token strip or message card', keywords: 'text message token label heading note' },
   art:              { category: 'Fun',      blurb: 'Daily generative pattern — reseeds every morning', keywords: 'art generative pattern decorative random' },
   chess:            { category: 'Fun',      blurb: 'Lichess puzzle of the day', keywords: 'chess puzzle lichess board game' },
-  quote:            { category: 'Text',     blurb: 'Quote + attribution', keywords: 'quote quotation saying author' },
-  wordofday:        { category: 'Text',     blurb: 'Daily vocabulary word + definition', keywords: 'word vocabulary definition dictionary' },
   webhook:          { category: 'Data',     blurb: 'Push any JSON, see it on the panel', keywords: 'webhook json push api custom' },
-  onthisday:        { category: 'Text',     blurb: 'Historical events for today', keywords: 'history historical on this day events anniversary' },
   qr:               { category: 'Text',     blurb: 'QR code + caption', keywords: 'qr code link url scan' }
 };
 function withPoolMeta(def) {
@@ -89,21 +84,16 @@ export const WIDGET_REGISTRY = [
   // No-key widgets (2026-06-16). This array is the editor palette's
   // source of truth — a widget missing here renders server-side but
   // never shows in the add-widget pool. Keep in sync with _registry.js.
+  { ...migratedDef('daily') },
+  { ...migratedDef('outdoors') },
   { ...migratedDef('markets') },
   { ...migratedDef('ai') },
-  { ...migratedDef('aqi') },
   { ...migratedDef('art') },
   { ...migratedDef('chess') },
-  { ...migratedDef('sun') },
   { ...migratedDef('countdown') },
   { ...migratedDef('progress') },
   { ...migratedDef('moon') },
-  { ...migratedDef('world_clock') },
-  { ...migratedDef('quote') },
-  { ...migratedDef('wordofday') },
   { ...migratedDef('webhook') },
-  { ...migratedDef('uv') },
-  { ...migratedDef('onthisday') },
   { ...migratedDef('headlines') },
   { ...migratedDef('photo') },
   { ...migratedDef('qr') },
@@ -251,10 +241,10 @@ export const SCREEN_PRESETS = [
         settings: { source: 'news', newsSource: 'bbc', count: 7, title: 'THE WIRE' } },
       { widgetId: 'calendar',         x: 9,  y: 2, w: 8, h: 6,
         settings: { variant: 'list', title: 'TODAY' } },
-      { widgetId: 'onthisday',        x: 9,  y: 8, w: 8, h: 4 },
+      { widgetId: 'daily', settings: { variant: 'onthisday' },        x: 9,  y: 8, w: 8, h: 4 },
       { widgetId: 'weather_forecast', x: 17, y: 2, w: 7, h: 6 },
-      { widgetId: 'quote',            x: 17, y: 8, w: 7, h: 4,
-        settings: { variant: 'serif' } }
+      { widgetId: 'daily', x: 17, y: 8, w: 7, h: 4,
+        settings: { variant: 'quote' } }
     ]
   },
   {

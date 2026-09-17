@@ -3,9 +3,10 @@
 // JSX into Node's import graph (which would happen if we imported
 // _registry.js — that pulls in every <id>.form.jsx).
 
+import * as daily         from './daily.js';
+import * as outdoors      from './outdoors.js';
 import * as markets       from './markets.js';
 import * as ai               from './ai.js';
-import * as aqi              from './aqi.js';
 import * as art              from './art.js';
 import * as chess            from './chess.js';
 import * as calendar         from './calendar.js';
@@ -15,26 +16,20 @@ import * as countdown        from './countdown.js';
 import * as eink_battery     from './eink_battery.js';
 import * as headlines        from './headlines.js';
 import * as moon             from './moon.js';
-import * as onthisday        from './onthisday.js';
 import * as photo            from './photo.js';
 import * as progress         from './progress.js';
 import * as qr               from './qr.js';
-import * as quote            from './quote.js';
 import * as sparkline        from './sparkline.js';
-import * as sun              from './sun.js';
 import * as tasks            from './tasks.js';
 import * as text             from './text.js';
 import * as transit          from './transit.js';
-import * as uv               from './uv.js';
 import * as webhook          from './webhook.js';
 import * as weather_forecast from './weather_forecast.js';
 import * as weather_hero     from './weather_hero.js';
-import * as world_clock      from './world_clock.js';
-import * as wordofday        from './wordofday.js';
 
 const MODULES = [
-  ai, aqi, art, calendar, chess, markets, codeactivity, clock, countdown, eink_battery,
-  headlines, moon, onthisday, photo, progress, qr, quote, sparkline, sun, tasks, text, transit, uv, webhook, weather_forecast, weather_hero, world_clock, wordofday
+  ai, art, outdoors, daily, calendar, chess, markets, codeactivity, clock, countdown, eink_battery,
+  headlines, moon, photo, progress, qr, sparkline, tasks, text, transit, webhook, weather_forecast, weather_hero
 ];
 
 export const DEFS = Object.fromEntries(MODULES.map(m => [m.def.id, m.def]));
