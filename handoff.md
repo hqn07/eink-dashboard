@@ -1,5 +1,52 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-17 (evening) — the world clock silently became a second local clock
+> **Found on the panel, by eye, not by any test.** A Saigon tile showing
+> 9:01 PM came back after a refresh as 10:02 AM — an exact duplicate of the
+> local clock beside it. Fixed in `16958d0`, verified live: the panel now reads
+> `10:08 AM · THU SEP 17` ‖ `9:08 PM · SAIGON`.
+>
+> **The chain.** The editor runs its own hand-mirrored `migrateConfigToScreens`
+> and stamps its own `GRID_VERSION`, which had drifted to **4** while the
+> server reached **10** — the constant literally carries a comment saying "keep
+> both in sync". Saving from the browser wrote `gridVersion: 4` over an
+> already-migrated config. The next load re-ran **v5**, whose frozen
+> `V5_LIVE_VARIANTS.clock = ['big']` is correct for v5-era clocks — but v5 runs
+> **before v9**, and v9 is what creates `clock/zones`. So v5 judged a v9-era
+> tile by v5-era rules and deleted the variant. The `zones` ARRAY survived, so
+> the tile still looked configured and fell through to `VIEWS.big`.
+>
+> **The general lesson, and it is the important part:** the migration chain
+> runs on every config load and is never written back, so it is permanently fed
+> its own output. **Idempotency is therefore a correctness requirement, not a
+> nicety.** It was not idempotent — pass 2 lost the variant and every pass
+> after kept it lost. The audit earlier the same day wrote down "every
+> migration must be idempotent and stable forever" as prose and did not test
+> it. One test asserting a fixed point would have caught this before it reached
+> the panel. **That test now exists** (`migrations are idempotent`) and it
+> fails on the old code.
+>
+> **Three independent barriers now:**
+> - `POST_V5_VARIANTS` (lib/screens.js) — variants that LATER migrations create
+>   for a widget that already existed at v5. `V5_LIVE_VARIANTS` stays frozen.
+>   **Any future merge that gives an old widget id a new variant must be added
+>   here**, or the strip will eat it.
+> - `saveConfig` stamps the SERVER's `GRID_VERSION` on every write
+>   (lib/config-store.js). A client is not the authority on the server's
+>   schema; whatever it sends, what lands on disk is what this server migrated
+>   to. Verified: disk went 4 → 10 → 11 and stayed.
+> - The client constant is realigned and no longer load-bearing.
+>
+> **Plus a repair, v11.** Fixing the code does not bring back a variant already
+> deleted from disk. `repairStrippedZoneClocks` fills it in when a `clock` tile
+> carries a non-empty `zones` array — unambiguous, because the local clock view
+> never reads `zones` and `clock`'s `defaults()` do not include it, so nothing
+> else produces that shape. One zone → `zones_big` (large single place),
+> several → `zones` (label/time rows). Idempotent; never overrides an existing
+> variant.
+>
+> `test:api` 38/38 · both visual snapshots 0px · `check:visual` 0.000%.
+>
 > ## 2026-09-17 (later still) — D2, sun-driven quiet hours
 > `cfg.quietHours` gains `mode: 'fixed' | 'sun'`. Sun mode sleeps from
 > sunset+60min to sunrise-60min instead of a fixed clock window, because the
