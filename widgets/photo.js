@@ -62,7 +62,9 @@ async function loadBytes(settings) {
   if (/^https?:\/\//i.test(url)) {
     const t0 = Date.now();
     try {
-      const res = await fetchPublicUrl(url, {}, 5000); // SSRF guard on user URL
+      // 12 MB: a generous phone photo, far below anything that threatens the
+      // dyno. The panel is 800x480 — nothing larger than this is ever useful.
+      const res = await fetchPublicUrl(url, {}, 5000, 12 * 1024 * 1024);
       if (!res.ok) {
         status.record('photo', { ok: false, ms: Date.now() - t0, err: `HTTP ${res.status}` });
         return null;

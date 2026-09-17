@@ -1,16 +1,80 @@
-// Shared fetch wrapper with a hard timeout. Every external HTTP call
-// the widgets make must go through this so a slow upstream can't hang
-// the Railway dyno's render queue.
+// Shared fetch wrapper with a hard timeout AND a hard size cap. Every
+// external HTTP call the widgets make must go through this so a slow
+// upstream can't hang the Railway dyno's render queue, and a large one
+// can't exhaust its memory.
 const dns = require('dns').promises;
 const net = require('net');
 
 const DEFAULT_TIMEOUT_MS = 8000;
+// Generous for a feed or a JSON API; callers handling images raise it.
+// An iCal feed with a decade of recurring events is well under 2 MB.
+const DEFAULT_MAX_BYTES = 2 * 1024 * 1024;
+const MAX_REDIRECTS = 5;
 
-async function fetchWithTimeout(url, options = {}, timeoutMs = DEFAULT_TIMEOUT_MS) {
+// Read a response body with a running byte count, and present the result
+// through the same three accessors every caller already uses.
+//
+// Why not just trust content-length: it is advisory, absent on chunked
+// responses, and trivially wrong on a hostile one. So it is checked first as
+// a cheap early out, then the actual bytes are counted as they arrive and the
+// stream is cancelled the moment the cap is passed — the point is to never
+// hold more than `maxBytes` in memory, not to detect it afterwards.
+function capBody(res, maxBytes) {
+  const declared = Number(res.headers.get('content-length'));
+  let cached = null;
+
+  const read = async () => {
+    if (Number.isFinite(declared) && declared > maxBytes) {
+      try { await res.body?.cancel(); } catch { /* already gone */ }
+      throw new Error(`response too large: ${declared} B > ${maxBytes} B`);
+    }
+    const reader = res.body && typeof res.body.getReader === 'function'
+      ? res.body.getReader() : null;
+    // No stream (empty body, or a runtime without one) — arrayBuffer is
+    // bounded by the content-length check above.
+    if (!reader) return Buffer.from(await res.arrayBuffer());
+
+    const chunks = [];
+    let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        try { await reader.cancel(); } catch { /* already gone */ }
+        throw new Error(`response too large: exceeded ${maxBytes} B`);
+      }
+      chunks.push(Buffer.from(value));
+    }
+    return Buffer.concat(chunks);
+  };
+
+  const body = () => (cached || (cached = read()));
+
+  return {
+    ok: res.ok,
+    status: res.status,
+    statusText: res.statusText,
+    headers: res.headers,
+    url: res.url,
+    // Discard an unread body so the socket is released rather than parked
+    // until GC — matters on the redirect path, which reads nothing.
+    async cancel() { try { await res.body?.cancel(); } catch { /* already gone */ } },
+    async arrayBuffer() {
+      const b = await body();
+      return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
+    },
+    async text() { return (await body()).toString('utf8'); },
+    async json() { return JSON.parse((await body()).toString('utf8')); },
+  };
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = DEFAULT_TIMEOUT_MS,
+                                maxBytes = DEFAULT_MAX_BYTES) {
   const ctrl = new AbortController();
   const id = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    return await fetch(url, { ...options, signal: ctrl.signal });
+    return capBody(await fetch(url, { ...options, signal: ctrl.signal }), maxBytes);
   } finally {
     clearTimeout(id);
   }
@@ -63,9 +127,39 @@ async function assertPublicUrl(raw) {
 }
 
 // Convenience: guard + fetch. Use for any URL that originates from user input.
-async function fetchPublicUrl(url, options = {}, timeoutMs = DEFAULT_TIMEOUT_MS) {
-  await assertPublicUrl(url);
-  return fetchWithTimeout(url, options, timeoutMs);
+//
+// Redirects are followed BY HAND, one hop at a time, because the guard has to
+// run on every hop. `fetch` defaults to redirect:'follow', which validated the
+// first URL and then followed a 302 to anywhere — a public host redirecting to
+// 169.254.169.254 or 127.0.0.1 walked straight through assertPublicUrl.
+//
+// Still not a complete defence: assertPublicUrl resolves the hostname and then
+// fetch resolves it again, so a hostile resolver can answer public once and
+// private once (DNS rebinding). Closing that needs the connection pinned to
+// the resolved IP via a custom undici dispatcher. Worth doing before anything
+// multi-tenant ships; not worth it while the only person who can set a URL
+// here is the panel's owner.
+// `guard` is a seam, and it exists for one reason: a test server can only bind
+// to loopback, which assertPublicUrl blocks at hop 0 — so with the real guard
+// hard-wired the hop loop is untestable, and a test that "passes" is only
+// re-proving that localhost is blocked. Production callers never pass it.
+async function fetchPublicUrl(url, options = {}, timeoutMs = DEFAULT_TIMEOUT_MS,
+                              maxBytes = DEFAULT_MAX_BYTES, guard = assertPublicUrl) {
+  let current = String(url);
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    await guard(current);
+    const res = await fetchWithTimeout(
+      current, { ...options, redirect: 'manual' }, timeoutMs, maxBytes);
+    if (res.status < 300 || res.status >= 400) return res;
+    const loc = res.headers.get('location');
+    if (!loc) return res;            // 3xx with no Location: hand it back as-is
+    await res.cancel();              // release the socket; we never read a redirect body
+    current = new URL(loc, current).toString();   // resolves relative Locations
+  }
+  throw new Error('too many redirects');
 }
 
-module.exports = { fetchWithTimeout, fetchPublicUrl, assertPublicUrl, isPrivateIp, DEFAULT_TIMEOUT_MS };
+module.exports = {
+  fetchWithTimeout, fetchPublicUrl, assertPublicUrl, isPrivateIp,
+  DEFAULT_TIMEOUT_MS, DEFAULT_MAX_BYTES, MAX_REDIRECTS,
+};

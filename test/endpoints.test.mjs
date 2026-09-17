@@ -691,3 +691,101 @@ test('config migration v10 folds the weather pair into one widget', async () => 
   assert.equal(again[0].widgetId, 'weather');
   assert.equal(again[0].settings.variant, 'forecast_rows');
 });
+
+// --- Outbound fetch guard: size cap + per-hop redirect validation ---------
+//
+// Both halves of the photo-widget attack chain, tested against a real local
+// HTTP server rather than a mock, because the thing being asserted is how the
+// wrapper behaves with actual sockets, chunked bodies and 302s.
+test('fetch guard caps response size and validates every redirect hop', async () => {
+  const { createServer } = await import('node:http');
+  const { fetchWithTimeout, fetchPublicUrl } = await import('../widgets/_fetch.js')
+    .then(m => m.default || m);
+
+  const srv = createServer((req, res) => {
+    if (req.url === '/small') {
+      res.writeHead(200, { 'content-type': 'text/plain' });
+      return res.end('ok');
+    }
+    if (req.url === '/big-declared') {
+      // Honest content-length over the cap — must be refused before any body.
+      res.writeHead(200, { 'content-type': 'text/plain', 'content-length': '5000000' });
+      return res.end('x'.repeat(5_000_000));
+    }
+    if (req.url === '/big-chunked') {
+      // No content-length; the cap has to come from counting bytes.
+      res.writeHead(200, { 'content-type': 'text/plain' });
+      for (let i = 0; i < 40; i++) res.write('y'.repeat(100_000));
+      return res.end();
+    }
+    if (req.url === '/lying') {
+      // Declares small, sends large — the header is advisory, the count is not.
+      res.writeHead(200, { 'content-type': 'text/plain', 'content-length': '10' });
+      for (let i = 0; i < 40; i++) res.write('z'.repeat(100_000));
+      return res.end();
+    }
+    if (req.url === '/redir-private') {
+      // The exact bypass: a reachable host 302-ing to the loopback interface.
+      res.writeHead(302, { location: 'http://127.0.0.1:9/burgled' });
+      return res.end();
+    }
+    if (req.url === '/redir-loop') {
+      res.writeHead(302, { location: '/redir-loop' });
+      return res.end();
+    }
+    res.writeHead(404); res.end();
+  });
+  await new Promise(r => srv.listen(0, '127.0.0.1', r));
+  const base = `http://127.0.0.1:${srv.address().port}`;
+
+  try {
+    // Baseline: a small body still works, and the accessors behave.
+    const okRes = await fetchWithTimeout(`${base}/small`, {}, 5000, 1024);
+    assert.equal(okRes.ok, true);
+    assert.equal(await okRes.text(), 'ok');
+
+    // Cap enforced from an honest content-length.
+    await assert.rejects(
+      fetchWithTimeout(`${base}/big-declared`, {}, 5000, 1024).then(r => r.text()),
+      /too large/, 'declared content-length over the cap must be refused');
+
+    // Cap enforced by counting when there is no content-length.
+    await assert.rejects(
+      fetchWithTimeout(`${base}/big-chunked`, {}, 5000, 1024).then(r => r.text()),
+      /too large/, 'chunked body over the cap must be refused');
+
+    // A content-length SMALLER than the body is not a way in: HTTP framing is
+    // authoritative, so the client is handed exactly the declared 10 bytes no
+    // matter how much the server writes. Asserted because it is the reason the
+    // counting path does not also need to police this case — and because the
+    // first version of this test wrongly expected a rejection here.
+    const lying = await fetchWithTimeout(`${base}/lying`, {}, 5000, 1024);
+    assert.equal((await lying.text()).length, 10,
+      'content-length framing must truncate, not overrun the cap');
+
+    // The hop loop has to be driven with a stub guard. The real one blocks
+    // loopback, and a test server can only bind to loopback — so with the real
+    // guard this would pass at hop 0 without ever following a redirect, i.e.
+    // it would assert nothing about the fix.
+    const seen = [];
+    const spyGuard = async (u) => {
+      seen.push(u);
+      // Stand in for assertPublicUrl: allow the test origin, refuse the target
+      // the redirect points at.
+      if (u.includes('/burgled')) throw new Error('blocked address');
+    };
+
+    await assert.rejects(
+      fetchPublicUrl(`${base}/redir-private`, {}, 5000, undefined, spyGuard),
+      /blocked address/, 'the redirect TARGET must be guarded, not just the first URL');
+    assert.equal(seen.length, 2, 'guard must run on every hop');
+    assert.match(seen[1], /\/burgled$/, 'second guard call is the redirect target');
+
+    // Redirect loops terminate rather than spinning.
+    await assert.rejects(
+      fetchPublicUrl(`${base}/redir-loop`, {}, 5000, undefined, async () => {}),
+      /too many redirects/);
+  } finally {
+    await new Promise(r => srv.close(r));
+  }
+});
