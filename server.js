@@ -135,7 +135,7 @@ app.use(require('./routes/connections')); // /api/connections (provider keys, ne
 app.use(require('./routes/display'));      // /display.* + /sleep + /api/wake (device-facing)
 app.get('/', (req, res) => res.redirect('/control'));
 app.use(require('./routes/auth'));         // /control* + /api/auth* (PIN login/setup)
-app.use(require('./routes/geocode'));      // /api/geocode + reverse + weather-check
+app.use(require('./routes/geocode'));      // /api/geocode + /api/reverse-geocode
 app.use(require('./routes/battery'));      // /api/battery report/read
 app.use(require('./routes/firmware'));     // /api/firmware/manifest + /firmware/:file
 app.use(require('./routes/devices'));      // /api/setup + /api/devices + /api/device/:id + /api/log(s)

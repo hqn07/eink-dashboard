@@ -221,11 +221,15 @@ async function diff(aBuf, bBuf) {
 // than the face matrix, and React hydration order can wiggle a few px.
 const SHOTS = [
   { name: 'widgets-matrix', fn: shootMatrix, threshold: THRESHOLD, maxPx: MAX_DIFF_PX },
-  // The editor is a live app viewport — scrollbars, focus rings and AA on real
-  // text make a handful of pixels move between runs, so it keeps a looser
-  // absolute allowance than the deterministic face matrix.
+  // The editor is a live app viewport, so it keeps a looser allowance than the
+  // deterministic face matrix — but 2500px was far looser than the evidence
+  // justified. Across this session every unchanged run came back at exactly
+  // 0px, while two real, intended changes measured 1823px and 2029px and
+  // PASSED as "no change". A guard whose allowance is bigger than the changes
+  // it is meant to catch is decoration. 250px still absorbs a focus ring or a
+  // scrollbar and fails on anything structural.
   { name: 'editor',         fn: shootEditor, threshold: Number(process.env.VR_EDITOR_THRESHOLD || 0.002),
-    maxPx: Number(process.env.VR_EDITOR_MAX_DIFF_PX || 2500) },
+    maxPx: Number(process.env.VR_EDITOR_MAX_DIFF_PX || 250) },
 ];
 
 async function main() {

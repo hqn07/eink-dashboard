@@ -1,6 +1,8 @@
 # UX / UI / QoL proposals — 2026-09-16
 
-Status: **P1, P4, P5, P8, P9 and P10 shipped 2026-09-16.** Everything else is a
+Status: **all eleven items resolved 2026-09-16** — P1, P3, P4, P5, P6, P7, P8,
+P9, P10 shipped; P2 shipped with a measured adjustment (30 -> 23, not the
+claimed weather 5 -> 1); P11 ruled out. Everything else is a
 proposal. Written after measuring the live system rather than from memory,
 and each item says what it costs and what it risks, because several of these
 are not obviously worth doing.
@@ -101,10 +103,11 @@ and every CSS rule whose selectors were entirely `.preview-pane-*`,
 `.preview-frame/canvas/stage`, `.settings-sidebar` or `.mobile-drawer-*` —
 16 rules plus a 77-line block inside a media query.
 
-**Found, not fixed:** on a 375px viewport the bottom row of canvas tiles
-renders blank. All five tiles are in the DOM with sensible boxes, and it
-happens with the 1-bit filter off, so it predates this change. The panel
-itself always renders at 800×480, so this is an editor-preview issue only.
+**The 375px "blank tiles" report was wrong.** Re-measured properly:
+`.live-tile-scale` applies `scale(0.43875)`, cells come out 234x105 inside
+234x105 grid items, and all four tiles render. The original reading was taken
+after a viewport change without a reload, before the ResizeObserver had
+resized the canvas — the measurement, not the editor, was stale.
 
 ### P2 — Consolidate 30 widgets → 21 *(high value, high cost, medium risk)*
 

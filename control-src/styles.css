@@ -3399,6 +3399,11 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
 /* ---------- Settings menu (Option A: sectioned, iconed) ---------- */
 .settings-menu { width: 300px; }
+/* A menu is 300px because menu ROWS are short. "You & your place" and
+ * "Connections" are real forms — location search, a feed list, a textarea —
+ * and at 300px their inputs were unusable. The menu widens only while a panel
+ * is open, so the row list keeps its compact shape the rest of the time. */
+.settings-menu:has(.settings-collapse-body) { width: min(440px, calc(100vw - 32px)); }
 .settings-section-label {
   padding: 9px 14px 4px;
   font-size: var(--fs-xs, 10px);

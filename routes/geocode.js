@@ -1,10 +1,9 @@
-// Location + weather-check helpers for the control panel's setup UI. Proxied
+// Location helpers for the control panel's setup UI. Proxied
 // server-side so responses can be cached and the provider can change without a
 // client edit. Owns a small LRU geocode cache.
 const router = require('express').Router();
 const { checkAdminAuth } = require('../lib/auth');
 const { jsonFetch } = require('../lib/geo');
-const { fetchWeather } = require('../widgets/weather');
 const { safeError } = require('../lib/http');
 
 const geocodeCache = new Map(); // key: q-lower → { at, data }
@@ -73,29 +72,5 @@ router.get('/api/reverse-geocode', checkAdminAuth, async (req, res) => {
   }
 });
 
-router.get('/api/weather-check', checkAdminAuth, async (req, res) => {
-  const city = (req.query.city || '').trim();
-  const lat = parseFloat(req.query.lat);
-  const lon = parseFloat(req.query.lon);
-  const units = req.query.units === 'C' ? 'C' : 'F';
-  try {
-    // Reuse the weather widget so the result matches what the dashboard will
-    // actually render. fetchWeather handles the geocode-then-fetch dance
-    // internally for city-only queries.
-    const loc = (Number.isFinite(lat) && Number.isFinite(lon))
-      ? { lat, lon }
-      : city;
-    const w = await fetchWeather(loc, units);
-    if (w.stale) return res.json({ ok: false, error: 'not found' });
-    res.json({
-      ok: true,
-      temp: w.temp,
-      desc: w.desc,
-      country: w.country || null
-    });
-  } catch (err) {
-    res.json({ ok: false, ...safeError(err) });
-  }
-});
 
 module.exports = router;
