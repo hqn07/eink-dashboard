@@ -201,10 +201,23 @@ html, body {
   border-color: #fff !important;
   color: #fff;
 }
-.cell.cell-inverted svg path,
-.cell.cell-inverted svg rect,
-.cell.cell-inverted svg polyline,
-.cell.cell-inverted svg circle {
+/* Repaint monochrome icon SVGs white. `:not(.face-art)` is load-bearing:
+ * this rule paints EVERY shape in a cell white, which is right for a
+ * single-colour glyph and fatal for any SVG that carries its own two tones.
+ * A QR's backing square and its data modules are both <rect>, so the code
+ * flattened to a blank white block; the chess board lost its squares and its
+ * pieces; the moon lost its disc. All three shipped that way on the default
+ * (inverted) theme — found 2026-09-17 via check:visual.
+ *
+ * Presentation attributes (fill="#000") lose to ANY stylesheet rule, so the
+ * widget cannot defend itself in markup. An SVG that means its own colours
+ * tags itself `.face-art` and this rule stops applying to it entirely.
+ * A glyph that wants inverting instead uses ONE fill colour, so painting
+ * everything white is always the correct answer for it. */
+.cell.cell-inverted svg:not(.face-art) path,
+.cell.cell-inverted svg:not(.face-art) rect,
+.cell.cell-inverted svg:not(.face-art) polyline,
+.cell.cell-inverted svg:not(.face-art) circle {
   fill: #fff;
   stroke: #fff;
 }

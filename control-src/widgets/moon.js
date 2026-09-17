@@ -82,7 +82,7 @@ export function moonSvg(size, illum, waxing) {
     A ${rx} ${R} 0 0 ${termSweep} ${cx} ${cy - R} Z`;
 
   const id = `mn${discUid++}`;
-  return `<svg class="moon-disc" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true">
+  return `<svg class="moon-disc face-art" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true">
     <defs>
       <clipPath id="${id}c"><path d="${lit}"/></clipPath>
       <clipPath id="${id}d"><circle cx="${cx}" cy="${cy}" r="${R - 1}"/></clipPath>

@@ -98,8 +98,15 @@ function deltaBadge(d) {
   return `<span class="wclock-delta">${d > 0 ? '+' : '−'}${Math.abs(d)}d</span>`;
 }
 
-// 1-bit safe day/night glyph. Sun = disc + 8 rays; moon = black disc
-// with a #fff disc bitten out (white = panel background → crescent).
+// 1-bit safe day/night glyph. Sun = disc + 8 rays; moon = a crescent cut
+// with fill-rule="evenodd" from two overlapping circle subpaths.
+//
+// The moon used to be a black disc with a #fff disc painted over it, which
+// assumed the panel background was white. On an inverted tile the theme
+// repaints every shape white (015-body-grid-system.css) and the bite
+// vanished into the disc — a solid white blob. One subpath, one fill, no
+// assumption about the background: the theme can invert it correctly, which
+// is exactly what a glyph should let it do.
 function dnGlyph(isDay) {
   if (isDay) {
     return `<svg class="wclock-dn" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">`
@@ -111,9 +118,15 @@ function dnGlyph(isDay) {
       + `<line x1="3.3" y1="12.7" x2="4.4" y2="11.6"/><line x1="11.6" y1="4.4" x2="12.7" y2="3.3"/>`
       + `</g></svg>`;
   }
+  // Disc r6 at (8,8); bite r4 at (9.41,6.59) — offset 2 toward the upper
+  // right, so 2 + 4 = 6 and the bite is internally TANGENT, never poking
+  // outside. That matters: even-odd fills any region covered an odd number
+  // of times, so a bite that overhung the limb would paint the overhang as
+  // a second sliver of moon.
   return `<svg class="wclock-dn" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">`
-    + `<circle cx="8" cy="8" r="6" fill="#000"/>`
-    + `<circle cx="10.5" cy="5.5" r="5" fill="#fff"/></svg>`;
+    + `<path fill="#000" fill-rule="evenodd" d="`
+    +   `M 2 8 a 6 6 0 1 0 12 0 a 6 6 0 1 0 -12 0 `
+    +   `M 5.41 6.59 a 4 4 0 1 0 8 0 a 4 4 0 1 0 -8 0"/></svg>`;
 }
 
 function metaLine(info, showMeta) {

@@ -83,7 +83,7 @@ function boardSvg(board, flip, coords) {
     }
   }
   const vbw = size + m, vbh = size + m;
-  return `<svg class="chess-board" viewBox="0 0 ${vbw} ${vbh}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+  return `<svg class="chess-board face-art" viewBox="0 0 ${vbw} ${vbh}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
     <defs><pattern id="chx" width="4" height="4" patternUnits="userSpaceOnUse"><rect width="4" height="4" fill="#fff"/><rect width="2" height="2" fill="#000"/><rect x="2" y="2" width="2" height="2" fill="#000"/></pattern></defs>
     <rect width="${vbw}" height="${vbh}" fill="#fff"/>
     ${sq}${pieces}${labels}

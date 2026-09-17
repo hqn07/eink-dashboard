@@ -1,5 +1,54 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-17 — QR, chess, moon and the world clock all rendered blank
+> `check:visual` had been failing at ~91% and I'd written it off as a stale
+> baseline. It wasn't only that. The fixture's QR was a solid white square,
+> and chasing that found one CSS rule breaking four widgets on the DEFAULT
+> theme.
+>
+> **`015-body-grid-system.css`:**
+> ```css
+> .cell.cell-inverted svg rect { fill: #fff; stroke: #fff; }
+> ```
+> It paints every shape in an inverted cell white. Correct for a monochrome
+> glyph, fatal for an SVG carrying its own two tones — and **presentation
+> attributes (`fill="#000"`) lose to any stylesheet rule**, so the widget
+> cannot defend itself in markup. Casualties: the QR's backing square and its
+> data modules are both `<rect>` (blank white block, unscannable); the chess
+> board lost its squares and its pieces; the moon lost its disc.
+>
+> Fix is opt-out, not a pile of exceptions: the rule is now
+> `svg:not(.face-art)`, and an SVG that means its own colours tags itself
+> `.face-art`. qr / chess / moon do. A glyph that wants inverting keeps ONE
+> fill colour, so "paint everything white" stays the right answer for it.
+>
+> **The world clock's night glyph needed the other half of that rule.** It was
+> a black disc with a `#fff` disc painted over it — it assumed the panel
+> background was white, so on an inverted tile the bite vanished into the
+> disc. `.face-art` would have frozen it black-on-black instead. Rebuilt as a
+> single `fill-rule="evenodd"` path, one colour, no assumption about the
+> background. **First attempt was wrong**: the bite circle (r5 at 10.5,5.5)
+> pokes outside the r6 disc, and even-odd fills any region covered an odd
+> number of times, so the overhang painted a second sliver of moon. Bite is
+> now r4 at (9.41,6.59) — offset 2, so 2+4=6 and it is internally TANGENT.
+> Verified with `path.isPointInFill()` at six probe points rather than by
+> eyeballing a 14px glyph.
+>
+> **Why no guard caught it.** `test:visual` renders every widget at every
+> size — but from `def.defaults()`, and qr ships `data: ''` while chess has no
+> puzzle without a fetch. Both rendered their SETUP placeholder, so the
+> artwork was never compared. `_pool_demo.js` now has frozen payloads for
+> both, which puts them under the matrix.
+>
+> Both baselines re-captured. check:visual is **OK at 0.000%** — it had been
+> failing long enough that it was telling nobody anything; the white-page
+> baseline also predated inverted-on-black becoming the default.
+>
+> **Process note, third time this has cost me:** two of my "after" renders
+> were byte-identical to the "before" because the server hit EADDRINUSE and a
+> stale process kept serving. Kill, then `until [ -z "$(lsof -ti :PORT)" ]`,
+> then grep the fresh log for EADDRINUSE before trusting a single pixel.
+>
 > ## 2026-09-17 — the weather pair merged; size ladders moved onto variants
 > **Widget count 23 -> 22.** `weather_hero` + `weather_forecast` are now one
 > `weather` widget with four views: `now`, `now_split`, `forecast`,

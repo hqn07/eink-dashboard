@@ -217,6 +217,37 @@ export function demoCtxForWidget(id, cellW, cellH) {
         ], stale: false
       }, settings: {} };
 
+    case 'qr':
+      // The matrix used to render qr's SETUP placeholder, because
+      // def.defaults() ships an empty `data` — which is how a QR that
+      // flattened to a blank white square on the default inverted theme got
+      // all the way to a panel without a single guard noticing (2026-09-17).
+      // A frozen payload puts the actual artwork under test:visual.
+      return { ...base, settings: {
+        variant: 'caption', mode: 'url', level: 'M',
+        data: 'https://example.com/matrix', caption: 'SCAN ME', title: 'QR'
+      } };
+
+    case 'chess': {
+      // Same reasoning as qr: without a frozen puzzle the matrix only ever
+      // saw "Puzzle unavailable", so the board's two-tone artwork was never
+      // compared. Legal position, fixed, no fetch.
+      const rank = (spec) => spec.split(',').map(c => (c === '.' ? null : c));
+      return { ...base, chessPuzzle: {
+        board: [
+          rank('.,.,.,.,.,.,bk,.'),
+          rank('.,.,.,.,.,bp,bp,bp'),
+          rank('.,.,.,.,.,.,.,.'),
+          rank('.,.,.,.,.,.,.,.'),
+          rank('.,.,.,.,.,.,.,.'),
+          rank('.,.,.,.,.,.,.,.'),
+          rank('.,.,.,.,.,wp,wp,wp'),
+          rank('.,.,.,.,.,.,wk,.'),
+        ],
+        turn: 'w', rating: 1700, themes: ['endgame'], stale: false
+      }, settings: {} };
+    }
+
     case 'moon':
       // Frozen now ≈ 8 days into the cycle → a clean first-quarter disc
       // (~58% lit, waxing) for the matrix / visual-regression.

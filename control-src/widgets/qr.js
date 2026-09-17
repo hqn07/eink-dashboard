@@ -87,7 +87,7 @@ function buildSvg(data, level) {
       }
     }
   }
-  return `<svg class="qr-svg" viewBox="0 0 ${dim} ${dim}" `
+  return `<svg class="qr-svg face-art" viewBox="0 0 ${dim} ${dim}" `
     + `preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges" `
     + `xmlns="http://www.w3.org/2000/svg">`
     + `<rect width="${dim}" height="${dim}" fill="#fff"/>`
