@@ -441,7 +441,7 @@
 > Prep done + kept: CI builds secret-free bins (empty wifi/token — captive
 > portal + per-device api keys), 40 token-bearing bins removed from tip,
 > github.com/hqn07 profile live w/ showcase. NOT done: history scrub
-> (wifi pass `REDACTED` + two fleet tokens still in old commits —
+> (the wifi password + two fleet tokens still in old commits —
 > bins in history too), visibility still PRIVATE, local secrets.h reverted
 > to match Railway. To resume: mirror clone → git-filter-repo
 > (--invert-paths --path public/firmware + --replace-text) → force push →
