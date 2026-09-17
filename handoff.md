@@ -49,6 +49,12 @@
 > stale process kept serving. Kill, then `until [ -z "$(lsof -ti :PORT)" ]`,
 > then grep the fresh log for EADDRINUSE before trusting a single pixel.
 >
+> **And a second sequencing trap:** `npm run test:visual --update` captures
+> the EDITOR snapshot from `public/control-app/`, the built bundle. I updated
+> the baseline and then ran `npx vite build`, so the next run failed on a QR
+> that had just started rendering correctly. **Run `npx vite build` BEFORE
+> capturing the editor baseline** whenever a widget module changed.
+>
 > ## 2026-09-17 — the weather pair merged; size ladders moved onto variants
 > **Widget count 23 -> 22.** `weather_hero` + `weather_forecast` are now one
 > `weather` widget with four views: `now`, `now_split`, `forecast`,
