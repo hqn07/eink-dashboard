@@ -49,7 +49,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.22.0"
+#define FW_VERSION "1.23.0"
 #define FW_BOARD   "b"
 #define OTA_MIN_BATT_PCT 50
 
@@ -115,24 +115,6 @@ static const int EPD_CS = 15, EPD_SCK = 13, EPD_MOSI = 14;
 #define BUZZER_RES     8
 #define BUZZER_VOLUME  64
 #define LOW_BATT_PCT   10
-
-// Alarm window: if NTP time lands within this many seconds of the
-// scheduled fire, treat the wake as the alarm and start ringing.
-#define ALARM_WINDOW_SEC 30
-// Auto-stop after this long if the user doesn't press the button.
-#define ALARM_TIMEOUT_SEC 60
-
-// Holder for the next-alarm payload. Declared above any function that
-// touches it because the Arduino IDE's auto-prototype generator scans
-// for function signatures and inserts forward declarations at the very
-// top of the translation unit — before the rest of the .ino's struct
-// definitions would be reached.
-struct NextAlarm {
-  uint64_t tsMs;           // Unix epoch ms (server clock)
-  uint64_t serverNowMs;    // Server's "now" — for measuring clock skew
-  int      durationSec;
-  char     label[48];
-};
 
 SPIClass hspi(HSPI);
 // 3-color driver class. GDEY075Z08 = Waveshare 7.5" V2 B (800×480, B/W/R).
@@ -1376,11 +1358,12 @@ int fetchSleepSeconds() {
   return fetchSleepMinutes() * 60;
 }
 
-// =================== ALARMS ===================
+// =================== TIME ===================
 
-// Sync the ESP32's internal RTC against NTP so we can compare local
-// wall-clock time to the server's alarm timestamps. Without this the
-// "is it alarm time?" check has no anchor.
+// Sync the ESP32's internal RTC against NTP. The scheduled-alarm feature
+// this was originally for is gone, but time(nullptr) still stamps
+// g_lastGoodAt — the "last successful render" the fail screen reports —
+// and that reads as 1970 without a sync.
 void syncTime() {
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
   struct tm now;
@@ -1393,68 +1376,6 @@ void syncTime() {
   } else {
     Serial.println("NTP sync FAILED");
   }
-}
-
-// Holder for the next-alarm payload. tsMs == 0 means none scheduled.
-bool fetchNextAlarm(NextAlarm* out) {
-  if (!out) return false;
-  out->tsMs = 0;
-  out->serverNowMs = 0;
-  out->durationSec = 60;
-  out->label[0] = 0;
-
-  String url = addToken(String(activeServerBase) + "/api/alarm/next");
-  HTTPClient http;
-  WiFiClientSecure tls;
-  http.setTimeout(5000);
-  httpBegin(http, tls, url);
-  addAuth(http);
-  int code = http.GET();
-  if (code != 200) {
-    http.end();
-    return false;
-  }
-  String body = http.getString();
-  http.end();
-
-  StaticJsonDocument<384> doc;
-  if (deserializeJson(doc, body) != DeserializationError::Ok) return false;
-  out->serverNowMs = doc["now"] | 0ULL;
-  JsonObject next = doc["next"].as<JsonObject>();
-  if (next.isNull()) return true;   // no alarm scheduled — still success
-  out->tsMs = next["ts"] | 0ULL;
-  out->durationSec = next["durationSec"] | 60;
-  const char* label = next["label"] | "";
-  strlcpy(out->label, label, sizeof(out->label));
-  return true;
-}
-
-// Big "ALARM" + label + scheduled time text on a full white screen.
-void drawAlarmScreen(const char* label) {
-  // This overwrites the dashboard, so invalidate the cached ETag — else
-  // the next wake could 304 and leave the alarm screen stuck on-panel.
-  g_lastEtag[0] = '\0';
-  display.setRotation(0);
-  display.setFullWindow();
-  display.firstPage();
-  do {
-    display.fillScreen(GxEPD_WHITE);
-    display.fillRect(0, 0, SW, 80, GxEPD_BLACK);
-    display.setTextColor(GxEPD_WHITE);
-    display.setCursor(40, 56);
-    display.setTextSize(5);
-    display.print("ALARM");
-
-    display.setTextColor(GxEPD_BLACK);
-    display.setTextSize(4);
-    display.setCursor(40, 200);
-    display.print(label && *label ? label : "(no label)");
-
-    display.setTextSize(2);
-    display.setCursor(40, 280);
-    display.print("Press button to dismiss");
-  } while (display.nextPage());
-  display.hibernate();
 }
 
 // Full-screen WiFi-setup instructions, shown when the user long-presses
@@ -1489,37 +1410,6 @@ void drawSetupScreen() {
     display.print("Window open 5 min, then restarts.");
   } while (display.nextPage());
   display.hibernate();
-}
-
-// Run the alarm loop: paint the alarm screen, then ring the buzzer in
-// a pattern until either the user presses the button or the timeout
-// elapses. Returns once the alarm is silenced.
-void runAlarm(const char* label) {
-  Serial.printf("ALARM firing — label=\"%s\"\n", label);
-  drawAlarmScreen(label);
-  beepChime();   // start of alarm cue
-  unsigned long start = millis();
-  // Pulse: 200 ms on, 600 ms off.
-  while (millis() - start < (unsigned long)ALARM_TIMEOUT_SEC * 1000UL) {
-    if (digitalRead(BTN_REFRESH) == LOW) {
-      Serial.println("Alarm dismissed by button press");
-      break;
-    }
-    buzzerOn();
-    unsigned long t = millis();
-    while (millis() - t < 200) {
-      if (digitalRead(BTN_REFRESH) == LOW) break;
-      delay(10);
-    }
-    buzzerOff();
-    t = millis();
-    while (millis() - t < 600) {
-      if (digitalRead(BTN_REFRESH) == LOW) break;
-      delay(10);
-    }
-  }
-  buzzerOff();
-  Serial.println("Alarm ended");
 }
 
 // =================== DISPLAY ===================
@@ -1688,7 +1578,7 @@ void pushImage(const uint8_t* buf) {
 // =================== MAIN ===================
 
 // Run one full refresh cycle: read battery → ensure WiFi → check
-// alarms/OTA → download + paint image → reschedule. Returns the
+// OTA → download + paint image → reschedule. Returns the
 // requested sleep length in minutes for the next iteration.
 //
 // `wakeCause` is the reason we entered this cycle (cold boot, button,
@@ -1785,15 +1675,6 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
   checkForUpdate(battPct, buttonWake);   // may not return (reboots on success)
   syncTime();
 
-  NextAlarm na;
-  if (fetchNextAlarm(&na) && na.tsMs > 0 && na.serverNowMs > 0) {
-    int64_t deltaSec = ((int64_t)na.tsMs - (int64_t)na.serverNowMs) / 1000;
-    Serial.printf("Next alarm: \"%s\" in %lld s\n", na.label, deltaSec);
-    if (deltaSec >= -ALARM_WINDOW_SEC && deltaSec <= ALARM_WINDOW_SEC) {
-      runAlarm(na.label);
-    }
-  }
-
   // A manual button press means "refresh now" — drop the cached ETag so
   // the server can't 304 us, forcing a real redraw even if unchanged.
   if (buttonWake) g_lastEtag[0] = '\0';
@@ -1846,20 +1727,6 @@ int runCycle(esp_sleep_wakeup_cause_t wakeCause) {
     }
   } while (refreshRequested);
 
-  NextAlarm post;
-  if (fetchNextAlarm(&post) && post.tsMs > 0 && post.serverNowMs > 0) {
-    int64_t deltaSec = ((int64_t)post.tsMs - (int64_t)post.serverNowMs) / 1000;
-    int64_t targetSec = deltaSec - 15;
-    if (targetSec > 0) {
-      int alarmSec = (int)targetSec;
-      if (alarmSec < 1) alarmSec = 1;
-      if (alarmSec < sleepSec) {
-        Serial.printf("Alarm in %lld s — shortening sleep to %d s\n",
-                      deltaSec, alarmSec);
-        sleepSec = alarmSec;
-      }
-    }
-  }
   return sleepSec;
 }
 
