@@ -49,21 +49,31 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.21.0"
+#define FW_VERSION "1.22.0"
 #define FW_BOARD   "b"
 #define OTA_MIN_BATT_PCT 50
 
 #define DEFAULT_SLEEP_MIN 30
 
-// USB-power detection: TP4056 holds VBAT at ~4.2V while charging. On
-// battery alone the cell drops to ~3.7V soon after disconnect. A
-// threshold of 4.10V cleanly separates "USB plugged in" from "running
-// off the LiPo" without flapping when the battery is near full.
-// When USB-powered we skip light sleep entirely and just delay() —
-// CPU stays awake, no sleep-mode complexity, infinite power budget.
-// On battery we light-sleep so the radio's association survives the
-// idle period and we don't burn ~5 s on a re-join each cycle.
-#define VBAT_USB_THRESHOLD 4.10f
+// Desk-development affordance: spin in an active delay() between cycles
+// instead of deep-sleeping, so the button answers instantly and the serial
+// monitor stays attached across refreshes. Set to 1 while working at a desk;
+// it MUST be 0 for anything running on a battery.
+//
+// This replaces a voltage heuristic (`vbat > 4.10f` meant "on USB") that did
+// not work. The claim was that a TP4056 holds VBAT at ~4.2V while charging
+// while a disconnected cell "drops to ~3.7V soon after" — but a LiPo straight
+// off the charger RESTS at 4.15-4.20V, which is the same reading. So a freshly
+// charged device on battery took the stay-awake branch and burned ~125 mAh
+// (roughly 2 h at ~60 mA) before it self-discharged below the threshold and
+// started sleeping. Every charge cycle, silently.
+//
+// Battery voltage cannot distinguish the two cases, because in both of them
+// the cell sits at its full-charge voltage. Detecting USB properly needs a
+// VBUS sense line — divide the charger's 5V input down to a spare RTC-capable
+// GPIO and read that. Until that wire exists, there is no runtime signal, so
+// this is a build-time flag rather than a guess that misfires.
+#define DEV_STAY_AWAKE 0
 
 // Battery sense — 1MΩ + 1MΩ divider from V_batt to GND, mid-point on GPIO34.
 // V_batt = V_GPIO34 × 2.0. Equal resistors keep V_GPIO34 ≤ 2.1V at full
@@ -2021,7 +2031,7 @@ void loop() {
   }
   buzzerOff();
 
-  // Mode select: USB → stay active (no sleep), battery → DEEP sleep.
+  // Idle between cycles. Deep sleep unless DEV_STAY_AWAKE is set.
   //
   // Deep sleep tears WiFi down completely, but the warm-boot fast-
   // reconnect path (cached BSSID + channel + static IP) brings the
@@ -2030,28 +2040,31 @@ void loop() {
   // through `WiFi.setSleep(false)` + `esp_light_sleep_start()`. Deep
   // sleep also draws ~10 µA vs light sleep's ~800 µA, so battery life
   // jumps from weeks to months.
+  //
+  // The button is NOT lost while deep asleep — ext1 ALL_LOW on GPIO32 wakes
+  // the board on a press. It costs a full boot + refresh instead of being
+  // instant, which is the right trade for a panel that redraws in 26 s anyway.
   float vbat = readBatteryVoltage();
-  bool onUsb = vbat > VBAT_USB_THRESHOLD;
 
-  if (onUsb) {
-    Serial.printf("USB (%.2fV) — active wait %d s\n", vbat, sleepSec);
-    unsigned long until = millis() + (unsigned long)(sleepUs / 1000ULL);
-    while ((long)(until - millis()) > 0) {
-      if (refreshRequested) {
-        Serial.println("Button pressed — early refresh");
-        s_buttonCycle = true;   // next loop() pass counts as a button cycle
-        beep(30);               // press ack (ISR no longer drives the buzzer)
-        break;
-      }
-      delay(200);
+#if DEV_STAY_AWAKE
+  Serial.printf("DEV_STAY_AWAKE (%.2fV) — active wait %d s\n", vbat, sleepSec);
+  unsigned long until = millis() + (unsigned long)(sleepUs / 1000ULL);
+  while ((long)(until - millis()) > 0) {
+    if (refreshRequested) {
+      Serial.println("Button pressed — early refresh");
+      s_buttonCycle = true;   // next loop() pass counts as a button cycle
+      beep(30);               // press ack (ISR no longer drives the buzzer)
+      break;
     }
-  } else {
-    Serial.printf("Battery (%.2fV) — deep sleep %d s\n", vbat, sleepSec);
-    rtc_gpio_pulldown_dis((gpio_num_t)BTN_REFRESH);
-    rtc_gpio_pullup_en((gpio_num_t)BTN_REFRESH);
-    esp_sleep_enable_timer_wakeup(sleepUs);
-    esp_sleep_enable_ext1_wakeup(WAKE_PIN_MASK, ESP_EXT1_WAKEUP_ALL_LOW);
-    Serial.flush();
-    esp_deep_sleep_start();   // does not return
+    delay(200);
   }
+#else
+  Serial.printf("Battery (%.2fV) — deep sleep %d s\n", vbat, sleepSec);
+  rtc_gpio_pulldown_dis((gpio_num_t)BTN_REFRESH);
+  rtc_gpio_pullup_en((gpio_num_t)BTN_REFRESH);
+  esp_sleep_enable_timer_wakeup(sleepUs);
+  esp_sleep_enable_ext1_wakeup(WAKE_PIN_MASK, ESP_EXT1_WAKEUP_ALL_LOW);
+  Serial.flush();
+  esp_deep_sleep_start();   // does not return
+#endif
 }
