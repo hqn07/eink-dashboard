@@ -15,7 +15,7 @@ const { strongEtag } = require('../lib/htmlutil');
 const { safeError } = require('../lib/http');
 const { findNewestFirmwareCached } = require('../lib/firmware');
 const zlib = require('zlib');
-const { startQuietCycle, stopQuietCycle, quietCycleActive, quietCycleStatus } = require('../lib/quiet-cycle');
+const { startQuietCycle, stopQuietCycle, quietCycleStatus, quietFreezesImage } = require('../lib/quiet-cycle');
 
 const SCREEN_W = 800, SCREEN_H = 480;
 
@@ -39,8 +39,8 @@ function applyStaleMarker(entry, bin, etag, res) {
 // Quiet cycle control. Admin-auth (the fleet DEVICE_TOKEN also unlocks it).
 router.get('/api/quiet-cycle', checkAdminAuth, (req, res) => res.json(quietCycleStatus()));
 router.post('/api/quiet-cycle', checkAdminAuth, (req, res) => {
-  const { minutes, reason } = req.body || {};
-  res.json(startQuietCycle(minutes, reason));
+  const { minutes, reason, freeze, suppressFirmware } = req.body || {};
+  res.json(startQuietCycle(minutes, reason, { freeze, suppressFirmware }));
 });
 router.delete('/api/quiet-cycle', checkAdminAuth, (req, res) => res.json(stopQuietCycle()));
 
@@ -257,11 +257,14 @@ router.get('/display-3c.bin', checkDeviceAuth, async (req, res) => {
     // (fresh boot) still gets a real image, which is what makes the cycle
     // right after the reboot work normally. Refresh headers are still sent so
     // cadence does not drift. See lib/quiet-cycle.js.
-    if (quietCycleActive() && req.headers['if-none-match']) {
+    // Freeze: 304 regardless of whether the device sent an ETag. A button
+    // wake deliberately CLEARS its stored ETag to force a redraw, so gating on
+    // If-None-Match would exempt exactly the cycle we need to keep short.
+    if (quietFreezesImage()) {
       const q = effectiveRefresh(cfg, captureBatteryHeaders(req));
       res.set('X-Refresh-Rate', String(q.minutes));
       res.set('X-Refresh-Seconds', String(q.seconds));
-      res.set('ETag', req.headers['if-none-match']);
+      if (req.headers['if-none-match']) res.set('ETag', req.headers['if-none-match']);
       res.set('Cache-Control', 'no-store');
       return res.status(304).end();
     }
