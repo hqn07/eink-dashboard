@@ -52,7 +52,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.25.0"
+#define FW_VERSION "1.26.0"
 #define FW_BOARD   "b"
 #define OTA_MIN_BATT_PCT 50
 
@@ -1403,14 +1403,29 @@ void postBattery(float v, int pct) {
 // first, then flash, and the wait disappears: the panel is already correct
 // before a byte is downloaded.
 //
-// rebootOnUpdate(false) means httpUpdate writes and validates the inactive
-// OTA slot, marks it bootable, and returns. We then deep sleep. Waking from
-// deep sleep is a CPU reset, so the bootloader brings up the new build on the
-// next natural wake — no reboot the user can see, and no second 26 s redraw
-// that an immediate reboot would force. A flash interrupted by power loss
-// never gets marked bootable, so the old slot keeps booting.
+// It reboots as soon as the flash lands, but AFTER the draw, which is the
+// part that matters.
 //
-// Because none of it is user-visible any more, button wakes check too. The
+// 1.24.0 tried to avoid the reboot entirely: stage the slot, deep sleep, and
+// let the next wake boot it. That DOES NOT WORK and the device told us so —
+// it downloaded b-1.25.0.bin at 03:36, woke at 04:17 still running 1.24.0,
+// and downloaded it again. ESP-IDF's bootloader caches the boot partition in
+// RTC retain memory and on a deep-sleep wake boots that directly without
+// consulting otadata, so a slot staged before sleeping is never selected and
+// the device re-downloads forever.
+//
+// So: restart explicitly once the write succeeds. The cost is not the second
+// 26 s refresh it looks like — the post-reboot cycle sends If-None-Match with
+// the ETag we just drew (g_lastEtag is RTC_DATA_ATTR and survives a software
+// reset), gets a 304, and skips the colour refresh entirely. It is a boot plus
+// a WiFi connect plus three small requests, a few seconds, with the correct
+// image already on glass throughout.
+//
+// A flash interrupted by power loss never gets marked bootable, so the old
+// slot keeps booting.
+//
+// Because the panel is already correct before any of this starts, button
+// wakes check too. The
 // only cost on a button press is a manifest round trip (~0.9 s), and usually
 // not even that: /display-3c.bin already told us the newest version via
 // X-Firmware-Latest, so we skip the request unless it is actually newer.
@@ -1470,7 +1485,9 @@ void checkForUpdate(int battPct) {
   WiFiClient plainClient;
   bool isHttps = binUrl.startsWith("https://");
 
-  // Do NOT reboot here — see the note above. Deep-sleep wake boots the new slot.
+  // false so the restart is ours to make, in the HTTP_UPDATE_OK case below,
+  // after the result has been logged and flushed. See the note above for why
+  // there has to be a restart at all rather than staging and sleeping.
   httpUpdate.rebootOnUpdate(false);
   t_httpUpdate_return result = isHttps
     ? httpUpdate.update(secureClient, binUrl)
@@ -1478,16 +1495,28 @@ void checkForUpdate(int battPct) {
 
   switch (result) {
     case HTTP_UPDATE_FAILED:
+      // Queue it for the server. This used to be Serial-only, which is why the
+      // 1.25.0 staging failure was invisible for two cycles — the only way to
+      // see it was to notice the same binary being downloaded twice in the
+      // HTTP log. An OTA that cannot apply is exactly the kind of thing you
+      // want reported by the device that is stuck.
       Serial.printf("OTA FAILED (%d): %s\n",
                     httpUpdate.getLastError(),
                     httpUpdate.getLastErrorString().c_str());
+      queueDeviceLog("OTA failed", httpUpdate.getLastError());
       break;
     case HTTP_UPDATE_NO_UPDATES:
       Serial.println("OTA: no updates");
       break;
     case HTTP_UPDATE_OK:
-      Serial.println("OTA: staged — next wake boots the new build");
-      break;
+      // Reboot HERE rather than via rebootOnUpdate(true), so the log line and
+      // the flush happen first and the restart is visible in this function
+      // instead of disappearing inside httpUpdate.
+      Serial.println("OTA: written — restarting into the new build");
+      Serial.flush();
+      delay(50);
+      ESP.restart();
+      break;   // not reached
   }
 }
 
