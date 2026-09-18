@@ -1058,3 +1058,74 @@ test('v11 restores a zone clock stripped by the v5/v9 ordering bug', async () =>
   assert.equal(mk({ variant: 'big', zones: ['SAIGON|Asia/Saigon'] }).variant, 'big',
     'an existing variant wins — the repair only fills a gap');
 });
+
+// --- Staleness marker (D6) -------------------------------------------------
+// The panel is the only output device this project has. If re-renders keep
+// failing, the device is handed the same frame forever and the display looks
+// perfectly healthy. These cover the marker itself, which is pure byte math
+// and needs no browser.
+test('stale marker draws a red dashed rule and leaves clean frames alone', async () => {
+  const { markStalePlanes, SCREEN_W, SCREEN_H } = await import('../lib/image.js');
+  const rowBytes = SCREEN_W / 8;
+  const planeBytes = rowBytes * SCREEN_H;
+
+  // Two-plane (B panel): start from an all-white frame.
+  const clean = Buffer.alloc(planeBytes * 2, 0xff);
+  const marked = markStalePlanes(clean);
+
+  assert.notEqual(Buffer.compare(clean, marked), 0, 'marker must change the bytes');
+  assert.equal(marked.length, clean.length, 'must not change the frame size');
+
+  // Everything above the bar is untouched — the marker must not eat content.
+  const barTop = SCREEN_H - 4;
+  for (const plane of [0, planeBytes]) {
+    assert.ok(
+      marked.subarray(plane, plane + barTop * rowBytes)
+        .equals(clean.subarray(plane, plane + barTop * rowBytes)),
+      'rows above the bar must be untouched');
+  }
+
+  // In the bar: black plane all 0xff (no black), red plane alternating.
+  for (let y = barTop; y < SCREEN_H; y++) {
+    for (let i = 0; i < rowBytes; i++) {
+      const off = y * rowBytes + i;
+      assert.equal(marked[off], 0xff, `black plane must stay clear at row ${y}`);
+      assert.equal(marked[planeBytes + off], (i % 2 === 0) ? 0x00 : 0xff,
+        `red plane dash wrong at row ${y} byte ${i}`);
+    }
+  }
+
+  // Mono (single plane) uses black instead of red.
+  const mono = Buffer.alloc(planeBytes, 0xff);
+  const monoMarked = markStalePlanes(mono);
+  for (let i = 0; i < rowBytes; i++) {
+    const off = barTop * rowBytes + i;
+    assert.equal(monoMarked[off], (i % 2 === 0) ? 0x00 : 0xff,
+      'mono dash must be black-on-white');
+  }
+
+  // A buffer of unexpected shape is returned untouched rather than corrupted.
+  const odd = Buffer.alloc(1234, 0xab);
+  assert.equal(markStalePlanes(odd), odd, 'unknown buffer shape must pass through');
+});
+
+test('stale marker only fires on a FAILED re-render, not mere age', async () => {
+  const { imageStaleInfo, IMAGE_STALE_MARK_MS } = await import('../lib/render.js');
+  const old = Date.now() - (IMAGE_STALE_MARK_MS + 60_000);
+
+  // Old, but nothing ever failed — nobody asked to refresh it. Not a problem.
+  assert.equal(imageStaleInfo({ at: old }).stale, false,
+    'age alone must not mark a frame');
+
+  // Failed, but only just — a single blip should not put a warning on glass.
+  assert.equal(imageStaleInfo({ at: Date.now(), failedAt: Date.now(), failCount: 1 }).stale,
+    false, 'a fresh failure must not mark immediately');
+
+  // Failed and stale for long enough: that is the real thing.
+  const bad = imageStaleInfo({ at: old, failedAt: old, failCount: 3 });
+  assert.equal(bad.stale, true);
+  assert.equal(bad.failCount, 3);
+  assert.ok(bad.ageMs >= IMAGE_STALE_MARK_MS);
+
+  assert.equal(imageStaleInfo(null).stale, false, 'no entry must not throw');
+});

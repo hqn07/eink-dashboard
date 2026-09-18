@@ -6,10 +6,10 @@ const router = require('express').Router();
 const { checkDeviceAuth, checkAdminAuth } = require('../lib/auth');
 const { loadConfig } = require('../lib/config-store');
 const { resolveVariant, pickActiveScreen, resolveRefreshMinutes } = require('../lib/screens');
-const { getCurrentImage } = require('../lib/render');
+const { getCurrentImage, imageStaleInfo } = require('../lib/render');
 const { effectiveRefresh, pushNow, FAST_INTERVAL_SECONDS, FAST_WINDOW_MS } = require('../lib/refresh');
 const { saveBatteryState } = require('../lib/battery-store');
-const { planesToPng, shiftPlanesLeft } = require('../lib/image');
+const { planesToPng, shiftPlanesLeft, markStalePlanes } = require('../lib/image');
 const { calibPlanes, calibTag } = require('../lib/calib');
 const { strongEtag } = require('../lib/htmlutil');
 const { safeError } = require('../lib/http');
@@ -17,6 +17,23 @@ const { findNewestFirmwareCached } = require('../lib/firmware');
 const zlib = require('zlib');
 
 const SCREEN_W = 800, SCREEN_H = 480;
+
+// Composite the staleness marker and fork the ETag when a frame is being
+// served stale because re-renders are failing.
+//
+// The ETag MUST change, or a device that already drew the clean frame 304s and
+// never sees the warning — the one case where the warning matters. It flips
+// exactly twice (clean -> stale, stale -> clean) rather than carrying the age,
+// because a per-minute ETag would force a 26 s colour refresh every wake for
+// as long as the outage lasted, which is a lot of battery to spend saying the
+// same thing.
+function applyStaleMarker(entry, bin, etag, res) {
+  const info = imageStaleInfo(entry);
+  if (!info.stale) return { bin, etag };
+  res.set('X-Image-Stale-Seconds', String(Math.round(info.ageMs / 1000)));
+  res.set('X-Image-Stale-Failures', String(info.failCount));
+  return { bin: markStalePlanes(bin), etag: etag.replace(/"$/, '-stale"') };
+}
 
 // Raw-DEFLATE the device image, cached by ETag.
 //
@@ -146,7 +163,12 @@ router.get('/display.bin', checkDeviceAuth, async (req, res) => {
   try {
     const cfg = await loadConfig();
     const variant = resolveVariant(req, cfg);
-    const { bin, etagBin } = await getCurrentImage(variant);
+    const monoEntry = await getCurrentImage(variant);
+    let { bin, etagBin } = monoEntry;
+    {
+      const marked = applyStaleMarker(monoEntry, bin, etagBin, res);
+      bin = marked.bin; etagBin = marked.etag;
+    }
 
     // Battery telemetry over headers (firmware sends Battery-Voltage +
     // Battery-Pct on every /display.bin request). Parsed first so the
@@ -231,9 +253,12 @@ router.get('/display-3c.bin', checkDeviceAuth, async (req, res) => {
         ? `"calib-nocache-${Date.now()}"`
         : `"calib-${CALIB_3C}-${PANEL_SHIFT_3C_PX}-${calibTag()}"`;
       if (CALIB_SHIFTED && PANEL_SHIFT_3C_PX) bin = shiftPlanesLeft(bin, PANEL_SHIFT_3C_PX);
+      // The calibration target is synthetic pixel math, not a render, so it
+      // is never marked stale.
     } else {
       const entry = await getCurrentImage(variant);
       ({ bin, etag } = await entry.get3c());
+      ({ bin, etag } = applyStaleMarker(entry, bin, etag, res));
     }
     if (!CALIB_ON && PANEL_SHIFT_3C_PX) {
       bin = shiftPlanesLeft(bin, PANEL_SHIFT_3C_PX);
