@@ -8,12 +8,17 @@ const router = require('express').Router();
 const { DEVICE_TOKEN } = require('../lib/env');
 const { checkDeviceAuth } = require('../lib/auth');
 const { FW_DIR, FW_NAME_RE, parseSemver, cmpSemver, findNewestFirmware } = require('../lib/firmware');
+const { quietCycleActive } = require('../lib/quiet-cycle');
 
 router.get('/api/firmware/manifest', checkDeviceAuth, async (req, res) => {
   const board = String(req.query.board || '').toLowerCase();
   if (!/^[a-z0-9]+$/.test(board)) {
     return res.status(400).json({ error: 'bad_board' });
   }
+  // Quiet cycle: decline to offer firmware so the wake stays short. An image
+  // already downloaded is staged in flash and stays staged — this only skips
+  // re-sending it. See lib/quiet-cycle.js.
+  if (quietCycleActive()) return res.status(204).end();
   const from = parseSemver(req.query.from);
   const best = await findNewestFirmware(board);
   if (!best) return res.status(204).end();
