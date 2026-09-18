@@ -519,6 +519,43 @@ test('device binaries send Content-Length and are not chunked', async () => {
     // A chunk header would look like hex digits followed by CRLF.
     assert.ok(!/^[0-9a-f]+\r\n/i.test(body.subarray(0, 12).toString('latin1')),
       'body must start with image data, not a chunk-size header');
+
+    // Same guarantees for the DEFLATE'd body the device asks for with
+    // X-Accept-Deflate. Content-Length must describe the COMPRESSED bytes
+    // actually on the wire, and the response must still be identity-framed —
+    // the firmware reads this one off the raw socket too, and a chunk header
+    // copied into the compressed stream corrupts the whole frame rather than
+    // shifting it sideways.
+    const rawZ = await new Promise((resolve, reject) => {
+      const parts = [];
+      const sock = createConnection(P, '127.0.0.1', () => {
+        sock.write(`GET /display-3c.bin HTTP/1.1\r\nHost: localhost\r\n`
+          + `X-Device-Token: ${TOKEN}\r\nX-Accept-Deflate: 1\r\n`
+          + `Connection: close\r\n\r\n`);
+      });
+      sock.on('data', (d) => parts.push(d));
+      sock.on('error', reject);
+      sock.on('end', () => resolve(Buffer.concat(parts)));
+    });
+    const splitZ = rawZ.indexOf('\r\n\r\n') + 4;
+    const headersZ = rawZ.subarray(0, splitZ).toString();
+    const bodyZ = rawZ.subarray(splitZ);
+
+    assert.ok(!/transfer-encoding:\s*chunked/i.test(headersZ),
+      'deflate body must not be chunked either');
+    assert.match(headersZ, /X-Body-Deflate:\s*1/i);
+    assert.match(headersZ, /X-Raw-Length:\s*96000/i);
+    const clZ = Number(/Content-Length:\s*(\d+)/i.exec(headersZ)[1]);
+    assert.equal(bodyZ.length, clZ,
+      'Content-Length must match the compressed bytes actually sent');
+    assert.ok(clZ < 96000, 'compressed body should be smaller than the raw one');
+
+    // And it must inflate back to exactly the bytes the raw request returned.
+    const { inflateRawSync } = await import('node:zlib');
+    const inflated = inflateRawSync(bodyZ);
+    assert.equal(inflated.length, 96000);
+    assert.ok(inflated.equals(body),
+      'inflated body must be byte-identical to the uncompressed response');
   } finally {
     child.kill();
   }

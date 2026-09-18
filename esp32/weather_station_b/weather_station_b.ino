@@ -22,6 +22,9 @@
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
+// ESP32 ROM ships miniz; tinfl is its inflate half. Used to expand the
+// DEFLATE'd panel image straight into the 96000-byte frame buffer.
+#include "miniz.h"
 #include <ArduinoJson.h>
 #include <GxEPD2_3C.h>
 #include <SPI.h>
@@ -49,7 +52,7 @@
 
 // OTA: bump on every release. Server returns 204 unless its newest
 // matching `bw-X.Y.Z.bin` is strictly greater than this.
-#define FW_VERSION "1.24.0"
+#define FW_VERSION "1.25.0"
 #define FW_BOARD   "b"
 #define OTA_MIN_BATT_PCT 50
 
@@ -168,6 +171,18 @@ int         g_lastHttpCode = 0;
 // server, or the fetch failed), in which case checkForUpdate falls back to
 // asking the manifest. Set every cycle, so it is plain RAM, not RTC.
 String      g_latestFw = "";
+// Consecutive failures of the DEFLATE image path. Survives deep sleep, so a
+// server or decoder that cannot produce a body we can inflate stops being
+// asked rather than costing a fail screen every wake. Two strikes, because
+// downloadImage is retried up to 3x per cycle — so the third attempt of a bad
+// cycle already falls back to the raw body and the panel still updates. Reset
+// to 0 on any successful inflate.
+RTC_DATA_ATTR uint8_t g_deflateFails = 0;
+#define DEFLATE_MAX_FAILS 2
+// Sanity bound on the compressed body. A real frame is ~2-6 KB (measured
+// 96000 -> 2055 on a typical dashboard), so 32 KB is ~5x headroom and caps
+// the transient heap at 96000 + 32768 + ~11 KB of decompressor.
+#define DEFLATE_MAX_BYTES 32768
 // Survives deep sleep — `time_t` of the last successful download
 // (set immediately after pushImage). 0 = never. drawFailScreen shows
 // "Last good: Nm ago" so the user knows whether this is a fresh
@@ -940,6 +955,79 @@ class ImageBufferSink : public Stream {
   size_t _len = 0;
   bool _over = false;
 };
+// Read `compLen` DEFLATE'd bytes off the socket and inflate them into `out`.
+//
+// The whole compressed body is buffered first and inflated in one shot rather
+// than streamed. It is a few KB, and this is the code path that draws to the
+// panel off a raw socket — the same path that cost two sessions to gotcha 10.
+// A single call with all the input present has no partial-input state machine
+// to get wrong.
+//
+// TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF is what keeps this cheap: the
+// output buffer is 96000, comfortably larger than DEFLATE's 32 KB window, so
+// tinfl back-references directly into it and needs no separate dictionary.
+// The decompressor struct itself is ~11 KB and goes on the HEAP — the Arduino
+// loop task stack is 8 KB, so tinfl_decompress_mem_to_mem(), which puts it on
+// the stack, would smash it.
+//
+// Returns true only on a complete inflate that filled `outCap` exactly.
+bool inflateImage(WiFiClient* stream, int compLen,
+                  uint8_t* out, size_t outCap, bool* timedOut) {
+  *timedOut = false;
+  if (compLen <= 0 || compLen > DEFLATE_MAX_BYTES) {
+    Serial.printf("inflate: bad compressed length %d\n", compLen);
+    return false;
+  }
+
+  uint8_t* comp = (uint8_t*)malloc((size_t)compLen);
+  if (!comp) { Serial.println("inflate: compressed-buffer malloc FAILED"); return false; }
+
+  int read = 0;
+  unsigned long lastData = millis();
+  while (read < compLen) {
+    size_t avail = stream->available();
+    if (avail) {
+      int n = stream->readBytes(comp + read, min((int)avail, compLen - read));
+      read += n;
+      lastData = millis();
+    } else {
+      if (millis() - lastData > 10000) {
+        Serial.println("inflate: stream timeout");
+        *timedOut = true;
+        free(comp);
+        return false;
+      }
+      delay(5);
+    }
+  }
+
+  tinfl_decompressor* dec = (tinfl_decompressor*)malloc(sizeof(tinfl_decompressor));
+  if (!dec) {
+    Serial.println("inflate: decompressor malloc FAILED");
+    free(comp);
+    return false;
+  }
+  tinfl_init(dec);
+
+  size_t inSize = (size_t)compLen;
+  size_t outSize = outCap;
+  tinfl_status st = tinfl_decompress(dec, comp, &inSize, out, out, &outSize,
+                                     TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF);
+  free(dec);
+  free(comp);
+
+  if (st != TINFL_STATUS_DONE) {
+    Serial.printf("inflate: tinfl status %d after %u bytes\n", (int)st, (unsigned)outSize);
+    return false;
+  }
+  if (outSize != outCap) {
+    Serial.printf("inflate: got %u bytes, expected %u\n", (unsigned)outSize, (unsigned)outCap);
+    return false;
+  }
+  Serial.printf("inflate: %d -> %u bytes\n", compLen, (unsigned)outSize);
+  return true;
+}
+
 // one heap buffer. black = buf, red = buf + IMG_BYTES. Returns nullptr on
 // failure (caller frees on success).
 uint8_t* downloadImage() {
@@ -970,14 +1058,22 @@ uint8_t* downloadImage() {
   http.addHeader("RSSI",       String(WiFi.RSSI()));
   http.addHeader("FW-Version", FW_VERSION);
   http.addHeader("FW-Board",   FW_BOARD);
+  // Ask for the DEFLATE'd body. A server that does not know this header sends
+  // the raw 96000 bytes and the path below is unchanged, so this is safe to
+  // send at all times — except once the decode has failed enough that it is
+  // clearly not working here, at which point we stop asking rather than
+  // losing a refresh every wake.
+  const bool wantDeflate = (g_deflateFails < DEFLATE_MAX_FAILS);
+  if (wantDeflate) http.addHeader("X-Accept-Deflate", "1");
   // Conditional GET — if the last image's ETag still matches, the server
   // returns 304 and we skip the slow color refresh.
   if (g_lastEtag[0]) http.addHeader("If-None-Match", g_lastEtag);
   // Retain the response headers we care about: refresh hint + ETag +
   // stale-enrollment flag.
   const char* keepHeaders[] = { "X-Refresh-Rate", "ETag", "X-Refresh-Seconds",
-                                "X-Enroll-Stale", "X-Firmware-Latest" };
-  http.collectHeaders(keepHeaders, 5);
+                                "X-Enroll-Stale", "X-Firmware-Latest",
+                                "X-Body-Deflate", "X-Raw-Length" };
+  http.collectHeaders(keepHeaders, 7);
 
   int code = http.GET();
   // Server didn't recognize our api_key (roster lost / re-provisioned
@@ -1029,6 +1125,39 @@ uint8_t* downloadImage() {
   }
 
   int len = http.getSize();
+
+  // DEFLATE'd body. Content-Length is the COMPRESSED size here, so the
+  // identity-path size check below does not apply; X-Raw-Length is what it
+  // must inflate to.
+  const bool deflated = http.hasHeader("X-Body-Deflate")
+                        && http.header("X-Body-Deflate") == "1";
+  if (deflated) {
+    int rawLen = http.hasHeader("X-Raw-Length")
+                 ? http.header("X-Raw-Length").toInt() : 0;
+    bool to = false;
+    if (rawLen != WANT) {
+      Serial.printf("Deflate: X-Raw-Length %d, expected %d\n", rawLen, WANT);
+    } else if (inflateImage(http.getStreamPtr(), len, buf, WANT, &to)) {
+      String etagD = http.hasHeader("ETag") ? http.header("ETag") : "";
+      http.end();
+      g_deflateFails = 0;
+      if (etagD.length() && etagD.length() < sizeof(g_lastEtag)) {
+        strncpy(g_lastEtag, etagD.c_str(), sizeof(g_lastEtag) - 1);
+        g_lastEtag[sizeof(g_lastEtag) - 1] = '\0';
+      }
+      return buf;
+    }
+    // Any failure here falls back to the raw path on a later attempt rather
+    // than drawing something we are not sure of.
+    if (g_deflateFails < 255) g_deflateFails++;
+    Serial.printf("Deflate path failed (%u/%d) — will retry uncompressed\n",
+                  (unsigned)g_deflateFails, DEFLATE_MAX_FAILS);
+    g_lastHttpCode = to ? HTTPC_ERROR_READ_TIMEOUT : HTTPC_ERROR_CONNECTION_LOST;
+    http.end();
+    free(buf);
+    return nullptr;
+  }
+
   // len < 0 means no usable Content-Length, i.e. the response is chunked (or
   // the length is unknown). The raw-socket read below would copy the chunk
   // framing in as image data, so that case takes the decoding path instead.

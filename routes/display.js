@@ -14,8 +14,47 @@ const { calibPlanes, calibTag } = require('../lib/calib');
 const { strongEtag } = require('../lib/htmlutil');
 const { safeError } = require('../lib/http');
 const { findNewestFirmwareCached } = require('../lib/firmware');
+const zlib = require('zlib');
 
 const SCREEN_W = 800, SCREEN_H = 480;
+
+// Raw-DEFLATE the device image, cached by ETag.
+//
+// The 96000-byte two-plane binary is mostly runs of identical bytes and
+// compresses ~16x (measured 96,000 -> 5,977). That is the single biggest
+// lever on awake time: the image fetch is 6-9 s of radio at 100-300 mA, and
+// nearly all of it is transfer.
+//
+// This deliberately does NOT use Content-Encoding: gzip.
+//  - The device would have to parse a gzip header (variable length, optional
+//    FNAME/FEXTRA fields) before it can inflate. Raw DEFLATE has no header.
+//  - Content-Encoding is a hop-by-hop negotiation any proxy is entitled to
+//    decode, re-encode, or strip. Railway sits in front of this. A private
+//    header nothing else understands is passed through untouched, which is
+//    what we want for a body the firmware reads off the raw socket.
+// So the contract is ours end to end: the device asks with X-Accept-Deflate,
+// and a server that honours it answers X-Body-Deflate: 1 plus X-Raw-Length.
+// A server that doesn't know the header simply returns the raw body and the
+// device takes its existing path — the negotiation degrades in both
+// directions.
+//
+// Content-Length still describes the bytes actually on the wire, so gotcha 10
+// (chunked framing landing in the image as pixels) stays closed.
+const _deflateCache = new Map();   // etag -> Buffer
+const DEFLATE_CACHE_MAX = 4;
+
+function deflateForEtag(etag, bin) {
+  const hit = _deflateCache.get(etag);
+  if (hit) return hit;
+  // Level 9: this runs once per new frame (a few times an hour at most) and
+  // every byte saved is radio time on a battery.
+  const out = zlib.deflateRawSync(bin, { level: 9 });
+  _deflateCache.set(etag, out);
+  while (_deflateCache.size > DEFLATE_CACHE_MAX) {
+    _deflateCache.delete(_deflateCache.keys().next().value);
+  }
+  return out;
+}
 
 // Advertise the newest published build for the calling device's board.
 //
@@ -229,8 +268,24 @@ router.get('/display-3c.bin', checkDeviceAuth, async (req, res) => {
     // yields "17700\r\n" = 7 bytes = 56px), with every further chunk
     // boundary adding another step mid-image. Setting it explicitly keeps
     // the response identity-encoded and byte-exact.
-    res.set('Content-Length', String(bin.length));
-    res.end(bin);
+    // Raw DEFLATE when the device asked for it. Content-Length describes the
+    // compressed bytes actually on the wire; X-Raw-Length is what they inflate
+    // to, so the firmware can size-check before it draws.
+    let body = bin;
+    if (req.headers['x-accept-deflate'] === '1') {
+      try {
+        body = deflateForEtag(etag, bin);
+        res.set('X-Body-Deflate', '1');
+        res.set('X-Raw-Length', String(bin.length));
+      } catch (e) {
+        // Never fail an image fetch over a compression problem — the device
+        // can always draw the raw bytes.
+        console.warn('deflate failed, serving raw:', e && e.message);
+        body = bin;
+      }
+    }
+    res.set('Content-Length', String(body.length));
+    res.end(body);
   } catch (err) {
     console.error('3C BIN error:', err);
     res.status(500).send(safeError(err).error);
