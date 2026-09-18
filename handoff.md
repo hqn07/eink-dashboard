@@ -1,5 +1,132 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-17 (night) — four firmware releases, and a roster that lied about all of them
+> **The device was never stuck.** It reported FW `1.20.1` in `/api/devices`
+> and in every line of `/api/logs`, two releases behind, for two months. It was
+> actually running the current build the whole time. `fw_version` was written
+> ONLY by `/api/setup` at enrollment, and `enrollDevice()` is a no-op once the
+> device holds an api key, so it never ran again — the field froze at whatever
+> the unit first enrolled with, and `routes/devices.js` reads `dev.fw_version`
+> first so the log feed inherited the same stale value.
+>
+> That is worse than showing nothing. It made a *working* OTA look like a
+> broken one, and I spent a real stretch hunting a phantom OTA failure —
+> checking `addToken`'s `?`/`&` handling, heap pressure against
+> `httpUpdate`, `activeServerBase` selection — before checking the one thing
+> that settles it.
+>
+> **Ground truth for "did it flash?" is Railway's HTTP log, not the roster.**
+> `httpUpdate` fetches the binary with user-agent **`ESP32-http-Update`**,
+> distinct from `ESP32HTTPClient` on every other request. One line with that
+> UA is proof; the version field is hearsay. Also note each Railway deployment
+> has its OWN log stream — a cycle that happened against the previous
+> deployment is invisible unless you query that `deploymentId` directly. The
+> first OTA of the day only turned up that way: deployment `374b7a28` was live
+> for **three minutes** and the device woke inside that window.
+>
+> Fixed: `checkDeviceAuth` now passes the `FW-Version` / `FW-Board` headers
+> (already sent on `/display-3c.bin` every cycle) into `touchDevice`, which
+> refreshes the record alongside `last_seen_at`. Sanitised — trimmed, rejected
+> if empty, >32 chars, or not printable ASCII.
+>
+> ### 1.22.0 — a full battery never slept
+> `VBAT_USB_THRESHOLD 4.10f` inferred "on USB" from battery voltage. The
+> comment argued a TP4056 holds VBAT at ~4.2 V while charging and a
+> disconnected cell "drops to ~3.7 V soon after" — but **a LiPo straight off
+> the charger RESTS at 4.15–4.20 V**. Same reading. So a freshly charged
+> device on battery took the stay-awake branch and burned ~125 mAh (~2 h at
+> ~60 mA) after every single charge before self-discharging past the
+> threshold.
+>
+> Battery voltage *cannot* separate the two cases, so this was NOT replaced
+> with a better threshold — it became a build-time `DEV_STAY_AWAKE` flag,
+> default 0. The honest runtime fix is a VBUS sense wire to a spare RTC GPIO;
+> noted in the vault hardware note. Found while writing up the deep-sleep
+> measurement, which it would have silently invalidated: charge the unit, put
+> a meter on it, and you measure the active loop rather than deep sleep.
+>
+> ### 1.23.0 — the dead alarm loop
+> `1759fd7` removed the scheduled-alarm feature server side on 09-15 and said
+> the firmware loop "comes out on the next flash". Until now every wake still
+> called `/api/alarm/next` **twice**, both 404. Removed `fetchNextAlarm`,
+> `runAlarm`, `drawAlarmScreen`, `struct NextAlarm` and both defines. KEPT
+> `beepChime` / `beepLowBattery` (that commit was explicit the buzzer stays)
+> and `syncTime()` — its comment claimed it existed to anchor the alarm check,
+> but `time(nullptr)` still stamps `g_lastGoodAt`, which would otherwise read
+> 1970 on the fail screen.
+>
+> ### 1.24.0 — seamless OTA
+> `checkForUpdate` ran BEFORE the draw and rebooted on success, so finding an
+> update cost ~33 s of flash + reboot before the ~26 s redraw the user was
+> waiting on. That is why button wakes skipped OTA — the skip was treating the
+> symptom, and timer wakes paid the same cost unwatched.
+>
+> Now it runs at the END of `runCycle`, after the panel is already correct,
+> with **`rebootOnUpdate(false)`**: httpUpdate stages and validates the
+> inactive slot, marks it bootable, returns, and the device deep sleeps.
+> Waking from deep sleep is a CPU reset, so the bootloader brings up the new
+> build on the next natural wake — no visible reboot, and no second 26 s
+> redraw an immediate reboot would force. An interrupted flash never gets
+> marked bootable, so the old slot keeps booting. It also runs when the draw
+> FAILED — a device that cannot render most needs to update itself.
+>
+> **Zero extra requests.** `/display-3c.bin` now carries `X-Firmware-Latest`
+> for the caller's `FW-Board`, on the 304 path too (unchanged image is the
+> common case). The device caches it and skips the manifest entirely unless
+> the advertised version is newer. The manifest stays authoritative — it hands
+> out the URL — this is only a hint deciding whether to ask, and its absence
+> falls back to asking, so it can only save a request. Server side it is a
+> 60 s TTL cache over `findNewestFirmware`, because that endpoint serves from
+> the image cache in ~0.6 ms and must not grow a readdir per request.
+>
+> Measured on the real device: cycle went from 5 requests to **3**, wake →
+> redraw from **2m 23s** (the last old-style flash) to **~9 s**. A button
+> press at 18:40 UTC produced two image fetches (the `do/while` re-refresh,
+> second one a 26 ms 304) and **zero OTA traffic** — the check happened and
+> cost nothing.
+>
+> ### The GxEPD2 trap, and a wrong call I nearly shipped
+> The sketch stopped compiling locally: 111 errors, all rooted in
+> `GxEPD2_750c_GDEY075Z08` being undeclared. I concluded GxEPD2 had removed
+> the class and proposed swapping to `GxEPD2_750c_Z08`. **Backwards.** That
+> class lives in GxEPD2 `src/gdey3c/` and was **added in 1.6.7**; CI pins
+> **1.6.9** and builds fine. The local copy was **1.6.5** — older than the
+> class, not newer. `GxEPD2_750c_Z08` is `epd3c` / GDE**W**075Z08, a different
+> panel's driver, and the workflow's own comment warns a silent change there
+> "can move the image on glass".
+>
+> Two things saved it. The git history showed `c540d6e` had already made that
+> exact swap and `6362225` reverted it two days later — chasing a ~1.5-column
+> offset that turned out to be the chunked-framing bug, not the panel. And CI
+> had just built the same source successfully, which is impossible if the repo
+> were broken. **A local compile failure on a file CI builds is a toolchain
+> drift, not a code bug.** Fix is `arduino-cli lib install "GxEPD2@1.6.9"`.
+>
+> Also: GxEPD2's directory held **180 macOS `<name> 2.cpp/h` duplicates** under
+> `src/`, left by an in-place version replace. They fail with "no declaration
+> matches" errors that read like library bugs. Moved aside, not deleted.
+>
+> ### Smaller things
+> - Client `GRID_VERSION` realigned 10 → 11 (`c269925`). Not load-bearing —
+>   the client migrator only implements v1–v4 and `saveConfig` stamps the
+>   server's version — but it is the exact constant behind `16958d0`.
+> - `.gitignore` now covers `esp32/*/build/`.
+> - **Firmware ships by CI.** A push touching `esp32/**` builds both boards and
+>   commits `public/firmware/<board>-<version>.bin` back to main with
+>   `[skip ci]`. Bump `FW_VERSION` and push; do NOT build and commit a `.bin`
+>   yourself — I did once and raced the bot for the same filename.
+> - Build with `PartitionScheme=min_spiffs`. At 1.24.0 the sketch is
+>   1,304,039 B = **66% of the 1.9 MB OTA slot**. A 97% figure means you built
+>   against the default 1.2 MB scheme, which this board does not run.
+>
+> `test:api` 38/38 · `check:visual` 0.000% · device confirmed on 1.24.0 via
+> `ESP32-http-Update` in the Railway log.
+>
+> **Still unproven:** the staged-flash path itself. `rebootOnUpdate(false)`
+> does not exercise until there is a 1.25.0 to install — the 1.23→1.24 hop was
+> performed by 1.23.0's old code. Watch the next release for a wake with no
+> visible reboot.
+
 > ## 2026-09-17 (evening) — the world clock silently became a second local clock
 > **Found on the panel, by eye, not by any test.** A Saigon tile showing
 > 9:01 PM came back after a refresh as 10:02 AM — an exact duplicate of the
