@@ -1,5 +1,160 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-18 — DEFLATE on the wire, a staleness mark, and an OTA that still will not write
+> **State at the end of the night: FW 1.26.0 is built and published, and the
+> device is still on 1.24.0.** The OTA write — not the boot selection — is the
+> open thread, and the last commit is a correction to the two before it. Read
+> the OTA section before touching `checkForUpdate`.
+>
+> ### D1 — the panel image DEFLATEs, 96000 → ~2055 bytes (`cf9d8c3`, FW 1.25.0)
+> The image fetch is 6–9 s of radio at 100–300 mA and is almost entirely
+> transfer. The two-plane binary is mostly runs of identical bytes: **46.7×** on
+> a typical frame. (The vault recorded 16.1× for gzip at the default level; raw
+> DEFLATE at level 9 does better on this data.)
+>
+> **Not `Content-Encoding: gzip`, deliberately.** The device would have to parse
+> a gzip header before inflating, and that header is variable-length with
+> optional FNAME/FEXTRA; raw DEFLATE has no header at all. And
+> `Content-Encoding` is a negotiation any intermediary may decode, re-encode or
+> strip — **Railway sits in front of this** — while a private header nothing
+> else understands passes through untouched, which is what a body read off the
+> raw socket needs. The contract is ours end to end: the device sends
+> `X-Accept-Deflate`, a server that honours it answers `X-Body-Deflate: 1` plus
+> `X-Raw-Length`, and a server that has never heard of the header returns the
+> raw body. It degrades in both directions; neither side needs the other's
+> version.
+>
+> `Content-Length` still describes the bytes actually on the wire, so **gotcha
+> 10 stays closed**, and `test:api` asserts it on a raw socket for the
+> compressed response too, including that it inflates byte-identical to the
+> uncompressed request. That check is worth more here than on the identity path:
+> a chunk header landing inside a compressed stream corrupts the entire frame
+> rather than shifting it sideways.
+>
+> Firmware uses the ESP32 ROM's **miniz (tinfl)** — the whole decoder costs
+> 1,444 bytes of flash. The body is buffered and inflated in one shot rather
+> than streamed: it is a few KB, and this is the path that draws to the panel
+> off a raw socket, where a partial-input state machine is exactly the kind of
+> thing that cost two sessions last time.
+> `TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF` lets tinfl back-reference into the
+> 96000-byte frame buffer instead of allocating a 32 KB window, and the ~11 KB
+> decompressor goes on the **heap** — `tinfl_decompress_mem_to_mem()` puts it on
+> the stack and the Arduino loop task stack is 8 KB, so it would smash it.
+>
+> **Fails safe.** Any inflate problem increments an RTC-backed counter and
+> returns nullptr; after 2 strikes the device stops sending `X-Accept-Deflate`
+> entirely. `downloadImage` retries up to 3× per cycle, so a server that cannot
+> produce an inflatable body costs one cycle and the third attempt already draws
+> raw bytes. A success resets the counter. Worst case is losing the compression,
+> never the panel. **Still unverified on glass: the inflate itself.** The
+> fallback is what made it acceptable to ship unverified.
+>
+> ### D6 — let a frozen panel admit it (`dd31e7e`)
+> An e-ink screen showing yesterday's weather is indistinguishable from one
+> showing today's. If background re-renders keep failing the device is handed
+> the same cached frame and the panel looks perfectly healthy. The audit's
+> ceiling on stale-while-revalidate stops the frozen-for-days case, but inside
+> that window the display still could not say that what you are reading is old.
+>
+> Past `IMAGE_STALE_MARK_MS` (10 min, env-tunable) a dashed rule is composited
+> along the bottom edge — red on the B panel, black on mono. **The signal is a
+> FAILED re-render, not age.** An old frame nobody asked to refresh is fine; the
+> thing worth putting on glass is "we tried and could not". The failure is
+> recorded on the cache entry, and a successful render replaces the entry
+> wholesale, so it clears itself — there is no reset path to forget to call.
+>
+> **Drawn into the PACKED bytes, not the HTML**, on purpose: the whole situation
+> is that rendering is broken, so anything needing Puppeteer is exactly what is
+> unavailable. This works on the bytes already in cache.
+>
+> The ETag forks to `…-stale` when marked — otherwise a device that already drew
+> the clean frame 304s and never sees the warning, which is the one case where
+> the warning matters. It flips exactly twice (clean → stale → clean) rather
+> than encoding the age, because a per-minute ETag would spend a 26 s colour
+> refresh every wake, for as long as the outage lasted, to say the same thing.
+> `X-Image-Stale-Seconds` / `-Failures` carry the detail for anything reading
+> headers. The dash is byte-aligned, 8 px on 8 px off, so each row byte is
+> wholly ink or wholly gap; gap bytes are written white so the rule reads as
+> deliberate. Bit conventions matter: in both planes bit 0 is ink and a red
+> pixel is "no black, yes red", so the bar writes `0xff` into plane 0 and `0x00`
+> into plane 1. The calibration target is synthetic and never marked.
+>
+> ### The OTA, in three wrong-then-right steps
+> **`832ddff` (FW 1.26.0) — restart after a successful write.** 1.24.0 set
+> `rebootOnUpdate(false)` so an update could be staged and picked up by the next
+> natural wake. The device disproved it: `b-1.25.0.bin` downloaded at 03:36, the
+> device woke at 04:17 still running 1.24.0 and downloaded the same binary
+> again. It would have done that forever. The reasoning at the time was that
+> ESP-IDF's bootloader caches the boot partition in RTC retain memory and on a
+> deep-sleep wake boots it directly without consulting otadata — a deep-sleep
+> wake is a reset, but not one that re-runs partition selection. So: restart
+> explicitly once the write succeeds, still at the END of the cycle, after the
+> draw. The second refresh it looks like it costs does not happen, because
+> `g_lastEtag` is `RTC_DATA_ATTR` and survives a software reset, so the
+> post-reboot cycle sends `If-None-Match` with the ETag it just drew and gets a
+> 304. Restarting in the `HTTP_UPDATE_OK` case rather than via
+> `rebootOnUpdate(true)` keeps the log line and the flush before it.
+> **Also: OTA failures now queue a device log.** They were Serial-only, which is
+> why this stayed invisible for two cycles — the only symptom reachable from
+> here was the same binary appearing twice in Railway's HTTP log.
+>
+> **`ae34b8d` — quiet cycle, so the button hold is usable.** The firmware's
+> staged button-hold ends in `ESP.restart()`, which was the only way to boot an
+> OTA 1.24.0 had staged but could not switch to. But the hold's 2-second timer
+> starts only AFTER `runCycle` returns, and `runCycle` is ~35 s because the
+> tri-colour panel takes ~26 s to draw, plus ~15 s more re-downloading an update
+> it will never apply. Asking someone to hold a button for a minute, through a
+> beep that sounds like completion, is not a recovery procedure. Both costs are
+> server-side decisions, so the server drops them: the manifest answers 204 and
+> the image answers 304. `GET/POST/DELETE /api/quiet-cycle`, admin auth,
+> **deadline-bound with a 30-minute ceiling and in-memory so a redeploy clears
+> it** — while it is on the panel is deliberately frozen, so a flag that could
+> be left set is precisely the confidently-stale display D6 exists to catch.
+>
+> **`357f4b8` — CORRECTION: nothing was ever staged.** The device rebooted via
+> the portal at 05:23:12 and still came up on 1.24.0. A software reset *does*
+> consult otadata, so the boot selection was never the problem — **the OTA write
+> is failing.** The likely cause is the other half of what 1.24.0 changed:
+> `checkForUpdate` moved to AFTER the draw. `downloadImage()` allocates the
+> 96000-byte frame buffer, `pushImage()` draws, then it is freed — so the OTA now
+> runs in the most fragmented heap state of the cycle. The file already warns
+> about exactly this ("the handshake allocates ~40 KB, so a 96000 contiguous
+> malloc AFTER it often fails … heap fragments"), which is why the buffer is
+> reserved before TLS. The OTA went on the wrong side of it.
+>
+> That is fixable from the server without touching firmware, because a 304
+> returns before `downloadImage` allocates anything and skips the draw entirely,
+> so `checkForUpdate` runs on an unchurned heap. Quiet cycle therefore split
+> into two independent switches:
+>
+> ```
+> freeze            304 every image request -> no big alloc, no draw
+> suppressFirmware  204 the manifest        -> no download at all
+> ```
+>
+> **The recovery combination is `freeze` ON, `suppressFirmware` OFF**: keep
+> offering the update, but let it be written under good conditions. `freeze` now
+> answers 304 even with no `If-None-Match` — a button wake deliberately clears
+> its stored ETag to force a redraw, so gating on the header exempted exactly
+> the cycle that needed to stay short, which is why the first attempt still did
+> a full 26 s draw on the button press.
+>
+> `/firmware/:file` is instrumented with a byte counter, readable at
+> `GET /api/firmware/fetches`. `httpUpdate` calls `Update.begin()` before
+> draining the body, so **a `begin()` failure shows up as a short read, while a
+> full read that still does not boot points at `Update.end()`**. The counter
+> measures bytes Node wrote; on loopback the kernel buffers everything and it
+> always reads complete, so it is only meaningful against a real device over
+> WiFi.
+>
+> `test:api` 40/40 · `check:visual` 0.000% · eink-lint clean.
+>
+> **Where this stands:** the recovery combination has not been run against the
+> device yet. Next session: turn quiet cycle on with `freeze` ON /
+> `suppressFirmware` OFF, wait a wake, then read `/api/firmware/fetches` and
+> `/api/logs` — short read means `Update.begin()`, full read that still boots
+> 1.24.0 means `Update.end()`.
+
 > ## 2026-09-17 (night) — four firmware releases, and a roster that lied about all of them
 > **The device was never stuck.** It reported FW `1.20.1` in `/api/devices`
 > and in every line of `/api/logs`, two releases behind, for two months. It was
