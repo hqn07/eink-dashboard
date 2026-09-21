@@ -242,11 +242,15 @@ html, body {
  * version of the icon that reads cleanly on the inverted tile. */
 .cell.cell-inverted img.icon,
 .cell.cell-inverted img.batt-icon,
-.cell.cell-inverted img.mac-np-art,
-.cell.cell-inverted .ph-icon img,
-.cell.cell-inverted .ph-icon svg {
+.cell.cell-inverted img.mac-np-art {
   filter: invert(1);
 }
+/* The placeholder is the exception: its card paints its OWN white
+ * background in every cell, so nothing inside it should follow the cell's
+ * polarity. Inverting here produced white strokes on a white card — the
+ * icon vanished, and with the title inheriting white too (fixed in
+ * 160-setup-needed-placeholder.css) an unconfigured tile was a blank white
+ * rectangle on glass. */
 .cell.cell-inverted .stale-pill,
 .cell.cell-inverted .ph-tag {
   background: #fff !important;
@@ -360,6 +364,15 @@ html, body {
 }
 
 .weather-hilo {
+  /* flex-wrap, not a wrapping text line: the parts are nowrap so a break
+     can only happen BETWEEN high and low, never inside one of them. */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  /* A gap, not a "·" separator: the dot only reads as one while the pair
+     shares a line, and CSS cannot tell that it wrapped — it would be left
+     dangling at the end of the first row. */
+  column-gap: 18px;
   font-family: var(--face-mono);
   /* 700/12px — the ° glyph at 500/11px thresholds away to a faint tick
      on the 1-bit e-ink render. */
@@ -417,7 +430,8 @@ html, body {
 }
 .hero-split .weather-temp { margin-top: 0; }
 .hero-split .weather-desc,
-.hero-split .weather-hilo { margin-top: 6px; }
+.weather-hilo .wh-part { white-space: nowrap; }
+.hero-split .weather-hilo { margin-top: 6px; column-gap: 14px; }
 /* Split on a compact tier still centers vertically inside the cell */
 .hero-split.hero-tier-compact { height: 100%; }
 
@@ -1794,6 +1808,22 @@ img.icon { object-fit: contain; }
   background: #fff;
   border: 3px dashed #000;
   margin: 4px;
+  /* The card paints its OWN white background, so it must also declare its
+   * own ink. Inside an inverted cell the inherited colour is #fff and the
+   * title rendered white-on-white — invisible on every placeholder, and at
+   * ph-sm (which drops the hint and the badge) the whole tile was a blank
+   * white rectangle with one icon in it. Found on a real /display.png,
+   * 2026-09-21. Same class of bug as the .face-art rule in
+   * 015-body-grid-system.css. */
+  color: #000;
+}
+/* And the icon, for the same reason: `.cell-inverted svg:not(.face-art)`
+ * paints every path/rect/circle white, which turns a line-art glyph on a
+ * white card into a solid black blob with white scratches. These glyphs
+ * are stroke-on-transparent and already carry the right colours. */
+.cell.cell-inverted .widget-placeholder .ph-icon svg :is(path, rect, polyline, circle, line) {
+  fill: none;
+  stroke: #000;
 }
 .widget-placeholder .ph-icon {
   width: 48px;
@@ -1807,6 +1837,7 @@ img.icon { object-fit: contain; }
   display: block;
 }
 .widget-placeholder .ph-title {
+  color: #000;
   font-family: var(--face-sans);
   font-size: 16px;
   font-weight: 700;

@@ -104,11 +104,15 @@
  * version of the icon that reads cleanly on the inverted tile. */
 .cell.cell-inverted img.icon,
 .cell.cell-inverted img.batt-icon,
-.cell.cell-inverted img.mac-np-art,
-.cell.cell-inverted .ph-icon img,
-.cell.cell-inverted .ph-icon svg {
+.cell.cell-inverted img.mac-np-art {
   filter: invert(1);
 }
+/* The placeholder is the exception: its card paints its OWN white
+ * background in every cell, so nothing inside it should follow the cell's
+ * polarity. Inverting here produced white strokes on a white card — the
+ * icon vanished, and with the title inheriting white too (fixed in
+ * 160-setup-needed-placeholder.css) an unconfigured tile was a blank white
+ * rectangle on glass. */
 .cell.cell-inverted .stale-pill,
 .cell.cell-inverted .ph-tag {
   background: #fff !important;

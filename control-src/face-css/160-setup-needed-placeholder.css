@@ -9,6 +9,22 @@
   background: #fff;
   border: 3px dashed #000;
   margin: 4px;
+  /* The card paints its OWN white background, so it must also declare its
+   * own ink. Inside an inverted cell the inherited colour is #fff and the
+   * title rendered white-on-white — invisible on every placeholder, and at
+   * ph-sm (which drops the hint and the badge) the whole tile was a blank
+   * white rectangle with one icon in it. Found on a real /display.png,
+   * 2026-09-21. Same class of bug as the .face-art rule in
+   * 015-body-grid-system.css. */
+  color: #000;
+}
+/* And the icon, for the same reason: `.cell-inverted svg:not(.face-art)`
+ * paints every path/rect/circle white, which turns a line-art glyph on a
+ * white card into a solid black blob with white scratches. These glyphs
+ * are stroke-on-transparent and already carry the right colours. */
+.cell.cell-inverted .widget-placeholder .ph-icon svg :is(path, rect, polyline, circle, line) {
+  fill: none;
+  stroke: #000;
 }
 .widget-placeholder .ph-icon {
   width: 48px;
@@ -22,6 +38,7 @@
   display: block;
 }
 .widget-placeholder .ph-title {
+  color: #000;
   font-family: var(--face-sans);
   font-size: 16px;
   font-weight: 700;

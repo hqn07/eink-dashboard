@@ -147,7 +147,14 @@ export function render(ctx) {
     ? `<div class="weather-icon" style="height:${px}px">${icon(w, px)}</div>`
     : '';
   const descLine = () => (s.showDesc !== false) ? `<div class="weather-desc">${w.desc}</div>` : '';
-  const hiloLine = () => `<div class="weather-hilo">HIGH ${w.tempMax}° &nbsp;·&nbsp; LOW ${w.tempMin}°</div>`;
+  // Spans, not one string: on a narrow column (hero-split puts the icon
+  // beside the text) the single line wrapped mid-pair and orphaned the LOW
+  // value on its own row. Each half is nowrap and the separator drops out
+  // when they stack, so the fallback is a deliberate two-line block.
+  const hiloLine = () => `<div class="weather-hilo">`
+    + `<span class="wh-part">HIGH ${w.tempMax}°</span>`
+    + `<span class="wh-part">LOW ${w.tempMin}°</span>`
+    + `</div>`;
 
   const statsKeys = Array.isArray(s.stats) && s.stats.length ? s.stats : DEFAULT_STATS;
   const statsBlock = () => {

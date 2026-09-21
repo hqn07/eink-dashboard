@@ -44,6 +44,15 @@
 }
 
 .weather-hilo {
+  /* flex-wrap, not a wrapping text line: the parts are nowrap so a break
+     can only happen BETWEEN high and low, never inside one of them. */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  /* A gap, not a "·" separator: the dot only reads as one while the pair
+     shares a line, and CSS cannot tell that it wrapped — it would be left
+     dangling at the end of the first row. */
+  column-gap: 18px;
   font-family: var(--face-mono);
   /* 700/12px — the ° glyph at 500/11px thresholds away to a faint tick
      on the 1-bit e-ink render. */
@@ -101,7 +110,8 @@
 }
 .hero-split .weather-temp { margin-top: 0; }
 .hero-split .weather-desc,
-.hero-split .weather-hilo { margin-top: 6px; }
+.weather-hilo .wh-part { white-space: nowrap; }
+.hero-split .weather-hilo { margin-top: 6px; column-gap: 14px; }
 /* Split on a compact tier still centers vertically inside the cell */
 .hero-split.hero-tier-compact { height: 100%; }
 
