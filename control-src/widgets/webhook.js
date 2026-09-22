@@ -78,7 +78,7 @@ function agoLabel(at, now) {
 function emptyState(msg, sub) {
   return `
     <div class="widget" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:100%;width:100%;border:2px dashed #000;color:#000;font-family:'JetBrains Mono',monospace;text-align:center;padding:8px;box-sizing:border-box">
-      <span style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase">${msg}</span>
+      <span style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase">${msg}</span>
       ${sub ? `<span style="font-size:11px;letter-spacing:1px">${sub}</span>` : ''}
     </div>`;
 }

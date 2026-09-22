@@ -20,7 +20,7 @@
   font-family: var(--face-mono);
   font-weight: 700;
   letter-spacing: 1.5px;
-  font-size: 12px;
+  font-size: 11px;
   color: #000;
 }
 
@@ -28,7 +28,7 @@
 .quote-mark { position: relative; }
 .quote-glyph {
   font-family: 'DM Serif Display', Georgia, serif;
-  font-size: 56px;
+  font-size: 50px;
   line-height: 0.6;
   color: #000;
   margin-bottom: var(--face-gap-2);

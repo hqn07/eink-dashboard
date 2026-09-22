@@ -73,7 +73,7 @@ export function render(ctx) {
       : '';
     return `<div class="cr-row" style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:3px 0">
       <span class="tr-l" style="min-width:48px">${escapeHtml(r.label)}</span>
-      <span class="tr-v" style="font-size:18px;flex:1;text-align:right">${escapeHtml(fmtValue(r.value, r.kind))}</span>
+      <span class="tr-v" style="font-size:16px;flex:1;text-align:right">${escapeHtml(fmtValue(r.value, r.kind))}</span>
       ${changeCell}
     </div>`;
   }).join('');

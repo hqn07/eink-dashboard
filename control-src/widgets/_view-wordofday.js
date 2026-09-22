@@ -130,7 +130,7 @@ export function render(ctx) {
   const tier = pickTier(cellW || 0, cellH || 0, density);
   const showDef = tier !== 'tiny' && definition;
   const partHtml = (part && tier !== 'tiny')
-    ? `<span style="font-family:${FONT_STACKS.mono};font-size:12px;letter-spacing:1px">${escapeHtml(part)}</span>` : '';
+    ? `<span style="font-family:${FONT_STACKS.mono};font-size:11px;letter-spacing:1px">${escapeHtml(part)}</span>` : '';
   const wordHtml = `<div class="autofit" style="font-family:${FONT_STACKS.serif};line-height:1.05" data-min-font="20" data-max-font="52">${escapeHtml(word)}</div>`;
   const defHtml = showDef
     ? `<div class="autofit multiline" style="font-family:${FONT_STACKS.serif};line-height:1.3" data-min-font="13" data-max-font="22">${escapeHtml(definition)}</div>` : '';

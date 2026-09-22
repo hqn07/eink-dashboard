@@ -74,16 +74,22 @@ export const def = {
 // Per-tier scale for the hero core. Icon px is real now — the fixed
 // 90px !important CSS override is gone, so big tiles actually get the
 // bigger art these numbers always promised.
+// Hero sizes are ladder rungs (control-src/autofit.js TYPE_LADDER), not
+// measured one-offs. 54/72/86/96 were each fitted to their own tier and were
+// therefore four sizes no other widget could ever match; on a screen with a
+// clock beside the weather that is two heroes disagreeing by 6px, which reads
+// as a mistake rather than as hierarchy. Rounded DOWN to the nearest rung so
+// every tier still fits the box it was measured against.
 const TIER_SIZE = {
-  tiny:     { icon: 0,   temp: 54 },
-  compact:  { icon: 60,  temp: 72 },
-  standard: { icon: 90,  temp: 86 },
-  extended: { icon: 110, temp: 96 },
+  tiny:     { icon: 0,   temp: 50 },
+  compact:  { icon: 60,  temp: 64 },
+  standard: { icon: 90,  temp: 80 },
+  extended: { icon: 110, temp: 80 },
   // Full tier stacks hero + stats + sunbar + hourly into 480px. Measured
   // 2026-09-15: at icon 110 the hourly strip ended 55px past the tile, so the
   // art gives back 18px and 070/065/020's full-tier spacing gives the rest.
   // Re-measure here if another block joins the stack.
-  full:     { icon: 84, temp: 96 }
+  full:     { icon: 84, temp: 80 }
 };
 
 // Resolve a stat key to a { label, value } pair. Returns null when the
@@ -141,7 +147,7 @@ export function render(ctx) {
 
   const tempBlock = (size) => `
     <div class="weather-temp" style="font-size:${size}px">
-      <span class="temp-num">${w.temp}</span><span class="temp-deg" style="font-size:${Math.round(size*0.6)}px">°${units}</span>
+      <span class="temp-num">${w.temp}</span><span class="temp-deg" style="font-size:${Math.round(size * 0.5)}px">°${units}</span>
     </div>`;
   const heroIcon = (px) => px > 0
     ? `<div class="weather-icon" style="height:${px}px">${icon(w, px)}</div>`

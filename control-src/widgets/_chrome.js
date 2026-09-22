@@ -103,6 +103,13 @@ export function tileCellClasses(item, gridCols = 24, gridRows = 12, faceTheme) {
   if (item.x + item.w >= gridCols) classes.push('cell-edge-right');
   if (item.y + item.h >= gridRows) classes.push('cell-edge-bottom');
   if (item.flush) classes.push('cell-flush');
+  // A tile 3 grid rows tall is 120px, and the label band costs 30 of them —
+  // a quarter of the tile spent on its own name. `cell-short` lets the rhythm
+  // layer tighten the chrome at that size instead of every widget inventing
+  // its own height test, which is how the forecast came to clip its low
+  // temperatures. Height only: a short tile is squeezed, a narrow one just
+  // wraps.
+  if (item.h <= 3) classes.push('cell-short');
   classes.push(...cellClasses(item.settings, faceTheme));
   return classes;
 }

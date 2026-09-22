@@ -132,7 +132,7 @@ export function render(ctx) {
           <span style="font-weight:700;font-size:13px;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(f.name)}</span>
           ${showIcons ? `<span class="fc-tr-icon" style="width:${icPx}px;height:${icPx}px;flex:none;display:inline-flex;overflow:hidden">${icon(f.main, icPx)}</span>` : ''}
           <span style="flex:1 1 auto;min-width:4px"></span>
-          ${showPrecip && Number.isFinite(f.precip) && f.precip > 0 ? `<span style="font-size:12px;flex:none" class="fc-precip${semRed(s, f.precip >= 60)}">${f.precip}%</span>` : ''}
+          ${showPrecip && Number.isFinite(f.precip) && f.precip > 0 ? `<span style="font-size:11px;flex:none" class="fc-precip${semRed(s, f.precip >= 60)}">${f.precip}%</span>` : ''}
           <span style="font-size:${tempPx}px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;flex:none">${f.hi}° <span style="font-weight:400">${f.lo}°</span></span>
         </div>`).join('');
         })()}
@@ -146,7 +146,11 @@ export function render(ctx) {
     const showPrecip = precipMode === 'always' ? true
                      : precipMode === 'never'  ? false
                      :                           ch >= 6;
-    const iconPx = ch < 6 ? 30 : ch < 10 ? 38 : 44;
+    // A 3-row tile is 120px: label band 30, day 20, icon, hi 20, lo 10, plus
+    // 20 of cell padding. The icon is the only part with any give, so it takes
+    // the squeeze — at 24 the column fits exactly, and before the CSS stopped
+    // overriding this number it drew at 38 and clipped the low temperature.
+    const iconPx = ch < 4 ? 24 : ch < 6 ? 30 : ch < 10 ? 38 : 44;
     return `
       ${title}
       <div class="fc-strip">

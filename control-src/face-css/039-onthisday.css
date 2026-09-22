@@ -17,14 +17,14 @@
   font-family: var(--face-mono);
   font-weight: 700;
   letter-spacing: 1px;
-  font-size: 14px;
+  font-size: 13px;
   color: #000;
 }
 .otd-text {
   flex: 1 1 auto;
   font-family: var(--face-sans);
   font-weight: 400;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.2;
   color: #000;
   /* Keep rows scannable: two lines max, ellipsis past that. */
@@ -43,7 +43,7 @@
 .otd-feature-year {
   font-family: 'DM Serif Display', serif;
   font-weight: 700;
-  font-size: 48px;
+  font-size: 40px;
   line-height: 1;
   color: #000;
 }

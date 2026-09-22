@@ -39,7 +39,9 @@ const TEXT_ALIGN = { left: 'left', center: 'center', right: 'right' };
 // card collapses into a smudge on a 24×1 strip). Pure 1-bit inks only:
 // grays here used to threshold into noise on the panel.
 function emptyState(isTall) {
-  const fz = isTall ? 14 : 11;
+  // Ladder rungs (control-src/autofit.js TYPE_LADDER) — 14 was the last size
+  // on the panel that belonged to no scale but its own.
+  const fz = isTall ? 13 : 11;
   return `
     <div class="widget widget-textbar tb-empty" style="display:flex;align-items:center;justify-content:center;height:100%;width:100%;border:2px dashed #000;color:#000;font-family:'JetBrains Mono',monospace;font-size:${fz}px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">
       <span>Text · click to set up</span>

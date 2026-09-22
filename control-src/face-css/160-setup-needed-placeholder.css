@@ -49,7 +49,7 @@
   /* 700 weight is load-bearing at 1-bit: regular mono strokes at this
    * size antialias to ~1px and break apart after threshold(128). */
   font-family: var(--face-mono);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
   color: #000;
@@ -85,4 +85,4 @@
   border-width: 2px;
   margin: 2px;
 }
-.widget-placeholder.ph-xs .ph-title { font-size: 12px; letter-spacing: 1px; }
+.widget-placeholder.ph-xs .ph-title { font-size: 11px; letter-spacing: 1px; }

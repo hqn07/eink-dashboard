@@ -21,13 +21,13 @@
 .spark-value {
   font-family: var(--face-serif);
   font-weight: 700;
-  font-size: 30px;
+  font-size: 25px;
   line-height: 0.9;
 }
 .spark-unit {
   font-family: var(--face-mono);
   font-weight: 700;
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 1px;
 }
 .spark-chart {

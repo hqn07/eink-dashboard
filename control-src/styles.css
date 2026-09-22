@@ -1244,6 +1244,17 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
  * white board while the device showed them on black. */
 .editor-wrap.body-dark  { background: #000; }
 .editor-wrap.body-light { background: #fff; }
+
+/* Dividers on the canvas come from the page-rules layer (the same computation
+ * the panel uses), so the tiles must stop drawing their own or every seam is
+ * doubled — and a seam the page deliberately OMITS, between two tiles of one
+ * zone, would still be drawn by the cell underneath. Card mode keeps its
+ * per-card borders; there the border is the card. */
+.editor-wrap:not(.cards) .live-tile .cell {
+  border-right: none;
+  border-bottom: none;
+}
+.editor-page-rules { z-index: 1; }
 .editor-wrap.show-grid {
   background-image:
     linear-gradient(to right, var(--grid) 1px, transparent 1px),

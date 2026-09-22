@@ -80,12 +80,12 @@
 
 /* stack time scales by tier so it tracks tile size (per-row autofit
  * can't measure a content-sized inline box). */
-.wclock-stack .wclock-time { font-size: 24px; }
-.wclock-stack--tiny     .wclock-time { font-size: 18px; }
-.wclock-stack--compact  .wclock-time { font-size: 22px; }
-.wclock-stack--standard .wclock-time { font-size: 28px; }
+.wclock-stack .wclock-time { font-size: 20px; }
+.wclock-stack--tiny     .wclock-time { font-size: 16px; }
+.wclock-stack--compact  .wclock-time { font-size: 20px; }
+.wclock-stack--standard .wclock-time { font-size: 25px; }
 .wclock-stack--extended .wclock-time,
-.wclock-stack--full     .wclock-time { font-size: 34px; }
+.wclock-stack--full     .wclock-time { font-size: 32px; }
 
 /* big — one zone, large; footer = glyph · label · meta */
 .wclock-big { align-items: stretch; justify-content: center; text-align: left; }

@@ -48,7 +48,7 @@
   justify-content: center;
   text-align: center;
 }
-.aqi-minimal .aqi-num { font-size: 72px; }
+.aqi-minimal .aqi-num { font-size: 64px; }
 
 /* bar — number + category over a 6-segment Good→Hazardous scale */
 .aqi-bar-head { display: flex; align-items: baseline; gap: var(--face-gap-8); }

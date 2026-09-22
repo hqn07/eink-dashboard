@@ -89,7 +89,7 @@ function fractions(now, tz) {
 function bar(spanKey, frac, showPct, shapeCls = '') {
   const pct = Math.max(0, Math.min(100, Math.round(frac * 100)));
   const head = `<div style="display:flex;justify-content:space-between;align-items:baseline;line-height:1">`
-    + `<span style="font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase">${SPAN_LABELS[spanKey]}</span>`
+    + `<span style="font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase">${SPAN_LABELS[spanKey]}</span>`
     + (showPct ? `<span style="font-size:16px;font-weight:800;font-variant-numeric:tabular-nums">${pct}%</span>` : '')
     + `</div>`;
   const track = `<div class="tr-bar${shapeCls}" style="height:16px;flex:none;margin-top:4px">`
@@ -160,7 +160,7 @@ export function render(ctx) {
       }).join('');
       return `<div>
         <div style="display:flex;justify-content:space-between;align-items:baseline;line-height:1;margin-bottom:5px">
-          <span style="font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase">${SPAN_LABELS[k]}</span>
+          <span style="font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase">${SPAN_LABELS[k]}</span>
           ${showPct ? `<span style="font-size:16px;font-weight:800;font-variant-numeric:tabular-nums">${pctK}%</span>` : ''}
         </div>
         <div style="display:flex;gap:6px">${dots}</div>

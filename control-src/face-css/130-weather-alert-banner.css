@@ -14,13 +14,13 @@
 }
 .alert-tag {
   font-family: var(--face-mono);
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 2px;
   font-weight: 700;
 }
 .alert-text {
   font-family: var(--face-sans);
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 1px;
   text-transform: uppercase;
   flex: 1;

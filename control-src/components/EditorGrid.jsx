@@ -5,7 +5,7 @@ import { Gear, X, Copy } from '@phosphor-icons/react';
 import * as HoverCard from '@radix-ui/react-hover-card';
 import { WIDGET_REGISTRY, POOL_CATEGORIES, GRID_COLS, GRID_ROWS, widgetById, makeInstance, newInstanceId } from '../widgets.js';
 import { sizeSpec, sizeSpecFor, growToMin } from '../widgets/_sizes.js';
-import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses, bodyThemeClass } from '../widget-render.js';
+import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses, bodyThemeClass, pageRuleStyles } from '../widget-render.js';
 import { demoCtxForWidget } from '../widgets/_pool_demo.js';
 import { autofitText } from '../autofit.js';
 const WidgetSettingsModal = React.lazy(() => import('./WidgetSettingsModal.jsx'));
@@ -535,6 +535,17 @@ export default function EditorGrid({ layout, showGrid, oneBit, cardStyle, readOn
             bottom: `${(FOOTER_H / DASH_H) * 100}%`
           }}
         >
+        {/* The page's dividers, drawn from the layout exactly as the panel
+            draws them — including the seams that DISAPPEAR between tiles in
+            the same zone. Rendering them here rather than per-tile is what
+            keeps the canvas honest about what the device will show; the tiles
+            themselves stopped drawing borders under .body-ruled. */}
+        {!cardsMode && enabled.length > 0 && (
+          <div className="page-rules editor-page-rules" aria-hidden="true">
+            {pageRuleStyles(enabled, { cols: GRID_COLS, rows: GRID_ROWS })
+              .map((st, i) => <i key={i} style={st} />)}
+          </div>
+        )}
         <GridLayout
           className="layout"
           cols={GRID_COLS}

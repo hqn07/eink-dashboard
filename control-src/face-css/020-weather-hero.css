@@ -22,14 +22,14 @@
    * card hero numbers (.tr-v). */
   font-family: var(--face-grotesk);
   font-weight: 800;
-  font-size: 96px;
+  font-size: 80px;
   line-height: 0.85;
   letter-spacing: -3px;
   margin-top: -8px;
 }
 
 .temp-deg {
-  font-size: 60px;
+  font-size: 50px;
   vertical-align: super;
   margin-left: -8px;
 }
@@ -57,7 +57,7 @@
   /* 700/12px — the ° glyph at 500/11px thresholds away to a faint tick
      on the 1-bit e-ink render. */
   font-weight: 700;
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 2px;
   margin-top: 4px;
 }
@@ -81,13 +81,13 @@
 }
 
 .stat-k {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 2px;
 }
 
 .stat-v {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.5px;
   text-align: right;
@@ -161,7 +161,7 @@
   flex: none;
   min-width: 36px;
   text-align: right;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }

@@ -13,7 +13,7 @@
 }
 .clock-ampm {
   font-family: var(--face-mono);
-  font-size: 18px;
+  font-size: 16px;
   letter-spacing: 2px;
   margin-left: 6px;
   vertical-align: top;

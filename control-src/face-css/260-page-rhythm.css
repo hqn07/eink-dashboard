@@ -1,0 +1,236 @@
+/* ============ PAGE RHYTHM — the tiles share one page ============
+ *
+ * THE PROBLEM, measured on a real eight-tile screen (2026-09-21):
+ *   32 text nodes · 11 distinct font sizes · 19 distinct baselines ·
+ *   20 distinct left edges.
+ * Nothing lined up with anything. Each widget was internally tidy and the
+ * page was a pile of tidy boxes, because every widget brought its own type
+ * sizes, its own inner padding and its own line-height ratios.
+ *
+ * Printers solved this before screens existed: a page reads as one page when
+ * text across columns sits on shared baselines and starts at shared left
+ * edges. Alignment, not borders, is what joins things — the borders were
+ * already there and the page still read as eight separate boxes.
+ *
+ * SO THIS LAYER IMPOSES THREE THINGS, AND ONLY THESE THREE:
+ *
+ *   1. ONE INNER MARGIN. The cell owns the inset (16px sides). Components
+ *      that carried their own (.tr-card / .tr-body / .tr-titlebar) give it up,
+ *      so a TRMNL-style tile and a plain one start their text at the same x.
+ *
+ *   2. ONE LABEL BAND. Every tile's label — .tr-titlebar, .col-title,
+ *      .widget-title, three systems that had drifted apart — is 11px caps on
+ *      a 20px band with the same rule under it. Across the page the labels
+ *      fall into rows instead of eleven private headers.
+ *
+ *   3. ONE BASELINE. The grid cell is 33.33x40px, so 10px divides the page
+ *      exactly (4 per row). Text line-heights here are multiples of 10 and
+ *      the cell's top inset is 10, which puts the first line of every tile on
+ *      the same page baseline as its neighbours'.
+ *
+ * WHAT IT DELIBERATELY DOES NOT DO: re-style the heroes. A weather temperature
+ * and a clock are meant to be the loudest things on the panel and they are
+ * sized by autofit, which now snaps to the same ladder (control-src/autofit.js).
+ * This layer is about the quiet 90% — labels, rows, captions, values — because
+ * that is what the eye reads as "structure".
+ *
+ * Deliberately last in the cascade (260-) so it can settle disagreements
+ * between 015 (grid), 035 (item primitive) and 220 (trmnl components) without
+ * editing three partials that each have their own reasons. */
+
+:root {
+  /* 4 baselines to a grid row (40px), 12 to a column (33.33px ≈ 3.3). */
+  --face-baseline: 10px;
+
+  /* The type ladder. ~1.25x steps, every value a size the 1-bit render can
+   * actually hold: below 11px strokes break up after threshold(128), which is
+   * why lint:eink enforces that floor. */
+  --face-t-cap:   11px;  /* labels, captions, meta */
+  --face-t-body:  13px;  /* rows, lists, body */
+  --face-t-lead:  16px;  /* lead line, emphasised row */
+  --face-t-sub:   20px;  /* secondary value */
+  --face-t-val:   25px;  /* value */
+  --face-t-head:  32px;  /* headline */
+  --face-t-hero:  40px;  /* hero */
+}
+
+/* ---- 1. ONE INNER MARGIN ------------------------------------------------
+ * The cell is the column; it owns the margin. 10px top/bottom keeps the
+ * baseline arithmetic whole, 16px sides is the existing optical margin and
+ * the one thing that was already consistent. */
+.cell {
+  padding: 10px 16px;
+}
+/* A card filling a cell must not inset again — double padding is how the same
+ * text ended up at x=16 in one tile and x=42 in the next. */
+.cell .tr-card > .tr-body,
+.cell .tr-body {
+  padding-left: 0;
+  padding-right: 0;
+}
+/* Flush widgets (photo, spacer, art) bleed on purpose and keep winning. */
+.cell.cell-flush { padding: 0; }
+
+/* ---- 2. ONE LABEL BAND -------------------------------------------------- */
+.cell .tr-titlebar,
+.cell .col-title,
+.cell .widget-title {
+  box-sizing: content-box;
+  min-height: 14px;
+  padding: 0 0 4px;
+  margin: 0 0 var(--face-baseline);
+  border-bottom: var(--face-rule) solid currentColor;
+  font-family: var(--face-grotesk);
+  font-size: var(--face-t-cap);
+  font-weight: 700;
+  line-height: 14px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+/* The label's own trailing element (location, count, "6-DAY") is the same
+ * band, one weight quieter. */
+.cell .tr-titlebar .tr-meta {
+  font-size: var(--face-t-cap);
+  line-height: 14px;
+  font-weight: 400;
+}
+
+/* ---- 3. ONE BASELINE ---------------------------------------------------
+ * Only the quiet roles. Each is a whole number of baselines tall, so a list in
+ * one tile steps down the page at the same rate as a list in the next. */
+.cell .tr-l,
+.cell .tr-sl,
+.cell .tr-meta,
+.cell .tr-cl,
+.cell .stat-k,
+.cell .item-label {
+  font-size: var(--face-t-cap);
+  line-height: var(--face-baseline);
+  letter-spacing: 1.5px;
+}
+.cell .tr-sv,
+.cell .stat-v,
+.cell .item-value {
+  font-size: var(--face-t-body);
+  line-height: calc(var(--face-baseline) * 2);
+}
+.cell .tr-row-title,
+.cell .tr-row-main,
+.cell .item-title {
+  font-size: var(--face-t-body);
+  line-height: calc(var(--face-baseline) * 2);
+}
+/* Row gaps in whole baselines, so N rows occupy a predictable N*20 and two
+ * stacked tiles of rows stay in step. */
+.cell .tr-body { gap: var(--face-baseline); }
+.cell .tr-rows { gap: 0; }
+.cell .tr-row-inner { min-height: calc(var(--face-baseline) * 2); }
+
+/* ---- 4. RULES BELONG TO THE PAGE ---------------------------------------
+ * `.body-ruled` means the dividers are drawn once, for the page, by the
+ * `.page-rules` layer (control-src/widgets/_rules.js) instead of by each
+ * cell's own border. Two consequences worth stating:
+ *
+ *   • Tiles in the same zone can share an edge with no rule at all — a
+ *     per-cell border cannot express "stop drawing here", which is why the
+ *     page read as eight fenced boxes no matter how the cells were styled.
+ *   • A seam is drawn once. Cells previously drew right AND bottom, so an
+ *     interior crossing got the same line from two directions; at 2px on a
+ *     1-bit panel that is a visible thickening at every junction.
+ *
+ * The layer sits ON TOP of the tiles and is centred on the seam via the
+ * negative margin, so each rule straddles the boundary and takes one pixel
+ * from each neighbour rather than a full two from one of them. On top is not
+ * a preference: `.cell` paints an opaque background, so a layer underneath is
+ * covered by the very tiles whose seams it is drawing. */
+.body-ruled .cell {
+  border-right: none;
+  border-bottom: none;
+}
+.page-rules {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.page-rules > i {
+  position: absolute;
+  background: var(--face-ink);
+  display: block;
+}
+/* Inverted is the default, so the rules are white on black; the light panel
+ * flips them back. Keyed off the body's theme class, which is the one place
+ * that knows the page's polarity. */
+.body-dark .page-rules > i { background: #fff; }
+.body-light .page-rules > i { background: #000; }
+
+/* The grid container has to be a positioning context for the layer, and the
+ * page is a fixed 800x480 so there is nothing to scroll or reflow. */
+.body-ruled { position: relative; }
+
+/* ---- 5. THE PLACEHOLDER IS A TILE LIKE ANY OTHER -----------------------
+ * It carried `margin: 4px` + a 3px dashed border + `padding: 12px`, so its
+ * text started 19px further in than every other tile's and its card floated
+ * inside the cell instead of filling it. Measured on the eight-tile screen:
+ * real content at x=16, placeholder text at x=33.
+ *
+ * The dashed border is worth keeping — it is what says "nothing is here yet"
+ * at a glance — so it moves to the cell's own inset instead of adding to it.*/
+.cell .widget-placeholder {
+  margin: 0;
+  padding: var(--face-baseline) 0 0;
+  border: none;
+  border-top: var(--face-rule) dashed currentColor;
+  background: none;
+  color: inherit;
+}
+/* Which means the card no longer paints its own white ground, so the icon and
+ * the title follow the tile's polarity like everything else — and the
+ * white-on-white title bug from earlier today cannot come back, because
+ * nothing here declares a background at all. */
+.cell.cell-inverted .widget-placeholder,
+.cell.cell-inverted .widget-placeholder .ph-title,
+.cell.cell-inverted .widget-placeholder .ph-hint { color: #fff; }
+.cell.cell-inverted .widget-placeholder .ph-icon svg :is(path, rect, polyline, circle, line) {
+  fill: none;
+  stroke: #fff;
+}
+.cell .widget-placeholder .ph-tag {
+  top: 0;
+  right: 0;
+}
+
+/* ---- 6. THE LAST FEW OFF-LADDER SIZES ----------------------------------
+ * Measured, not guessed: every text node on a full screen was checked against
+ * the ladder and these are the ones that missed. They are each 1-2px off a
+ * rung, which is the worst kind of difference — too small to read as
+ * hierarchy, too large to read as the same thing.
+ *
+ * The forecast pair does double duty: at 22/18 the day row plus the temps ran
+ * 21px past the bottom of a 3-row tile (clientHeight 120, scrollHeight 141),
+ * so the numbers were being clipped on glass. On the ladder they fit. */
+.cell .fc-day { font-size: var(--face-t-sub); line-height: calc(var(--face-baseline) * 2); }
+.cell .fc-hi  { font-size: var(--face-t-lead); line-height: calc(var(--face-baseline) * 2); }
+.cell .fc-lo  { font-size: var(--face-t-cap); line-height: var(--face-baseline); }
+.cell .clock-ampm { font-size: var(--face-t-lead); }
+.cell .weather-hilo .wh-part { font-size: var(--face-t-cap); }
+.cell .widget-placeholder .ph-hint { font-size: var(--face-t-cap); line-height: calc(var(--face-baseline) * 2); }
+/* The degree sign rides the temperature, so it has to be a RATIO — but one
+ * that lands on a rung from every rung: 0.5 of 80/64/50 is 40/32/25, all of
+ * them ladder steps. At 0.6 it produced 48, which is a step from nothing. */
+.cell .temp-deg { font-size: 0.5em; }
+
+/* ---- 7. SHORT TILES TIGHTEN, THEY DO NOT CLIP --------------------------
+ * `cell-short` is set by tileCellClasses for any tile 3 grid rows or less
+ * (120px). At that height the full label band plus a normal content stack
+ * overruns the box, and an overrun on a fixed panel is a clip — there is no
+ * scrollbar and nothing tells you it happened. The band keeps its rule and
+ * its type and gives up its breathing room, which is the part that costs
+ * nothing to read. */
+.cell-short .tr-titlebar,
+.cell-short .col-title,
+.cell-short .widget-title {
+  margin-bottom: 4px;
+}
+.cell-short .fc-strip { padding-top: 0; padding-bottom: 0; }
+.cell-short .tr-body { gap: 4px; }

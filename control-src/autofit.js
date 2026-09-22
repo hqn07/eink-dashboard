@@ -45,7 +45,33 @@ export function autofitText(el) {
     if (el.scrollWidth <= maxW + 1 && el.scrollHeight <= hCap + 1) lo = mid;
     else hi = mid - 1;
   }
-  el.style.fontSize = lo + 'px';
+  el.style.fontSize = snapToLadder(lo, minFont) + 'px';
+}
+
+// The type ladder, shared with the CSS tokens in face-css/260-page-rhythm.css.
+// Steps are ~1.25x and every value clears the 11px 1-bit floor that lint:eink
+// enforces.
+//
+// WHY SNAP AT ALL. The binary search returns the largest size that fits, which
+// is a different arbitrary number in every tile — one screen measured 11, 12,
+// 13, 16, 18, 22, 24, 36, 52, 80 and 86 px across 32 pieces of text. Sizes
+// that are merely *close* read as a mistake rather than as hierarchy: two
+// headlines at 52 and 56 look like a bug, at 50 and 50 they look like a
+// system. Fitting is still the constraint — this only ever rounds DOWN, so a
+// snapped element fits wherever the searched one did.
+const TYPE_LADDER = [11, 13, 16, 20, 25, 32, 40, 50, 64, 80, 100, 128, 160, 200, 260];
+
+export function snapToLadder(px, floor) {
+  const min = Number.isFinite(floor) ? floor : 11;
+  // Below the floor the fit constraint wins outright: a tile that can only
+  // hold 9px gets 9px, because rounding UP to a rung would overflow it and an
+  // overflow on a fixed 800x480 panel draws over the neighbouring tile.
+  if (px < min) return px;
+  let best = null;
+  for (const step of TYPE_LADDER) {
+    if (step <= px) best = step;
+  }
+  return best == null ? px : best;
 }
 
 // Run the pass over every `.autofit` element under `root` (default document).

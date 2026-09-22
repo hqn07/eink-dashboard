@@ -365,14 +365,14 @@ html, body {
    * card hero numbers (.tr-v). */
   font-family: var(--face-grotesk);
   font-weight: 800;
-  font-size: 96px;
+  font-size: 80px;
   line-height: 0.85;
   letter-spacing: -3px;
   margin-top: -8px;
 }
 
 .temp-deg {
-  font-size: 60px;
+  font-size: 50px;
   vertical-align: super;
   margin-left: -8px;
 }
@@ -400,7 +400,7 @@ html, body {
   /* 700/12px — the ° glyph at 500/11px thresholds away to a faint tick
      on the 1-bit e-ink render. */
   font-weight: 700;
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 2px;
   margin-top: 4px;
 }
@@ -424,13 +424,13 @@ html, body {
 }
 
 .stat-k {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 2px;
 }
 
 .stat-v {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.5px;
   text-align: right;
@@ -504,7 +504,7 @@ html, body {
   flex: none;
   min-width: 36px;
   text-align: right;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -559,14 +559,26 @@ html, body {
 .fc-day {
   font-family: var(--face-sans);
   font-weight: 700;
-  font-size: 22px;
+  font-size: 20px;
   letter-spacing: 1px;
 }
 
-.fc-icon .icon { width: 38px; height: 38px; }
+/* The render already sizes this icon per tile height — 26/28/30/32/34/38 px
+ * off cellH in _view-weather-forecast.js — and emits it as width/height
+ * ATTRIBUTES on the <img>. A CSS rule beats an attribute, so a hardcoded 38px
+ * here silently threw that away and every forecast icon drew at 38 no matter
+ * how short the tile was. On a 3-row tile that pushed the low temperature 21px
+ * past the bottom edge, where the panel clipped it. Same class of bug as the
+ * presentation-attribute note in 015: whoever sets it last in CSS wins, so CSS
+ * must not restate what the render is already deciding.
+ *
+ * And the rule has to be ABSENT, not `auto`: an <img>'s width/height
+ * attributes are presentational hints, which any stylesheet declaration beats
+ * — `width: auto` therefore discards them too, and these SVGs carry no
+ * intrinsic size, so the icons collapsed to nothing. */
 
 .fc-hilo { text-align: right; font-family: var(--face-mono); }
-.fc-hi { font-size: 18px; font-weight: 700; }
+.fc-hi { font-size: 16px; font-weight: 700; }
 .fc-lo { font-size: 13px; font-weight: 500; }
 
 /* ----- variant: columns (horizontal day strip) ----- */
@@ -595,12 +607,12 @@ html, body {
 
 /* Forecast hi/lo variants ----- */
 .fc-hilo-inline { display: flex; align-items: baseline; gap: var(--face-gap-4); justify-content: flex-end; }
-.fc-hilo-inline .fc-hi { font-size: 18px; }
+.fc-hilo-inline .fc-hi { font-size: 16px; }
 .fc-hilo-inline .fc-lo { font-size: 16px; }
-.fc-hilo-inline .fc-hilo-sep { font-size: 14px; font-weight: 300; }
+.fc-hilo-inline .fc-hilo-sep { font-size: 13px; font-weight: 300; }
 .fc-hilo-arrows { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
 .fc-hilo-arrows .fc-hi { font-size: 16px; }
-.fc-hilo-arrows .fc-lo { font-size: 14px; }
+.fc-hilo-arrows .fc-lo { font-size: 13px; }
 
 /* ============ WIDGET SHELL + TEXT CARD ============ */
 
@@ -650,7 +662,7 @@ html, body {
    * `serif` default key. */
   font-family: inherit;
   font-style: italic;
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1.05;
   letter-spacing: -0.5px;
 }
@@ -658,7 +670,7 @@ html, body {
 .msg-sub {
   font-family: inherit;
   font-weight: 500;
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 2px;
   margin-top: 6px;
   border-top: 2px solid #fff;
@@ -715,7 +727,7 @@ html, body {
   justify-content: center;
   text-align: center;
 }
-.aqi-minimal .aqi-num { font-size: 72px; }
+.aqi-minimal .aqi-num { font-size: 64px; }
 
 /* bar — number + category over a 6-segment Good→Hazardous scale */
 .aqi-bar-head { display: flex; align-items: baseline; gap: var(--face-gap-8); }
@@ -755,7 +767,7 @@ html, body {
   font-weight: 700;
   line-height: 0.9;
 }
-.cd-big .cd-num { font-size: 72px; }     /* autofit overrides */
+.cd-big .cd-num { font-size: 64px; }     /* autofit overrides */
 .cd-unit {
   font-family: var(--face-mono);
   font-weight: 700;
@@ -766,7 +778,7 @@ html, body {
 .cd-label {
   font-family: var(--face-mono);
   font-weight: 500;
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 1px;
   color: #000;
 }
@@ -786,7 +798,7 @@ html, body {
   gap: var(--face-gap-20);
 }
 .cd-cell { display: flex; flex-direction: column; align-items: flex-start; }
-.cd-detail .cd-num { font-size: 48px; }
+.cd-detail .cd-num { font-size: 40px; }
 
 /* ============ ITEM PRIMITIVE ============
  * TRMNL-inspired list-item shape. A standardized three-slot row used
@@ -818,7 +830,7 @@ html, body {
 .item > .meta {
   font-family: var(--face-sans);
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
   letter-spacing: 1px;
 }
 
@@ -837,7 +849,7 @@ html, body {
 .item > .content > .description {
   display: block;
   font-family: var(--face-mono);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 1px;
   margin-top: 2px;
@@ -845,7 +857,7 @@ html, body {
 
 .item > .trailing {
   font-family: var(--face-mono);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 1px;
 }
@@ -873,7 +885,7 @@ html, body {
 
 .empty {
   font-family: var(--face-sans);
-  font-size: 14px;
+  font-size: 13px;
   letter-spacing: 3px;
   text-align: center;
   padding: 40px 10px;
@@ -884,7 +896,7 @@ html, body {
 .terminal-empty {
   font-family: var(--face-mono);
   font-weight: 700;
-  font-size: 22px;
+  font-size: 20px;
   letter-spacing: 6px;
   text-align: center;
   display: flex;
@@ -946,7 +958,7 @@ html, body {
 .eink-batt-bolt { vertical-align: -0.05em; }
 .eink-batt-volts {
   font-family: var(--face-mono);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 1px;
 }
@@ -973,7 +985,7 @@ html, body {
 }
 .eink-batt-eta {
   font-family: var(--face-mono);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 1.5px;
   color: #000;
@@ -1224,12 +1236,12 @@ html, body {
 
 /* stack time scales by tier so it tracks tile size (per-row autofit
  * can't measure a content-sized inline box). */
-.wclock-stack .wclock-time { font-size: 24px; }
-.wclock-stack--tiny     .wclock-time { font-size: 18px; }
-.wclock-stack--compact  .wclock-time { font-size: 22px; }
-.wclock-stack--standard .wclock-time { font-size: 28px; }
+.wclock-stack .wclock-time { font-size: 20px; }
+.wclock-stack--tiny     .wclock-time { font-size: 16px; }
+.wclock-stack--compact  .wclock-time { font-size: 20px; }
+.wclock-stack--standard .wclock-time { font-size: 25px; }
 .wclock-stack--extended .wclock-time,
-.wclock-stack--full     .wclock-time { font-size: 34px; }
+.wclock-stack--full     .wclock-time { font-size: 32px; }
 
 /* big — one zone, large; footer = glyph · label · meta */
 .wclock-big { align-items: stretch; justify-content: center; text-align: left; }
@@ -1276,7 +1288,7 @@ html, body {
   font-family: var(--face-mono);
   font-weight: 700;
   letter-spacing: 1.5px;
-  font-size: 12px;
+  font-size: 11px;
   color: #000;
 }
 
@@ -1284,7 +1296,7 @@ html, body {
 .quote-mark { position: relative; }
 .quote-glyph {
   font-family: 'DM Serif Display', Georgia, serif;
-  font-size: 56px;
+  font-size: 50px;
   line-height: 0.6;
   color: #000;
   margin-bottom: var(--face-gap-2);
@@ -1309,14 +1321,14 @@ html, body {
   font-family: var(--face-mono);
   font-weight: 700;
   letter-spacing: 1px;
-  font-size: 14px;
+  font-size: 13px;
   color: #000;
 }
 .otd-text {
   flex: 1 1 auto;
   font-family: var(--face-sans);
   font-weight: 400;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.2;
   color: #000;
   /* Keep rows scannable: two lines max, ellipsis past that. */
@@ -1335,7 +1347,7 @@ html, body {
 .otd-feature-year {
   font-family: 'DM Serif Display', serif;
   font-weight: 700;
-  font-size: 48px;
+  font-size: 40px;
   line-height: 1;
   color: #000;
 }
@@ -1589,7 +1601,7 @@ img.icon { object-fit: contain; }
 }
 .clock-ampm {
   font-family: var(--face-mono);
-  font-size: 18px;
+  font-size: 16px;
   letter-spacing: 2px;
   margin-left: 6px;
   vertical-align: top;
@@ -1636,13 +1648,13 @@ img.icon { object-fit: contain; }
 }
 .alert-tag {
   font-family: var(--face-mono);
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 2px;
   font-weight: 700;
 }
 .alert-text {
   font-family: var(--face-sans);
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 1px;
   text-transform: uppercase;
   flex: 1;
@@ -1655,7 +1667,7 @@ img.icon { object-fit: contain; }
 .fc-row { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; }
 .fc-precip {
   font-family: var(--face-mono);
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 1px;
   min-width: 32px;
   text-align: right;
@@ -1804,7 +1816,7 @@ img.icon { object-fit: contain; }
   gap: var(--face-gap-4);
 }
 .month-num {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
 }
@@ -1878,7 +1890,7 @@ img.icon { object-fit: contain; }
   /* 700 weight is load-bearing at 1-bit: regular mono strokes at this
    * size antialias to ~1px and break apart after threshold(128). */
   font-family: var(--face-mono);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
   color: #000;
@@ -1914,7 +1926,7 @@ img.icon { object-fit: contain; }
   border-width: 2px;
   margin: 2px;
 }
-.widget-placeholder.ph-xs .ph-title { font-size: 12px; letter-spacing: 1px; }
+.widget-placeholder.ph-xs .ph-title { font-size: 11px; letter-spacing: 1px; }
 
 /* ============ QR ============ */
 .qr {
@@ -1949,7 +1961,7 @@ img.icon { object-fit: contain; }
   flex: none;
   font-family: var(--face-mono);
   font-weight: 500;
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 1px;
   color: #000;
   text-align: center;
@@ -2068,13 +2080,13 @@ img.icon { object-fit: contain; }
 .spark-value {
   font-family: var(--face-serif);
   font-weight: 700;
-  font-size: 30px;
+  font-size: 25px;
   line-height: 0.9;
 }
 .spark-unit {
   font-family: var(--face-mono);
   font-weight: 700;
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 1px;
 }
 .spark-chart {
@@ -2310,23 +2322,23 @@ img.icon { object-fit: contain; }
 .tr-lv { line-height: 1; }
 .tr-lv .tr-v {
   font-weight: 800;
-  font-size: 56px;
+  font-size: 50px;
   line-height: 0.92;
   letter-spacing: -2px;
   font-variant-numeric: tabular-nums;
 }
 .tr-lv .tr-deg { font-size: 0.55em; font-weight: 700; vertical-align: top; }
 .tr-lv .tr-l {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 1.5px;
   text-transform: uppercase;
   margin-top: 3px;
 }
 /* size modifiers */
-.tr-lv.tr-lv-sm .tr-v { font-size: 30px; letter-spacing: -1px; }
+.tr-lv.tr-lv-sm .tr-v { font-size: 25px; letter-spacing: -1px; }
 .tr-lv.tr-lv-md .tr-v { font-size: 40px; }
-.tr-lv.tr-lv-xl .tr-v { font-size: 68px; }
+.tr-lv.tr-lv-xl .tr-v { font-size: 64px; }
 
 /* Icon + value + label cells, 2-col dotted grid. */
 .tr-cells {
@@ -2435,7 +2447,7 @@ img.icon { object-fit: contain; }
 }
 .tr-stat { flex: 1; padding: 8px 4px; border-right: var(--face-rule) dotted var(--face-ink); }
 .tr-stat:last-child { border-right: none; }
-.tr-stat .tr-sv { font-size: 24px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.tr-stat .tr-sv { font-size: 20px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
 .tr-stat .tr-sl { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
 
 /* Tone chip — status badge. */
@@ -2567,7 +2579,7 @@ img.icon { object-fit: contain; }
 }
 .tr-gauge-val {
   font-weight: 800;
-  font-size: 30px;
+  font-size: 25px;
   line-height: 1;
   letter-spacing: -1px;
   font-variant-numeric: tabular-nums;
@@ -2579,7 +2591,7 @@ img.icon { object-fit: contain; }
   text-transform: uppercase;
   margin-top: 3px;
 }
-.tr-gauge-sm .tr-gauge-val { font-size: 22px; }
+.tr-gauge-sm .tr-gauge-val { font-size: 20px; }
 .tr-gauge-lg .tr-gauge-val { font-size: 40px; letter-spacing: -1.5px; }
 
 /* ---- Contribution heatmap ---- */
@@ -2823,7 +2835,7 @@ img.icon { object-fit: contain; }
 /* Both-platforms mode: per-train ↑/↓ platform marker. */
 .tr-t-dir {
   flex: none;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 800;
   line-height: 1;
 }
@@ -2837,7 +2849,7 @@ img.icon { object-fit: contain; }
   height: 1.7em;
   border: 2px solid var(--face-ink);
   border-radius: 999px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
   line-height: 1;
   color: var(--face-ink);
@@ -2845,21 +2857,21 @@ img.icon { object-fit: contain; }
 
 .tr-t-min {
   margin-left: auto;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
   line-height: 1;
   color: var(--face-ink);
   font-variant-numeric: tabular-nums;
 }
 .tr-t-unit {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   margin-left: 2px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.tr-t-list--board .tr-t-min { font-size: 30px; }
+.tr-t-list--board .tr-t-min { font-size: 25px; }
 
 .tr-t-stale { font-size: 0.85em; font-weight: 400; }
 
@@ -2897,7 +2909,7 @@ img.icon { object-fit: contain; }
 }
 .beam-foot {
   font-family: var(--face-mono);
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 2px;
   text-transform: uppercase;
   text-align: right;
@@ -2965,3 +2977,240 @@ img.icon { object-fit: contain; }
      quote, which is the wrong register for a briefing. */
   text-align: left;
 }
+
+/* ============ PAGE RHYTHM — the tiles share one page ============
+ *
+ * THE PROBLEM, measured on a real eight-tile screen (2026-09-21):
+ *   32 text nodes · 11 distinct font sizes · 19 distinct baselines ·
+ *   20 distinct left edges.
+ * Nothing lined up with anything. Each widget was internally tidy and the
+ * page was a pile of tidy boxes, because every widget brought its own type
+ * sizes, its own inner padding and its own line-height ratios.
+ *
+ * Printers solved this before screens existed: a page reads as one page when
+ * text across columns sits on shared baselines and starts at shared left
+ * edges. Alignment, not borders, is what joins things — the borders were
+ * already there and the page still read as eight separate boxes.
+ *
+ * SO THIS LAYER IMPOSES THREE THINGS, AND ONLY THESE THREE:
+ *
+ *   1. ONE INNER MARGIN. The cell owns the inset (16px sides). Components
+ *      that carried their own (.tr-card / .tr-body / .tr-titlebar) give it up,
+ *      so a TRMNL-style tile and a plain one start their text at the same x.
+ *
+ *   2. ONE LABEL BAND. Every tile's label — .tr-titlebar, .col-title,
+ *      .widget-title, three systems that had drifted apart — is 11px caps on
+ *      a 20px band with the same rule under it. Across the page the labels
+ *      fall into rows instead of eleven private headers.
+ *
+ *   3. ONE BASELINE. The grid cell is 33.33x40px, so 10px divides the page
+ *      exactly (4 per row). Text line-heights here are multiples of 10 and
+ *      the cell's top inset is 10, which puts the first line of every tile on
+ *      the same page baseline as its neighbours'.
+ *
+ * WHAT IT DELIBERATELY DOES NOT DO: re-style the heroes. A weather temperature
+ * and a clock are meant to be the loudest things on the panel and they are
+ * sized by autofit, which now snaps to the same ladder (control-src/autofit.js).
+ * This layer is about the quiet 90% — labels, rows, captions, values — because
+ * that is what the eye reads as "structure".
+ *
+ * Deliberately last in the cascade (260-) so it can settle disagreements
+ * between 015 (grid), 035 (item primitive) and 220 (trmnl components) without
+ * editing three partials that each have their own reasons. */
+
+:root {
+  /* 4 baselines to a grid row (40px), 12 to a column (33.33px ≈ 3.3). */
+  --face-baseline: 10px;
+
+  /* The type ladder. ~1.25x steps, every value a size the 1-bit render can
+   * actually hold: below 11px strokes break up after threshold(128), which is
+   * why lint:eink enforces that floor. */
+  --face-t-cap:   11px;  /* labels, captions, meta */
+  --face-t-body:  13px;  /* rows, lists, body */
+  --face-t-lead:  16px;  /* lead line, emphasised row */
+  --face-t-sub:   20px;  /* secondary value */
+  --face-t-val:   25px;  /* value */
+  --face-t-head:  32px;  /* headline */
+  --face-t-hero:  40px;  /* hero */
+}
+
+/* ---- 1. ONE INNER MARGIN ------------------------------------------------
+ * The cell is the column; it owns the margin. 10px top/bottom keeps the
+ * baseline arithmetic whole, 16px sides is the existing optical margin and
+ * the one thing that was already consistent. */
+.cell {
+  padding: 10px 16px;
+}
+/* A card filling a cell must not inset again — double padding is how the same
+ * text ended up at x=16 in one tile and x=42 in the next. */
+.cell .tr-card > .tr-body,
+.cell .tr-body {
+  padding-left: 0;
+  padding-right: 0;
+}
+/* Flush widgets (photo, spacer, art) bleed on purpose and keep winning. */
+.cell.cell-flush { padding: 0; }
+
+/* ---- 2. ONE LABEL BAND -------------------------------------------------- */
+.cell .tr-titlebar,
+.cell .col-title,
+.cell .widget-title {
+  box-sizing: content-box;
+  min-height: 14px;
+  padding: 0 0 4px;
+  margin: 0 0 var(--face-baseline);
+  border-bottom: var(--face-rule) solid currentColor;
+  font-family: var(--face-grotesk);
+  font-size: var(--face-t-cap);
+  font-weight: 700;
+  line-height: 14px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+/* The label's own trailing element (location, count, "6-DAY") is the same
+ * band, one weight quieter. */
+.cell .tr-titlebar .tr-meta {
+  font-size: var(--face-t-cap);
+  line-height: 14px;
+  font-weight: 400;
+}
+
+/* ---- 3. ONE BASELINE ---------------------------------------------------
+ * Only the quiet roles. Each is a whole number of baselines tall, so a list in
+ * one tile steps down the page at the same rate as a list in the next. */
+.cell .tr-l,
+.cell .tr-sl,
+.cell .tr-meta,
+.cell .tr-cl,
+.cell .stat-k,
+.cell .item-label {
+  font-size: var(--face-t-cap);
+  line-height: var(--face-baseline);
+  letter-spacing: 1.5px;
+}
+.cell .tr-sv,
+.cell .stat-v,
+.cell .item-value {
+  font-size: var(--face-t-body);
+  line-height: calc(var(--face-baseline) * 2);
+}
+.cell .tr-row-title,
+.cell .tr-row-main,
+.cell .item-title {
+  font-size: var(--face-t-body);
+  line-height: calc(var(--face-baseline) * 2);
+}
+/* Row gaps in whole baselines, so N rows occupy a predictable N*20 and two
+ * stacked tiles of rows stay in step. */
+.cell .tr-body { gap: var(--face-baseline); }
+.cell .tr-rows { gap: 0; }
+.cell .tr-row-inner { min-height: calc(var(--face-baseline) * 2); }
+
+/* ---- 4. RULES BELONG TO THE PAGE ---------------------------------------
+ * `.body-ruled` means the dividers are drawn once, for the page, by the
+ * `.page-rules` layer (control-src/widgets/_rules.js) instead of by each
+ * cell's own border. Two consequences worth stating:
+ *
+ *   • Tiles in the same zone can share an edge with no rule at all — a
+ *     per-cell border cannot express "stop drawing here", which is why the
+ *     page read as eight fenced boxes no matter how the cells were styled.
+ *   • A seam is drawn once. Cells previously drew right AND bottom, so an
+ *     interior crossing got the same line from two directions; at 2px on a
+ *     1-bit panel that is a visible thickening at every junction.
+ *
+ * The layer sits ON TOP of the tiles and is centred on the seam via the
+ * negative margin, so each rule straddles the boundary and takes one pixel
+ * from each neighbour rather than a full two from one of them. On top is not
+ * a preference: `.cell` paints an opaque background, so a layer underneath is
+ * covered by the very tiles whose seams it is drawing. */
+.body-ruled .cell {
+  border-right: none;
+  border-bottom: none;
+}
+.page-rules {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.page-rules > i {
+  position: absolute;
+  background: var(--face-ink);
+  display: block;
+}
+/* Inverted is the default, so the rules are white on black; the light panel
+ * flips them back. Keyed off the body's theme class, which is the one place
+ * that knows the page's polarity. */
+.body-dark .page-rules > i { background: #fff; }
+.body-light .page-rules > i { background: #000; }
+
+/* The grid container has to be a positioning context for the layer, and the
+ * page is a fixed 800x480 so there is nothing to scroll or reflow. */
+.body-ruled { position: relative; }
+
+/* ---- 5. THE PLACEHOLDER IS A TILE LIKE ANY OTHER -----------------------
+ * It carried `margin: 4px` + a 3px dashed border + `padding: 12px`, so its
+ * text started 19px further in than every other tile's and its card floated
+ * inside the cell instead of filling it. Measured on the eight-tile screen:
+ * real content at x=16, placeholder text at x=33.
+ *
+ * The dashed border is worth keeping — it is what says "nothing is here yet"
+ * at a glance — so it moves to the cell's own inset instead of adding to it.*/
+.cell .widget-placeholder {
+  margin: 0;
+  padding: var(--face-baseline) 0 0;
+  border: none;
+  border-top: var(--face-rule) dashed currentColor;
+  background: none;
+  color: inherit;
+}
+/* Which means the card no longer paints its own white ground, so the icon and
+ * the title follow the tile's polarity like everything else — and the
+ * white-on-white title bug from earlier today cannot come back, because
+ * nothing here declares a background at all. */
+.cell.cell-inverted .widget-placeholder,
+.cell.cell-inverted .widget-placeholder .ph-title,
+.cell.cell-inverted .widget-placeholder .ph-hint { color: #fff; }
+.cell.cell-inverted .widget-placeholder .ph-icon svg :is(path, rect, polyline, circle, line) {
+  fill: none;
+  stroke: #fff;
+}
+.cell .widget-placeholder .ph-tag {
+  top: 0;
+  right: 0;
+}
+
+/* ---- 6. THE LAST FEW OFF-LADDER SIZES ----------------------------------
+ * Measured, not guessed: every text node on a full screen was checked against
+ * the ladder and these are the ones that missed. They are each 1-2px off a
+ * rung, which is the worst kind of difference — too small to read as
+ * hierarchy, too large to read as the same thing.
+ *
+ * The forecast pair does double duty: at 22/18 the day row plus the temps ran
+ * 21px past the bottom of a 3-row tile (clientHeight 120, scrollHeight 141),
+ * so the numbers were being clipped on glass. On the ladder they fit. */
+.cell .fc-day { font-size: var(--face-t-sub); line-height: calc(var(--face-baseline) * 2); }
+.cell .fc-hi  { font-size: var(--face-t-lead); line-height: calc(var(--face-baseline) * 2); }
+.cell .fc-lo  { font-size: var(--face-t-cap); line-height: var(--face-baseline); }
+.cell .clock-ampm { font-size: var(--face-t-lead); }
+.cell .weather-hilo .wh-part { font-size: var(--face-t-cap); }
+.cell .widget-placeholder .ph-hint { font-size: var(--face-t-cap); line-height: calc(var(--face-baseline) * 2); }
+/* The degree sign rides the temperature, so it has to be a RATIO — but one
+ * that lands on a rung from every rung: 0.5 of 80/64/50 is 40/32/25, all of
+ * them ladder steps. At 0.6 it produced 48, which is a step from nothing. */
+.cell .temp-deg { font-size: 0.5em; }
+
+/* ---- 7. SHORT TILES TIGHTEN, THEY DO NOT CLIP --------------------------
+ * `cell-short` is set by tileCellClasses for any tile 3 grid rows or less
+ * (120px). At that height the full label band plus a normal content stack
+ * overruns the box, and an overrun on a fixed panel is a clip — there is no
+ * scrollbar and nothing tells you it happened. The band keeps its rule and
+ * its type and gives up its breathing room, which is the part that costs
+ * nothing to read. */
+.cell-short .tr-titlebar,
+.cell-short .col-title,
+.cell-short .widget-title {
+  margin-bottom: 4px;
+}
+.cell-short .fc-strip { padding-top: 0; padding-bottom: 0; }
+.cell-short .tr-body { gap: 4px; }

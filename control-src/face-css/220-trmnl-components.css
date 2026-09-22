@@ -69,23 +69,23 @@
 .tr-lv { line-height: 1; }
 .tr-lv .tr-v {
   font-weight: 800;
-  font-size: 56px;
+  font-size: 50px;
   line-height: 0.92;
   letter-spacing: -2px;
   font-variant-numeric: tabular-nums;
 }
 .tr-lv .tr-deg { font-size: 0.55em; font-weight: 700; vertical-align: top; }
 .tr-lv .tr-l {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 1.5px;
   text-transform: uppercase;
   margin-top: 3px;
 }
 /* size modifiers */
-.tr-lv.tr-lv-sm .tr-v { font-size: 30px; letter-spacing: -1px; }
+.tr-lv.tr-lv-sm .tr-v { font-size: 25px; letter-spacing: -1px; }
 .tr-lv.tr-lv-md .tr-v { font-size: 40px; }
-.tr-lv.tr-lv-xl .tr-v { font-size: 68px; }
+.tr-lv.tr-lv-xl .tr-v { font-size: 64px; }
 
 /* Icon + value + label cells, 2-col dotted grid. */
 .tr-cells {
@@ -194,7 +194,7 @@
 }
 .tr-stat { flex: 1; padding: 8px 4px; border-right: var(--face-rule) dotted var(--face-ink); }
 .tr-stat:last-child { border-right: none; }
-.tr-stat .tr-sv { font-size: 24px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.tr-stat .tr-sv { font-size: 20px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
 .tr-stat .tr-sl { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
 
 /* Tone chip — status badge. */

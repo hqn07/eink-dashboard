@@ -57,3 +57,7 @@ export { demoCtxForWidget } from './_pool_demo.js';
 // The size contract. lib/ssr.js is CJS and cannot import the ESM module
 // directly, so the matrix reaches its per-variant ladders through here.
 export { sizeSpec, variantOf, sizeSpecFor } from './_sizes.js';
+
+// Page rules — the dividers, computed for the page rather than drawn by each
+// cell, so tiles in the same zone can share an edge. See _rules.js.
+export { pageRulesHtml, pageRuleStyles, pageRuleSegments } from './_rules.js';

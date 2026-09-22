@@ -1,6 +1,6 @@
 import { homeValue } from '../home.js';
 import React, { useEffect, useRef } from 'react';
-import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses, bodyThemeClass } from '../widget-render.js';
+import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses, bodyThemeClass, pageRuleStyles } from '../widget-render.js';
 import { widgetById } from '../widgets.js';
 import { autofitText } from '../autofit.js';
 
@@ -153,10 +153,24 @@ export default function LiveDashboard({
     }
   }
 
+  // Same page-rule computation the server runs, over the same layout — the
+  // preview cannot show a seam the panel will not draw (or hide one it will).
+  const cards = !!(data && data.cardStyle === 'cards');
+  const ruled = !cards && tiles.length > 0;
+  const rules = ruled
+    ? pageRuleStyles(layout.filter(it => withinVisibility(it.visibility, nowM)),
+        { cols: GRID_COLS, rows: GRID_ROWS })
+    : [];
+
   return (
     <div className="page" style={pageStyle} ref={rootRef}>
       <div className="hdr-stub" />
-      <main className={`body body-grid${(data && data.cardStyle === 'cards') ? ' body-cards' : ''} ${bodyThemeClass(faceTheme)}`} style={bodyStyle}>
+      <main className={`body body-grid${cards ? ' body-cards' : ''}${ruled ? ' body-ruled' : ''} ${bodyThemeClass(faceTheme)}`} style={bodyStyle}>
+        {rules.length > 0 && (
+          <div className="page-rules" aria-hidden="true">
+            {rules.map((st, i) => <i key={i} style={st} />)}
+          </div>
+        )}
         {tiles.length > 0 ? tiles : (
           <div className="empty terminal-empty" style={{ gridColumn: `1 / span ${GRID_COLS}`, gridRow: `1 / span ${GRID_ROWS}` }}>
             &gt; NO_WIDGETS_ENABLED

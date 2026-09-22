@@ -15,7 +15,7 @@
   font-weight: 700;
   line-height: 0.9;
 }
-.cd-big .cd-num { font-size: 72px; }     /* autofit overrides */
+.cd-big .cd-num { font-size: 64px; }     /* autofit overrides */
 .cd-unit {
   font-family: var(--face-mono);
   font-weight: 700;
@@ -26,7 +26,7 @@
 .cd-label {
   font-family: var(--face-mono);
   font-weight: 500;
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 1px;
   color: #000;
 }
@@ -46,4 +46,4 @@
   gap: var(--face-gap-20);
 }
 .cd-cell { display: flex; flex-direction: column; align-items: flex-start; }
-.cd-detail .cd-num { font-size: 48px; }
+.cd-detail .cd-num { font-size: 40px; }
