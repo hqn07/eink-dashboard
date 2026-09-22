@@ -1,5 +1,109 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-22 — D4 done: all 22 widget forms are data
+> `75a5a64` → `9141276` → `e1e3abc`, plus `09f1a1a` for a bug the deploys
+> themselves caused.
+>
+> ### What it is
+> A form is now `export const FIELDS = [...]` and
+> `export const Form = buildForm(FIELDS)`. `_schema.jsx` builds **exactly the
+> tree the hand-written forms produced** — `FormSection` blocks holding the
+> same field primitives — so `TabbedForm`'s introspection, the pill tabs and
+> the per-widget section memory never knew anything changed. Nothing
+> downstream can tell the difference, which is why this landed in four
+> commits without a single visual baseline moving.
+>
+> **1,886 lines of JSX → 1,465**, and the remainder is mostly bespoke
+> components that were always going to be components.
+>
+> ### The hook rule became structural
+> `TabbedForm` CALLS the form as a plain function to read its sections, so a
+> hook at a form's top level is an invalid-hook crash that blanks the editor —
+> it happened, with `photo.form`, and `ErrorBoundary` exists because of it. A
+> generated form cannot hold a hook: there is nowhere to write one. And
+> `type: 'custom'` is handed the context and returns an **element**, which is
+> the whole trick — an element is rendered by React later, so hooks inside
+> that component are fine.
+>
+> ### Field types, in the order they were needed
+> ```
+> text select toggle slider csv      the first four widgets
+> textarea multi list note presets   webhook / progress / daily / clock
+> location                           raw onChange: LocationFields emits a
+>                                    COMPLETE object, and a patch-merge would
+>                                    defeat "use Setup instead", which works
+>                                    by deleting keys
+> slots                              N pickers writing one array by INDEX —
+>                                    weather's stats grid, where "slot 3 shows
+>                                    wind" is a position, not a setting
+> custom                             the seven bespoke controls
+> ```
+> Plus `when(v)`, `section`, `collapse` groups, `toField`/`fromField` for a
+> value the widget does not store (the forecast keeps a number or null; the
+> picker needs `'auto'`), `owns: [...]` so a custom control declares the keys
+> it writes, and functions for label/help/placeholder/options so a
+> view-switching widget says the right thing per view instead of duplicating
+> the field.
+>
+> ### The guard is the point, and it found a real bug
+> `check:widgets` now checks both directions: a field key missing from
+> `defaults()` is dead, a default no field exposes is unreachable. First run
+> against the full set: **`photo` had `caption` and `title` in defaults and
+> exposed neither.** The renderer draws a caption on the framed and caption
+> variants, so the only way to set one was editing `config.json` by hand.
+>
+> **Six guard bugs, every one surfaced by correct code failing** — worth
+> listing because each is a way static analysis lies:
+> 1. comments inside `defaults()` scanned as keys (`// YYYY-MM-DDTHH:MM` →
+>    `DDTHH`, `// 'wifi' = build WIFI:` → `WIFI`)
+> 2. single-line `defaults: () => ({ variant: 'sun', title: '' })` parsed as
+>    one key, because the scan anchored on line starts
+> 3. `defaults: (ctx) =>` did not match a regex expecting `()`
+> 4. merged widgets keep each view's settings in `_view-*.js`, so the parent
+>    legitimately omits keys the form exposes — unioned in now
+> 5. the `location` field owns city/lat/lon without naming a key, in BOTH
+>    directions (weather seeds from home, sparkline just accepts one)
+> 6. a widget that COMPOSES its FIELDS from other form modules (clock =
+>    local + zones) declared no keys of its own
+>
+> I probed it before trusting it, per the standing lesson: deleting chess's
+> `showMeta` field fails the build with the exact message.
+>
+> ### A deploy used to break any editor tab left open
+> Reported from a real tab mid-session: `Failed to fetch dynamically imported
+> module … WidgetSettingsModal-3XY4RAJ3.js`. Chunk names carry a content hash,
+> a deploy replaces them, and the page only finds out when someone opens the
+> settings modal. The card's own button called `retry()`, which re-rendered and
+> refetched the same missing URL — the one control offered could not work.
+>
+> `retryOnStaleChunk` (`control-src/lazy-chunk.js`) wraps every `React.lazy`
+> factory and reloads **once**, guarded by a sessionStorage timestamp: a reload
+> fetches the new index.html and therefore the new names, so a second failure
+> is a genuinely missing chunk and belongs on screen rather than in a refresh
+> loop. Blocked storage counts as "already reloaded", so a page that cannot
+> remember cannot loop. `ErrorBoundary` recognises the error class and says
+> "This page is out of date" with a button that actually reloads.
+>
+> Verified by breaking it on purpose: loaded the editor, deleted the modal
+> chunk from disk, opened a tile's settings — the page reloaded itself, and
+> with the chunk still missing the second attempt showed the card without
+> looping.
+>
+> ### Left hand-written: nothing
+> Seven forms keep a custom control *inside* a schema — ai (feed chips),
+> transit (station search writing stop + line + heading at once), headlines
+> (saved feeds), text (token pairs + schedule), photo (uploader + live dither
+> preview), calendar (feed rows with badge/save + active-feed switches),
+> worldclock (IANA search). `clock` used to DISPATCH to whichever view form
+> matched the variant; both view forms are lists now, so it concatenates them
+> with a `when` per side, which also lets the guard see the whole widget at
+> once.
+>
+> `test:api` 45/45 · `check:visual` 0.000% · both snapshots PASS ·
+> `check:widgets` 22 · eink-lint clean. Live panel after the deploys: 6 tiles,
+> 4 page rules, 7 type sizes all on the ladder, zero overflow, device on
+> FW 1.26.0.
+
 > ## 2026-09-22 — tiles join by subject; and the OTA closed itself
 > ### The join was too narrow, and the question caught it
 > Asked point-blank whether the widgets actually integrate when placed on the
