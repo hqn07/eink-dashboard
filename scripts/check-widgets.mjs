@@ -134,7 +134,16 @@ for (const id of palette) {
     try { form = await readFile(join(WDIR, `${id}.form.jsx`), 'utf8'); } catch { continue; }
     if (!/export const FIELDS\s*=/.test(form)) continue;   // hand-written form
 
-    const formBody = form.replace(/\/\/[^\n]*/g, '');
+    let formBody = form.replace(/\/\/[^\n]*/g, '');
+    // A merged widget can COMPOSE its schema from the view forms it shows
+    // (clock = local + zones), in which case its own file declares no keys at
+    // all. Follow those imports and fold the imported field lists in, or the
+    // guard reports every one of the widget's settings as unreachable.
+    for (const m of formBody.matchAll(/import\s*\{[^}]*\bFIELDS\b[^}]*\}\s*from\s*'\.\/([A-Za-z0-9_.-]+)\.jsx?'/g)) {
+      try {
+        formBody += '\n' + (await readFile(join(WDIR, `${m[1]}.jsx`), 'utf8')).replace(/\/\/[^\n]*/g, '');
+      } catch { /* a form that moved — the wiring guard above covers that */ }
+    }
     const fieldKeys = new Set([...formBody.matchAll(KEYS_FROM_FIELDS)].map(m => m[1]));
     // `location` is the one field type that owns keys without naming one: it
     // renders LocationFields, which writes the whole place at once. Without
@@ -146,6 +155,14 @@ for (const id of palette) {
     // and neither is a wiring bug.
     const locationKeys = /type:\s*'location'/.test(formBody) ? ['city', 'lat', 'lon'] : [];
     for (const k of locationKeys) fieldKeys.add(k);
+    // A `custom` field writes keys without naming one as its own; `owns: [...]`
+    // is how it says which, so the guard still holds it to the defaults.
+    for (const m of formBody.matchAll(/owns:\s*\[([^\]]*)\]/g)) {
+      for (const k of m[1].split(',')) {
+        const key = k.trim().replace(/^['"]|['"]$/g, '');
+        if (key) fieldKeys.add(key);
+      }
+    }
     const src = await readFile(join(WDIR, `${id}.js`), 'utf8');
     // `(ctx)` as well as `()`: a widget whose defaults depend on the home
     // location takes the context, and weather's spreads both of its views.
@@ -182,7 +199,7 @@ for (const id of palette) {
     // the schema's one failure mode that is worse than the JSX it replaced,
     // because a missing field looks like a deliberate omission.
     const TYPES = new Set(['text', 'textarea', 'select', 'segmented', 'toggle', 'slider',
-      'csv', 'multi', 'list', 'location', 'note', 'presets', 'slots']);
+      'csv', 'multi', 'list', 'location', 'note', 'presets', 'slots', 'custom']);
     for (const m of form.matchAll(/type:\s*'([A-Za-z0-9_]+)'/g)) {
       if (!TYPES.has(m[1])) {
         problems.push(`${id}.form.jsx: field type '${m[1]}' has no renderer in _schema.jsx`);

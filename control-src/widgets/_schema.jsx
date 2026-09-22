@@ -34,7 +34,7 @@ import React from 'react';
 // and must stay free of editor-only imports.
 const RENDERERS = {
   text:      (P, f, props) => <P.TextField {...props} />,
-  select:    (P, f, props) => <P.SelectField {...props} options={f.options} />,
+  select:    (P, f, props, ctx) => <P.SelectField {...props} options={resolve(f.options, ctx.values)} />,
   segmented: (P, f, props) => <P.SegmentedField {...props} options={f.options} />,
   toggle:    (P, f, props) => <P.ToggleField {...props} />,
   slider:    (P, f, props) => <P.SliderField {...props} min={f.min} max={f.max} step={f.step} format={f.format} />,
@@ -105,6 +105,17 @@ const RENDERERS = {
   presets:   (P, f, props, ctx) => (
     <P.PresetField presets={f.presets} onApply={(vals) => ctx.onChange({ ...ctx.values, ...vals })} />
   ),
+  // An escape hatch with a small door. Some controls are genuinely bespoke —
+  // a zone search, an uploader with a live dither preview, a saved-feeds
+  // manager — and pretending otherwise would mean inventing a field type per
+  // widget, which is the JSX this replaces with extra steps.
+  //
+  // `render` is handed the form context and returns an ELEMENT. That matters:
+  // an element is rendered by React later, so a hook inside the component is
+  // fine, while a hook in the form function itself would crash TabbedForm's
+  // introspection. Every custom control here is a nested component for exactly
+  // that reason.
+  custom:    (P, f, props, ctx) => f.render(ctx),
   // Static prose. Not a setting — the blurb that tells you what the selected
   // view does, which several forms carried as a bare div.
   note:      (P, f, props, ctx) => (
@@ -190,13 +201,13 @@ export function buildForm(FIELDS) {
                   // `toField` lets a field present a value the renderer does
                   // not store — the forecast's day count is a number or null,
                   // and the picker needs the string 'auto' for the null.
-                  value: f.toField ? f.toField(current) : current,
+                  value: f.toField ? f.toField(current, v) : current,
                   defaultValue: defaults[f.key],
                   tokens: f.tokens,
                   secret: f.secret,
                   onChange: (x) => patch({ [f.key]: f.fromField ? f.fromField(x) : x })
                 };
-                return render(P, f, props, { values: v, onChange, patch, cfg });
+                return render(P, f, props, { values: v, onChange, patch, cfg, fields: P });
           };
 
           return (

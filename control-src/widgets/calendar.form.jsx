@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { buildForm } from './_schema.jsx';
 import { ICAL_PRESETS } from './_ical_presets.js';
 import SearchableSelect from '../components/SearchableSelect.jsx';
 import QuickEventsEditor from '../components/QuickEventsEditor.jsx';
@@ -59,108 +60,115 @@ function PresetAdder({ v, patch }) {
   );
 }
 
-export function Form({ values, patch, onChange, fields }) {
-  const v = values || {};
-  const { TextField, ListEditor, SelectField, ToggleField, FormSection, PresetField, defaults = {} } = fields;
-  const urls = Array.isArray(v.icalUrls) ? v.icalUrls.filter(Boolean) : [];
-  const disabled = Array.isArray(v.disabledFeeds) ? v.disabledFeeds : [];
-  const toggleFeed = (url, on) => {
-    const next = on
-      ? disabled.filter(u => u !== url)
-      : disabled.includes(url) ? disabled : [...disabled, url];
-    patch({ disabledFeeds: next });
-  };
+// The feed list rows carry a badge and a save button beside the URL, and the
+// active-feeds switches are one toggle per URL the user has entered — both are
+// shapes the generic field types cannot describe, so they stay components.
+function FeedList({ ctx }) {
+  const { ListEditor } = ctx.fields;
   return (
-    <>
-      <FormSection title="Data">
-        <PresetAdder v={v} patch={patch} />
-        <ListEditor
-          label="iCal feed URLs"
-          items={v.icalUrls}
-          onChange={(items) => patch({ icalUrls: items })}
-          blank=""
-          replaceRow
-          addLabel="Add feed"
-          help={
-            <>
-              Events merge + dedupe.{' '}
-              <a href="https://support.google.com/calendar/answer/37648?hl=en#zippy=%2Cget-your-calendar-view-only"
-                target="_blank" rel="noopener noreferrer"
-                style={{ color: 'var(--mute)', textDecoration: 'underline' }}>
-                Where do I get this? →
-              </a>
-            </>
-          }
-          renderRow={(it, set) => (
-            <>
-              <input type="url"
-                value={typeof it === 'string' ? it : ''}
-                placeholder="https://calendar.google.com/calendar/ical/..."
-                onChange={e => set(e.target.value)}
-                style={{ flex: 1 }} />
-              <UrlBadge url={typeof it === 'string' ? it : ''} />
-              <SaveFeedButton url={typeof it === 'string' ? it : ''} />
-            </>
-          )}
-        />
-        <SavedFeedsManager />
-        <div className="wsm-field-label" style={{ marginTop: 10 }}>Quick events (no calendar app needed)</div>
-        <QuickEventsEditor
-          value={v.localEvents || []}
-          onChange={(items) => patch({ localEvents: items })}
-        />
-        {urls.length > 1 && (
-          <div style={{ marginTop: 8 }}>
-            <div className="wsm-field-label">Active feeds</div>
-            <div className="wsm-field-help" style={{ marginBottom: 6 }}>
-              Switch a feed off to skip it without removing the URL.
-            </div>
-            {urls.map((url, i) => (
-              <ToggleField
-                key={`${url}-${i}`}
-                label={url.length > 48 ? `${url.slice(0, 44)}…` : url}
-                value={!disabled.includes(url)}
-                onChange={(on) => toggleFeed(url, on)}
-              />
-            ))}
-          </div>
-        )}
-      </FormSection>
-      <FormSection title="Content">
-        <PresetField presets={PRESETS} onApply={(vals) => onChange({ ...v, ...vals })} />
-        <TextField
-          label="Tile heading"
-          value={v.title || ''}
-          defaultValue={defaults.title}
-          onChange={(x) => patch({ title: x })} tokens
-          placeholder="UPCOMING"
-          help="Leave blank to keep the default heading."
-        />
-        <ToggleField label="Day label (column with date)"
-          value={v.showDayLabel !== false} defaultValue={defaults.showDayLabel}
-          onChange={(x) => patch({ showDayLabel: x })} />
-        <ToggleField label="Event time"
-          value={v.showTime     !== false} defaultValue={defaults.showTime}
-          onChange={(x) => patch({ showTime:     x })} />
-      </FormSection>
-      <FormSection title="Layout">
-        <div className="wsm-field-help" style={{ marginBottom: 6 }}>
-          Pick the view with the variant cards above. Strip needs a tile
-          ≥7 wide, month ≥7×4 — smaller tiles fall back to the list.
-        </div>
-        <SelectField
-          label="Density (list view only)"
-          value={v.density || 'auto'}
-          defaultValue={defaults.density}
-          options={[
-            { value: 'auto',     label: 'Auto — by tile size' },
-            { value: 'compact',  label: 'Compact — fewer events' },
-            { value: 'standard', label: 'Standard' },
-            { value: 'rich',     label: 'Rich — more events + sections' }
-          ]}
-          onChange={(x) => patch({ density: x })}
-        />
-      </FormSection>
-    </>
+    <ListEditor
+      label="iCal feed URLs"
+      items={ctx.values.icalUrls}
+      onChange={(items) => ctx.patch({ icalUrls: items })}
+      blank=""
+      replaceRow
+      addLabel="Add feed"
+      help={
+        <>
+          Events merge + dedupe.{' '}
+          <a href="https://support.google.com/calendar/answer/37648?hl=en#zippy=%2Cget-your-calendar-view-only"
+            target="_blank" rel="noopener noreferrer"
+            style={{ color: 'var(--mute)', textDecoration: 'underline' }}>
+            Where do I get this? →
+          </a>
+        </>
+      }
+      renderRow={(it, set) => (
+        <>
+          <input type="url"
+            value={typeof it === 'string' ? it : ''}
+            placeholder="https://calendar.google.com/calendar/ical/..."
+            onChange={e => set(e.target.value)}
+            style={{ flex: 1 }} />
+          <UrlBadge url={typeof it === 'string' ? it : ''} />
+          <SaveFeedButton url={typeof it === 'string' ? it : ''} />
+        </>
+      )}
+    />
   );
 }
+
+// Muting a feed keeps the URL but skips the fetch, so the switch list is
+// generated from whatever the user has entered — not from a fixed option set.
+function ActiveFeeds({ ctx }) {
+  const { ToggleField } = ctx.fields;
+  const urls = Array.isArray(ctx.values.icalUrls) ? ctx.values.icalUrls.filter(Boolean) : [];
+  const disabled = Array.isArray(ctx.values.disabledFeeds) ? ctx.values.disabledFeeds : [];
+  if (urls.length < 2) return null;
+  const toggleFeed = (url, on) => ctx.patch({
+    disabledFeeds: on
+      ? disabled.filter(u => u !== url)
+      : disabled.includes(url) ? disabled : [...disabled, url]
+  });
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div className="wsm-field-label">Active feeds</div>
+      <div className="wsm-field-help" style={{ marginBottom: 6 }}>
+        Switch a feed off to skip it without removing the URL.
+      </div>
+      {urls.map((url, i) => (
+        <ToggleField
+          key={`${url}-${i}`}
+          label={url.length > 48 ? `${url.slice(0, 44)}…` : url}
+          value={!disabled.includes(url)}
+          onChange={(on) => toggleFeed(url, on)}
+        />
+      ))}
+    </div>
+  );
+}
+
+export const FIELDS = [
+  {
+    type: 'custom', section: 'Data', owns: ['icalUrls', 'disabledFeeds', 'localEvents'],
+    render: (ctx) => (
+      <>
+        <PresetAdder v={ctx.values} patch={ctx.patch} />
+        <FeedList ctx={ctx} />
+        <SavedFeedsManager />
+        <div className="wsm-field-label" style={{ marginTop: 10 }}>
+          Quick events (no calendar app needed)
+        </div>
+        <QuickEventsEditor
+          value={ctx.values.localEvents || []}
+          onChange={(items) => ctx.patch({ localEvents: items })}
+        />
+        <ActiveFeeds ctx={ctx} />
+      </>
+    )
+  },
+  { type: 'presets', section: 'Content', presets: PRESETS },
+  {
+    key: 'title', type: 'text', label: 'Tile heading', section: 'Content', tokens: true,
+    placeholder: 'UPCOMING',
+    help: 'Leave blank to keep the default heading.'
+  },
+  { key: 'showDayLabel', type: 'toggle', label: 'Day label (column with date)', section: 'Content' },
+  { key: 'showTime', type: 'toggle', label: 'Event time', section: 'Content' },
+  {
+    type: 'note', section: 'Layout',
+    text: 'Pick the view with the variant cards above. Strip needs a tile ≥7 wide, '
+      + 'month ≥7×4 — smaller tiles fall back to the list.'
+  },
+  {
+    key: 'density', type: 'select', label: 'Density (list view only)', section: 'Layout',
+    options: [
+      { value: 'auto',     label: 'Auto — by tile size' },
+      { value: 'compact',  label: 'Compact — fewer events' },
+      { value: 'standard', label: 'Standard' },
+      { value: 'rich',     label: 'Rich — more events + sections' }
+    ]
+  }
+];
+
+export const Form = buildForm(FIELDS);

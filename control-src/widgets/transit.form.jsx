@@ -1,87 +1,81 @@
 import React from 'react';
+import { buildForm } from './_schema.jsx';
 import SearchableSelect from '../components/SearchableSelect.jsx';
 import { MTA_STATIONS } from './_mta_stations.js';
 
 const BY_ID = new Map(MTA_STATIONS.map(s => [s.id, s]));
 const STATION_ITEMS = MTA_STATIONS.map(s => ({
-  value: s.id,
-  label: s.name,
-  hint: s.routes.join(' ')
+  value: s.id, label: s.name, hint: s.routes.join(' ')
 }));
+const stationOf = (v) => (v.stopId ? BY_ID.get(v.stopId) : null);
+const routesOf = (v) => { const st = stationOf(v); return st ? st.routes : []; };
 
-export function Form({ values, patch, onChange, fields }) {
-  const v = values || {};
-  const { TextField, FormSection, defaults = {} } = fields;
-  const station = v.stopId ? BY_ID.get(v.stopId) : null;
-  const routes = station ? station.routes : [];
-  const dir = (v.direction === 'S' || v.direction === 'both') ? v.direction : 'N';
-
-  const pickStation = (id, item) => {
-    const st = BY_ID.get(id);
-    const patch2 = { stopId: id };
-    // Set the line to the station's first route (drives the realtime feed);
-    // if it serves several, the Line select below lets the user narrow.
-    if (st && st.routes.length && !st.routes.includes(v.line)) patch2.line = st.routes[0];
-    // Seed the tile heading with the station name if the user hasn't set one.
-    if (!v.title && item) patch2.title = item.label;
-    patch(patch2);
-  };
-
+// Picking a station writes three things at once, which is why it is a custom
+// control rather than a select: the stop id, the line (the realtime feed keys
+// off it, so it must be one the station actually serves), and the heading —
+// seeded with the station name, since typing it again is work the editor can
+// do for you.
+function StationPicker({ values, patch }) {
+  const v = values;
   return (
-    <>
-      <FormSection title="Station">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span style={{ fontSize: 12 }}>Station</span>
-          <SearchableSelect
-            value={v.stopId || ''}
-            items={STATION_ITEMS}
-            onChange={pickStation}
-            placeholder="Search a station…"
-            ariaLabel="Subway station"
-          />
-        </div>
-        {routes.length > 1 && (
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
-            Line
-            <select
-              value={routes.includes(v.line) ? v.line : routes[0]}
-              onChange={(e) => patch({ line: e.target.value })}
-              style={{ width: 220 }}
-            >
-              {routes.map(r => <option key={r} value={r}>{r} train</option>)}
-            </select>
-          </label>
-        )}
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
-          Direction
-          <select
-            value={dir}
-            onChange={(e) => patch({ direction: e.target.value })}
-            style={{ width: 220 }}
-          >
-            <option value="N">{station && station.nl ? `${station.nl} (N)` : 'Northbound (N)'}</option>
-            <option value="S">{station && station.sl ? `${station.sl} (S)` : 'Southbound (S)'}</option>
-            <option value="both">Both platforms (↑/↓ per train)</option>
-          </select>
-        </label>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
-          Max trains ({Number.isFinite(v.count) ? v.count : 5})
-          <input
-            type="range" min={2} max={8} step={1}
-            value={Number.isFinite(v.count) ? v.count : 5}
-            onChange={(e) => patch({ count: parseInt(e.target.value, 10) })}
-            style={{ width: 220 }}
-          />
-        </label>
-        <TextField
-          label="Tile heading"
-          value={v.title || ''}
-          defaultValue={defaults.title}
-          onChange={(x) => patch({ title: x })} tokens
-          placeholder="Station name"
-          help="Defaults to the station you pick."
-        />
-      </FormSection>
-    </>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <span style={{ fontSize: 12 }}>Station</span>
+      <SearchableSelect
+        value={v.stopId || ''}
+        items={STATION_ITEMS}
+        onChange={(id, item) => {
+          const st = BY_ID.get(id);
+          const next = { stopId: id };
+          if (st && st.routes.length && !st.routes.includes(v.line)) next.line = st.routes[0];
+          if (!v.title && item) next.title = item.label;
+          patch(next);
+        }}
+        placeholder="Search a station…"
+        ariaLabel="Subway station"
+      />
+    </div>
   );
 }
+
+export const FIELDS = [
+  {
+    type: 'custom', section: 'Station',
+    // Declares the keys it writes without naming one of them as ITS key —
+    // check-widgets reads this so a custom control still has to account for
+    // the defaults it covers.
+    owns: ['stopId', 'line', 'title'],
+    render: (ctx) => <StationPicker values={ctx.values} patch={ctx.patch} />
+  },
+  {
+    key: 'line', type: 'select', label: 'Line', section: 'Station',
+    // Only the routes this station serves, and only worth asking when it
+    // serves more than one.
+    options: (v) => routesOf(v).map(r => ({ value: r, label: `${r} train` })),
+    toField: (x, v) => (routesOf(v).includes(x) ? x : routesOf(v)[0]),
+    when: (v) => routesOf(v).length > 1
+  },
+  {
+    key: 'direction', type: 'select', label: 'Direction', section: 'Station',
+    // The platform labels are the station's own ("Uptown", "To Manhattan"),
+    // which is what the signs say — compass letters are the fallback.
+    options: (v) => {
+      const st = stationOf(v);
+      return [
+        { value: 'N', label: st && st.nl ? `${st.nl} (N)` : 'Northbound (N)' },
+        { value: 'S', label: st && st.sl ? `${st.sl} (S)` : 'Southbound (S)' },
+        { value: 'both', label: 'Both platforms (↑/↓ per train)' }
+      ];
+    }
+  },
+  {
+    key: 'count', type: 'slider', label: 'Max trains', section: 'Station',
+    min: 2, max: 8, step: 1
+  },
+  {
+    key: 'title', type: 'text', label: 'Tile heading', section: 'Station', tokens: true,
+    placeholder: 'Station name',
+    help: 'Defaults to the station you pick.'
+  }
+];
+
+export const Form = buildForm(FIELDS);

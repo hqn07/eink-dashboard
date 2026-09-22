@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { buildForm } from './_schema.jsx';
 import { renderDitherPreview } from '../dither-preview.js';
 import { uploadPhotoUrl } from '../api.js';
 
@@ -124,61 +125,67 @@ function DitherPreview({ v }) {
   );
 }
 
-export function Form({ values, patch, onChange, fields }) {
-  const v = values || {};
-  const { TextField, CsvField, FormSection, defaults = {} } = fields;
-  const hasUpload = !!uploadedSrc(v);
-  return (
-    <>
-      <FormSection title="Image">
-        <PhotoUpload v={v} patch={patch} />
-        <TextField
-          label="Image URL"
-          value={v.imageUrl || ''}
-          defaultValue={defaults.imageUrl}
-          onChange={(x) => patch({ imageUrl: x })}
-          placeholder="https://example.com/photo.jpg"
-          help={hasUpload ? 'Ignored while an uploaded image is set.' : 'Public http(s) image link.'}
-        />
-        <CsvField
-          label="Rotation list (URLs, comma-separated)"
-          value={v.imageUrls || []}
-          defaultValue={defaults.imageUrls}
-          onCommit={(arr) => patch({ imageUrls: arr })}
-          placeholder="https://…/a.jpg, https://…/b.jpg"
-          help="Two or more URLs cycle to the next image roughly every 30 minutes. Overrides the single URL above."
-        />
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
-          Fit
-          <select value={v.fit || 'cover'} onChange={(e) => patch({ fit: e.target.value })} style={{ width: 220 }}>
-            <option value="cover">Cover — fill tile, crop edges</option>
-            <option value="contain">Contain — fit whole image</option>
-          </select>
-        </label>
-      </FormSection>
-      <FormSection title="Dithering">
-        <DitherPreview v={v} />
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
-          Style
-          <select value={v.dither || 'atkinson'} onChange={(e) => patch({ dither: e.target.value })} style={{ width: 220 }}>
-            <option value="atkinson">Atkinson — clean, TRMNL look (best for photos)</option>
-            <option value="fs">Floyd–Steinberg — fine grain, more detail</option>
-            <option value="threshold">Threshold — hard B/W, no dots (logos)</option>
-          </select>
-        </label>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
-          Brightness ({Number.isFinite(v.brightness) ? v.brightness : 0})
-          <input type="range" min={-100} max={100} step={5}
-            value={Number.isFinite(v.brightness) ? v.brightness : 0}
-            onChange={(e) => patch({ brightness: parseInt(e.target.value, 10) })} style={{ width: 220 }} />
-        </label>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
-          Contrast ({Number.isFinite(v.contrast) ? v.contrast : 0})
-          <input type="range" min={-100} max={100} step={5}
-            value={Number.isFinite(v.contrast) ? v.contrast : 0}
-            onChange={(e) => patch({ contrast: parseInt(e.target.value, 10) })} style={{ width: 220 }} />
-        </label>
-      </FormSection>
-    </>
-  );
-}
+const hasUpload = (v) => !!uploadedSrc(v);
+
+export const FIELDS = [
+  {
+    type: 'custom', section: 'Image', owns: ['imageData', 'imageRef'],
+    render: (ctx) => <PhotoUpload v={ctx.values} patch={ctx.patch} />
+  },
+  {
+    key: 'imageUrl', type: 'text', label: 'Image URL', section: 'Image',
+    placeholder: 'https://example.com/photo.jpg',
+    help: (v) => (hasUpload(v)
+      ? 'Ignored while an uploaded image is set.'
+      : 'Public http(s) image link.')
+  },
+  {
+    key: 'imageUrls', type: 'csv', label: 'Rotation list (URLs, comma-separated)', section: 'Image',
+    placeholder: 'https://…/a.jpg, https://…/b.jpg',
+    help: 'Two or more URLs cycle to the next image roughly every 30 minutes. '
+      + 'Overrides the single URL above.'
+  },
+  {
+    key: 'fit', type: 'select', label: 'Fit', section: 'Image',
+    options: [
+      { value: 'cover',   label: 'Cover — fill tile, crop edges' },
+      { value: 'contain', label: 'Contain — fit whole image' }
+    ]
+  },
+  {
+    type: 'custom', section: 'Dithering',
+    render: (ctx) => <DitherPreview v={ctx.values} />
+  },
+  {
+    key: 'dither', type: 'select', label: 'Style', section: 'Dithering',
+    options: [
+      { value: 'atkinson',  label: 'Atkinson — clean, TRMNL look (best for photos)' },
+      { value: 'fs',        label: 'Floyd–Steinberg — fine grain, more detail' },
+      { value: 'threshold', label: 'Threshold — hard B/W, no dots (logos)' }
+    ]
+  },
+  {
+    key: 'brightness', type: 'slider', label: 'Brightness', section: 'Dithering',
+    min: -100, max: 100, step: 5
+  },
+  {
+    key: 'contrast', type: 'slider', label: 'Contrast', section: 'Dithering',
+    min: -100, max: 100, step: 5
+  },
+  // Both of these were in photo.js defaults() and reachable from NO field —
+  // the renderer draws a caption on the framed and caption variants, and the
+  // only way to set one was editing config.json by hand. Found by
+  // check-widgets the moment this form became a schema.
+  {
+    key: 'caption', type: 'text', label: 'Caption', section: 'Image', tokens: true,
+    placeholder: 'Shown under (framed) or across (caption) the image',
+    help: 'Hidden on the smallest tiles, where there is no room for it.'
+  },
+  {
+    key: 'title', type: 'text', label: 'Tile heading', section: 'Image', tokens: true,
+    placeholder: 'PHOTO',
+    help: 'Leave blank for none.'
+  }
+];
+
+export const Form = buildForm(FIELDS);

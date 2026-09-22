@@ -1,4 +1,5 @@
 import React from 'react';
+import { buildForm } from './_schema.jsx';
 
 // Curated favourites — surfaced as one-tap chips above the search box.
 const FAVES = [
@@ -70,68 +71,67 @@ function ZoneAdder({ v, patch }) {
   );
 }
 
-export function Form({ values, patch, onChange, fields }) {
-  const v = values || {};
-  const { TextField, ListEditor, SegmentedField, ToggleField, FormSection, defaults = {} } = fields;
-  const zones = Array.isArray(v.zones) ? v.zones : [];
-
+// Zone rows are two inputs over one "LABEL|IANA" string. A custom row rather
+// than the schema's plain string list, because splitting on the first pipe is
+// this widget's own format and does not generalise.
+function ZoneListEditor({ ctx }) {
+  const { ListEditor } = ctx.fields;
+  const zones = Array.isArray(ctx.values.zones) ? ctx.values.zones : [];
   return (
-    <>
-      <FormSection title="Zones">
-        <ZoneAdder v={v} patch={patch} />
-        <ListEditor
-          replaceRow
-          label="Zones (LABEL | IANA timezone)"
-          items={zones}
-          onChange={(items) => patch({ zones: items })}
-          blank="CITY|UTC"
-          addLabel="Add zone"
-          help="Edit the label before the | and the IANA name after it. First zone is 'home' — others show +1d / −1d relative to it."
-          renderRow={(it, set) => {
-            const str = typeof it === 'string' ? it : '';
-            const i = str.indexOf('|');
-            const label = i < 0 ? str : str.slice(0, i);
-            const tz = i < 0 ? '' : str.slice(i + 1);
-            return (
-              <>
-                <input type="text" value={label} placeholder="LABEL"
-                  onChange={e => set(`${e.target.value}|${tz}`)}
-                  style={{ flex: '0 0 38%' }} />
-                <input type="text" value={tz} placeholder="Region/City"
-                  onChange={e => set(`${label}|${e.target.value}`)}
-                  style={{ flex: 1 }} />
-              </>
-            );
-          }}
-        />
-      </FormSection>
-      <FormSection title="Content">
-        <TextField
-          label="Tile heading"
-          value={v.title || ''}
-          defaultValue={defaults.title}
-          onChange={(x) => patch({ title: x })} tokens
-          placeholder="WORLD CLOCK"
-          help="Leave blank to keep the default heading."
-        />
-        <SegmentedField
-          label="Time format"
-          value={v.format === '24h' ? '24h' : '12h'}
-          defaultValue={defaults.format}
-          options={[
-            { value: '12h', short: '12h', label: '12-hour' },
-            { value: '24h', short: '24h', label: '24-hour' }
-          ]}
-          onChange={(x) => patch({ format: x })}
-        />
-        <ToggleField
-          label="Show weekday + UTC offset"
-          value={v.showMeta !== false}
-          defaultValue={defaults.showMeta}
-          onChange={(x) => patch({ showMeta: x })}
-          help="Hidden automatically on small tiles."
-        />
-      </FormSection>
-    </>
+    <ListEditor
+      replaceRow
+      label="Zones (LABEL | IANA timezone)"
+      items={zones}
+      onChange={(items) => ctx.patch({ zones: items })}
+      blank="CITY|UTC"
+      addLabel="Add zone"
+      help="Edit the label before the | and the IANA name after it. First zone is 'home' — others show +1d / −1d relative to it."
+      renderRow={(it, set) => {
+        const str = typeof it === 'string' ? it : '';
+        const i = str.indexOf('|');
+        const label = i < 0 ? str : str.slice(0, i);
+        const tz = i < 0 ? '' : str.slice(i + 1);
+        return (
+          <>
+            <input type="text" value={label} placeholder="LABEL"
+              onChange={e => set(`${e.target.value}|${tz}`)}
+              style={{ flex: '0 0 38%' }} />
+            <input type="text" value={tz} placeholder="Region/City"
+              onChange={e => set(`${label}|${e.target.value}`)}
+              style={{ flex: 1 }} />
+          </>
+        );
+      }}
+    />
   );
 }
+
+export const FIELDS = [
+  {
+    type: 'custom', section: 'Zones', owns: ['zones'],
+    render: (ctx) => (
+      <>
+        <ZoneAdder v={ctx.values} patch={ctx.patch} />
+        <ZoneListEditor ctx={ctx} />
+      </>
+    )
+  },
+  {
+    key: 'title', type: 'text', label: 'Tile heading',  section: 'Content', tokens: true,
+    placeholder: 'WORLD CLOCK',
+    help: 'Leave blank to keep the default heading.'
+  },
+  {
+    key: 'format', type: 'segmented', label: 'Time format', section: 'Content',
+    options: [
+      { value: '12h', short: '12h', label: '12-hour' },
+      { value: '24h', short: '24h', label: '24-hour' }
+    ]
+  },
+  {
+    key: 'showMeta', type: 'toggle', label: 'Show weekday + UTC offset', section: 'Content',
+    help: 'Hidden automatically on small tiles.'
+  }
+];
+
+export const Form = buildForm(FIELDS);
