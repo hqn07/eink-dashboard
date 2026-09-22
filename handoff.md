@@ -1,5 +1,74 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-21 — the face: dividers that were black on black, and a panel-wide invert
+> Three fixes, all found by rendering a realistic eight-tile screen through
+> `/display.png` instead of trusting the fixtures. The fixtures are
+> deterministic on purpose, which also means they show almost nothing about
+> how the face reads.
+>
+> ### An unconfigured tile was a blank white rectangle (`c8340cb`)
+> `markets`, `headlines` and `tasks` with no config came back as empty white
+> cards with one black blob in the corner. Two colour assumptions, both the
+> same class as the `.face-art` rule:
+>
+> - `.widget-placeholder` paints its own white background but never declared
+>   its own ink, so inside a `cell-inverted` tile it inherited `color: #fff`
+>   from `.cell.cell-inverted *` and the title rendered **white on white**. At
+>   `ph-sm` (h ≤ 3) the hint and the badge are deliberately dropped, so the
+>   title is the only text there is — those tiles said nothing at all, on the
+>   default theme, for as long as the tier has existed.
+> - `.cell.cell-inverted .ph-icon svg { filter: invert(1) }` applied the
+>   *cell's* polarity to an icon sitting on the *card's* white background.
+>   That made the blob. It also survived the first fix — correcting the
+>   fill/stroke just gave the filter black strokes to invert back to white,
+>   and the icon vanished entirely. The placeholder is the one thing in an
+>   inverted cell that keeps its own background, so it now opts out of the
+>   invert and defends its inline SVGs against the white-repaint rule instead.
+>
+> ### Tiles had no separation (`3e757d3`)
+> `.cell` has always drawn the grid lines as `border-right/bottom: 2px solid
+> #000`, and `.cell.cell-inverted *` repaints DESCENDANT borders white but
+> never the cell's own. Inverted is the default, so **every divider on the
+> panel was black on black.** `.cell.cell-inverted { border-color: #fff }`.
+> Only the colour: the edge-suppression rules set `border-*: none`, which
+> kills the style, so the page edge and the footer still have no duplicate
+> line. Card mode needs the same override in its own partial because its
+> `border` shorthand is later and equally specific.
+>
+> ### One click to invert the whole panel (`3e757d3`)
+> `cfg.faceTheme` (`'dark'` | `'light'`, default dark) flips every tile on
+> every screen from a toolbar button next to 1-BIT. Before this the only
+> control was per-tile `settings.theme`, so changing the look meant opening
+> every tile in turn.
+>
+> Resolution is **tile-then-panel**: an explicit `theme: 'inverted'` or
+> `'normal'` still wins, so a deliberate odd-one-out survives the flip, and an
+> unset theme follows the panel. Default `dark` is exactly what an unset theme
+> already did — no config changes meaning, no migration.
+>
+> Threaded as an argument through `cellClasses` / `tileCellClasses` rather than
+> a module-level global, and the editor surfaces read it off `previewData.cfg`
+> — the object that already carries live cfg edits, so the canvas flips while
+> the save bar is still dirty. All four surfaces (SSR, canvas, modal preview,
+> form preview) go through the one helper; that is the `193b74b` parity path.
+> The grid container also gets `body-dark` / `body-light`, because uncovered
+> grid area and every card-mode gap would otherwise stay white while the tiles
+> around them are black. The editor canvas carries the same class.
+>
+> Also fixed: the weather hi/lo line wrapped mid-pair on a narrow column
+> (`hero-split` puts the icon beside the text), orphaning `LOW 70°` on its own
+> row. Two nowrap spans in a flex row now, and the `·` separator is gone —
+> **CSS cannot tell that a line wrapped**, so the dot would have been left
+> dangling at the end of the first row. A wider `column-gap` reads correctly in
+> both states.
+>
+> `test:api` 40/40 · eink-lint clean · `check:widgets` 22 · all three visual
+> baselines re-captured (the dividers are a deliberate 0.94% of the page).
+>
+> **Unverified on glass:** everything here is from `/display.png`, not a photo
+> of the panel. The dividers in particular are worth a look — 2 px of white
+> between every tile is a real change in how the face reads.
+
 > ## 2026-09-18 — DEFLATE on the wire, a staleness mark, and an OTA that still will not write
 > **State at the end of the night: FW 1.26.0 is built and published, and the
 > device is still on 1.24.0.** The OTA write — not the boot selection — is the
