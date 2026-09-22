@@ -1,5 +1,65 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-22 — tiles join by subject; and the OTA closed itself
+> ### The join was too narrow, and the question caught it
+> Asked point-blank whether the widgets actually integrate when placed on the
+> panel, the honest answer was no. D15 joined tiles of the same WIDGET, which
+> in practice only ever helped the weather pair and a second clock — a calendar
+> beside its task list still had a rule through it, and even where a rule was
+> suppressed both halves kept their own 16px margin, leaving a **32px trough**
+> down the middle of the thing that was supposed to read as continuous.
+>
+> The mechanism was right; the definition of "belongs together" was wrong.
+> `ZONE_FAMILIES` (`control-src/widgets/_rules.js`) now resolves a tile to its
+> **subject**, not its widget id:
+>
+> ```
+> weather + outdoors      one glance out of the window
+> clock + countdown       time
+> calendar + tasks        agenda
+> headlines + daily + ai  feed
+> ```
+>
+> and `tileJoins()` reports which edges were joined rather than ruled, so the
+> cell can halve its gutter there (`cell-join-left/right/top/bottom`). The same
+> map drives SSR, the editor canvas and the preview, so a join you see while
+> dragging is the join the panel draws.
+>
+> **Kept opinionated.** The alternative was a per-tile "group" field, which is
+> the knob that taxes every add and gets set wrong. `settings.zone` still
+> overrides in both directions — it can split a family or join widgets that
+> share none — and has no UI on purpose.
+>
+> Three tests: a family pair joins while an unrelated neighbour keeps its rule;
+> a partial seam is drawn for exactly the rows two tiles share (ruled against
+> the clock above, joined against the forecast below); and `settings.zone`
+> overrides the family both ways. `test:api` 45/45 · `check:visual` 0.000% ·
+> both snapshots PASS · eink-lint clean.
+>
+> ### The OTA closed itself
+> The device reports **FW 1.26.0**, last seen 2026-09-22T03:30Z. The thread
+> opened on 09-18 — "a staged OTA never boots", then the correction "nothing was
+> ever staged, the WRITE is failing" — resolved without further firmware work.
+> It flashed on its own.
+>
+> Two things worth keeping from it. The roster is trustworthy on this now,
+> because `checkDeviceAuth` refreshes `fw_version` from the `FW-Version` header
+> every cycle (fixed 09-17, after the field had been frozen at the enrolled
+> version for two months and made a working OTA look broken). And the
+> diagnosis kit built for it — `/api/quiet-cycle` (`freeze` answers 304 to every
+> image request so `checkForUpdate` runs on an unchurned heap;
+> `suppressFirmware` answers 204 to the manifest) and the `/api/firmware/fetches`
+> byte counter — went **unused**. Keep both: if a future release sticks, a short
+> read means `Update.begin()` failed and a full read that still boots the old
+> slot points at `Update.end()`.
+>
+> D1's DEFLATE path is also confirmed by this: 1.25.0 is what the device
+> installed on the way to 1.26.0.
+>
+> **Next, unchanged in priority:** measure deep-sleep current on the assembled
+> unit. It is still the number that decides whether any other power work is
+> worth doing, and nothing since has made it easier to guess.
+
 > ## 2026-09-21 (night) — D15: the tiles share one page
 > Asked to research ways to make the widgets integrate into each other. The
 > research says the tiles were never the problem — the page was, and it had no
