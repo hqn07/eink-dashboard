@@ -1,5 +1,95 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-21 (night) — D15: the tiles share one page
+> Asked to research ways to make the widgets integrate into each other. The
+> research says the tiles were never the problem — the page was, and it had no
+> say over anything.
+>
+> ### Measured first, because "it feels like boxes" is not actionable
+> One real eight-tile screen, instrumented in the browser rather than eyeballed:
+>
+> ```
+> 32 text nodes · 11 distinct font sizes · 19 distinct baselines
+> 2 of 9 tiles carried a label at all
+> placeholders inset their text to 33px; everything else used 16px
+> one tile clipped its own content and nothing reported it
+> ```
+>
+> Every widget was internally tidy. That is exactly the failure mode: 22
+> separately tidy widgets, each bringing its own type sizes, its own inner
+> padding and its own line-height ratios.
+>
+> ### What the prior art says
+> **TRMNL** buys consistency by *constraining composition* — eight fixed mashup
+> layouts (`1Lx1R`, `2x2`, …), one `title_bar` component, and a deliberately
+> tiny vocabulary of Title / Value / Label / Description / Divider that every
+> plugin draws from. **Swiss editorial practice** is blunter: alignment is what
+> joins things, hierarchy comes from a small type scale rather than ornament,
+> and the grid *is* the design. We had the opposite — ornament (a border per
+> tile) and no scale. Notably, borders were already there and the page still
+> read as eight boxes, which is the tell: a border fences, it does not join.
+>
+> ### Four mechanisms, shipped (`e7614a6`)
+> **1. Rules belong to the page.** `control-src/widgets/_rules.js` computes the
+> seams BETWEEN tiles from the layout and draws them once in a layer over the
+> grid; `.body-ruled .cell` draws no border of its own. Two tiles in the same
+> zone — `settings.zone`, else the widget id — get no rule at all, so a weather
+> hero beside its own forecast now reads as one L-shaped module. **Partial
+> seams work, which a per-cell border cannot express**: a 9-wide tile against a
+> 3-tall one gets a rule for exactly the rows they share. A seam is also drawn
+> ONCE now; cells used to draw right AND bottom, thickening every interior
+> crossing. One computation feeds SSR, the editor canvas and the preview.
+>
+> **2. One type ladder.** 11/13/16/20/25/32/40/50/64/80/100/128, ~1.25x steps,
+> floor at the 11px the 1-bit render can hold. `autofit` snaps its binary-search
+> result DOWN to a rung — only ever down, so a snapped element fits wherever the
+> searched one did. The weather hero's per-tier constants (54/72/86/96, four
+> sizes no other widget could ever match) became rungs. Then 64 declarations
+> across 20 CSS partials and 7 widget modules were moved onto the ladder by
+> script, because rounding down cannot overflow a box that already fit.
+> Demo screen 11 sizes → 6. Whole widget matrix: 265 off-ladder text nodes → 0.
+>
+> **3. One inner margin, one label band.** The cell owns the inset; `.tr-card` /
+> `.tr-body` stop insetting again (that double padding is why the same text
+> started at x=16 in one tile and x=42 in the next). The three title systems
+> that had drifted apart — `.tr-titlebar`, `.col-title`, `.widget-title` — are
+> one band. The placeholder joins the same grid instead of floating in its own
+> bordered card, and since it no longer paints its own white ground, the
+> white-on-white title bug from this morning cannot recur.
+>
+> **4. `cell-short`.** Tiles ≤3 rows tighten their chrome rather than clip.
+>
+> ### Two bugs the measurements turned up
+> **`.fc-icon .icon` hardcoded 38px**, overriding the width/height ATTRIBUTES
+> the forecast render emits per tile height. Its 26/28/30/32/34/38 ladder had
+> been dead for as long as the rule existed, every icon drew at 38, and on a
+> 3-row tile that pushed the low temperature 21px past the edge where the panel
+> clipped it. **The fix is to DELETE the declaration, not to set `auto`** — an
+> attribute is a presentational hint that any stylesheet rule beats, `auto`
+> included, and these SVGs carry no intrinsic size, so `auto` collapsed the
+> icons to nothing. I shipped that wrong version to a render and caught it on
+> the image. Sibling of the presentation-attribute gotcha in 015.
+>
+> **The forecast still overran by 4px afterwards**, which is what `cell-short`
+> exists for.
+>
+> ### Verification
+> Zero overflowing cells across all **153** matrix cells (there was one on the
+> demo screen alone before), **1038** text nodes all on the ladder, both
+> polarities rendered and read. `test:api` 42/42 · `check:visual` 0.000% ·
+> both snapshots PASS · `check:widgets` 22 · eink-lint clean. All three
+> baselines re-captured: the drift is the 4px padding change and seams now
+> centred on the boundary instead of sitting inside one neighbour.
+>
+> **Unverified on glass.** Everything here is `/display.png`. The seam-sharing
+> in particular is worth a photo — it is the change that alters how the panel
+> reads from across a room.
+>
+> **Left deliberately open:** `settings.zone` has no UI, so joins are automatic
+> by widget id; and the two-role model (hero tiles carry no label, module tiles
+> carry one) is a convention the renderers follow rather than a contract. D4's
+> schema-driven forms would be the place to enforce it.
+
 > ## 2026-09-21 (night) — "light/dark does not work", and why the migration could not save it
 > **Confirmed working on the live panel after `4560582`.** Three commits to get
 > there, and the interesting part is the order in which the diagnosis was
