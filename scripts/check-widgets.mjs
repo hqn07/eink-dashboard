@@ -134,10 +134,22 @@ for (const id of palette) {
     try { form = await readFile(join(WDIR, `${id}.form.jsx`), 'utf8'); } catch { continue; }
     if (!/export const FIELDS\s*=/.test(form)) continue;   // hand-written form
 
-    const fieldKeys = new Set(
-      [...form.replace(/\/\/[^\n]*/g, '').matchAll(KEYS_FROM_FIELDS)].map(m => m[1]));
+    const formBody = form.replace(/\/\/[^\n]*/g, '');
+    const fieldKeys = new Set([...formBody.matchAll(KEYS_FROM_FIELDS)].map(m => m[1]));
+    // `location` is the one field type that owns keys without naming one: it
+    // renders LocationFields, which writes the whole place at once. Without
+    // this the guard reports city/lat/lon as unreachable on every widget that
+    // asks where it is.
+    // Both directions: the field covers them whether or not the widget's
+    // defaults() names them. Some widgets seed a location from the home
+    // context (weather), others accept one without defaulting it (sparkline),
+    // and neither is a wiring bug.
+    const locationKeys = /type:\s*'location'/.test(formBody) ? ['city', 'lat', 'lon'] : [];
+    for (const k of locationKeys) fieldKeys.add(k);
     const src = await readFile(join(WDIR, `${id}.js`), 'utf8');
-    const block = src.match(/defaults:\s*\(\)\s*=>\s*\(\{([\s\S]*?)\}\)/);
+    // `(ctx)` as well as `()`: a widget whose defaults depend on the home
+    // location takes the context, and weather's spreads both of its views.
+    const block = src.match(/defaults:\s*\([^)]*\)\s*=>\s*\(\{([\s\S]*?)\}\)/);
     if (!block) {
       problems.push(`${id}: has a FIELDS schema but no defaults() the guard can read`);
       continue;
@@ -150,7 +162,7 @@ for (const id of palette) {
     for (const m of src.matchAll(/from\s+'\.\/(_view-[A-Za-z0-9_-]+)\.js'/g)) {
       try {
         const vsrc = await readFile(join(WDIR, `${m[1]}.js`), 'utf8');
-        for (const d of vsrc.matchAll(/defaults:\s*\(\)\s*=>\s*\(\{([\s\S]*?)\}\)/g)) {
+        for (const d of vsrc.matchAll(/defaults:\s*\([^)]*\)\s*=>\s*\(\{([\s\S]*?)\}\)/g)) {
           viewBodies += '\n' + d[1];
         }
       } catch { /* a view that moved — the wiring guard above already covers that */ }
@@ -170,7 +182,7 @@ for (const id of palette) {
     // the schema's one failure mode that is worse than the JSX it replaced,
     // because a missing field looks like a deliberate omission.
     const TYPES = new Set(['text', 'textarea', 'select', 'segmented', 'toggle', 'slider',
-      'csv', 'multi', 'list', 'location', 'note', 'presets']);
+      'csv', 'multi', 'list', 'location', 'note', 'presets', 'slots']);
     for (const m of form.matchAll(/type:\s*'([A-Za-z0-9_]+)'/g)) {
       if (!TYPES.has(m[1])) {
         problems.push(`${id}.form.jsx: field type '${m[1]}' has no renderer in _schema.jsx`);
@@ -178,7 +190,7 @@ for (const id of palette) {
     }
 
     for (const k of fieldKeys) {
-      if (!defaultKeys.has(k) && !CHROME.has(k)) {
+      if (!defaultKeys.has(k) && !CHROME.has(k) && !locationKeys.includes(k)) {
         problems.push(`${id}.form.jsx: field '${k}' is not in ${id}.js defaults() — `
           + 'the renderer never reads it');
       }

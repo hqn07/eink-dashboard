@@ -74,6 +74,32 @@ const RENDERERS = {
   // merging it here would defeat clearing a location (see weather.form.jsx).
   // It is the one field that takes the raw onChange.
   location:  (P, f, props, ctx) => <P.LocationFields values={ctx.values} onChange={ctx.onChange} />,
+  // N pickers that write into one ARRAY by index — the weather stats grid,
+  // where "slot 3 shows wind" is a position, not a separate setting. Writing
+  // them as four independent fields would need four keys the renderer does not
+  // read, which the defaults guard would (correctly) reject.
+  slots:     (P, f, props, ctx) => {
+    const list = Array.isArray(props.value) && props.value.length === f.count
+      ? props.value
+      : (f.fallback || []);
+    return (
+      <>
+        {Array.from({ length: f.count }, (_, i) => (
+          <P.SelectField
+            key={i}
+            label={f.slotLabel ? f.slotLabel(i) : `Slot ${i + 1}`}
+            value={list[i]}
+            options={f.options}
+            onChange={(x) => {
+              const next = list.slice();
+              next[i] = x;
+              ctx.patch({ [f.key]: next });
+            }}
+          />
+        ))}
+      </>
+    );
+  },
   // A row of one-tap presets that write several keys at once. Applied through
   // the raw onChange because a preset is a whole shape, not a patch.
   presets:   (P, f, props, ctx) => (
@@ -119,6 +145,21 @@ function groupBySection(FIELDS) {
   return out;
 }
 
+// Consecutive fields that name the same `collapse` group fold into one
+// Collapsible. Grouping by adjacency rather than by a nested structure keeps
+// the schema a flat list — the thing that makes it readable — while still
+// letting a form tuck its fiddly end away.
+function foldGroups(list) {
+  const out = [];
+  for (const f of list) {
+    const last = out[out.length - 1];
+    if (f.collapse && last && last.collapse === f.collapse) last.fields.push(f);
+    else if (f.collapse) out.push({ collapse: f.collapse, storageScope: f.collapseScope, fields: [f] });
+    else out.push({ field: f });
+  }
+  return out;
+}
+
 export function buildForm(FIELDS) {
   // Named so React DevTools and any error boundary report something useful
   // rather than "Anonymous".
@@ -134,9 +175,7 @@ export function buildForm(FIELDS) {
         {sections.map(sec => {
           const visible = sec.fields.filter(f => typeof f.when !== 'function' || f.when(v));
           if (!visible.length) return null;
-          return (
-            <P.FormSection key={sec.title} title={sec.title}>
-              {visible.map(f => {
+          const renderField = (f) => {
                 const render = RENDERERS[f.type];
                 if (!render) return null;
                 // `value` falls back to the widget's own default rather than to
@@ -148,14 +187,34 @@ export function buildForm(FIELDS) {
                   label: resolve(f.label, v, { cfg }),
                   help: resolve(f.help, v, { cfg }),
                   placeholder: resolve(f.placeholder, v, { cfg }),
-                  value: current,
+                  // `toField` lets a field present a value the renderer does
+                  // not store — the forecast's day count is a number or null,
+                  // and the picker needs the string 'auto' for the null.
+                  value: f.toField ? f.toField(current) : current,
                   defaultValue: defaults[f.key],
                   tokens: f.tokens,
                   secret: f.secret,
-                  onChange: (x) => patch({ [f.key]: x })
+                  onChange: (x) => patch({ [f.key]: f.fromField ? f.fromField(x) : x })
                 };
                 return render(P, f, props, { values: v, onChange, patch, cfg });
-              })}
+          };
+
+          return (
+            <P.FormSection key={sec.title} title={sec.title}>
+              {foldGroups(visible).map((entry, i) => (
+                entry.field
+                  ? renderField(entry.field)
+                  : (
+                    <P.Collapsible
+                      key={`${entry.collapse}-${i}`}
+                      title={entry.collapse}
+                      storageScope={entry.storageScope}
+                      defaultOpen={false}
+                    >
+                      {entry.fields.map(renderField)}
+                    </P.Collapsible>
+                  )
+              ))}
             </P.FormSection>
           );
         })}
