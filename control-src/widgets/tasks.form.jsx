@@ -1,70 +1,36 @@
-import React from 'react';
+import { buildForm } from './_schema.jsx';
 
-export function Form({ values, patch, onChange, fields }) {
-  const v = values || {};
-  const { TextField, FormSection, defaults = {} } = fields;
-  const source = (v.source === 'ical' || v.source === 'both') ? v.source : 'todoist';
-  return (
-    <>
-      <FormSection title="Source">
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
-          Provider
-          <select
-            value={source}
-            onChange={(e) => patch({ source: e.target.value })}
-            style={{ width: 220 }}
-          >
-            <option value="todoist">Todoist</option>
-            <option value="ical">iCal / Reminders feed (VTODO)</option>
-            <option value="both">Both — merge by due date</option>
-          </select>
-        </label>
-        {(source === 'todoist' || source === 'both') && (
-          <TextField
-            label="Todoist API token"
-            value={v.token || ''}
-            onChange={(x) => patch({ token: x })}
-            placeholder="paste token"
-            secret
-            help="Todoist → Settings → Integrations → Developer → API token."
-          />
-        )}
-        {(source === 'ical' || source === 'both') && (
-          <TextField
-            label="VTODO feed URL"
-            value={v.icalUrl || ''}
-            defaultValue={defaults.icalUrl}
-            onChange={(x) => patch({ icalUrl: x })}
-            placeholder="https://…/reminders.ics"
-            help="A published iCal feed that contains VTODO items."
-          />
-        )}
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
-          Max tasks ({Number.isFinite(v.count) ? v.count : 6})
-          <input
-            type="range" min={2} max={12} step={1}
-            value={Number.isFinite(v.count) ? v.count : 6}
-            onChange={(e) => patch({ count: parseInt(e.target.value, 10) })}
-            style={{ width: 220 }}
-          />
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-          <input
-            type="checkbox"
-            checked={v.showDue !== false}
-            onChange={(e) => patch({ showDue: e.target.checked })}
-          />
-          Show due dates
-        </label>
-        <TextField
-          label="Tile heading"
-          value={v.title || ''}
-          defaultValue={defaults.title}
-          onChange={(x) => patch({ title: x })} tokens
-          placeholder="TASKS"
-          help="Optional title-bar override."
-        />
-      </FormSection>
-    </>
-  );
-}
+export const FIELDS = [
+  {
+    key: 'source', type: 'select', label: 'Provider', section: 'Source',
+    options: [
+      { value: 'todoist', label: 'Todoist' },
+      { value: 'ical',    label: 'iCal / Reminders feed (VTODO)' },
+      { value: 'both',    label: 'Both — merge by due date' }
+    ]
+  },
+  {
+    key: 'token', type: 'text', label: 'Todoist API token', section: 'Source', secret: true,
+    placeholder: 'paste token',
+    help: 'Todoist → Settings → Integrations → Developer → API token.',
+    when: (v) => (v.source || 'todoist') !== 'ical'
+  },
+  {
+    key: 'icalUrl', type: 'text', label: 'VTODO feed URL', section: 'Source',
+    placeholder: 'https://…/reminders.ics',
+    help: 'A published iCal feed that contains VTODO items.',
+    when: (v) => v.source === 'ical' || v.source === 'both'
+  },
+  {
+    key: 'count', type: 'slider', label: 'Max tasks', section: 'Source',
+    min: 2, max: 12, step: 1
+  },
+  { key: 'showDue', type: 'toggle', label: 'Show due dates', section: 'Source' },
+  {
+    key: 'title', type: 'text', label: 'Tile heading', section: 'Source', tokens: true,
+    placeholder: 'TASKS',
+    help: 'Optional title-bar override.'
+  }
+];
+
+export const Form = buildForm(FIELDS);

@@ -1,67 +1,39 @@
-import React from 'react';
+import { buildForm } from './_schema.jsx';
 
-// Webhook widget settings. The key names the /api/webhook/<key> endpoint
-// this tile listens to; the optional template turns the payload into
-// custom lines ({{path.to.value}} per line, first line = hero). Left
-// blank, the widget auto-renders the payload's top-level fields.
-export function Form({ values, patch, onChange, fields }) {
-  const v = values || {};
-  const { TextField, FormSection, defaults = {} } = fields;
-  const key = (v.key || '').trim();
+// The key names the /api/webhook/<key> endpoint this tile listens to. The
+// optional template turns the payload into custom lines; left blank, the
+// widget auto-renders the payload's top-level fields.
+export const FIELDS = [
+  {
+    key: 'key', type: 'text', label: 'Webhook key', section: 'Source',
+    placeholder: 'e.g. steps',
+    help: 'Letters/digits/dash/underscore. Push data with:'
+  },
+  {
+    type: 'note', section: 'Source',
+    text: '',
+    code: (v) => `curl -X POST '<server>/api/webhook/${(v.key || '').trim() || '<key>'}`
+      + `?token=<DEVICE_TOKEN>' -H 'Content-Type: application/json' -d '{"steps":8432}'`
+  },
+  {
+    key: 'title', type: 'text', label: 'Tile heading', section: 'Layout', tokens: true,
+    placeholder: 'WEBHOOK',
+    help: 'Leave blank to keep the default heading.'
+  },
+  {
+    key: 'path', type: 'text', label: 'Value path', section: 'Layout',
+    placeholder: 'steps  ·  sensors.0.value',
+    help: 'Dot path into the posted JSON. Blank = first numeric field.',
+    when: (v) => v.variant === 'number'
+  },
+  {
+    key: 'template', type: 'textarea', label: 'Template (optional)', section: 'Layout',
+    rows: 4,
+    placeholder: '{{steps}} steps\nGoal: {{goal}}\n{{note}}',
+    help: 'One line per row; first line renders big. {{path.to.value}} pulls from the '
+      + "posted JSON (dots for nesting, numbers for arrays). Empty = automatic key/value "
+      + "list of the payload's top-level fields."
+  }
+];
 
-  return (
-    <>
-      <FormSection title="Source">
-        <TextField
-          label="Webhook key"
-          value={v.key || ''}
-          defaultValue={defaults.key}
-          onChange={(x) => patch({ key: x.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 32) })}
-          placeholder="e.g. steps"
-          help="Letters/digits/dash/underscore. Push data with:"
-        />
-        <code style={{
-          display: 'block', fontSize: 11, background: '#f4f2ec', padding: '6px 8px',
-          borderRadius: 4, wordBreak: 'break-all', userSelect: 'all'
-        }}>
-          {`curl -X POST '<server>/api/webhook/${key || '<key>'}?token=<DEVICE_TOKEN>' -H 'Content-Type: application/json' -d '{"steps":8432}'`}
-        </code>
-      </FormSection>
-      <FormSection title="Layout">
-        <TextField
-          label="Tile heading"
-          value={v.title || ''}
-          defaultValue={defaults.title}
-          onChange={(x) => patch({ title: x })} tokens
-          placeholder="WEBHOOK"
-          help="Leave blank to keep the default heading."
-        />
-        {(v.variant === 'number') && (
-          <TextField
-            label="Value path"
-            value={v.path || ''}
-            defaultValue={defaults.path}
-            onChange={(x) => patch({ path: x })}
-            placeholder="steps  ·  sensors.0.value"
-            help="Dot path into the posted JSON. Blank = first numeric field."
-          />
-        )}
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
-          Template (optional)
-          <textarea
-            value={v.template || ''}
-            onChange={(e) => patch({ template: e.target.value })}
-            rows={4}
-            placeholder={'{{steps}} steps\nGoal: {{goal}}\n{{note}}'}
-            style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12, resize: 'vertical' }}
-          />
-        </label>
-        <div style={{ fontSize: 11, opacity: 0.75 }}>
-          One line per row; first line renders big. <code>{'{{path.to.value}}'}</code> pulls
-          from the posted JSON (dots for nesting, numbers for arrays). Empty = automatic
-          key/value list of the payload's top-level fields.
-        </div>
-      </FormSection>
-    </>
-  );
-}
+export const Form = buildForm(FIELDS);

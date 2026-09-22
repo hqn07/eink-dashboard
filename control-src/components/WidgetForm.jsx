@@ -189,6 +189,51 @@ function SelectField({ label, value, options, onChange, help, defaultValue }) {
   );
 }
 
+// Multi-line text. Only the webhook template needs one today, but a schema
+// field type without a primitive behind it renders nothing at all, so it lives
+// with the others rather than inline in one form.
+function TextAreaField({ label, value, onChange, help, placeholder, rows = 4, defaultValue }) {
+  return (
+    <label className="wsm-field">
+      <FieldLabel label={label} value={value} defaultValue={defaultValue}
+        onReset={() => onChange(defaultValue)} />
+      <textarea
+        value={value ?? ''}
+        rows={rows}
+        placeholder={placeholder}
+        onChange={e => onChange(e.target.value)}
+        style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12, resize: 'vertical' }}
+      />
+      {help && <span className="wsm-field-help">{help}</span>}
+    </label>
+  );
+}
+
+// A set of checkboxes writing an ARRAY of the checked keys, never empty —
+// progress' spans are the case: unchecking the last one would render a tile
+// with nothing in it.
+function MultiField({ label, value, options, onChange, help, atLeastOne = true }) {
+  const list = Array.isArray(value) ? value : [];
+  const toggle = (key) => {
+    const next = list.includes(key) ? list.filter(k => k !== key) : [...list, key];
+    onChange(next.length || !atLeastOne ? next : list);
+  };
+  return (
+    <div className="wsm-field">
+      {label && <span className="wsm-field-label">{label}</span>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {options.map(o => (
+          <label key={o.value} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+            <input type="checkbox" checked={list.includes(o.value)} onChange={() => toggle(o.value)} />
+            {o.label}
+          </label>
+        ))}
+      </div>
+      {help && <span className="wsm-field-help">{help}</span>}
+    </div>
+  );
+}
+
 let __toggleIdSeed = 0;
 function ToggleField({ label, value, onChange, help, defaultValue }) {
   const idRef = useRef(null);
@@ -1069,7 +1114,7 @@ function PresetCard({ preset, isActive, ctx, currentValues, onPick, thumbSize })
 // they appear in widget forms.
 const FIELD_PRIMITIVES = {
   TextField, SelectField, ToggleField, SliderField, CsvField,
-  SegmentedField,
+  SegmentedField, TextAreaField, MultiField,
   ListEditor, LocationFields, TypographyFields,
   FormSection, AdvancedGroup, PresetField, Collapsible
 };

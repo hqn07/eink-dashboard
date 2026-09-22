@@ -1,64 +1,34 @@
-import React from 'react';
+import { buildForm } from './_schema.jsx';
 
-// One form for three views. Each view's own controls appear only when that
-// view is selected — the Variant picker above already chose what the tile
-// shows, so repeating "which view?" here would be asking twice, and showing
-// the sun's clock format on an air-quality tile would be asking about
-// something that cannot happen.
-export function Form({ values, patch, onChange, fields }) {
-  const v = values || {};
-  const { TextField, ToggleField, FormSection, defaults = {} } = fields;
-  const view = v.variant || 'sun';
+// One form, three views. Each view's controls appear only when that view is
+// selected — the Variant picker already chose what the tile shows, so asking
+// again here would be asking twice.
+const BLURB = {
+  sun: 'Sunrise, sunset and daylight length for your dashboard location. No API key needed.',
+  uv:  'UV index and WHO band for your dashboard location. No API key needed (Open-Meteo).',
+  air: 'Air quality (US AQI) for your dashboard location. No API key needed.'
+};
+const PLACEHOLDER = { sun: 'SUN', uv: 'UV INDEX', air: 'AIR QUALITY' };
 
-  const BLURB = {
-    sun: 'Sunrise, sunset and daylight length for your dashboard location. No API key needed.',
-    uv:  'UV index and WHO band for your dashboard location. No API key needed (Open-Meteo).',
-    air: 'Air quality (US AQI) for your dashboard location. No API key needed.',
-  };
-  const PLACEHOLDER = { sun: 'SUN', uv: 'UV INDEX', air: 'AIR QUALITY' };
+export const FIELDS = [
+  {
+    type: 'note',
+    text: (v) => `${BLURB[v.variant || 'sun']} Set the place in Settings > Tools > You & your place.`
+  },
+  { key: 'hour24', type: 'toggle', label: '24-hour clock', when: (v) => (v.variant || 'sun') === 'sun' },
+  {
+    key: 'showDaylight', type: 'toggle', label: 'Show daylight length',
+    when: (v) => (v.variant || 'sun') === 'sun'
+  },
+  {
+    key: 'showPollutants', type: 'toggle', label: 'Pollutant line (PM2.5 · PM10)',
+    when: (v) => v.variant === 'air'
+  },
+  {
+    key: 'title', type: 'text', label: 'Tile heading', tokens: true,
+    placeholder: (v) => PLACEHOLDER[v.variant || 'sun'],
+    help: 'Leave blank to keep the default heading.'
+  }
+];
 
-  return (
-    <>
-      <FormSection title="Content">
-        <div className="wsm-field-help" style={{ marginBottom: 6 }}>
-          {BLURB[view]} Set the place in Settings &gt; Tools &gt; You &amp; your place.
-        </div>
-
-        {view === 'sun' && (
-          <>
-            <ToggleField
-              label="24-hour clock"
-              value={v.hour24 === true}
-              defaultValue={defaults.hour24}
-              onChange={(x) => patch({ hour24: x })}
-            />
-            <ToggleField
-              label="Show daylight length"
-              value={v.showDaylight !== false}
-              defaultValue={defaults.showDaylight}
-              onChange={(x) => patch({ showDaylight: x })}
-            />
-          </>
-        )}
-
-        {view === 'air' && (
-          <ToggleField
-            label="Pollutant line (PM2.5 · PM10)"
-            value={v.showPollutants !== false}
-            defaultValue={defaults.showPollutants}
-            onChange={(x) => patch({ showPollutants: x })}
-          />
-        )}
-
-        <TextField
-          label="Tile heading"
-          value={v.title || ''}
-          defaultValue={defaults.title}
-          onChange={(x) => patch({ title: x })} tokens
-          placeholder={PLACEHOLDER[view]}
-          help="Leave blank to keep the default heading."
-        />
-      </FormSection>
-    </>
-  );
-}
+export const Form = buildForm(FIELDS);

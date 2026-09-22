@@ -1,48 +1,21 @@
-import React from 'react';
+import { buildForm } from './_schema.jsx';
 
-const SPANS = [
-  ['day', 'Day'],
-  ['week', 'Week'],
-  ['month', 'Month'],
-  ['year', 'Year']
+export const FIELDS = [
+  {
+    key: 'spans', type: 'multi', label: 'Show', section: 'Spans',
+    options: [
+      { value: 'day',   label: 'Day' },
+      { value: 'week',  label: 'Week' },
+      { value: 'month', label: 'Month' },
+      { value: 'year',  label: 'Year' }
+    ],
+    help: 'At least one — a tile with no spans has nothing to draw.'
+  },
+  {
+    key: 'title', type: 'text', label: 'Tile heading', section: 'Spans', tokens: true,
+    placeholder: 'PROGRESS',
+    help: 'Leave blank to keep the default heading.'
+  }
 ];
 
-export function Form({ values, patch, onChange, fields }) {
-  const v = values || {};
-  const { TextField, SelectField, FormSection, defaults = {} } = fields;
-  const spans = Array.isArray(v.spans) ? v.spans : ['day', 'year'];
-
-  const toggle = (key) => {
-    const next = spans.includes(key)
-      ? spans.filter(k => k !== key)
-      : [...spans, key];
-    patch({ spans: next.length ? next : ['day'] }); // never empty
-  };
-
-  return (
-    <>
-      <FormSection title="Spans">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {SPANS.map(([key, label]) => (
-            <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-              <input
-                type="checkbox"
-                checked={spans.includes(key)}
-                onChange={() => toggle(key)}
-              />
-              {label}
-            </label>
-          ))}
-        </div>
-        <TextField
-          label="Tile heading"
-          value={v.title || ''}
-          defaultValue={defaults.title}
-          onChange={(x) => patch({ title: x })} tokens
-          placeholder="PROGRESS"
-          help="Leave blank to keep the default heading."
-        />
-      </FormSection>
-    </>
-  );
-}
+export const Form = buildForm(FIELDS);

@@ -142,17 +142,35 @@ for (const id of palette) {
       problems.push(`${id}: has a FIELDS schema but no defaults() the guard can read`);
       continue;
     }
+    // A merged widget (outdoors, daily, clock, weather) keeps each view's own
+    // settings in its `_view-*.js` module and only the shared ones in its own
+    // defaults(), so the form legitimately exposes keys the parent never
+    // names. Union in the defaults of every view the widget imports.
+    let viewBodies = '';
+    for (const m of src.matchAll(/from\s+'\.\/(_view-[A-Za-z0-9_-]+)\.js'/g)) {
+      try {
+        const vsrc = await readFile(join(WDIR, `${m[1]}.js`), 'utf8');
+        for (const d of vsrc.matchAll(/defaults:\s*\(\)\s*=>\s*\(\{([\s\S]*?)\}\)/g)) {
+          viewBodies += '\n' + d[1];
+        }
+      } catch { /* a view that moved — the wiring guard above already covers that */ }
+    }
     // Comments first: `// YYYY-MM-DDTHH:MM` and `// 'wifi' = build WIFI: payload`
     // both look exactly like a key to a naive scan, and both produced a false
     // failure the first time this ran.
-    const body = block[1].replace(/\/\/[^\n]*/g, '');
+    const body = (block[1] + viewBodies).replace(/\/\/[^\n]*/g, '');
+    // Anchored on `{` or `,` rather than on line starts: several widgets write
+    // their whole defaults object on one line, where only the first key sits at
+    // the start of a line. Anchoring also keeps colons INSIDE string values
+    // (`'https://…'`) from reading as keys.
     const defaultKeys = new Set(
-      [...body.matchAll(/^\s*([A-Za-z0-9_]+)\s*:/gm)].map(m => m[1]));
+      [...body.matchAll(/(?:^|[{,])\s*([A-Za-z0-9_]+)\s*:/gm)].map(m => m[1]));
 
     // Well-formedness: a typo in `type` renders nothing at all, silently —
     // the schema's one failure mode that is worse than the JSX it replaced,
     // because a missing field looks like a deliberate omission.
-    const TYPES = new Set(['text', 'select', 'segmented', 'toggle', 'slider', 'csv', 'list', 'location']);
+    const TYPES = new Set(['text', 'textarea', 'select', 'segmented', 'toggle', 'slider',
+      'csv', 'multi', 'list', 'location', 'note', 'presets']);
     for (const m of form.matchAll(/type:\s*'([A-Za-z0-9_]+)'/g)) {
       if (!TYPES.has(m[1])) {
         problems.push(`${id}.form.jsx: field type '${m[1]}' has no renderer in _schema.jsx`);

@@ -44,9 +44,62 @@ const RENDERERS = {
     const { onChange, ...rest } = props;
     return <P.CsvField {...rest} onCommit={onChange} />;
   },
-  list:      (P, f, props) => <P.ListEditor {...props} />,
-  location:  (P, f, props) => <P.LocationFields {...props} />
+  textarea:  (P, f, props) => <P.TextAreaField {...props} rows={f.rows} />,
+  multi:     (P, f, props) => <P.MultiField {...props} options={f.options} />,
+  // A list of plain strings needs `replaceRow`, or every keystroke spreads the
+  // string into an object and the row becomes untypeable (bug 3289942).
+  list:      (P, f, props) => {
+    const { value, onChange, ...rest } = props;
+    return (
+      <P.ListEditor
+        {...rest}
+        replaceRow
+        items={Array.isArray(value) ? value : []}
+        blank=""
+        addLabel={f.addLabel}
+        onChange={onChange}
+        renderRow={(it, set) => (
+          <input
+            type="text"
+            value={typeof it === 'string' ? it : ''}
+            placeholder={f.rowPlaceholder}
+            onChange={(e) => set(e.target.value)}
+            style={{ flex: 1 }}
+          />
+        )}
+      />
+    );
+  },
+  // LocationFields emits a COMPLETE settings object rather than a patch —
+  // merging it here would defeat clearing a location (see weather.form.jsx).
+  // It is the one field that takes the raw onChange.
+  location:  (P, f, props, ctx) => <P.LocationFields values={ctx.values} onChange={ctx.onChange} />,
+  // A row of one-tap presets that write several keys at once. Applied through
+  // the raw onChange because a preset is a whole shape, not a patch.
+  presets:   (P, f, props, ctx) => (
+    <P.PresetField presets={f.presets} onApply={(vals) => ctx.onChange({ ...ctx.values, ...vals })} />
+  ),
+  // Static prose. Not a setting — the blurb that tells you what the selected
+  // view does, which several forms carried as a bare div.
+  note:      (P, f, props, ctx) => (
+    <div className="wsm-field-help" style={{ marginBottom: 6 }}>
+      {typeof f.text === 'function' ? f.text(ctx.values) : f.text}
+      {f.code && (
+        <code style={{
+          display: 'block', marginTop: 6, fontSize: 11, background: '#f4f2ec',
+          padding: '6px 8px', borderRadius: 4, wordBreak: 'break-all', userSelect: 'all'
+        }}>{typeof f.code === 'function' ? f.code(ctx.values) : f.code}</code>
+      )}
+    </div>
+  )
 };
+
+// Labels, help and placeholders may be functions of the current values — a
+// view-switching widget says something different per view, and duplicating the
+// field per view just to change its placeholder is how these forms got long.
+// Second argument is the form's context (cfg, so a field can say what it
+// inherits from Settings rather than showing a fake example).
+const resolve = (x, v, ctx) => (typeof x === 'function' ? x(v, ctx) : x);
 
 export function fieldKeys(FIELDS) {
   return (FIELDS || []).filter(f => f && f.key && f.type !== 'note').map(f => f.key);
@@ -69,11 +122,12 @@ function groupBySection(FIELDS) {
 export function buildForm(FIELDS) {
   // Named so React DevTools and any error boundary report something useful
   // rather than "Anonymous".
-  return function SchemaForm({ values, patch, fields }) {
+  return function SchemaForm({ values, patch, onChange, fields, cfg }) {
     const v = values || {};
     const P = fields || {};
     const defaults = P.defaults || {};
     const sections = groupBySection(FIELDS);
+    void onChange; // used by the location/presets renderers via ctx
 
     return (
       <>
@@ -90,17 +144,17 @@ export function buildForm(FIELDS) {
                 // as on before anyone touches it.
                 const current = v[f.key] !== undefined ? v[f.key] : defaults[f.key];
                 const props = {
-                  key: f.key,
-                  label: f.label,
-                  help: f.help,
-                  placeholder: f.placeholder,
+                  key: f.key || `${f.type}-${sec.title}`,
+                  label: resolve(f.label, v, { cfg }),
+                  help: resolve(f.help, v, { cfg }),
+                  placeholder: resolve(f.placeholder, v, { cfg }),
                   value: current,
                   defaultValue: defaults[f.key],
                   tokens: f.tokens,
                   secret: f.secret,
                   onChange: (x) => patch({ [f.key]: x })
                 };
-                return render(P, f, props);
+                return render(P, f, props, { values: v, onChange, patch, cfg });
               })}
             </P.FormSection>
           );
