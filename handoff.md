@@ -1,5 +1,57 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-21 (later) — the settings UI, and the migration the invert switch needed
+> The panel-wide polarity switch shipped earlier today exposed a problem it
+> could not fix on its own, plus a settings surface that had drifted: two
+> device-wide settings were filed under screen-shaped headings, and a per-tile
+> control started lying the moment the panel gained a setting of its own.
+>
+> ### v12 — old tiles could not hear the switch
+> `settings.theme` on a tile outranks `cfg.faceTheme`, which is right for a
+> deliberate odd-one-out and wrong for the tiles that carry `theme: 'inverted'`
+> only because the old per-tile checkbox wrote back the value it was already
+> displaying. Those tiles would have ignored the new switch entirely — which is
+> exactly the visit-every-widget chore the switch exists to remove.
+>
+> **v12 drops `'inverted'` and keeps `'normal'`.** Dropping it cannot change how
+> anything renders today, because an unset theme already means inverted; it only
+> lets the panel switch reach the tile. `'normal'` stays because it is the one
+> value nobody writes by accident. Idempotent by construction — after one pass
+> there is nothing to remove, and a tile pinned deliberately after the config has
+> been stamped v12 is never fed to it again. Both seeds went into the
+> `migrations are idempotent` list and there is a dedicated test.
+>
+> ### The tile modal's Appearance section was a checkbox that lied
+> It read "inverted" from an ABSENT theme, which now means "whatever the panel
+> is" — so on a light panel it claimed a tile was white-on-black while the tile
+> was rendering black-on-white. Three states now, because there are three:
+> **Match the panel** (no key — the absence IS the state), **Always white on
+> black**, **Always black on white**. The "match" label names the panel's
+> current setting, and the help text points at where to change it.
+>
+> ### Where a setting lives
+> - **Screen settings** — name, units, **tile style (dividers / cards)**,
+>   refresh interval, schedule. Tile style used to be a toolbar button whose
+>   tooltip called it a prototype; it is a property of the screen, like its
+>   units, so it sits with them.
+> - **Settings → Panel** — Colours (the polarity switch) and **Quiet hours**.
+>   Quiet hours is device-wide and was living under the schedule timeline,
+>   which is about screens; CLAUDE.md had been telling people to look in
+>   Settings for a year, and now that is true.
+> - **The toolbar keeps actions** — TIDY / 1-BIT / CLEAR / DUPLICATE, plus the
+>   polarity button because one click is the whole point of it.
+>
+> Both settings rows carry their current value on the right (`.settings-row-value`):
+> a row that says "white on black" or "follows the sun" answers the question
+> without being opened.
+>
+> `test:api` **41/41** · `check:visual` 0.000% · `check:widgets` 22 ·
+> eink-lint clean · editor snapshot re-captured (leaner toolbar).
+>
+> Checked in a real browser at desktop and 375px: the menu fits the viewport at
+> both, the quiet-hours block expands inside it, and the canvas follows the
+> polarity switch live while the save bar is still dirty.
+
 > ## 2026-09-21 — the face: dividers that were black on black, and a panel-wide invert
 > Three fixes, all found by rendering a realistic eight-tile screen through
 > `/display.png` instead of trusting the fixtures. The fixtures are

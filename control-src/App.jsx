@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LazyMotion, domAnimation, m, AnimatePresence, MotionConfig } from 'framer-motion';
-import { Star, ArrowCounterClockwise, Trash, Lock, Cards, Copy, CircleHalf, SquaresFour, MoonStars, Sun } from '@phosphor-icons/react';
+import { Star, ArrowCounterClockwise, Trash, Lock, Copy, CircleHalf, SquaresFour, MoonStars, Sun } from '@phosphor-icons/react';
 import { fetchConfig, saveConfig, fetchPreviewData, onUnauthorized } from './api.js';
 import { faceIsDark } from './widget-render.js';
 import {
@@ -25,7 +25,6 @@ import ScreenTabs from './components/ScreenTabs.jsx';
 import ScreenPresetPicker from './components/ScreenPresetPicker.jsx';
 import ScreenPanel from './components/ScreenPanel.jsx';
 import ScheduleTimeline from './components/ScheduleTimeline.jsx';
-import QuietHours from './components/QuietHours.jsx';
 const SetupWizard = React.lazy(() => import('./components/SetupWizard.jsx'));
 import SettingsMenu from './components/SettingsMenu.jsx';
 import { homeValue, homeCoords } from './home.js';
@@ -788,13 +787,6 @@ export default function App() {
                 schedule: { ...(screens.find(s => s.id === id)?.schedule || { enabled: false }), ...patch, enabled: true }
               })}
             />
-            <div className="schedule-card-sub">
-              <QuietHours
-                value={cfg.quietHours}
-                hasLocation={!!homeCoords(cfg)}
-                onChange={(next) => mutateCfg(prev => ({ ...prev, quietHours: next }))}
-              />
-            </div>
           </div>
         )}
       </div>
@@ -864,15 +856,6 @@ export default function App() {
                     ? <><MoonStars size={12} weight="bold" /> DARK</>
                     : <><Sun size={12} weight="bold" /> LIGHT</>}
                 </button>
-                {editScreen && (
-                  <button
-                    className={`btn btn-iconed btn-compact ${editCardStyle === 'cards' ? '' : 'btn-ghost'}`}
-                    title="Prototype: float each widget as a bordered card with gaps (vs abutting grid)"
-                    onClick={() => updateScreen(editScreen.id, { cardStyle: editCardStyle === 'cards' ? 'grid' : 'cards' })}
-                  >
-                    <Cards size={12} weight="bold" /> {editCardStyle === 'cards' ? 'CARDS ON' : 'CARDS'}
-                  </button>
-                )}
                 <button className="btn btn-ghost btn-iconed btn-compact"
                   title="Remove every widget from this screen (undoable)"
                   onClick={() => clearLayout(editScreen.id)}>

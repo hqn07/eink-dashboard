@@ -25,7 +25,9 @@ export default function QuietHours({ value, onChange, hasLocation }) {
           onChange={e => set({ enabled: e.target.checked })}
         />
         <Moon size={14} weight="bold" />
-        <span>Quiet hours</span>
+        {/* The settings row above already names the feature; this is only
+            the on/off switch for it. */}
+        <span>Enabled</span>
       </label>
 
       <div className={`quiet-hours-body ${q.enabled ? '' : 'is-disabled'}`}>

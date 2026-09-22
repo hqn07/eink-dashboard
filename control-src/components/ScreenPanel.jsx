@@ -36,6 +36,25 @@ export default function ScreenPanel({ screen, isOverlap, onUpdate, onOpenTimelin
         </div>
       </div>
 
+      {/* Tile style used to be a toolbar button labelled "prototype". It is a
+          property of the screen, like its units and its cadence, so it lives
+          with them — and the toolbar keeps only actions. */}
+      <div className="toggle-row">
+        <span className="toggle-label">Tiles</span>
+        <div className="btn-row" style={{ marginTop: 0 }}>
+          {[['grid', 'Dividers'], ['cards', 'Cards']].map(([v, label]) => (
+            <button
+              key={v}
+              className={`btn ${(screen.cardStyle || 'grid') === v ? 'btn-primary' : ''}`}
+              title={v === 'grid'
+                ? 'Tiles abut, separated by a single rule'
+                : 'Each tile floats as its own bordered card with a gap around it'}
+              onClick={() => onUpdate({ cardStyle: v })}
+            >{label}</button>
+          ))}
+        </div>
+      </div>
+
       <label className="field">
         <span className="label">Refresh interval (minutes)</span>
         <input

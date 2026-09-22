@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { m, AnimatePresence } from 'framer-motion';
 import {
-  Gear, MagicWand, Keyboard, Archive, CaretRight, User, Plug,
+  Gear, MagicWand, Keyboard, Archive, CaretRight, User, Plug, MoonStars, Sun,
 } from '@phosphor-icons/react';
 import PushNowButton from './PushNowButton.jsx';
 import PanelPreview from './PanelPreview.jsx';
@@ -10,6 +10,9 @@ import SetupPanel from './SetupPanel.jsx';
 import ConnectionsPanel from './ConnectionsPanel.jsx';
 import DeviceStatusCard from './DeviceStatusCard.jsx';
 import BackupPanel from './BackupPanel.jsx';
+import QuietHours from './QuietHours.jsx';
+import { faceIsDark } from '../widget-render.js';
+import { homeCoords } from '../home.js';
 
 // Single header settings menu. Consolidates what used to be separate
 // header controls — Setup wizard, Panel view, PIN/Lock,
@@ -22,7 +25,7 @@ import BackupPanel from './BackupPanel.jsx';
 // expandable rows to keep the menu short.
 export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcuts, telemetry, refreshMinutes }) {
   const [open, setOpen] = useState(false);
-  const [expanded, setExpanded] = useState(null); // 'home' | 'connections' | 'backup' | null
+  const [expanded, setExpanded] = useState(null); // 'quiet' | 'home' | 'connections' | 'backup' | null
   const ref = useRef(null);
 
   useEffect(() => {
@@ -40,6 +43,18 @@ export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcut
   }, [open]);
 
   const toggle = (key) => setExpanded((cur) => (cur === key ? null : key));
+
+  // PANEL section. Both of these are properties of the device's face, not of
+  // a screen, and both used to be somewhere else: polarity was a per-tile
+  // setting you had to visit every tile to change, and quiet hours sat under
+  // the schedule timeline, which is about screens.
+  const dark = faceIsDark(cfg && cfg.faceTheme);
+  const quiet = (cfg && cfg.quietHours) || {};
+  const quietSummary = !quiet.enabled
+    ? 'off'
+    : quiet.mode === 'sun'
+      ? 'follows the sun'
+      : `${quiet.from || '00:00'}–${quiet.to || '00:00'}`;
 
   return (
     <div className="gdm-wrap" ref={ref}>
@@ -76,15 +91,42 @@ export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcut
             </button>
             <PanelPreview block />
 
-            <div className="settings-section-label">Security</div>
-            <PinButton block />
+            <div className="settings-section-label">Panel</div>
             <button
               type="button"
               className="settings-row"
-              onClick={() => { setOpen(false); onShortcuts && onShortcuts(); }}
+              aria-pressed={dark}
+              title={dark
+                ? 'Every tile is white-on-black — click for black-on-white'
+                : 'Every tile is black-on-white — click for white-on-black'}
+              onClick={() => onReplaceConfig({ ...cfg, faceTheme: dark ? 'light' : 'dark' })}
             >
-              <Keyboard size={14} weight="bold" /> Keyboard shortcuts
+              {dark ? <MoonStars size={14} weight="bold" /> : <Sun size={14} weight="bold" />}
+              {' '}Colours
+              <span className="settings-row-value">{dark ? 'white on black' : 'black on white'}</span>
             </button>
+            <button
+              type="button"
+              className={`settings-row settings-row--expandable ${expanded === 'quiet' ? 'is-open' : ''}`}
+              aria-expanded={expanded === 'quiet'}
+              onClick={() => toggle('quiet')}
+            >
+              <MoonStars size={14} weight="bold" /> Quiet hours
+              <span className="settings-row-value">{quietSummary}</span>
+              <CaretRight className="settings-row-caret" size={12} weight="bold" />
+            </button>
+            {expanded === 'quiet' && (
+              <div className="settings-collapse-body">
+                <QuietHours
+                  value={cfg.quietHours}
+                  hasLocation={!!homeCoords(cfg)}
+                  onChange={(next) => onReplaceConfig({ ...cfg, quietHours: next })}
+                />
+              </div>
+            )}
+
+            <div className="settings-section-label">Security</div>
+            <PinButton block />
 
             <div className="settings-section-label">Tools</div>
             <button
@@ -129,6 +171,15 @@ export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcut
                 <BackupPanel cfg={cfg} onReplaceConfig={onReplaceConfig} />
               </div>
             )}
+
+            <div className="settings-section-label">Help</div>
+            <button
+              type="button"
+              className="settings-row"
+              onClick={() => { setOpen(false); onShortcuts && onShortcuts(); }}
+            >
+              <Keyboard size={14} weight="bold" /> Keyboard shortcuts
+            </button>
           </m.div>
         )}
       </AnimatePresence>

@@ -996,6 +996,8 @@ test('migrations are idempotent — re-running never loses a setting', async () 
     ['weather_hero/split',{ widgetId: 'weather_hero', settings: { variant: 'split' } }],
     ['weather/forecast',  { widgetId: 'weather', settings: { variant: 'forecast' } }],
     ['markets/trmnl',     { widgetId: 'markets', settings: { variant: 'trmnl', symbols: ['AAPL'] } }],
+    ['theme/normal',      { widgetId: 'text', settings: { theme: 'normal', text: 'x' } }],
+    ['theme/inverted',    { widgetId: 'text', settings: { theme: 'inverted', text: 'x' } }],
   ];
 
   for (const [label, tile] of seeds) {
@@ -1032,6 +1034,28 @@ test('migrations are idempotent — re-running never loses a setting', async () 
     }
     assert.equal(cfg.gridVersion, GRID_VERSION);
   }
+});
+
+// --- v12: let the panel-wide polarity switch reach ordinary tiles ---------
+test('v12 drops a redundant inverted theme but keeps an explicit normal one', async () => {
+  const { migrateConfigToScreens, GRID_VERSION } = await import('../lib/screens.js');
+  const mk = (settings, gridVersion = 11) => migrateConfigToScreens({
+    gridVersion, firstRunSeeded: true, home: { lat: 29.6, lon: -82.3 },
+    screens: [{ id: 's', isDefault: true, layoutKind: 'free',
+      layout: [{ id: 't', widgetId: 'text', x: 0, y: 0, w: 8, h: 4, settings }] }],
+  }).screens[0].layout[0].settings;
+
+  // 'inverted' is what an absent theme already means, so dropping it cannot
+  // change the render — it only lets cfg.faceTheme reach the tile.
+  const dropped = mk({ theme: 'inverted', text: 'keep me' });
+  assert.equal(dropped.theme, undefined);
+  assert.equal(dropped.text, 'keep me', 'the rest of the settings must survive');
+
+  // The deliberate opt-out is the one value nobody writes by accident.
+  assert.equal(mk({ theme: 'normal' }).theme, 'normal');
+
+  // A tile pinned after the config has been stamped v12 stays pinned.
+  assert.equal(mk({ theme: 'inverted' }, GRID_VERSION).theme, 'inverted');
 });
 
 // --- v11: repair a world clock whose variant was already deleted ----------

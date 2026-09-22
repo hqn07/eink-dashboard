@@ -40,7 +40,7 @@ export const GRID_ROWS = 12;
 // here gates on this value above 4 — it is only the number stamped onto a
 // saved config — but keep it equal to lib/screens.js GRID_VERSION anyway, so a
 // config that never reaches the server's stamp is not labelled older than it is.
-export const GRID_VERSION = 11;
+export const GRID_VERSION = 12;
 export const SCREENS = [1, 2];
 
 // Sizes are in 24x12 grid units. With body ≈ 800px × 392-452px, cells

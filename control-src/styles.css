@@ -3480,6 +3480,19 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   margin-left: auto;
   transition: transform 0.12s ease;
 }
+/* Current value, right-aligned on the row — "white on black", "follows the
+ * sun". A settings row that states what it is set to answers the question
+ * without being opened; on an expandable row the caret still sits last. */
+.settings-row-value {
+  margin-left: auto;
+  font-size: var(--fs-xs, 10px);
+  letter-spacing: 0.5px;
+  text-transform: lowercase;
+  color: var(--mute, #8a877e);
+  white-space: nowrap;
+}
+.settings-row:hover .settings-row-value { color: #fff; }
+.settings-row--expandable .settings-row-value { margin-right: 8px; }
 .settings-row--expandable.is-open .settings-row-caret { transform: rotate(90deg); }
 .settings-collapse-body { border-top: var(--bw-hair) solid var(--ink); }
 .settings-row-note {

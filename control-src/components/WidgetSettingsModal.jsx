@@ -6,7 +6,7 @@ import 'react-loading-skeleton/dist/skeleton.css';
 import { GRID_COLS, GRID_ROWS, widgetById } from '../widgets.js';
 import { growToMin } from '../widgets/_sizes.js';
 import {
-  renderWidget, typographyCss, cellClasses, scaleWrap
+  renderWidget, typographyCss, cellClasses, scaleWrap, faceIsDark
 } from '../widget-render.js';
 import { runAutofit } from '../autofit.js';
 import WidgetForm from './WidgetForm.jsx';
@@ -318,6 +318,10 @@ export default function WidgetSettingsModal({
   const effectiveSettings = hoveredPresetValues
     ? { ...draft.settings, ...hoveredPresetValues }
     : draft.settings;
+  // Panel polarity, for the Appearance section's "match the panel" label.
+  const panelIsDark = faceIsDark(previewData && previewData.cfg && previewData.cfg.faceTheme);
+  const rawTileTheme = (draft.settings || {}).theme;
+  const tileTheme = rawTileTheme === 'inverted' || rawTileTheme === 'normal' ? rawTileTheme : '';
   const classes = ['cell', `cell-${draft.widgetId}`];
   if (draft.flush) classes.push('cell-flush');
   classes.push(...cellClasses(effectiveSettings, (previewData && previewData.cfg && previewData.cfg.faceTheme) || undefined));
@@ -404,33 +408,42 @@ export default function WidgetSettingsModal({
                   with their neighbours. `draft.density` is still threaded
                   through the render context, so any value already saved in a
                   config keeps working — it just can't be set by hand. */}
-              {/* The one cosmetic control that survived the 2026-09-15 cut.
-                  Inverted became the default because every tile on the live
-                  screen used it — but that left no way to set a tile back
-                  without hand-editing config.json, which is not a real option.
-                  One checkbox, not the eleven typography knobs: the look is
-                  still the design's decision, this is just the escape hatch. */}
+              {/* The one cosmetic control that survived the 2026-09-15 cut —
+                  the escape hatch for a tile that should read the other way
+                  round, not the eleven typography knobs.
+
+                  It was a checkbox until the panel gained its own polarity
+                  switch (Settings → Panel → Colours), at which point the
+                  checkbox started lying: it read "inverted" from an ABSENT
+                  theme, which now means "whatever the panel is". Three states,
+                  because there are three: follow the panel, or pin it either
+                  way. */}
               <section className="wsm-section wsm-subsection" data-section-title="Appearance">
                 <div className="wsm-subsection-title">Appearance</div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-                  <input
-                    type="checkbox"
-                    checked={(draft.settings || {}).theme !== 'normal'}
-                    onChange={(e) => setDraft(prev => ({
-                      ...prev,
-                      settings: {
-                        ...(prev.settings || {}),
-                        // Store the explicit value either way — an absent theme
-                        // means inverted, so "off" has to be written down.
-                        theme: e.target.checked ? 'inverted' : 'normal'
-                      }
-                    }))}
-                  />
-                  Inverted (white on black)
-                </label>
+                {[
+                  ['', `Match the panel (${panelIsDark ? 'white on black' : 'black on white'})`],
+                  ['inverted', 'Always white on black'],
+                  ['normal', 'Always black on white']
+                ].map(([val, label]) => (
+                  <label key={val || 'auto'} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                    <input
+                      type="radio"
+                      name="wsm-tile-theme"
+                      checked={tileTheme === val}
+                      onChange={() => setDraft(prev => {
+                        const next = { ...(prev.settings || {}) };
+                        // "Match the panel" is the ABSENCE of the key, not a
+                        // value — anything stored here outranks the panel.
+                        if (val) next.theme = val; else delete next.theme;
+                        return { ...prev, settings: next };
+                      })}
+                    />
+                    {label}
+                  </label>
+                ))}
                 <span className="wsm-field-help">
-                  On for every tile by default. Turn it off for a tile that
-                  should read black-on-white instead.
+                  Every tile follows the panel unless it is pinned here.
+                  Change the panel itself in Settings → Panel → Colours.
                 </span>
               </section>
               <section className="wsm-section wsm-subsection" data-section-title="Visibility">
