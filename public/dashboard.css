@@ -3214,3 +3214,21 @@ img.icon { object-fit: contain; }
 }
 .cell-short .fc-strip { padding-top: 0; padding-bottom: 0; }
 .cell-short .tr-body { gap: 4px; }
+
+/* ---- 8. THE WIDGET SHELL STOPS BEING A BOX -----------------------------
+ * `.widget` (030-right-column-widgets.css) gave every widget a 2px border and
+ * `8px 12px` of padding — a box drawn inside the cell's box, with its own
+ * inset on top of the cell's. Two costs, both visible on the live panel: the
+ * calendar read as a card pasted onto the page rather than a column of it,
+ * and its text sat 12px further in than its neighbours'.
+ *
+ * The page draws the separation now, so the shell does not need to. Padding
+ * goes too: the cell already provides the margin, and a widget that wants to
+ * bleed says so with cell-flush. */
+.cell .widget:not(.widget-placeholder) {
+  border: none;
+  padding: 0;
+}
+/* The placeholder is the exception and keeps the dashed top rule from
+   section 5 — "nothing here yet" is worth saying in the chrome. */
+.cell .widget-placeholder { padding: var(--face-baseline) 0 0; }
