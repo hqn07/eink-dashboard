@@ -313,6 +313,40 @@ export default function App() {
     ...prev, [key]: { ...(prev?.[key] || {}), ...patch }
   }));
 
+  // Panel polarity. Setting it CLEARS every per-tile theme override, because
+  // a tile that states its own theme outranks the panel and the whole point
+  // of this control is not having to visit tiles. The live config was the
+  // proof: seven of eight tiles carried theme:'normal' — written by the old
+  // per-tile checkbox, which stored a value either way — so flipping the
+  // panel changed nothing visible and the switch looked broken.
+  //
+  // Destructive, so it says what it did, and the normal undo stack covers it.
+  // A tile that should genuinely disagree is re-pinned in its own settings,
+  // which is a deliberate act rather than a leftover.
+  const setFaceTheme = (next) => {
+    // Counted HERE, not inside the setCfg updater: that runs on React's
+    // schedule, so a counter incremented in it is still 0 when showToast
+    // reads it and the message silently loses the number.
+    let cleared = 0;
+    const strip = (screens) => (screens || []).map(sc => ({
+      ...sc,
+      layout: (sc.layout || []).map(it => {
+        const st = it.settings;
+        if (!st || typeof st !== 'object' || !st.theme) return it;
+        cleared++;
+        const nextSettings = { ...st };
+        delete nextSettings.theme;
+        return { ...it, settings: nextSettings };
+      })
+    }));
+    const screens = strip(cfg.screens);
+    mutateCfg(prev => ({ ...prev, faceTheme: next, screens }));
+    const look = next === 'light' ? 'black on white' : 'white on black';
+    showToast(cleared
+      ? `Panel is ${look} — cleared ${cleared} tile override${cleared === 1 ? '' : 's'}`
+      : `Panel is ${look}`);
+  };
+
   // ============ SAVED FEEDS (cross-widget URL library) ============
   // Named iCal/RSS URLs kept at cfg.savedFeeds so a feed typed once is
   // reusable on every future calendar/headlines widget instead of being
@@ -696,6 +730,7 @@ export default function App() {
           {cfg && (
             <SettingsMenu
               cfg={cfg}
+              onSetFaceTheme={setFaceTheme}
               telemetry={telemetry}
               refreshMinutes={editScreen?.refreshMinutes ?? 30}
               onSetup={() => setShowWizard(true)}
@@ -850,7 +885,7 @@ export default function App() {
                     ? 'Panel is white-on-black — click for black-on-white'
                     : 'Panel is black-on-white — click for white-on-black'}
                   aria-pressed={faceIsDark(cfg.faceTheme)}
-                  onClick={() => patchCfg({ faceTheme: faceIsDark(cfg.faceTheme) ? 'light' : 'dark' })}
+                  onClick={() => setFaceTheme(faceIsDark(cfg.faceTheme) ? 'light' : 'dark')}
                 >
                   {faceIsDark(cfg.faceTheme)
                     ? <><MoonStars size={12} weight="bold" /> DARK</>
@@ -945,6 +980,31 @@ export default function App() {
           onPick={addScreenWithPreset}
           onClose={() => setShowPresetPicker(false)}
         />
+      )}
+
+      {/* showToast() has been setting this state — and nothing has been
+          rendering it. Every toast in the editor was silent: the tidy result
+          ("3 tiles did not fit and were left out"), the duplicate confirmation
+          and, worst, the delete-with-UNDO pattern, whose whole safety net is
+          an action button on a toast nobody could see. Found 2026-09-21 while
+          checking that the polarity switch reports the overrides it clears. */}
+      {toast && (
+        <div
+          className={`toast ${toast.action ? 'toast-actionable' : ''}`}
+          role="status"
+          aria-live="polite"
+        >
+          <span>{toast.msg}</span>
+          {toast.action && (
+            <button
+              type="button"
+              className="toast-action"
+              onClick={() => { toast.action.onClick(); setToast(null); }}
+            >
+              {toast.action.label}
+            </button>
+          )}
+        </div>
       )}
     </div>
     </MotionConfig>

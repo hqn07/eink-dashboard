@@ -23,7 +23,7 @@ import { homeCoords } from '../home.js';
 // trigger as a full-width menu row here (block prop). "You & your place"
 // (cfg.home) and Backup are heavy blocks, so they collapse behind
 // expandable rows to keep the menu short.
-export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcuts, telemetry, refreshMinutes }) {
+export default function SettingsMenu({ cfg, onReplaceConfig, onSetFaceTheme, onSetup, onShortcuts, telemetry, refreshMinutes }) {
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(null); // 'quiet' | 'home' | 'connections' | 'backup' | null
   const ref = useRef(null);
@@ -99,7 +99,7 @@ export default function SettingsMenu({ cfg, onReplaceConfig, onSetup, onShortcut
               title={dark
                 ? 'Every tile is white-on-black — click for black-on-white'
                 : 'Every tile is black-on-white — click for white-on-black'}
-              onClick={() => onReplaceConfig({ ...cfg, faceTheme: dark ? 'light' : 'dark' })}
+              onClick={() => onSetFaceTheme && onSetFaceTheme(dark ? 'light' : 'dark')}
             >
               {dark ? <MoonStars size={14} weight="bold" /> : <Sun size={14} weight="bold" />}
               {' '}Colours
