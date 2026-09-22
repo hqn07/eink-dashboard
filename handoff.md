@@ -1,5 +1,72 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-22 (later) — a markets heatmap, and what the red plane is actually worth
+> `7640556` + `66bcfc4`. Ships as a **variant of markets**, not a new widget:
+> same symbol list, same fetchers, widget count stays 22.
+>
+> ### Feasibility was one question, and it was about the API
+> The row view fetches one request per symbol, capped at 8 — fine for a list,
+> absurd for a grid of 40. Yahoo's `v7/finance/quote` batch endpoint is 401 now
+> (needs a crumb), but **`v8/finance/spark` takes 20 symbols per request,
+> keyless, and returns `fulldayChangePercent` already computed**. So 60 symbols
+> is 3 requests. `fetchStockPcts` chunks by 20 and shares the row view's
+> 15-minute per-symbol cache, so a symbol on both tiles is fetched once.
+>
+> The row view deliberately keeps the per-symbol path: spark reports no
+> currency, and a row printing a bare number is wrong for anything not listed
+> in USD. The heatmap draws only a percentage, so it does not care.
+>
+> ### Encoding for three inks
+> Chip tone runs light→dark over six dither steps with the size of the move;
+> losers take the two pink tones. **Not a treemap** — Finviz sizes rectangles by
+> market cap, which needs a squarify pass and produces slivers, and a sliver at
+> the 11px type floor is an unreadable smudge rather than a small stock. Equal
+> chips lose the weighting and keep everything else.
+>
+> ### Three layout bugs, each caught by a render and not by review
+> 1. **Labels directly on the tone were illegible.** 11px type over a 2px
+>    dither grid: the dots land inside the letterforms and the chip turns to
+>    noise. They sit on their own white plates now.
+> 2. **The plate was shorter than its own glyphs** — a 10px baseline
+>    line-height under 11px type — and the spans were flex items in a short
+>    chip, so they were being shrunk to **6px** regardless. `flex: none`.
+> 3. **Rows were a fraction of the tile's grid units.** Looked right at L,
+>    clipped all nine chips at M. Rows come from pixels now: a 42px chip plus a
+>    3px gap against the tile height minus the 30px title band. The rhythm
+>    layer's 10px `.tr-body` gap was also costing a whole row, and `.mh-grid`
+>    lost that specificity fight until it became `.cell .mh-grid`.
+>
+> The M-size clipping was only visible because the matrix demo payload grew
+> from 3 symbols to 16, spread across the tone ramp with a double-digit mover
+> and several losers. **At three symbols every layout bug in a grid renders
+> "correctly"** — the same lesson as the blank-QR bug, which survived because
+> the matrix rendered qr's SETUP placeholder instead of a code.
+>
+> ### "Use the red color?" — measured rather than assumed
+> Extracted both planes from `/display-3c.bin` and counted: **7,411 pixels on
+> the red plane**, exactly where the losing chips sit. Per chip, `r50` puts 32%
+> of pixels on the red plane and `r25` 17%.
+>
+> Then the useful part. I looked at my own 3-colour composite and read KO
+> -0.8% and VZ -0.6% as grey while SBUX -0.8% looked pink — **and the pixel
+> counts said all three were identical**. A 17% dot wash next to a dark grey
+> gainer is not red to a human eye. If the author cannot tell with the numbers
+> in front of him, a panel across the room has already failed.
+>
+> So the percentage itself goes on the red plane for a loss — solid glyphs on
+> the white plate, where they stay crisp instead of competing with a dither —
+> plus the title bar's loser count. 7,411 → 8,146 red pixels, all of the
+> increase in glyphs rather than in more wash. Tone still carries magnitude and
+> the sign is still printed, so the mono panel loses nothing.
+>
+> **Technique worth keeping:** to see what the B panel will actually draw,
+> fetch `/display-3c.bin`, split it at 48000, and composite — red ink where the
+> red plane's bit is 0, black where the black plane's is, white otherwise. The
+> PNG preview cannot show you this; it greyscales the red.
+>
+> `test:api` 45/45 · `check:visual` 0.000% · both snapshots PASS ·
+> `check:widgets` 22 · eink-lint clean.
+
 > ## 2026-09-22 — D4 done: all 22 widget forms are data
 > `75a5a64` → `9141276` → `e1e3abc`, plus `09f1a1a` for a bug the deploys
 > themselves caused.
