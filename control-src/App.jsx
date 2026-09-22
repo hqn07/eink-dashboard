@@ -3,6 +3,7 @@ import { LazyMotion, domAnimation, m, AnimatePresence, MotionConfig } from 'fram
 import { Star, ArrowCounterClockwise, Trash, Lock, Copy, CircleHalf, SquaresFour, MoonStars, Sun } from '@phosphor-icons/react';
 import { fetchConfig, saveConfig, fetchPreviewData, onUnauthorized } from './api.js';
 import { faceIsDark } from './widget-render.js';
+import { retryOnStaleChunk } from './lazy-chunk.js';
 import {
   WIDGET_REGISTRY,
   widgetById,
@@ -25,10 +26,10 @@ import ScreenTabs from './components/ScreenTabs.jsx';
 import ScreenPresetPicker from './components/ScreenPresetPicker.jsx';
 import ScreenPanel from './components/ScreenPanel.jsx';
 import ScheduleTimeline from './components/ScheduleTimeline.jsx';
-const SetupWizard = React.lazy(() => import('./components/SetupWizard.jsx'));
+const SetupWizard = React.lazy(retryOnStaleChunk(() => import('./components/SetupWizard.jsx')));
 import SettingsMenu from './components/SettingsMenu.jsx';
 import { homeValue, homeCoords } from './home.js';
-const ShortcutsHelp = React.lazy(() => import('./components/ShortcutsHelp.jsx'));
+const ShortcutsHelp = React.lazy(retryOnStaleChunk(() => import('./components/ShortcutsHelp.jsx')));
 import DeviceStatusChip from './components/DeviceStatusChip.jsx';
 import AttentionStrip from './components/AttentionStrip.jsx';
 import { useDeviceTelemetry } from './use-device-telemetry.js';

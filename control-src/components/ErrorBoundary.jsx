@@ -1,4 +1,5 @@
 import React from 'react';
+import { isChunkLoadError } from '../lazy-chunk.js';
 
 // Catches render/lifecycle errors in a subtree and shows a fallback instead
 // of unmounting the whole React tree (which blanks the editor to white). Used
@@ -34,6 +35,23 @@ export default class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.error) {
+      // A chunk that 404s means this page is from a previous deploy, not that
+      // anything is broken. lazy-chunk.js reloads once on its own; if we are
+      // still here, that reload already happened and did not help — so say
+      // what it is and offer the only action that can work.
+      if (isChunkLoadError(this.state.error)) {
+        return (
+          <div className="error-boundary-fallback">
+            <div className="eb-title">This page is out of date</div>
+            <div className="eb-msg">
+              A new version of the control panel was deployed while this tab was open.
+            </div>
+            <button type="button" className="eb-retry" onClick={() => window.location.reload()}>
+              Reload
+            </button>
+          </div>
+        );
+      }
       if (typeof this.props.fallback === 'function') {
         return this.props.fallback(this.state.error, () => this.setState({ error: null }));
       }

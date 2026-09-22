@@ -6,9 +6,10 @@ import * as HoverCard from '@radix-ui/react-hover-card';
 import { WIDGET_REGISTRY, POOL_CATEGORIES, GRID_COLS, GRID_ROWS, widgetById, makeInstance, newInstanceId } from '../widgets.js';
 import { sizeSpec, sizeSpecFor, growToMin } from '../widgets/_sizes.js';
 import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses, bodyThemeClass, pageRuleStyles, tileJoins } from '../widget-render.js';
+import { retryOnStaleChunk } from '../lazy-chunk.js';
 import { demoCtxForWidget } from '../widgets/_pool_demo.js';
 import { autofitText } from '../autofit.js';
-const WidgetSettingsModal = React.lazy(() => import('./WidgetSettingsModal.jsx'));
+const WidgetSettingsModal = React.lazy(retryOnStaleChunk(() => import('./WidgetSettingsModal.jsx')));
 
 // Editor cells must align 1:1 with dashboard cells so widget previews
 // scale cleanly. Any padding/margin would offset cells from the
