@@ -457,6 +457,13 @@ html, body {
 .hero-split .weather-hilo { margin-top: 6px; column-gap: 14px; }
 /* Split on a compact tier still centers vertically inside the cell */
 .hero-split.hero-tier-compact { height: 100%; }
+/* …and so does a split hero with nothing under it. The stats grid, sun bar
+ * and hourly strip are SIBLINGS after the hero, and they are gated on tile
+ * height (stats need 8 grid rows), so a 9x6 tile renders the hero alone and
+ * left it sitting at the top of the cell with ~40% dead space below. Keyed on
+ * :only-child rather than on a tier, because "is anything else in this cell"
+ * is the actual question and the DOM already answers it. */
+.weather-hero.hero-split:only-child { height: 100%; }
 
 /* ----- variant: minimal (temp + hilo only) ----- */
 .weather-hero.hero-minimal {
