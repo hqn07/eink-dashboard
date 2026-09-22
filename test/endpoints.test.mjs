@@ -1051,11 +1051,62 @@ test('v12 drops a redundant inverted theme but keeps an explicit normal one', as
   assert.equal(dropped.theme, undefined);
   assert.equal(dropped.text, 'keep me', 'the rest of the settings must survive');
 
-  // The deliberate opt-out is the one value nobody writes by accident.
-  assert.equal(mk({ theme: 'normal' }).theme, 'normal');
+  // A lone 'normal' tile in a config that is otherwise inverted is a real
+  // odd-one-out and must survive.
+  const mixed = migrateConfigToScreens({
+    gridVersion: 11, firstRunSeeded: true, home: { lat: 29.6, lon: -82.3 },
+    screens: [{ id: 's', isDefault: true, layoutKind: 'free', layout: [
+      { id: 'a', widgetId: 'text', x: 0, y: 0, w: 8, h: 4, settings: { theme: 'normal' } },
+      { id: 'b', widgetId: 'text', x: 8, y: 0, w: 8, h: 4, settings: { theme: 'inverted' } },
+    ] }],
+  });
+  assert.equal(mixed.screens[0].layout[0].settings.theme, 'normal');
+  assert.equal(mixed.faceTheme, undefined, 'a mixed config must not claim a panel-wide theme');
 
   // A tile pinned after the config has been stamped v12 stays pinned.
   assert.equal(mk({ theme: 'inverted' }, GRID_VERSION).theme, 'inverted');
+});
+
+test('v12 lifts a uniformly black-on-white config to the panel setting', async () => {
+  const { migrateConfigToScreens } = await import('../lib/screens.js');
+  const uniform = () => ({
+    gridVersion: 11, firstRunSeeded: true, home: { lat: 29.6, lon: -82.3 },
+    screens: [
+      { id: 's1', isDefault: true, layoutKind: 'free', layout: [
+        { id: 'a', widgetId: 'text', x: 0, y: 0, w: 8, h: 4, settings: { theme: 'normal', text: 'a' } },
+      ] },
+      { id: 's2', layoutKind: 'free', layout: [
+        { id: 'b', widgetId: 'text', x: 0, y: 0, w: 8, h: 4, settings: { theme: 'normal' } },
+      ] },
+    ],
+  });
+
+  // This is the production case: the old checkbox stored 'normal' on every
+  // tile, which is one decision written many times. It becomes the panel's.
+  const out = migrateConfigToScreens(uniform());
+  assert.equal(out.faceTheme, 'light');
+  for (const sc of out.screens) {
+    for (const it of sc.layout) assert.equal(it.settings.theme, undefined);
+  }
+  assert.equal(out.screens[0].layout[0].settings.text, 'a', 'other settings survive');
+
+  // Render-identical is the bar: light panel + no tile theme draws the same
+  // black-on-white as normal tiles did, and running it again changes nothing.
+  const again = migrateConfigToScreens(JSON.parse(JSON.stringify(out)));
+  assert.deepEqual(again.screens, out.screens);
+  assert.equal(again.faceTheme, 'light');
+
+  // A panel that already states its theme outranks the lift.
+  const stated = migrateConfigToScreens({ ...uniform(), faceTheme: 'dark' });
+  assert.equal(stated.faceTheme, 'dark');
+  assert.equal(stated.screens[0].layout[0].settings.theme, 'normal');
+
+  // An empty config must not claim anything — "all of them" is vacuous.
+  const empty = migrateConfigToScreens({
+    gridVersion: 11, firstRunSeeded: true,
+    screens: [{ id: 's', isDefault: true, layoutKind: 'free', layout: [] }],
+  });
+  assert.equal(empty.faceTheme, undefined);
 });
 
 // --- v11: repair a world clock whose variant was already deleted ----------
