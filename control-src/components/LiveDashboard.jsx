@@ -1,6 +1,6 @@
 import { homeValue } from '../home.js';
 import React, { useEffect, useRef } from 'react';
-import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses } from '../widget-render.js';
+import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses, bodyThemeClass } from '../widget-render.js';
 import { widgetById } from '../widgets.js';
 import { autofitText } from '../autofit.js';
 
@@ -92,6 +92,8 @@ export default function LiveDashboard({
     return () => { cancelled = true; if (rafId) cancelAnimationFrame(rafId); };
   });
   const cfg = (data && data.cfg) || {};
+  // Panel-wide polarity — same resolution the server does in lib/ssr.js.
+  const faceTheme = cfg.faceTheme || 'dark';
   const layout = (data && data.layout) || [];
   const nowM = nowMinsTZ(homeValue(cfg, 'timezone') || 'UTC');
 
@@ -115,7 +117,7 @@ export default function LiveDashboard({
     // Shared class assembly; only editor-surface extras appended here.
     // (The old `item.border` dashed/none classes were dead — no CSS
     // rules and nothing in the UI ever set them.)
-    const classes = tileCellClasses(item, GRID_COLS, GRID_ROWS);
+    const classes = tileCellClasses(item, GRID_COLS, GRID_ROWS, faceTheme);
     if (selectedTileId === item.id) classes.push('cell-selected');
     if (editingTileId === item.id)  classes.push('cell-editing');
     const tileStyle = {
@@ -154,7 +156,7 @@ export default function LiveDashboard({
   return (
     <div className="page" style={pageStyle} ref={rootRef}>
       <div className="hdr-stub" />
-      <main className={`body body-grid${(data && data.cardStyle === 'cards') ? ' body-cards' : ''}`} style={bodyStyle}>
+      <main className={`body body-grid${(data && data.cardStyle === 'cards') ? ' body-cards' : ''} ${bodyThemeClass(faceTheme)}`} style={bodyStyle}>
         {tiles.length > 0 ? tiles : (
           <div className="empty terminal-empty" style={{ gridColumn: `1 / span ${GRID_COLS}`, gridRow: `1 / span ${GRID_ROWS}` }}>
             &gt; NO_WIDGETS_ENABLED

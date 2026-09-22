@@ -5,7 +5,7 @@ import { Gear, X, Copy } from '@phosphor-icons/react';
 import * as HoverCard from '@radix-ui/react-hover-card';
 import { WIDGET_REGISTRY, POOL_CATEGORIES, GRID_COLS, GRID_ROWS, widgetById, makeInstance, newInstanceId } from '../widgets.js';
 import { sizeSpec, sizeSpecFor, growToMin } from '../widgets/_sizes.js';
-import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses } from '../widget-render.js';
+import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses, bodyThemeClass } from '../widget-render.js';
 import { demoCtxForWidget } from '../widgets/_pool_demo.js';
 import { autofitText } from '../autofit.js';
 const WidgetSettingsModal = React.lazy(() => import('./WidgetSettingsModal.jsx'));
@@ -52,6 +52,10 @@ function showcaseSizeKey(def, spec) {
 
 export default function EditorGrid({ layout, showGrid, oneBit, cardStyle, readOnly = false, previewData, seedCtx, onChange, onError, onCommitItemNow, openSettingsId, onSettingsOpened}) {
   const cardsMode = cardStyle === 'cards';
+  // Panel-wide polarity, read off the live cfg the preview data carries so
+  // the canvas flips the moment the toolbar toggle is clicked — same
+  // resolution lib/ssr.js does for the real render.
+  const faceTheme = (previewData && previewData.cfg && previewData.cfg.faceTheme) || 'dark';
   const wrapRef = useRef(null);
   const paletteRef = useRef(null);
   const dupLockRef = useRef(false);
@@ -508,7 +512,7 @@ export default function EditorGrid({ layout, showGrid, oneBit, cardStyle, readOn
     <div>
       <m.div
         ref={wrapRef}
-        className={`editor-wrap ${showGrid ? 'show-grid' : ''} ${oneBit ? 'editor-1bit' : ''} ${dropHover ? 'drop-target' : ''} ${cardsMode ? 'cards' : ''}`}
+        className={`editor-wrap ${bodyThemeClass(faceTheme)} ${showGrid ? 'show-grid' : ''} ${oneBit ? 'editor-1bit' : ''} ${dropHover ? 'drop-target' : ''} ${cardsMode ? 'cards' : ''}`}
         animate={shake ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
         transition={{ duration: 0.45 }}
         onDragOver={onCanvasDragOver}
@@ -562,7 +566,7 @@ export default function EditorGrid({ layout, showGrid, oneBit, cardStyle, readOn
             const typoStyle = typographyCss(l.settings);
             const dashW = l.w * (DASH_W / GRID_COLS);
             const dashH = l.h * (BODY_H / GRID_ROWS);
-            const classes = tileCellClasses(l, GRID_COLS, GRID_ROWS);
+            const classes = tileCellClasses(l, GRID_COLS, GRID_ROWS, faceTheme);
             const cellHtml = `<div class="${classes.join(' ')}" style="width:${dashW}px;height:${dashH}px;${typoStyle}">${inner}</div>`;
             const isSelected = selectedId === l.id;
             return (

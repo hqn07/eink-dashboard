@@ -14,7 +14,9 @@ export {
   scaleWrap,
   cellClasses,
   buildTileCtx,
-  tileCellClasses
+  tileCellClasses,
+  bodyThemeClass,
+  faceIsDark
 } from './widgets/_chrome.js';
 
 export function renderWidget(id, data) {

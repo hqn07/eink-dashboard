@@ -1017,7 +1017,7 @@ function PresetCard({ preset, isActive, ctx, currentValues, onPick, thumbSize })
       }) || '';
       const sw = scaleWrap(merged);
       const classes = ['cell', `cell-${widgetId}`];
-      classes.push(...cellClasses(merged));
+      classes.push(...cellClasses(merged, (previewData && previewData.cfg && previewData.cfg.faceTheme) || undefined));
       const typoStyle = typographyCss(merged);
       return `<div class="${classes.join(' ')}" style="width:${cellPxW}px;height:${cellPxH}px;${typoStyle}">${sw.open}${inner}${sw.close}</div>`;
     } catch {

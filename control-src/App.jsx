@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LazyMotion, domAnimation, m, AnimatePresence, MotionConfig } from 'framer-motion';
-import { Star, ArrowCounterClockwise, Trash, Lock, Cards, Copy, CircleHalf, SquaresFour } from '@phosphor-icons/react';
+import { Star, ArrowCounterClockwise, Trash, Lock, Cards, Copy, CircleHalf, SquaresFour, MoonStars, Sun } from '@phosphor-icons/react';
 import { fetchConfig, saveConfig, fetchPreviewData, onUnauthorized } from './api.js';
+import { faceIsDark } from './widget-render.js';
 import {
   WIDGET_REGISTRY,
   widgetById,
@@ -846,6 +847,22 @@ export default function App() {
                   onClick={() => setOneBit(v => !v)}
                 >
                   <CircleHalf size={12} weight="bold" /> 1-BIT
+                </button>
+                {/* Panel-wide polarity. One click flips every tile on every
+                    screen — the alternative was opening each tile's settings
+                    in turn. A tile that carries an explicit theme of its own
+                    keeps it, so a deliberate odd-one-out survives the flip. */}
+                <button
+                  className={`btn btn-iconed btn-compact ${faceIsDark(cfg.faceTheme) ? '' : 'btn-ghost'}`}
+                  title={faceIsDark(cfg.faceTheme)
+                    ? 'Panel is white-on-black — click for black-on-white'
+                    : 'Panel is black-on-white — click for white-on-black'}
+                  aria-pressed={faceIsDark(cfg.faceTheme)}
+                  onClick={() => patchCfg({ faceTheme: faceIsDark(cfg.faceTheme) ? 'light' : 'dark' })}
+                >
+                  {faceIsDark(cfg.faceTheme)
+                    ? <><MoonStars size={12} weight="bold" /> DARK</>
+                    : <><Sun size={12} weight="bold" /> LIGHT</>}
                 </button>
                 {editScreen && (
                   <button

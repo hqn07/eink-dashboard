@@ -18,9 +18,23 @@ import { resolveTokenSettings, buildTokenCtx } from './_tokens.js';
 // So an unset theme now means inverted. `theme: 'normal'` remains the
 // explicit opt-out and still works, which keeps the escape hatch available
 // in config even though the UI no longer offers the choice.
-export function cellClasses(s) {
+//
+// SCREEN-WIDE POLARITY (2026-09-21). `cfg.faceTheme` flips the whole panel
+// in one click instead of asking the user to visit every tile. An unset tile
+// theme follows it; an explicit per-tile `inverted` / `normal` still wins, so
+// a deliberate odd-one-out tile survives the switch. Default is `dark`, which
+// is exactly what an unset theme did before, so no config changes meaning.
+export function faceIsDark(faceTheme) {
+  return faceTheme !== 'light';
+}
+
+export function cellClasses(s, faceTheme) {
   const out = [];
-  if (!s || s.theme !== 'normal') out.push('cell-inverted');
+  const tile = s && s.theme;
+  const inverted = tile === 'inverted' ? true
+    : tile === 'normal' ? false
+    : faceIsDark(faceTheme);
+  if (inverted) out.push('cell-inverted');
   // Per-tile text style toggles. Applied via class + universal child
   // selector (015-body-grid-system.css) because most widgets set their
   // own font-weight per element — inline style on the cell wouldn't
@@ -83,14 +97,21 @@ export function buildTileCtx(item, data, def) {
 // Cell wrapper class list shared by all three surfaces: widget id,
 // grid-edge border suppression, flush mode, and settings-derived
 // classes (inverted theme etc.).
-export function tileCellClasses(item, gridCols = 24, gridRows = 12) {
+export function tileCellClasses(item, gridCols = 24, gridRows = 12, faceTheme) {
   const widgetId = item.widgetId || item.id;
   const classes = ['cell', `cell-${widgetId}`];
   if (item.x + item.w >= gridCols) classes.push('cell-edge-right');
   if (item.y + item.h >= gridRows) classes.push('cell-edge-bottom');
   if (item.flush) classes.push('cell-flush');
-  classes.push(...cellClasses(item.settings));
+  classes.push(...cellClasses(item.settings, faceTheme));
   return classes;
+}
+
+// Class for the grid container itself. The page background has to follow the
+// polarity too, or an area no tile covers (and, in card mode, every gap
+// between cards) stays white while the tiles around it are black.
+export function bodyThemeClass(faceTheme) {
+  return faceIsDark(faceTheme) ? 'body-dark' : 'body-light';
 }
 
 // Per-tile typography → `style` attribute fragment for the .cell wrapper.

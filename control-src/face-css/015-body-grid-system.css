@@ -34,6 +34,21 @@
 .cell.cell-edge-right  { border-right: none; }
 .cell.cell-edge-bottom { border-bottom: none; }
 
+/* The grid lines have to follow the tile's polarity. `.cell` draws them in
+ * #000, which is invisible on an inverted (black) tile — and inverted is the
+ * default, so on a real panel every tile bled into its neighbours with no
+ * divider anywhere. `.cell.cell-inverted *` repaints DESCENDANT borders white
+ * and never touched the cell's own. Found on a real /display.png 2026-09-21.
+ * Only the colour changes: the edge-suppression rules above set
+ * `border-*: none`, which kills the style, so they still win. */
+.cell.cell-inverted { border-color: #fff; }
+
+/* Page background follows the panel-wide polarity (cfg.faceTheme). Without
+ * this, any grid area no tile covers — and, in card mode, every gap between
+ * cards — stays white while the tiles around it are black. */
+.body.body-dark  { background: #000; }
+.body.body-light { background: #fff; }
+
 /* Per-tile bold / italic toggles (typography settings). !important on
  * weight because widgets pin explicit per-element weights; 700 is close
  * enough to any 600/800 already there at 1-bit. DM Serif ships only a

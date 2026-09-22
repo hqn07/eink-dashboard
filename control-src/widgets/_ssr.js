@@ -45,7 +45,8 @@ export {
   scaleWrap,
   cellClasses,
   buildTileCtx,
-  tileCellClasses
+  tileCellClasses,
+  bodyThemeClass
 } from './_chrome.js';
 
 // Frozen demo data — /widgets-matrix uses it to fill slots that have

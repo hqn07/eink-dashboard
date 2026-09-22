@@ -320,7 +320,7 @@ export default function WidgetSettingsModal({
     : draft.settings;
   const classes = ['cell', `cell-${draft.widgetId}`];
   if (draft.flush) classes.push('cell-flush');
-  classes.push(...cellClasses(effectiveSettings));
+  classes.push(...cellClasses(effectiveSettings, (previewData && previewData.cfg && previewData.cfg.faceTheme) || undefined));
   if (draft.x + draft.w >= GRID_COLS) classes.push('cell-edge-right');
   if (draft.y + draft.h >= GRID_ROWS) classes.push('cell-edge-bottom');
   const itemSlot = (previewData && previewData.perItem && previewData.perItem[draft.id]) || {};

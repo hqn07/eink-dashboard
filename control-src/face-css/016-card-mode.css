@@ -17,6 +17,14 @@
   margin: 4px;
   border: 2px solid #000;
 }
+/* Same reason as the grid dividers in 015: a black card border on a black
+ * tile is not a border. This has to live here because the rule above is a
+ * later, equally specific `border` shorthand and would otherwise win. */
+.body-cards .cell.cell-inverted,
+.body-cards .cell.cell-inverted.cell-edge-right,
+.body-cards .cell.cell-inverted.cell-edge-bottom {
+  border-color: #fff;
+}
 
 /* A per-tile dithered frame still wins over the plain card border. */
 .body-cards .cell.face-frame { border-width: 4px; }

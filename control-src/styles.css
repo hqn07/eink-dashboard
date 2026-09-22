@@ -1238,6 +1238,12 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .editor-wrap .react-grid-layout {
   width: 100% !important;
 }
+/* The canvas is a stand-in for the panel, so it follows the same
+ * panel-wide polarity the face does (cfg.faceTheme → body-dark/body-light,
+ * resolved in EditorGrid). Without this the editor showed black tiles on a
+ * white board while the device showed them on black. */
+.editor-wrap.body-dark  { background: #000; }
+.editor-wrap.body-light { background: #fff; }
 .editor-wrap.show-grid {
   background-image:
     linear-gradient(to right, var(--grid) 1px, transparent 1px),
