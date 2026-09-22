@@ -252,3 +252,18 @@
 /* The placeholder is the exception and keeps the dashed top rule from
    section 5 — "nothing here yet" is worth saying in the chrome. */
 .cell .widget-placeholder { padding: var(--face-baseline) 0 0; }
+
+/* ---- 9. A JOINED EDGE IS NOT A GUTTER ----------------------------------
+ * When the page draws no rule between two tiles they are one module, but each
+ * still carried its own 16px side margin — a 32px trough down the middle of
+ * the thing that is supposed to read as continuous. Halve the gutter on a
+ * joined edge: the module keeps one 16px rhythm across the join instead of
+ * two margins meeting.
+ *
+ * The classes come from _rules.js tileJoins() via tileCellClasses, so they
+ * follow the same zone logic as the rules themselves — including a
+ * settings.zone override. */
+.cell-join-left   { padding-left: 8px; }
+.cell-join-right  { padding-right: 8px; }
+.cell-join-top    { padding-top: 5px; }
+.cell-join-bottom { padding-bottom: 5px; }

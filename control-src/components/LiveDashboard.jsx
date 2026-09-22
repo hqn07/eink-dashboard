@@ -1,6 +1,6 @@
 import { homeValue } from '../home.js';
 import React, { useEffect, useRef } from 'react';
-import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses, bodyThemeClass, pageRuleStyles } from '../widget-render.js';
+import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses, bodyThemeClass, pageRuleStyles, tileJoins } from '../widget-render.js';
 import { widgetById } from '../widgets.js';
 import { autofitText } from '../autofit.js';
 
@@ -105,6 +105,8 @@ export default function LiveDashboard({
     gridTemplateRows:    `repeat(${GRID_ROWS}, minmax(0, 1fr))`
   };
 
+  const visible = layout.filter(it => withinVisibility(it.visibility, nowM));
+  const joins = tileJoins(visible, { cols: GRID_COLS, rows: GRID_ROWS });
   const tiles = [];
   for (const item of layout) {
     const def = widgetById(item.widgetId || item.id);
@@ -117,7 +119,8 @@ export default function LiveDashboard({
     // Shared class assembly; only editor-surface extras appended here.
     // (The old `item.border` dashed/none classes were dead — no CSS
     // rules and nothing in the UI ever set them.)
-    const classes = tileCellClasses(item, GRID_COLS, GRID_ROWS, faceTheme);
+    const classes = tileCellClasses(item, GRID_COLS, GRID_ROWS, faceTheme,
+      joins[item.id || `${item.x},${item.y}`]);
     if (selectedTileId === item.id) classes.push('cell-selected');
     if (editingTileId === item.id)  classes.push('cell-editing');
     const tileStyle = {

@@ -60,4 +60,4 @@ export { sizeSpec, variantOf, sizeSpecFor } from './_sizes.js';
 
 // Page rules — the dividers, computed for the page rather than drawn by each
 // cell, so tiles in the same zone can share an edge. See _rules.js.
-export { pageRulesHtml, pageRuleStyles, pageRuleSegments } from './_rules.js';
+export { pageRulesHtml, pageRuleStyles, pageRuleSegments, tileJoins } from './_rules.js';

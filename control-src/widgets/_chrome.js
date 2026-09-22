@@ -97,7 +97,7 @@ export function buildTileCtx(item, data, def) {
 // Cell wrapper class list shared by all three surfaces: widget id,
 // grid-edge border suppression, flush mode, and settings-derived
 // classes (inverted theme etc.).
-export function tileCellClasses(item, gridCols = 24, gridRows = 12, faceTheme) {
+export function tileCellClasses(item, gridCols = 24, gridRows = 12, faceTheme, joins) {
   const widgetId = item.widgetId || item.id;
   const classes = ['cell', `cell-${widgetId}`];
   if (item.x + item.w >= gridCols) classes.push('cell-edge-right');
@@ -110,6 +110,17 @@ export function tileCellClasses(item, gridCols = 24, gridRows = 12, faceTheme) {
   // temperatures. Height only: a short tile is squeezed, a narrow one just
   // wraps.
   if (item.h <= 3) classes.push('cell-short');
+  // Edges where the page drew no rule because the neighbour is in the same
+  // zone. The cell halves its gutter there: two 16px margins on either side of
+  // a seam that is not there add up to a 32px trough running through the
+  // middle of what is supposed to read as one module. Computed once per layout
+  // in _rules.js tileJoins() and passed in, so no surface re-derives adjacency.
+  if (joins) {
+    if (joins.left)   classes.push('cell-join-left');
+    if (joins.right)  classes.push('cell-join-right');
+    if (joins.top)    classes.push('cell-join-top');
+    if (joins.bottom) classes.push('cell-join-bottom');
+  }
   classes.push(...cellClasses(item.settings, faceTheme));
   return classes;
 }

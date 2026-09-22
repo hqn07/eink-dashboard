@@ -1204,3 +1204,61 @@ test('stale marker only fires on a FAILED re-render, not mere age', async () => 
 
   assert.equal(imageStaleInfo(null).stale, false, 'no entry must not throw');
 });
+
+// --- page rules: seams belong to the page, and subjects join -------------
+test('page rules skip the seam between tiles of the same subject', async () => {
+  const { pageRuleSegments, tileJoins } = await import('../control-src/widgets/_rules.js');
+
+  // weather | sun  ·  calendar | tasks  — two pairs that a reader treats as
+  // one thing each, plus a clock that belongs to neither.
+  const layout = [
+    { id: 'wx',  widgetId: 'weather',  x: 0,  y: 0, w: 8,  h: 6 },
+    { id: 'sun', widgetId: 'outdoors', x: 8,  y: 0, w: 6,  h: 6 },
+    { id: 'clk', widgetId: 'clock',    x: 14, y: 0, w: 10, h: 6 },
+    { id: 'cal', widgetId: 'calendar', x: 0,  y: 6, w: 8,  h: 6 },
+    { id: 'tsk', widgetId: 'tasks',    x: 8,  y: 6, w: 6,  h: 6 },
+    { id: 'mk',  widgetId: 'markets',  x: 14, y: 6, w: 10, h: 6 },
+  ];
+  const segs = pageRuleSegments(layout);
+  const vertical = segs.filter(s => s.dir === 'v').map(s => s.at).sort((a, b) => a - b);
+
+  // x=8 is weather|sun and calendar|tasks — both joins, so no rule there.
+  assert.deepEqual(vertical, [14], 'only the seam against unrelated subjects is drawn');
+  // The row seam still runs the full width: weather over calendar is a change
+  // of subject however you place it.
+  assert.ok(segs.some(s => s.dir === 'h' && s.at === 6 && s.from === 0 && s.to === 24));
+
+  const joins = tileJoins(layout);
+  assert.equal(joins.wx.right, true);
+  assert.equal(joins.sun.left, true);
+  assert.equal(joins.clk.left, false, 'a clock does not join the weather beside it');
+});
+
+test('a partial seam is drawn for exactly the rows two tiles share', async () => {
+  const { pageRuleSegments } = await import('../control-src/widgets/_rules.js');
+  // A tall weather hero with a clock above and its own forecast below-right:
+  // the rule must exist against the clock and stop where the forecast starts.
+  const segs = pageRuleSegments([
+    { id: 'hero', widgetId: 'weather', x: 0, y: 0, w: 9,  h: 6 },
+    { id: 'clk',  widgetId: 'clock',   x: 9, y: 0, w: 15, h: 3 },
+    { id: 'fc',   widgetId: 'weather', x: 9, y: 3, w: 15, h: 3 },
+  ]);
+  const at9 = segs.filter(s => s.dir === 'v' && s.at === 9);
+  assert.deepEqual(at9.map(s => [s.from, s.to]), [[0, 3]],
+    'ruled against the clock, joined against its own forecast');
+});
+
+test('settings.zone overrides the family, both ways', async () => {
+  const { pageRuleSegments } = await import('../control-src/widgets/_rules.js');
+  const pair = (a, b) => pageRuleSegments([
+    { id: 'a', widgetId: 'weather',  x: 0, y: 0, w: 12, h: 12, settings: a },
+    { id: 'b', widgetId: 'outdoors', x: 12, y: 0, w: 12, h: 12, settings: b },
+  ]).length;
+  assert.equal(pair(undefined, undefined), 0, 'same family joins by default');
+  assert.equal(pair({ zone: 'left' }, { zone: 'right' }), 1, 'an explicit zone can split a family');
+  const unrelated = pageRuleSegments([
+    { id: 'a', widgetId: 'markets', x: 0, y: 0, w: 12, h: 12, settings: { zone: 'strip' } },
+    { id: 'b', widgetId: 'tasks',   x: 12, y: 0, w: 12, h: 12, settings: { zone: 'strip' } },
+  ]);
+  assert.equal(unrelated.length, 0, 'and can join widgets that share no family');
+});

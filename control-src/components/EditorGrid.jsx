@@ -5,7 +5,7 @@ import { Gear, X, Copy } from '@phosphor-icons/react';
 import * as HoverCard from '@radix-ui/react-hover-card';
 import { WIDGET_REGISTRY, POOL_CATEGORIES, GRID_COLS, GRID_ROWS, widgetById, makeInstance, newInstanceId } from '../widgets.js';
 import { sizeSpec, sizeSpecFor, growToMin } from '../widgets/_sizes.js';
-import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses, bodyThemeClass, pageRuleStyles } from '../widget-render.js';
+import { renderWidget, typographyCss, scaleWrap, buildTileCtx, tileCellClasses, bodyThemeClass, pageRuleStyles, tileJoins } from '../widget-render.js';
 import { demoCtxForWidget } from '../widgets/_pool_demo.js';
 import { autofitText } from '../autofit.js';
 const WidgetSettingsModal = React.lazy(() => import('./WidgetSettingsModal.jsx'));
@@ -56,6 +56,10 @@ export default function EditorGrid({ layout, showGrid, oneBit, cardStyle, readOn
   // the canvas flips the moment the toolbar toggle is clicked — same
   // resolution lib/ssr.js does for the real render.
   const faceTheme = (previewData && previewData.cfg && previewData.cfg.faceTheme) || 'dark';
+  // Which tile edges the page joined rather than ruled — same computation the
+  // panel runs, so a module that reads as one block on glass reads as one
+  // block on the canvas while you are still dragging it.
+  const tileJoinMap = tileJoins(layout, { cols: GRID_COLS, rows: GRID_ROWS });
   const wrapRef = useRef(null);
   const paletteRef = useRef(null);
   const dupLockRef = useRef(false);
@@ -577,7 +581,8 @@ export default function EditorGrid({ layout, showGrid, oneBit, cardStyle, readOn
             const typoStyle = typographyCss(l.settings);
             const dashW = l.w * (DASH_W / GRID_COLS);
             const dashH = l.h * (BODY_H / GRID_ROWS);
-            const classes = tileCellClasses(l, GRID_COLS, GRID_ROWS, faceTheme);
+            const classes = tileCellClasses(l, GRID_COLS, GRID_ROWS, faceTheme,
+              tileJoinMap[l.id || `${l.x},${l.y}`]);
             const cellHtml = `<div class="${classes.join(' ')}" style="width:${dashW}px;height:${dashH}px;${typoStyle}">${inner}</div>`;
             const isSelected = selectedId === l.id;
             return (

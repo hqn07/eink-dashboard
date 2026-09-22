@@ -14,10 +14,14 @@
 // the three rows they actually share and nothing for the rest, which a
 // per-cell border cannot express at all.
 //
-// Zones: `settings.zone` when set, otherwise the widget id. So two `weather`
-// tiles placed against each other read as one weather module with no seam,
-// while a weather tile against a clock keeps its rule. Naming a zone lets
-// unrelated widgets join deliberately.
+// Zones answer "do these two belong together", in three steps:
+//   1. `settings.zone` when either tile names one — the explicit override.
+//   2. the FAMILY the widget belongs to, so a weather tile and the sun/UV tile
+//      beside it join without anyone configuring anything. This is the
+//      difference between "tiles of the same widget join" (which only helped
+//      the weather pair and a second clock) and "tiles about the same subject
+//      join", which is what a reader actually sees.
+//   3. the widget id, for anything with no family of its own.
 //
 // Geometry is emitted in PERCENT of the page, so the same numbers drive the
 // 800x480 render, the editor canvas at whatever width it happens to be, and
@@ -26,10 +30,30 @@
 
 const DEFAULT_GRID = { cols: 24, rows: 12 };
 
+// Subject families. Opinionated on purpose — the alternative is a "group"
+// field on every tile, which is the kind of knob that taxes every add and gets
+// set wrong. If a pairing here is ever wrong for a screen, `settings.zone` on
+// either tile overrides it.
+export const ZONE_FAMILIES = {
+  weather:  'weather',   // current conditions
+  outdoors: 'weather',   // sun / UV / air — the same glance
+  clock:    'time',
+  countdown:'time',
+  calendar: 'agenda',
+  tasks:    'agenda',
+  headlines:'feed',
+  daily:    'feed',      // quote / word / on-this-day
+  ai:       'feed',
+  markets:  'markets',
+  transit:  'transit'
+};
+
 function zoneOf(item) {
   const s = item && item.settings;
   const z = s && typeof s.zone === 'string' ? s.zone.trim() : '';
-  return z || item.widgetId || item.id || '';
+  if (z) return z;
+  const id = item.widgetId || item.id || '';
+  return ZONE_FAMILIES[id] || id;
 }
 
 // [a1, a2) and [b1, b2) — the shared span, or null when they only touch at a
@@ -104,6 +128,31 @@ function mergeCollinear(segs) {
       }
     }
     out.push(cur);
+  }
+  return out;
+}
+
+// Which edges of a tile were joined rather than ruled. The cell needs to know:
+// a 16px gutter on each side of a seam that ISN'T there leaves a 32px trough
+// through the middle of what is supposed to read as one module, and both
+// halves draw their own label band into it. Returns a per-tile-id map so the
+// three render surfaces can put the classes on without re-deriving adjacency.
+export function tileJoins(layout, grid = DEFAULT_GRID) {
+  const tiles = (layout || []).filter(t => t
+    && Number.isFinite(t.x) && Number.isFinite(t.y)
+    && Number.isFinite(t.w) && Number.isFinite(t.h));
+  const out = {};
+  for (const a of tiles) {
+    const key = a.id || `${a.x},${a.y}`;
+    const j = { left: false, right: false, top: false, bottom: false };
+    for (const b of tiles) {
+      if (b === a || zoneOf(a) !== zoneOf(b)) continue;
+      if (b.x === a.x + a.w && overlap(a.y, a.y + a.h, b.y, b.y + b.h)) j.right = true;
+      if (b.x + b.w === a.x && overlap(a.y, a.y + a.h, b.y, b.y + b.h)) j.left = true;
+      if (b.y === a.y + a.h && overlap(a.x, a.x + a.w, b.x, b.x + b.w)) j.bottom = true;
+      if (b.y + b.h === a.y && overlap(a.x, a.x + a.w, b.x, b.x + b.w)) j.top = true;
+    }
+    out[key] = j;
   }
   return out;
 }

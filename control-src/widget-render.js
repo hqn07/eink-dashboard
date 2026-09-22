@@ -19,7 +19,7 @@ export {
   faceIsDark
 } from './widgets/_chrome.js';
 
-export { pageRuleStyles, pageRuleSegments } from './widgets/_rules.js';
+export { pageRuleStyles, pageRuleSegments, tileJoins } from './widgets/_rules.js';
 
 export function renderWidget(id, data) {
   const fn = MIGRATED_RENDERERS[id];
