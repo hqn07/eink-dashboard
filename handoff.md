@@ -1,5 +1,77 @@
 # E-Ink Dashboard — Handoff
 
+> ## 2026-09-21 (night) — "light/dark does not work", and why the migration could not save it
+> **Confirmed working on the live panel after `4560582`.** Three commits to get
+> there, and the interesting part is the order in which the diagnosis was
+> wrong.
+>
+> ### The switch was real, the config outranked it
+> `3e757d3` shipped `cfg.faceTheme` with tile-then-panel resolution: an explicit
+> `settings.theme` wins, an unset one follows the panel. Correct design, and it
+> left the live config unable to use the feature — because the OLD per-tile
+> checkbox stored its value **both ways**. Running a black-on-white panel meant
+> unticking it on every tile, so every tile carried `theme: 'normal'`, so every
+> tile ignored the switch.
+>
+> **It was the production render that said so, not a test.** After deploying I
+> fetched `/display.png` from Railway and got a black-on-white face, which is
+> impossible under a `dark` panel unless the tiles are overriding it. The
+> fixtures could never have shown this: they carry no per-tile themes.
+>
+> ### v12, first attempt: right instinct, wrong value (`f39f256`)
+> v12 already dropped `'inverted'` (it is what an unset theme means, so removing
+> it cannot change a render). I had kept `'normal'` on the reasoning that it is
+> "the one value nobody writes by accident" — **wrong: the checkbox wrote it for
+> them.** Stripping it blindly would have flipped a working panel to its
+> opposite on the next render, so v12 now *lifts* instead: when every tile on
+> every screen says `'normal'` and the panel states no theme, that one decision
+> becomes `faceTheme: 'light'` and the copies go. Render-identical, all-or-
+> nothing, and a mixed config keeps every explicit value.
+>
+> ### …and it still did not fire, because the config was already half-changed
+> Reading the live config through `/api/config?token=` settled it:
+>
+> ```
+> gridVersion: 12 | faceTheme: dark | tiles: 8 | {"normal": 7, "(unset)": 1}
+> ```
+>
+> `faceTheme` was set — the switch HAD been used — and one tile had no theme at
+> all, so the lift's "every tile agrees" precondition failed. **A migration can
+> only rescue a config it recognises, and a half-broken feature produces shapes
+> it does not.** Worth remembering the next time a migration looks like the
+> whole answer.
+>
+> ### So the control took responsibility (`4560582`)
+> Setting the panel colour now **clears every per-tile theme override in one
+> action**, which is what "one click, not every widget" has to mean. Destructive,
+> so it reports what it did ("cleared 8 tile overrides"), undo covers it, and the
+> tile modal's three-way re-pins a genuine odd-one-out afterwards — a deliberate
+> act rather than a leftover.
+>
+> ### Two bugs found while verifying that
+> - **Every toast in the editor was silent.** `showToast()` set state and NO JSX
+>   consumed it — there was no toast renderer in `App.jsx` at all. The tidy
+>   result ("3 tiles did not fit and were left out"), the duplicate
+>   confirmation, and worst the delete-with-UNDO pattern, whose whole safety net
+>   is an action button on a toast nobody could see. Rendered now, actionable
+>   variant included. Unknown how long it had been dead.
+> - **Mine:** the cleared-override counter was incremented INSIDE the `setCfg`
+>   updater, which React runs on its own schedule, so `showToast` read 0 and the
+>   message silently dropped the number. Count before you set.
+>
+> `test:api` 42/42 · `check:visual` 0.000% · both snapshots PASS ·
+> `check:widgets` 22. Verified in a browser against a config in the production
+> shape (seven `'normal'` tiles + one unset, `faceTheme: dark`): one click flips
+> the whole canvas and reports the count. Then confirmed by the user on the
+> real panel.
+>
+> **Deploy note.** Four pushes in ~25 minutes produced three `REMOVED`
+> deployments — each build cancelled by the next, exactly gotcha 15's shape.
+> They were harmless only because each superseding commit was a later commit on
+> the same branch. Verification was `/static/dashboard.css` carrying a string
+> added in that commit, plus the Railway deployment's own status; `/health`
+> would have said nothing.
+
 > ## 2026-09-21 (later) — the settings UI, and the migration the invert switch needed
 > The panel-wide polarity switch shipped earlier today exposed a problem it
 > could not fix on its own, plus a settings surface that had drifted: two
