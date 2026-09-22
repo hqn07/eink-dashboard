@@ -81,10 +81,6 @@
 > baselines re-captured: the drift is the 4px padding change and seams now
 > centred on the boundary instead of sitting inside one neighbour.
 >
-> **Unverified on glass.** Everything here is `/display.png`. The seam-sharing
-> in particular is worth a photo — it is the change that alters how the panel
-> reads from across a room.
->
 > **Left deliberately open:** `settings.zone` has no UI, so joins are automatic
 > by widget id; and the two-role model (hero tiles carry no label, module tiles
 > carry one) is a convention the renderers follow rather than a contract. D4's
