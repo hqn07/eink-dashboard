@@ -109,6 +109,71 @@ for (const id of palette) {
   }
 }
 
+// D4: a schema form's FIELDS must agree with the widget's defaults().
+//
+// This is the check a hand-written form could never offer. A field whose key
+// is not in defaults() writes a setting the renderer never reads (dead); a
+// default that no field exposes is a setting nobody can reach except by
+// editing config.json (unreachable). Both survive review easily and both have
+// shipped here before.
+//
+// Static analysis, like the rest of this script: FIELDS entries are read as
+// `key: 'name'` pairs out of the source, and defaults() keys the same way, so
+// no JSX loader or browser is needed. A form with no FIELDS export is a
+// hand-written one and is skipped — schema forms are opt-in per widget.
+{
+  const KEYS_FROM_FIELDS = /\bkey:\s*'([A-Za-z0-9_]+)'/g;
+  // Keys every tile carries that no widget form owns: the variant picker is
+  // modal chrome, and the rest are per-tile chrome handled outside the form.
+  const CHROME = new Set(['variant', 'theme', 'zone', 'frame', 'accent', 'fontFamily',
+    'fontScale', 'scaleAnchor', 'padding', 'bold', 'italic', 'upper', 'letterSpacing',
+    'semanticRed']);
+
+  for (const id of widgetIds) {
+    let form;
+    try { form = await readFile(join(WDIR, `${id}.form.jsx`), 'utf8'); } catch { continue; }
+    if (!/export const FIELDS\s*=/.test(form)) continue;   // hand-written form
+
+    const fieldKeys = new Set(
+      [...form.replace(/\/\/[^\n]*/g, '').matchAll(KEYS_FROM_FIELDS)].map(m => m[1]));
+    const src = await readFile(join(WDIR, `${id}.js`), 'utf8');
+    const block = src.match(/defaults:\s*\(\)\s*=>\s*\(\{([\s\S]*?)\}\)/);
+    if (!block) {
+      problems.push(`${id}: has a FIELDS schema but no defaults() the guard can read`);
+      continue;
+    }
+    // Comments first: `// YYYY-MM-DDTHH:MM` and `// 'wifi' = build WIFI: payload`
+    // both look exactly like a key to a naive scan, and both produced a false
+    // failure the first time this ran.
+    const body = block[1].replace(/\/\/[^\n]*/g, '');
+    const defaultKeys = new Set(
+      [...body.matchAll(/^\s*([A-Za-z0-9_]+)\s*:/gm)].map(m => m[1]));
+
+    // Well-formedness: a typo in `type` renders nothing at all, silently —
+    // the schema's one failure mode that is worse than the JSX it replaced,
+    // because a missing field looks like a deliberate omission.
+    const TYPES = new Set(['text', 'select', 'segmented', 'toggle', 'slider', 'csv', 'list', 'location']);
+    for (const m of form.matchAll(/type:\s*'([A-Za-z0-9_]+)'/g)) {
+      if (!TYPES.has(m[1])) {
+        problems.push(`${id}.form.jsx: field type '${m[1]}' has no renderer in _schema.jsx`);
+      }
+    }
+
+    for (const k of fieldKeys) {
+      if (!defaultKeys.has(k) && !CHROME.has(k)) {
+        problems.push(`${id}.form.jsx: field '${k}' is not in ${id}.js defaults() — `
+          + 'the renderer never reads it');
+      }
+    }
+    for (const k of defaultKeys) {
+      if (!fieldKeys.has(k) && !CHROME.has(k)) {
+        problems.push(`${id}.js: default '${k}' is not exposed by ${id}.form.jsx — `
+          + 'unreachable without hand-editing config.json');
+      }
+    }
+  }
+}
+
 if (problems.length) {
   console.error('check-widgets FAILED:\n  - ' + problems.join('\n  - '));
   process.exit(1);
