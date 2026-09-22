@@ -145,8 +145,16 @@ export function demoCtxForWidget(id, cellW, cellH) {
         settings: { source: 'weather_temp', title: 'TEMPERATURE' } };
     }
     case 'markets':
-      // One of each kind, so the pool card shows what the tile is FOR: a
-      // stock, a coin and a currency pair in one list.
+      // One of each kind FIRST, so the pool card shows what the tile is FOR: a
+      // stock, a coin and a currency pair in one list. The row view shows only
+      // as many as its tile holds, so the tail costs it nothing.
+      //
+      // The tail exists for the heatmap variant, which is a grid: at three
+      // symbols it would snapshot as three chips and every layout bug in it —
+      // shrunken label plates, chips that overflow their tile, a column count
+      // that does not fit — would render "correctly" in the matrix and break
+      // on a real list. Spread across the tone ramp on purpose, including a
+      // double-digit mover and several losers.
       return { ...base,
         markets: {
           vs: 'usd',
@@ -154,6 +162,19 @@ export function demoCtxForWidget(id, cellW, cellH) {
             { label: 'AAPL',    value: 227.52,   change: 0.8,  kind: 'stock' },
             { label: 'BTC',     value: 64213,    change: -1.4, kind: 'crypto' },
             { label: 'EUR/USD', value: 1.0842,   change: null, kind: 'fx' },
+            { label: 'MSFT',    value: 421.10,   change: 1.6,  kind: 'stock' },
+            { label: 'NVDA',    value: 118.04,   change: 4.2,  kind: 'stock' },
+            { label: 'META',    value: 512.78,   change: 12.2, kind: 'stock' },
+            { label: 'AMZN',    value: 186.33,   change: 2.3,  kind: 'stock' },
+            { label: 'GOOGL',   value: 165.20,   change: -0.3, kind: 'stock' },
+            { label: 'TSLA',    value: 248.91,   change: 3.3,  kind: 'stock' },
+            { label: 'XOM',     value: 113.47,   change: -3.1, kind: 'stock' },
+            { label: 'JPM',     value: 208.66,   change: 0.7,  kind: 'stock' },
+            { label: 'WMT',     value: 78.12,    change: 1.0,  kind: 'stock' },
+            { label: 'DIS',     value: 95.40,    change: 1.2,  kind: 'stock' },
+            { label: 'KO',      value: 70.55,    change: -0.9, kind: 'stock' },
+            { label: 'INTC',    value: 23.18,    change: -6.4, kind: 'stock' },
+            { label: 'ETH',     value: 2612,     change: 3.1,  kind: 'crypto' },
           ],
           stale: false
         },

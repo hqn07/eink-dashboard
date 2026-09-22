@@ -10,7 +10,7 @@
 // failure behaviour are unchanged. What is new is the ordering — rows come
 // back in the order the user listed them, not grouped by provider, because
 // the list is the user's own priority order.
-const { fetchStocks } = require('./stocks');
+const { fetchStocks, fetchStockPcts } = require('./stocks');
 const { fetchCrypto, SYMBOLS } = require('./crypto');
 const { fetchFx } = require('./fx');
 
@@ -41,12 +41,12 @@ function classify(raw) {
   return { kind: 'stock', symbol: upper };
 }
 
-function parseSymbols(list) {
+function parseSymbols(list, limit = 10) {
   const out = [];
   for (const raw of Array.isArray(list) ? list : []) {
     const c = classify(raw);
     if (c) out.push(c);
-    if (out.length >= 10) break;   // a panel row budget, not an API limit
+    if (out.length >= limit) break;   // a panel budget, not an API limit
   }
   return out;
 }
@@ -56,7 +56,11 @@ function pct(n) { return Number.isFinite(n) ? n : null; }
 // settings: { symbols: ['AAPL', 'BTC', 'EUR/USD'], vs: 'usd' }
 async function fetchMarkets(settings) {
   const s = settings || {};
-  const wanted = parseSymbols(s.symbols);
+  // The heatmap is the same data at a different budget: a grid wants 20-60
+  // symbols where a row list wants a handful, and the stock side switches to
+  // the batch endpoint so that costs 3 requests rather than 60.
+  const heat = s.variant === 'heat';
+  const wanted = parseSymbols(s.symbols, heat ? 60 : 10);
   if (!wanted.length) return null;
   const vs = (typeof s.vs === 'string' && s.vs.trim()) ? s.vs.trim().toLowerCase() : 'usd';
 
@@ -76,7 +80,10 @@ async function fetchMarkets(settings) {
     fxByBase.get(base).push(target);
   }
   const [stocksRes, cryptoRes, ...fxRes] = await Promise.allSettled([
-    stockSyms.length ? fetchStocks({ symbols: stockSyms }) : Promise.resolve(null),
+    stockSyms.length
+      ? (heat ? fetchStockPcts({ symbols: stockSyms, limit: 60 })
+              : fetchStocks({ symbols: stockSyms }))
+      : Promise.resolve(null),
     cryptoIds.length ? fetchCrypto({ coins: cryptoIds, vs }) : Promise.resolve(null),
     ...[...fxByBase.entries()].map(([base, targets]) => fetchFx({ base, targets })),
   ]);

@@ -1,0 +1,94 @@
+/* ============ MARKETS — HEATMAP VIEW ============
+ * A grid of chips: tone = size of the move, red = direction. See
+ * control-src/widgets/_view-markets-heat.js for why it is a grid of equal
+ * cells rather than a market-cap treemap.
+ *
+ * Every chip paints its own light ground (the dither tones are black dots on
+ * white), so like the placeholder it has to declare its own ink — inside an
+ * inverted cell it would otherwise inherit white text onto a white tile and
+ * disappear. Same trap as gotcha 13; the fix is the same shape. */
+
+/* `.cell .mh-grid`, not `.mh-grid`: the rhythm layer sets a 10px baseline gap
+ * on every `.tr-body` and wins on specificity otherwise. Ten pixels between
+ * chips costs a whole row on a 5-row tile, which is how nine chips came to be
+ * clipped at the M size while the same code was fine at L. */
+.cell .mh-grid {
+  display: grid;
+  gap: 3px;
+  padding-top: 0;
+  padding-bottom: 0;
+  align-content: start;
+  grid-auto-rows: 1fr;
+  min-height: 0;
+}
+
+.cell .mh-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1px;
+  /* Enough padding that the tone reads as a field around the labels rather
+     than as a frame behind them — the tone IS the datum here. */
+  padding: 5px 4px;
+  min-width: 0;
+  overflow: hidden;
+  color: #000;
+  border: var(--face-rule) solid #000;
+  box-sizing: border-box;
+}
+
+/* A symbol with no change to report — a currency pair — has no place on the
+ * scale, so it gets no tone rather than a tone that would claim it was flat. */
+.cell .mh-cell.mh-flat {
+  background: #fff;
+  border-style: dashed;
+}
+
+/* The label sits on its own white plate rather than directly on the tone.
+ * 11px type over a 2px dither grid is illegible — the dots land inside the
+ * letterforms and the whole chip turns to noise, which the first render made
+ * very clear. A plate keeps the ink clean and leaves the tone doing the one
+ * job it is good at: reading as a shade from across the room. */
+.cell .mh-sym,
+.cell .mh-pct {
+  background: #fff;
+  padding: 0 3px;
+  box-decoration-break: clone;
+  /* flex: none is load-bearing. As flex items in a short chip these were
+     SHRUNK — the ticker measured 6px tall against a 14px line-height, so its
+     white plate was a sliver and the glyphs spilled onto the dither, which on
+     the panel looked like the labels had been half-erased. */
+  flex: none;
+}
+
+.cell .mh-sym {
+  font-family: var(--face-grotesk);
+  font-size: var(--face-t-cap);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  /* One baseline (10px) is SHORTER than the 11px glyphs, so the white plate
+     did not cover the ascenders and the dither showed through the letterforms
+     — the labels looked half-erased on the panel. The plate has to be at least
+     as tall as the type it is protecting. */
+  line-height: calc(var(--face-baseline) * 1.4);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell .mh-pct {
+  font-family: var(--face-mono);
+  font-size: var(--face-t-body);
+  font-weight: 700;
+  line-height: calc(var(--face-baseline) * 1.4);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The inverted cell repaints every descendant white; these chips carry their
+ * own ground and must keep their own ink. */
+.cell.cell-inverted .mh-cell,
+.cell.cell-inverted .mh-sym,
+.cell.cell-inverted .mh-pct { color: #000; }
+.cell.cell-inverted .mh-cell { border-color: #000; }

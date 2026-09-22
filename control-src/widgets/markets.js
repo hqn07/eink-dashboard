@@ -1,5 +1,6 @@
 import { escapeHtml, placeholder, staleMark, pickTier } from './_shared.js';
 import { homeValue } from '../home.js';
+import { def as heatDef, render as renderHeat } from './_view-markets-heat.js';
 
 // Markets — stocks, crypto and currency pairs in one tile.
 //
@@ -21,11 +22,23 @@ export const def = {
   },
   defaultSize: 'M',
   defaultVariant: 'trmnl',
+  // Two ways to read the same list. The rows answer "what is AAPL at"; the
+  // heatmap answers "what kind of day is it" across twenty or sixty symbols at
+  // once, which the rows cannot do at any tile size. The heatmap declares its
+  // own size ladder (_sizes.js): a grid needs room the row list does not, and
+  // seeding a heat tile at the rows' 8x5 would make a cramped first impression
+  // of a view that is fine at 14x6.
+  variants: {
+    trmnl: { label: 'Rows — label · price · change' },
+    heat:  { label: 'Heatmap — a chip per symbol', ...heatDef }
+  },
   defaults: () => ({
     variant: 'trmnl',
     symbols: ['AAPL', 'BTC', 'EUR/USD'],
     vs: 'usd',
     title: '',
+    // Heatmap only: biggest movers first, or the order the list was written.
+    heatSort: 'change',
   })
 };
 
@@ -42,6 +55,7 @@ function fmtValue(v, kind) {
 export function render(ctx) {
   const { settings, cellW, cellH, density } = ctx;
   const s = settings || {};
+  if ((ctx.variant || s.variant) === 'heat') return renderHeat(ctx);
   const m = ctx.markets;
   const titleLabel = (typeof s.title === 'string' && s.title.trim())
     ? s.title.trim() : 'MARKETS';

@@ -27,6 +27,15 @@ export const FIELDS = [
     when: (v) => (Array.isArray(v.symbols) ? v.symbols : []).some(x => x && !String(x).includes('/'))
   },
   {
+    key: 'heatSort', type: 'segmented', label: 'Order',
+    options: [
+      { value: 'change', short: 'Movers', label: 'Biggest movers first' },
+      { value: 'list',   short: 'List',   label: 'The order I wrote them' }
+    ],
+    help: 'A symbol with no change to report sorts last either way.',
+    when: (v) => v.variant === 'heat'
+  },
+  {
     key: 'title', type: 'text', label: 'Tile heading', tokens: true,
     placeholder: 'MARKETS'
   }
