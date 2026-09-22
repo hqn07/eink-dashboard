@@ -91,4 +91,10 @@
 .cell.cell-inverted .mh-cell,
 .cell.cell-inverted .mh-sym,
 .cell.cell-inverted .mh-pct { color: #000; }
+/* …except a loss, which is red on both panels. Listed after the black rule
+ * and with the same specificity, so it wins by order — and on the mono panel
+ * the red token greyscales to a dark ink, which is why the sign is printed
+ * rather than implied. */
+.cell .mh-pct.face-red,
+.cell.cell-inverted .mh-pct.face-red { color: var(--face-red); }
 .cell.cell-inverted .mh-cell { border-color: #000; }

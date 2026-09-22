@@ -109,15 +109,23 @@ export function render(ctx) {
     const tone = toneFor(ch);
     const sign = !Number.isFinite(ch) ? '' : (ch < 0 ? '−' : '+');
     const pctStr = Number.isFinite(ch) ? `${sign}${Math.abs(ch).toFixed(1)}%` : '—';
+    // The number goes on the red plane for a loss as well as the chip's tone.
+    // Measured: the pink tones put 17% (r25) and 32% (r50) of a chip's pixels
+    // on the red plane, which reads as a wash next to a dark grey neighbour
+    // and can be missed at a glance. Solid red glyphs cannot — and they sit on
+    // the white plate, so they stay crisp instead of competing with a dither.
+    const down = Number.isFinite(ch) && ch < 0;
     return `<div class="mh-cell ${tone}">
       <span class="mh-sym">${escapeHtml(r.label)}</span>
-      <span class="mh-pct">${pctStr}</span>
+      <span class="mh-pct${down ? ' face-red' : ''}">${pctStr}</span>
     </div>`;
   }).join('');
 
   const up = shown.filter(r => Number.isFinite(r.change) && r.change > 0).length;
   const down = shown.filter(r => Number.isFinite(r.change) && r.change < 0).length;
-  const meta = `${up}▲ ${down}▼${staleMark(m.stale)}`;
+  // The count of losers is red too, so the title bar carries the day's mood
+  // before the eye reaches the grid.
+  const meta = `${up}▲ <span class="face-red">${down}▼</span>${staleMark(m.stale)}`;
 
   return `<div class="tr-card">
     <div class="tr-titlebar"><span>${escapeHtml(titleLabel)}</span><span class="tr-meta">${meta}</span></div>
